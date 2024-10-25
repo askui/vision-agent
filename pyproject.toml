@@ -1,0 +1,19 @@
+[project]
+name = "vision-agent"
+version = "0.1.0"
+description = "Automate anything with a vision agent."
+authors = [
+    {name = "Maximilian Wessendorf", email = "maximilian.wessendorf@askui.com"},
+]
+dependencies = []
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "UNKNOWN"}
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.pdm]
+distribution = true
