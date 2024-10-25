@@ -5,7 +5,12 @@ description = "Automate anything with a vision agent."
 authors = [
     {name = "Maximilian Wessendorf", email = "maximilian.wessendorf@askui.com"},
 ]
-dependencies = []
+dependencies = [
+    "grpcio>=1.67.0",
+    "grpcio-tools>=1.67.0",
+    "Pillow>=11.0.0",
+    "pydantic>=2.9.2",
+]
 requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "UNKNOWN"}
@@ -17,3 +22,11 @@ build-backend = "hatchling.build"
 
 [tool.pdm]
 distribution = true
+
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest>=8.3.3",
+]
+
+[tool.pdm.scripts]
+test = "pytest"
