@@ -14,7 +14,7 @@ from anthropic.types.beta import BetaToolComputerUse20241022Param
 from .base import BaseAnthropicTool, ToolError, ToolResult
 from .run import run
 
-from ..utils import image_to_base64
+from ..utils import image_to_base64, scale_image_with_padding, scale_coordinates_back
 
 
 OUTPUT_DIR = "/tmp/outputs"
@@ -82,9 +82,11 @@ class ComputerTool(BaseAnthropicTool):
 
     @property
     def options(self) -> ComputerToolOptions:
-        width, height = self.scale_coordinates(
-            ScalingSource.COMPUTER, self.width, self.height
-        )
+        # width, height = self.scale_coordinates(
+        #     ScalingSource.COMPUTER, self.width, self.height
+        # )
+        width = self.width
+        height = self.height
         return {
             "display_width_px": width,
             "display_height_px": height,
@@ -100,8 +102,8 @@ class ComputerTool(BaseAnthropicTool):
 
         #self.width = int(os.getenv("WIDTH") or 0)
         #self.height = int(os.getenv("HEIGHT") or 0)
-        self.width = 1920
-        self.height = 1200
+        self.width = 1280
+        self.height = 800
 
         assert self.width and self.height, "WIDTH, HEIGHT must be set"
         if (display_num := os.getenv("DISPLAY_NUM")) is not None:
@@ -131,9 +133,11 @@ class ComputerTool(BaseAnthropicTool):
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
                 raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
 
-            x, y = self.scale_coordinates(
-                ScalingSource.API, coordinate[0], coordinate[1]
-            )
+            # x, y = self.scale_coordinates(
+            #     ScalingSource.API, coordinate[0], coordinate[1]
+            # )
+            x, y = scale_coordinates_back(coordinate[0], coordinate[1], 1920, 1200, 1280, 800)
+            x, y = int(x), int(y)
 
             if action == "mouse_move":
                 self.controller_client.mouse(x, y)
@@ -155,18 +159,26 @@ class ComputerTool(BaseAnthropicTool):
                 raise ToolError(output=f"{text} must be a string")
 
             if action == "key":
-                return self.shell(f"{self.xdotool} key -- {text}")
+                # TODO: claude has other names for keys
+                if text == "Return":
+                    text = "enter"
+                self.controller_client.keyboard_pressed(text)
+                self.controller_client.keyboard_release(text)
+                return ToolResult()
+                #return self.shell(f"{self.xdotool} key -- {text}")
             elif action == "type":
-                results: list[ToolResult] = []
-                for chunk in chunks(text, TYPING_GROUP_SIZE):
-                    cmd = f"{self.xdotool} type --delay {TYPING_DELAY_MS} -- {shlex.quote(chunk)}"
-                    results.append(self.shell(cmd, take_screenshot=False))
-                screenshot_base64 = (self.screenshot()).base64_image
-                return ToolResult(
-                    output="".join(result.output or "" for result in results),
-                    error="".join(result.error or "" for result in results),
-                    base64_image=screenshot_base64,
-                )
+                self.controller_client.type(text)
+                return ToolResult()
+                # results: list[ToolResult] = []
+                # for chunk in chunks(text, TYPING_GROUP_SIZE):
+                #     cmd = f"{self.xdotool} type --delay {TYPING_DELAY_MS} -- {shlex.quote(chunk)}"
+                #     results.append(self.shell(cmd, take_screenshot=False))
+                # screenshot_base64 = (self.screenshot()).base64_image
+                # return ToolResult(
+                #     output="".join(result.output or "" for result in results),
+                #     error="".join(result.error or "" for result in results),
+                #     base64_image=screenshot_base64,
+                # )
 
         if action in (
             "left_click",
@@ -211,7 +223,8 @@ class ComputerTool(BaseAnthropicTool):
     def screenshot(self):
         """Take a screenshot of the current screen and return the base64 encoded image."""
         screenshot = self.controller_client.screenshot()
-        base64_image = image_to_base64(screenshot)
+        scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
+        base64_image = image_to_base64(scaled_screenshot)
         return ToolResult(base64_image=base64_image)
         # output_dir = Path(OUTPUT_DIR)
         # output_dir.mkdir(parents=True, exist_ok=True)
