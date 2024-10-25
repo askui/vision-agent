@@ -1,3 +1,5 @@
+import subprocess
+
 from .tools.askui_controller import AskUiControllerClient, AskUiControllerServer
 from .brains.claude import ClaudeHandler
 
@@ -24,6 +26,9 @@ class VisionAgent:
 
     def act(goal: str):
         raise NotImplementedError("act is not implemented yet")
+    
+    def cli(self, command: str):
+        subprocess.run(command.split(" "))
 
     def close(self):
         self.client.disconnect()

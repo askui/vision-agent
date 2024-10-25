@@ -4,7 +4,8 @@ import time
 
 def test_agent():
     agent = VisionAgent()
-    time.sleep(2)
+    agent.cli("firefox")
+    time.sleep(1)
     agent.click("url bar")
     agent.type("http://www.google.com")
     agent.close()

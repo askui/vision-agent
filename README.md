@@ -21,6 +21,9 @@ from askui import VisionAgent
 # Initialize your agent
 agent = VisionAgent()
 
+# Launch you target application via CLI
+agent.cli("firefox)
+
 # Start to automate
 agent.click("url bar")
 agent.type("http://www.google.com")
