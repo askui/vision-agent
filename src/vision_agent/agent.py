@@ -1,4 +1,5 @@
 from .tools.askui_controller import AskUiControllerClient, AskUiControllerServer
+from .brains.claude import ClaudeHandler
 
 
 class VisionAgent:
@@ -7,9 +8,12 @@ class VisionAgent:
         self.controller.start(True)
         self.client = AskUiControllerClient()
         self.client.connect()
+        self.claude = ClaudeHandler()
 
     def click(self, instruction: str):
-        self.client.mouse(10, 10)
+        screenshot = self.client.screenshot()
+        x, y = self.claude.click_inference(screenshot, instruction)
+        self.client.mouse(x, y)
         self.client.click("left")
 
     def type(text: str):

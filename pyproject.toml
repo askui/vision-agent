@@ -10,6 +10,7 @@ dependencies = [
     "grpcio-tools>=1.67.0",
     "Pillow>=11.0.0",
     "pydantic>=2.9.2",
+    "anthropic>=0.37.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

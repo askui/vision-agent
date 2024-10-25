@@ -11,6 +11,8 @@ TODO: Exlain
 
 `export ASKUI_INSTALL_DIRECTORY=<path>`
 
+`export ANTHROPIC_API_KEY='your-api-key-here'`
+
 ### 3. Start Building
 
 ```python
