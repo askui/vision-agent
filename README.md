@@ -22,7 +22,8 @@ from askui import VisionAgent
 agent = VisionAgent()
 
 # Start to automate
-agent.click("firefox icon")
+agent.click("url bar")
+agent.type("http://www.google.com")
 
 # Close agent when done
 agent.close()

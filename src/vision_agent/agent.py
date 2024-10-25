@@ -16,8 +16,8 @@ class VisionAgent:
         self.client.mouse(x, y)
         self.client.click("left")
 
-    def type(text: str):
-        raise NotImplementedError("type is not implemented yet")
+    def type(self, text: str):
+        self.client.type(text)
 
     def get(instruction: str):
         raise NotImplementedError("get is not implemented yet")
