@@ -22,7 +22,7 @@ from askui import VisionAgent
 agent = VisionAgent()
 
 # Launch you target application via CLI
-agent.cli("firefox)
+agent.cli("firefox")
 
 # Start to automate
 agent.click("url bar")
