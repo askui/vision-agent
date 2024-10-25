@@ -27,6 +27,7 @@ agent.cli("firefox)
 # Start to automate
 agent.click("url bar")
 agent.type("http://www.google.com")
+agent.keyboard("enter")
 
 # Close agent when done
 agent.close()

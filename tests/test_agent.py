@@ -8,4 +8,5 @@ def test_agent():
     time.sleep(1)
     agent.click("url bar")
     agent.type("http://www.google.com")
+    agent.keyboard("enter")
     agent.close()
