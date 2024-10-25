@@ -24,11 +24,11 @@ class ToolCollection:
     ) -> list[BetaToolUnionParam]:
         return [tool.to_params() for tool in self.tools]
 
-    async def run(self, *, name: str, tool_input: dict[str, Any]) -> ToolResult:
+    def run(self, *, name: str, tool_input: dict[str, Any]) -> ToolResult:
         tool = self.tool_map.get(name)
         if not tool:
             return ToolFailure(error=f"Tool {name} is invalid")
         try:
-            return await tool(**tool_input)
+            return tool(**tool_input)
         except ToolError as e:
             return ToolFailure(error=e.message)

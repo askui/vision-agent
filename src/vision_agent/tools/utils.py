@@ -1,6 +1,10 @@
+import base64
 import socket
 import subprocess
 import time
+
+from PIL import Image
+from io import BytesIO
 
 
 def wait_for_port(port: int, host: str = 'localhost', timeout: float = 5.0):
@@ -32,3 +36,19 @@ def process_exists(process_name):
     last_line = output.strip().split('\r\n')[-1]
     # because Fail message could be translated
     return last_line.lower().startswith(process_name.lower())
+
+
+def base64_to_image(base64_string):
+    base64_string = base64_string.split(",")[1]
+    while len(base64_string) % 4 != 0:
+        base64_string += '='
+    image_data = base64.b64decode(base64_string)
+    image = Image.open(BytesIO(image_data))
+    return image
+
+
+def image_to_base64(image):
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return img_str

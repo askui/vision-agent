@@ -46,3 +46,34 @@ class ClaudeHandler:
         scaled_x, scaled_y = extract_click_coordinates(response)
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, self.resolution[0], self.resolution[1])
         return int(x), int(y)
+
+
+    def act_inference(self, image: Image.Image, instruction: str):
+        scaled_image = scale_image_with_padding(image, self.resolution[0], self.resolution[1])
+        image_b64 = image_to_base64(scaled_image)
+
+        response = self.client.beta.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
+            tools=[
+                {
+                "type": "computer_20241022",
+                "name": "computer",
+                "display_width_px": self.resolution[0],
+                "display_height_px": self.resolution[1],
+                "display_number": 1,
+                },
+                # {
+                # "type": "text_editor_20241022",
+                # "name": "str_replace_editor"
+                # },
+                # {
+                # "type": "bash_20241022",
+                # "name": "bash"
+                # }
+            ],
+            messages=[{"role": "user", "content": instruction}],
+            betas=["computer-use-2024-10-22"],
+        )
+        print(response)
+        

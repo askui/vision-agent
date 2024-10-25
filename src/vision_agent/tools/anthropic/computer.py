@@ -1,4 +1,5 @@
 import asyncio
+import time
 import base64
 import os
 import shlex
@@ -12,6 +13,9 @@ from anthropic.types.beta import BetaToolComputerUse20241022Param
 
 from .base import BaseAnthropicTool, ToolError, ToolResult
 from .run import run
+
+from ..utils import image_to_base64
+
 
 OUTPUT_DIR = "/tmp/outputs"
 
@@ -90,11 +94,15 @@ class ComputerTool(BaseAnthropicTool):
     def to_params(self) -> BetaToolComputerUse20241022Param:
         return {"name": self.name, "type": self.api_type, **self.options}
 
-    def __init__(self):
+    def __init__(self, controller_client):
         super().__init__()
+        self.controller_client = controller_client
 
-        self.width = int(os.getenv("WIDTH") or 0)
-        self.height = int(os.getenv("HEIGHT") or 0)
+        #self.width = int(os.getenv("WIDTH") or 0)
+        #self.height = int(os.getenv("HEIGHT") or 0)
+        self.width = 1920
+        self.height = 1200
+
         assert self.width and self.height, "WIDTH, HEIGHT must be set"
         if (display_num := os.getenv("DISPLAY_NUM")) is not None:
             self.display_num = int(display_num)
@@ -105,7 +113,7 @@ class ComputerTool(BaseAnthropicTool):
 
         self.xdotool = f"{self._display_prefix}xdotool"
 
-    async def __call__(
+    def __call__(
         self,
         *,
         action: Action,
@@ -128,11 +136,15 @@ class ComputerTool(BaseAnthropicTool):
             )
 
             if action == "mouse_move":
-                return await self.shell(f"{self.xdotool} mousemove --sync {x} {y}")
+                self.controller_client.mouse(x, y)
+                return ToolResult()
+                # return self.shell(f"{self.xdotool} mousemove --sync {x} {y}")
             elif action == "left_click_drag":
-                return await self.shell(
-                    f"{self.xdotool} mousedown 1 mousemove --sync {x} {y} mouseup 1"
-                )
+                self.client.click("left")
+                return ToolResult()
+                # return self.shell(
+                #     f"{self.xdotool} mousedown 1 mousemove --sync {x} {y} mouseup 1"
+                # )
 
         if action in ("key", "type"):
             if text is None:
@@ -143,13 +155,13 @@ class ComputerTool(BaseAnthropicTool):
                 raise ToolError(output=f"{text} must be a string")
 
             if action == "key":
-                return await self.shell(f"{self.xdotool} key -- {text}")
+                return self.shell(f"{self.xdotool} key -- {text}")
             elif action == "type":
                 results: list[ToolResult] = []
                 for chunk in chunks(text, TYPING_GROUP_SIZE):
                     cmd = f"{self.xdotool} type --delay {TYPING_DELAY_MS} -- {shlex.quote(chunk)}"
-                    results.append(await self.shell(cmd, take_screenshot=False))
-                screenshot_base64 = (await self.screenshot()).base64_image
+                    results.append(self.shell(cmd, take_screenshot=False))
+                screenshot_base64 = (self.screenshot()).base64_image
                 return ToolResult(
                     output="".join(result.output or "" for result in results),
                     error="".join(result.error or "" for result in results),
@@ -170,9 +182,9 @@ class ComputerTool(BaseAnthropicTool):
                 raise ToolError(f"coordinate is not accepted for {action}")
 
             if action == "screenshot":
-                return await self.screenshot()
+                return self.screenshot()
             elif action == "cursor_position":
-                result = await self.shell(
+                result = self.shell(
                     f"{self.xdotool} getmouselocation --shell",
                     take_screenshot=False,
                 )
@@ -190,47 +202,52 @@ class ComputerTool(BaseAnthropicTool):
                     "middle_click": "2",
                     "double_click": "--repeat 2 --delay 500 1",
                 }[action]
-                return await self.shell(f"{self.xdotool} click {click_arg}")
+                self.controller_client.click("left")
+                return ToolResult()
+                #return self.shell(f"{self.xdotool} click {click_arg}")
 
         raise ToolError(f"Invalid action: {action}")
 
-    async def screenshot(self):
+    def screenshot(self):
         """Take a screenshot of the current screen and return the base64 encoded image."""
-        output_dir = Path(OUTPUT_DIR)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        path = output_dir / f"screenshot_{uuid4().hex}.png"
+        screenshot = self.controller_client.screenshot()
+        base64_image = image_to_base64(screenshot)
+        return ToolResult(base64_image=base64_image)
+        # output_dir = Path(OUTPUT_DIR)
+        # output_dir.mkdir(parents=True, exist_ok=True)
+        # path = output_dir / f"screenshot_{uuid4().hex}.png"
 
-        # Try gnome-screenshot first
-        if shutil.which("gnome-screenshot"):
-            screenshot_cmd = f"{self._display_prefix}gnome-screenshot -f {path} -p"
-        else:
-            # Fall back to scrot if gnome-screenshot isn't available
-            screenshot_cmd = f"{self._display_prefix}scrot -p {path}"
+        # # Try gnome-screenshot first
+        # if shutil.which("gnome-screenshot"):
+        #     screenshot_cmd = f"{self._display_prefix}gnome-screenshot -f {path} -p"
+        # else:
+        #     # Fall back to scrot if gnome-screenshot isn't available
+        #     screenshot_cmd = f"{self._display_prefix}scrot -p {path}"
 
-        result = await self.shell(screenshot_cmd, take_screenshot=False)
-        if self._scaling_enabled:
-            x, y = self.scale_coordinates(
-                ScalingSource.COMPUTER, self.width, self.height
-            )
-            await self.shell(
-                f"convert {path} -resize {x}x{y}! {path}", take_screenshot=False
-            )
+        # result = self.shell(screenshot_cmd, take_screenshot=False)
+        # if self._scaling_enabled:
+        #     x, y = self.scale_coordinates(
+        #         ScalingSource.COMPUTER, self.width, self.height
+        #     )
+        #     self.shell(
+        #         f"convert {path} -resize {x}x{y}! {path}", take_screenshot=False
+        #     )
 
-        if path.exists():
-            return result.replace(
-                base64_image=base64.b64encode(path.read_bytes()).decode()
-            )
-        raise ToolError(f"Failed to take screenshot: {result.error}")
+        # if path.exists():
+        #     return result.replace(
+        #         base64_image=base64.b64encode(path.read_bytes()).decode()
+        #     )
+        # raise ToolError(f"Failed to take screenshot: {result.error}")
 
-    async def shell(self, command: str, take_screenshot=True) -> ToolResult:
+    def shell(self, command: str, take_screenshot=True) -> ToolResult:
         """Run a shell command and return the output, error, and optionally a screenshot."""
-        _, stdout, stderr = await run(command)
+        _, stdout, stderr = run(command)
         base64_image = None
 
         if take_screenshot:
             # delay to let things settle before taking a screenshot
-            await asyncio.sleep(self._screenshot_delay)
-            base64_image = (await self.screenshot()).base64_image
+            time.sleep(self._screenshot_delay)
+            base64_image = (self.screenshot()).base64_image
 
         return ToolResult(output=stdout, error=stderr, base64_image=base64_image)
 
