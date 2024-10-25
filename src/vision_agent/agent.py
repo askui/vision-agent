@@ -13,7 +13,13 @@ class VisionAgent:
         self.client.click("left")
 
     def type(text: str):
-        pass
+        raise NotImplementedError("type is not implemented yet")
+
+    def get(instruction: str):
+        raise NotImplementedError("get is not implemented yet")
+
+    def act(goal: str):
+        raise NotImplementedError("act is not implemented yet")
 
     def close(self):
         self.client.disconnect()
