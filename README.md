@@ -16,8 +16,12 @@ TODO: Exlain
 ```python
 from askui import VisionAgent
 
-
+# Initialize your agent
 agent = VisionAgent()
+
+# Start to automate
 agent.click("firefox icon")
 
+# Close agent when done
+agent.close()
 ```
