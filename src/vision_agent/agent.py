@@ -44,3 +44,9 @@ class VisionAgent:
     def close(self):
         self.client.disconnect()
         self.controller.stop(True)
+
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()

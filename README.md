@@ -60,24 +60,20 @@
 ```python
 from vision_agent import VisionAgent
 
-# Initialize your agent
-agent = VisionAgent()
+# Initialize your agent context manager
+with VisionAgent() as agent:
+    # Launch you target application via CLI
+    agent.cli("firefox")
 
-# Launch you target application via CLI
-agent.cli("firefox")
+    # Start to automate individual steps
+    agent.click("url bar")
+    agent.type("http://www.google.com")
+    agent.keyboard("enter")
 
-# Start to automate individual steps
-agent.click("url bar")
-agent.type("http://www.google.com")
-agent.keyboard("enter")
+    # Extract information from the screen
+    datetime = agent.get("What is the datetime at the top of the screen?")
+    print(datetime)
 
-# Extract information from the screen
-datetime = agent.get("What is the datetime at the top of the screen?")
-print(datetime)
-
-# Or let the agent work on its own
-agent.act("search for a flight from Berlin to Paris in January")
-
-# Close agent when done
-agent.close()
+    # Or let the agent work on its own
+    agent.act("search for a flight from Berlin to Paris in January")
 ```
