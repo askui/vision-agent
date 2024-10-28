@@ -24,10 +24,13 @@ agent = VisionAgent()
 # Launch you target application via CLI
 agent.cli("firefox")
 
-# Start to automate
+# Start to automate individual steps
 agent.click("url bar")
 agent.type("http://www.google.com")
 agent.keyboard("enter")
+
+# Or let the agent work on its own
+agent.act("search for a flight from Berlin to Paris in January")
 
 # Close agent when done
 agent.close()
