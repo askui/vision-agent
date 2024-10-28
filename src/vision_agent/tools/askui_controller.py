@@ -60,12 +60,8 @@ class AskUiControllerServer():
             return
         self.process.kill()
         
-        
-
-
 
 class AskUiControllerClient():
-
     def __init__(self) -> None:
         self.stub = None
         self.channel = None
@@ -107,7 +103,6 @@ class AskUiControllerClient():
         response = self.stub.StartSession(controller_v1_pbs.Request_StartSession(sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True))
         self.session_info = response.sessionInfo
 
-        
     def __stop_session(self):
         self.stub.EndSession(controller_v1_pbs.Request_EndSession(sessionInfo = self.session_info))
 
@@ -116,7 +111,6 @@ class AskUiControllerClient():
 
     def __stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
-
 
     def screenshot(self, display=1) -> Image:
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=display)))        

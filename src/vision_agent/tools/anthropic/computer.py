@@ -35,6 +35,8 @@ Action = Literal[
     "cursor_position",
 ]
 
+PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
+
 
 class Resolution(TypedDict):
     width: int
@@ -133,22 +135,17 @@ class ComputerTool(BaseAnthropicTool):
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
                 raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
 
-            # x, y = self.scale_coordinates(
-            #     ScalingSource.API, coordinate[0], coordinate[1]
-            # )
             x, y = scale_coordinates_back(coordinate[0], coordinate[1], 1920, 1200, 1280, 800)
             x, y = int(x), int(y)
 
             if action == "mouse_move":
                 self.controller_client.mouse(x, y)
                 return ToolResult()
-                # return self.shell(f"{self.xdotool} mousemove --sync {x} {y}")
             elif action == "left_click_drag":
-                self.client.click("left")
+                self.controller_client.mouse_down("left")
+                self.controller_client.mouse(x, y)
+                self.controller_client.mouse_up("left")
                 return ToolResult()
-                # return self.shell(
-                #     f"{self.xdotool} mousedown 1 mousemove --sync {x} {y} mouseup 1"
-                # )
 
         if action in ("key", "type"):
             if text is None:
@@ -162,23 +159,15 @@ class ComputerTool(BaseAnthropicTool):
                 # TODO: claude has other names for keys
                 if text == "Return":
                     text = "enter"
+
+                if text not in PC_KEY.__args__:
+                    raise ToolError(f"Key {text} is not a valid PC_KEY")
                 self.controller_client.keyboard_pressed(text)
                 self.controller_client.keyboard_release(text)
                 return ToolResult()
-                #return self.shell(f"{self.xdotool} key -- {text}")
             elif action == "type":
                 self.controller_client.type(text)
                 return ToolResult()
-                # results: list[ToolResult] = []
-                # for chunk in chunks(text, TYPING_GROUP_SIZE):
-                #     cmd = f"{self.xdotool} type --delay {TYPING_DELAY_MS} -- {shlex.quote(chunk)}"
-                #     results.append(self.shell(cmd, take_screenshot=False))
-                # screenshot_base64 = (self.screenshot()).base64_image
-                # return ToolResult(
-                #     output="".join(result.output or "" for result in results),
-                #     error="".join(result.error or "" for result in results),
-                #     base64_image=screenshot_base64,
-                # )
 
         if action in (
             "left_click",
@@ -196,95 +185,26 @@ class ComputerTool(BaseAnthropicTool):
             if action == "screenshot":
                 return self.screenshot()
             elif action == "cursor_position":
-                result = self.shell(
-                    f"{self.xdotool} getmouselocation --shell",
-                    take_screenshot=False,
-                )
-                output = result.output or ""
-                x, y = self.scale_coordinates(
-                    ScalingSource.COMPUTER,
-                    int(output.split("X=")[1].split("\n")[0]),
-                    int(output.split("Y=")[1].split("\n")[0]),
-                )
-                return result.replace(output=f"X={x},Y={y}")
-            else:
-                click_arg = {
-                    "left_click": "1",
-                    "right_click": "3",
-                    "middle_click": "2",
-                    "double_click": "--repeat 2 --delay 500 1",
-                }[action]
+                # TODO: Implement in the future
+                return ToolError("cursor_position is not implemented by this agent")
+            elif action == "left_click":
                 self.controller_client.click("left")
                 return ToolResult()
-                #return self.shell(f"{self.xdotool} click {click_arg}")
+            elif action == "right_click":
+                self.controller_client.click("right")
+                return ToolResult()
+            elif action == "middle_click":
+                self.controller_client.click("middle")
+                return ToolResult()
+            elif action == "double_click":
+                self.controller_client.click("left", 2)
+                return ToolResult()
 
         raise ToolError(f"Invalid action: {action}")
 
     def screenshot(self):
-        """Take a screenshot of the current screen and return the base64 encoded image."""
+        """Take a screenshot of the current screen, scale it and return the base64 encoded image."""
         screenshot = self.controller_client.screenshot()
         scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
         base64_image = image_to_base64(scaled_screenshot)
         return ToolResult(base64_image=base64_image)
-        # output_dir = Path(OUTPUT_DIR)
-        # output_dir.mkdir(parents=True, exist_ok=True)
-        # path = output_dir / f"screenshot_{uuid4().hex}.png"
-
-        # # Try gnome-screenshot first
-        # if shutil.which("gnome-screenshot"):
-        #     screenshot_cmd = f"{self._display_prefix}gnome-screenshot -f {path} -p"
-        # else:
-        #     # Fall back to scrot if gnome-screenshot isn't available
-        #     screenshot_cmd = f"{self._display_prefix}scrot -p {path}"
-
-        # result = self.shell(screenshot_cmd, take_screenshot=False)
-        # if self._scaling_enabled:
-        #     x, y = self.scale_coordinates(
-        #         ScalingSource.COMPUTER, self.width, self.height
-        #     )
-        #     self.shell(
-        #         f"convert {path} -resize {x}x{y}! {path}", take_screenshot=False
-        #     )
-
-        # if path.exists():
-        #     return result.replace(
-        #         base64_image=base64.b64encode(path.read_bytes()).decode()
-        #     )
-        # raise ToolError(f"Failed to take screenshot: {result.error}")
-
-    def shell(self, command: str, take_screenshot=True) -> ToolResult:
-        """Run a shell command and return the output, error, and optionally a screenshot."""
-        _, stdout, stderr = run(command)
-        base64_image = None
-
-        if take_screenshot:
-            # delay to let things settle before taking a screenshot
-            time.sleep(self._screenshot_delay)
-            base64_image = (self.screenshot()).base64_image
-
-        return ToolResult(output=stdout, error=stderr, base64_image=base64_image)
-
-    def scale_coordinates(self, source: ScalingSource, x: int, y: int):
-        """Scale coordinates to a target maximum resolution."""
-        if not self._scaling_enabled:
-            return x, y
-        ratio = self.width / self.height
-        target_dimension = None
-        for dimension in MAX_SCALING_TARGETS.values():
-            # allow some error in the aspect ratio - not ratios are exactly 16:9
-            if abs(dimension["width"] / dimension["height"] - ratio) < 0.02:
-                if dimension["width"] < self.width:
-                    target_dimension = dimension
-                break
-        if target_dimension is None:
-            return x, y
-        # should be less than 1
-        x_scaling_factor = target_dimension["width"] / self.width
-        y_scaling_factor = target_dimension["height"] / self.height
-        if source == ScalingSource.API:
-            if x > self.width or y > self.height:
-                raise ToolError(f"Coordinates {x}, {y} are out of bounds")
-            # scale up
-            return round(x / x_scaling_factor), round(y / y_scaling_factor)
-        # scale down
-        return round(x * x_scaling_factor), round(y * y_scaling_factor)
