@@ -1,6 +1,7 @@
 import anthropic
 from PIL import Image
 
+from ..utils import AutomationError
 from .utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
 
 
@@ -45,7 +46,10 @@ class ClaudeHandler:
         scaled_image = scale_image_with_padding(image, self.resolution[0], self.resolution[1])
         response = self.inference(image_to_base64(scaled_image), prompt, system_prompt)
         response = response[0].text
-        scaled_x, scaled_y = extract_click_coordinates(response)
+        try:
+            scaled_x, scaled_y = extract_click_coordinates(response)
+        except Exception as e:
+            raise AutomationError(f"Couldn't locate '{instruction}' on the screen.")
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, self.resolution[0], self.resolution[1])
         return int(x), int(y)
 
