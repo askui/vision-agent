@@ -25,7 +25,7 @@ class VisionAgent:
     def type(self, text: str):
         self.client.type(text)
 
-    def get(instruction: str):
+    def get(self, instruction: str):
         raise NotImplementedError("get is not implemented yet")
 
     def act(self, goal: str):
