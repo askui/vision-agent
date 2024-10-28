@@ -49,7 +49,7 @@
 
 ### 3. Set Controller Environment
 
-`export ASKUI_INSTALL_DIRECTORY=<path>/.askui-suites`
+`export ASKUI_INSTALL_DIRECTORY=<path-to-askui-controller>`
 
 ### 4. Authenticate with Anthropic
 
