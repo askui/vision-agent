@@ -1,6 +1,6 @@
-# vision-agent
+# 🤖 AskUI Vision Agent
 
-## Setup
+## 🔧 Setup
 
 ### 1. Install AskUI Controller
 
@@ -55,7 +55,7 @@
 
 `export ANTHROPIC_API_KEY=<your-api-key-here>`
 
-## Start Building
+## ▶️ Start Building
 
 ```python
 from vision_agent import VisionAgent
