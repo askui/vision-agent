@@ -4,35 +4,44 @@
 
 ### 1. Install AskUI Controller
 
-#### 1.1 Windows
-
-##### 1.1.1 AMD64
+<details>
+  <summary>Windows</summary>
+  
+  ##### AMD64
 
 [AskUI Installer for AMD64](https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-Installer-Win-AMD64-Full.exe)
 
-##### 1.1.2 ARM64
+##### ARM64
 
 [AskUI Installer for ARM64](https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-Installer-Win-ARM64-Full.exe)
+</details>
 
-#### 1.2 Linux
 
-##### 1.2.1 AMD64
+<details>
+  <summary>Linux</summary>
+  
+##### AMD64
 
 `curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run`
 
 `bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run`
 
-##### 1.2.1 ARM64
+##### ARM64
 
 `curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run`
 
 `bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run`
+</details>
 
-#### 1.2 MacOS
 
+<details>
+  <summary>MacOs</summary>
+  
 `curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run`
 
 `bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run`
+</details>
+
 
 ### 2. Install vision-agent in your Python environment
 
