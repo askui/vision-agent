@@ -1,10 +1,8 @@
 import platform
 from collections.abc import Callable
 from datetime import datetime
-from enum import StrEnum
 from typing import Any, cast
 
-import httpx
 from anthropic import (
     Anthropic,
     AnthropicBedrock,
@@ -25,7 +23,7 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
-from ..tools.anthropic import BashTool, ComputerTool, EditTool, ToolCollection, ToolResult
+from ..tools.anthropic import ComputerTool, ToolCollection, ToolResult
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
@@ -70,8 +68,6 @@ class ClaudeComputerAgent:
     def __init__(self, controller_client):
         self.tool_collection = ToolCollection(
             ComputerTool(controller_client),
-            #BashTool(),
-            #EditTool(),
         )
         self.system = BetaTextBlockParam(
             type="text",

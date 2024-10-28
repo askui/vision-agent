@@ -1,11 +1,7 @@
 from typing import List, Literal
 import grpc
-from pydantic import BaseModel, Field
 import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
-
-#from .askui_ui_controller_grpc.Controller_V1_pb2_grpc import *
-#from .askui_ui_controller_grpc.Controller_V1_pb2 import *
 
 import time
 from PIL import Image
@@ -79,7 +75,6 @@ class AskUiControllerClient():
         self.__start_session()
         self.__start_execution()
 
-
     def __run_recorder_action(self, acion_class_id: controller_v1_pbs.ActionClassID, action_parameters: controller_v1_pbs.ActionParameters):
         time.sleep(self.pre_action_wait)
         response: controller_v1_pbs.Response_RunRecordedAction = self.stub.RunRecordedAction(controller_v1_pbs.Request_RunRecordedAction(sessionInfo=self.session_info, actionClassID=acion_class_id, actionParameters=action_parameters))
@@ -135,7 +130,6 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPressAndRelease=controller_v1_pbs.ActionParameters_MouseButton_PressAndRelease(mouseButton=mouse_button, count=count)))
         
-
     def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left'):        
         mouse_button = None
         match button:

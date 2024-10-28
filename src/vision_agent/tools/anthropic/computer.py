@@ -1,26 +1,12 @@
-import asyncio
-import time
-import base64
 import os
-import shlex
-import shutil
-from enum import StrEnum
-from pathlib import Path
 from typing import Literal, TypedDict
-from uuid import uuid4
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
 
 from .base import BaseAnthropicTool, ToolError, ToolResult
-from .run import run
 
 from ..utils import image_to_base64, scale_image_with_padding, scale_coordinates_back
 
-
-OUTPUT_DIR = "/tmp/outputs"
-
-TYPING_DELAY_MS = 12
-TYPING_GROUP_SIZE = 50
 
 Action = Literal[
     "key",
@@ -34,6 +20,7 @@ Action = Literal[
     "screenshot",
     "cursor_position",
 ]
+
 
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
@@ -50,11 +37,6 @@ MAX_SCALING_TARGETS: dict[str, Resolution] = {
     "WXGA": Resolution(width=1280, height=800),  # 16:10
     "FWXGA": Resolution(width=1366, height=768),  # ~16:9
 }
-
-
-class ScalingSource(StrEnum):
-    COMPUTER = "computer"
-    API = "api"
 
 
 class ComputerToolOptions(TypedDict):
