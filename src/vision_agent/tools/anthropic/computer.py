@@ -89,6 +89,9 @@ class ComputerTool(BaseAnthropicTool):
         self.width = 1280
         self.height = 800
 
+        self.real_screen_width = None
+        self.real_screen_height = None
+
         assert self.width and self.height, "WIDTH, HEIGHT must be set"
         if (display_num := os.getenv("DISPLAY_NUM")) is not None:
             self.display_num = int(display_num)
@@ -117,7 +120,7 @@ class ComputerTool(BaseAnthropicTool):
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
                 raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
 
-            x, y = scale_coordinates_back(coordinate[0], coordinate[1], 1920, 1200, 1280, 800)
+            x, y = scale_coordinates_back(coordinate[0], coordinate[1], self.real_screen_width, self.real_screen_height, 1280, 800)
             x, y = int(x), int(y)
 
             if action == "mouse_move":
@@ -187,6 +190,8 @@ class ComputerTool(BaseAnthropicTool):
     def screenshot(self):
         """Take a screenshot of the current screen, scale it and return the base64 encoded image."""
         screenshot = self.controller_client.screenshot()
+        self.real_screen_width = screenshot.width
+        self.real_screen_height = screenshot.height
         scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
         base64_image = image_to_base64(scaled_screenshot)
         return ToolResult(base64_image=base64_image)
