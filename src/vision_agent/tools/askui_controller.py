@@ -1,11 +1,7 @@
 from typing import List, Literal
 import grpc
-from pydantic import BaseModel, Field
 import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
-
-#from .askui_ui_controller_grpc.Controller_V1_pb2_grpc import *
-#from .askui_ui_controller_grpc.Controller_V1_pb2 import *
 
 import time
 from PIL import Image
@@ -60,12 +56,8 @@ class AskUiControllerServer():
             return
         self.process.kill()
         
-        
-
-
 
 class AskUiControllerClient():
-
     def __init__(self) -> None:
         self.stub = None
         self.channel = None
@@ -82,7 +74,6 @@ class AskUiControllerClient():
         self.stub = controller_v1.ControllerAPIStub(self.channel)        
         self.__start_session()
         self.__start_execution()
-
 
     def __run_recorder_action(self, acion_class_id: controller_v1_pbs.ActionClassID, action_parameters: controller_v1_pbs.ActionParameters):
         time.sleep(self.pre_action_wait)
@@ -107,7 +98,6 @@ class AskUiControllerClient():
         response = self.stub.StartSession(controller_v1_pbs.Request_StartSession(sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True))
         self.session_info = response.sessionInfo
 
-        
     def __stop_session(self):
         self.stub.EndSession(controller_v1_pbs.Request_EndSession(sessionInfo = self.session_info))
 
@@ -116,7 +106,6 @@ class AskUiControllerClient():
 
     def __stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
-
 
     def screenshot(self, display=1) -> Image:
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=display)))        
@@ -141,7 +130,6 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPressAndRelease=controller_v1_pbs.ActionParameters_MouseButton_PressAndRelease(mouseButton=mouse_button, count=count)))
         
-
     def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left'):        
         mouse_button = None
         match button:
