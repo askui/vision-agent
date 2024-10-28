@@ -25,8 +25,10 @@ class VisionAgent:
     def type(self, text: str):
         self.client.type(text)
 
-    def get(self, instruction: str):
-        raise NotImplementedError("get is not implemented yet")
+    def get(self, instruction: str) -> str:
+        screenshot = self.client.screenshot()
+        reponse = self.claude.get_inference(screenshot, instruction)
+        return reponse
 
     def act(self, goal: str):
         agent = ClaudeComputerAgent(self.client)
