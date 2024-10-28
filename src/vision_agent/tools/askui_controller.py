@@ -12,18 +12,15 @@ import os
 import time
 import sys
 import time
-
-# Worker function for the process
 import subprocess
 
 from .utils import process_exists, wait_for_port
 
+
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
-# Continue with other tasks in the main process
 class AskUiControllerServer():
-
     def __init__(self) -> None:
         self.process = None
 
@@ -45,7 +42,6 @@ class AskUiControllerServer():
 
     def clean_up(self):
         if sys.platform == 'win32':
-
             subprocess.run("taskkill.exe /IM AskUI*")
             time.sleep(0.1)
 
@@ -157,12 +153,10 @@ class AskUiControllerClient():
             modifierKeys = []   
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Press, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyPress=controller_v1_pbs.ActionParameters_KeyboardKey_Press(keyName=key, modifierKeyNames=modifierKeys)))
 
-
     def keyboard_release(self, key: str,  modifierKeys: List[str] = None):
         if modifierKeys is None:
             modifierKeys = []   
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Release, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyRelease=controller_v1_pbs.ActionParameters_KeyboardKey_Release(keyName=key, modifierKeyNames=modifierKeys)))
-
 
     def keyboard_tap(self, key: str,  modifierKeys: List[str] = None):
         if modifierKeys is None:
