@@ -58,7 +58,7 @@
 ## Start Building
 
 ```python
-from askui import VisionAgent
+from vision_agent import VisionAgent
 
 # Initialize your agent
 agent = VisionAgent()
