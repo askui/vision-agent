@@ -77,3 +77,15 @@ with VisionAgent() as agent:
     # Or let the agent work on its own
     agent.act("search for a flight from Berlin to Paris in January")
 ```
+
+
+### 📜 Logging
+
+You want a better understanding of what you agent is doing? Set the log_level to DEBUG.
+
+```python
+import logging
+
+with VisionAgent(log_level=logging.DEBUG) as agent:
+    agent...
+```
