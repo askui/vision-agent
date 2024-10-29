@@ -4,6 +4,7 @@ import anthropic
 from pathlib import Path
 from PIL import Image, ImageDraw
 
+from ..logging import logger
 from ..utils import AutomationError
 from .utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
 
@@ -58,6 +59,7 @@ class ClaudeHandler:
         scaled_image = scale_image_with_padding(image, screen_width, screen_height)
         response = self.inference(image_to_base64(scaled_image), prompt, system_prompt)
         response = response[0].text
+        logger.debug("ClaudeHandler received instruction: %s", response)
         try:
             scaled_x, scaled_y = extract_click_coordinates(response)
         except Exception as e:
