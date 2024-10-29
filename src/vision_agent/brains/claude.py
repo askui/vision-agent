@@ -44,14 +44,6 @@ class ClaudeHandler:
         )
         return message.content
     
-    @staticmethod
-    def draw_red_point(image, coordinates, size=5):
-        new_image = image.copy()
-        draw = ImageDraw.Draw(new_image)
-        x, y = coordinates
-        draw.ellipse((x - size, y - size, x + size, y + size), fill="red", outline="red")
-        return new_image
-    
     def click_inference(self, image: Image.Image, instruction: str):
         prompt = f"Click on {instruction}"
         screen_width, screen_height = self.resolution[0], self.resolution[1]
@@ -65,12 +57,6 @@ class ClaudeHandler:
         except Exception as e:
             raise AutomationError(f"Couldn't locate '{instruction}' on the screen.")
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
-
-        if self.log_level == logging.DEBUG:
-            os.makedirs("logs", exist_ok=True)
-            self.draw_red_point(image, (int(x), int(y))).save(Path("logs", "test_original.png"))
-            self.draw_red_point(scaled_image, (int(scaled_x), int(scaled_y))).save(Path("logs", "test_scaled.png"))
-
         return int(x), int(y)
 
     def get_inference(self, image: Image.Image, instruction: str):
