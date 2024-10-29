@@ -100,8 +100,6 @@ class ComputerTool(BaseAnthropicTool):
             self.display_num = None
             self._display_prefix = ""
 
-        self.xdotool = f"{self._display_prefix}xdotool"
-
     def __call__(
         self,
         *,
@@ -146,7 +144,7 @@ class ComputerTool(BaseAnthropicTool):
                     text = "enter"
 
                 if text not in PC_KEY.__args__:
-                    raise ToolError(f"Key {text} is not a valid PC_KEY")
+                    raise ToolError(f"Key {text} is not a valid PC_KEY from {', '.join(list(PC_KEY.__args__))}")
                 self.controller_client.keyboard_pressed(text)
                 self.controller_client.keyboard_release(text)
                 return ToolResult()

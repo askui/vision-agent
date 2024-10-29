@@ -1,7 +1,7 @@
 import sys
 import platform
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, cast, Literal
 
 from anthropic import (
     Anthropic,
@@ -29,6 +29,7 @@ from ..logging import logger
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
+PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
 # class APIProvider(StrEnum):
@@ -49,6 +50,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
 * When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
 * When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* Valid keyboard keys available are {', '.join(list(PC_KEY.__args__))}
 * The current date is {datetime.today().strftime('%A, %B %-d, %Y')}.S
 </SYSTEM_CAPABILITY>
 
@@ -75,58 +77,61 @@ class ClaudeComputerAgent:
         self.client = Anthropic()
         self.model = "claude-3-5-sonnet-20241022"
 
-    def run(self, instruction: str):
-        messages = [{"role": "user", "content": instruction}]
-        while True:
-            if self.only_n_most_recent_images:
-                self._maybe_filter_to_n_most_recent_images(
-                    messages,
-                    self.only_n_most_recent_images,
-                    min_removal_threshold=self.image_truncation_threshold,
-                )
-
-            try:
-                raw_response = self.client.beta.messages.with_raw_response.create(
-                    max_tokens=self.max_tokens,
-                    messages=messages,
-                    model=self.model,
-                    system=[self.system],
-                    tools=self.tool_collection.to_params(),
-                    betas=self.betas,
-                )
-            except (APIStatusError, APIResponseValidationError) as e:
-                print(e)
-                return messages
-            except APIError as e:
-                print(e)
-                return messages
-
-            response = raw_response.parse()
-
-            response_params = self._response_to_params(response)
-            logger.debug("ClaudeComputerAgent received instruction: %s", response_params)
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": response_params,
-                }
+    def step(self, messages: list):
+        if self.only_n_most_recent_images:
+            self._maybe_filter_to_n_most_recent_images(
+                messages,
+                self.only_n_most_recent_images,
+                min_removal_threshold=self.image_truncation_threshold,
             )
 
-            tool_result_content: list[BetaToolResultBlockParam] = []
-            for content_block in response_params:
-                if content_block["type"] == "tool_use":
-                    result = self.tool_collection.run(
-                        name=content_block["name"],
-                        tool_input=cast(dict[str, Any], content_block["input"]),
-                    )
-                    tool_result_content.append(
-                        self._make_api_tool_result(result, content_block["id"])
-                    )
+        try:
+            raw_response = self.client.beta.messages.with_raw_response.create(
+                max_tokens=self.max_tokens,
+                messages=messages,
+                model=self.model,
+                system=[self.system],
+                tools=self.tool_collection.to_params(),
+                betas=self.betas,
+            )
+        except (APIStatusError, APIResponseValidationError) as e:
+            logger.error(e)
+            return messages
+        except APIError as e:
+            logger.error(e)
+            return messages
+        
+        response = raw_response.parse()
+        response_params = self._response_to_params(response)
+        logger.debug("ClaudeComputerAgent received instruction: %s", response_params)
+        messages.append(
+            {
+                "role": "assistant",
+                "content": response_params,
+            }
+        )
 
-            if not tool_result_content:
-                return messages
+        tool_result_content: list[BetaToolResultBlockParam] = []
+        for content_block in response_params:
+            if content_block["type"] == "tool_use" and "action" in content_block["input"]:
+                result = self.tool_collection.run(
+                    name=content_block["name"],
+                    tool_input=cast(dict[str, Any], content_block["input"]),
+                )
+                tool_result_content.append(
+                    self._make_api_tool_result(result, content_block["id"])
+                )
 
+        if len(tool_result_content) > 0:
             messages.append({"content": tool_result_content, "role": "user"})
+        return messages
+
+    
+    def run(self, instruction: str):
+        messages = [{"role": "user", "content": instruction}]
+        while messages[-1]["role"] == "user":
+            messages = self.step(messages)
+
 
     @staticmethod
     def _maybe_filter_to_n_most_recent_images(
