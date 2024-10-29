@@ -103,11 +103,14 @@ class ComputerTool(BaseAnthropicTool):
     def __call__(
         self,
         *,
-        action: Action,
+        action: Action | None = None,
         text: str | None = None,
         coordinate: tuple[int, int] | None = None,
         **kwargs,
     ):
+        if action is None:
+            raise ToolError("Action is missing")
+        
         if action in ("mouse_move", "left_click_drag"):
             if coordinate is None:
                 raise ToolError(f"coordinate is required for {action}")

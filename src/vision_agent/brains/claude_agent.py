@@ -113,7 +113,7 @@ class ClaudeComputerAgent:
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
-            if content_block["type"] == "tool_use" and "action" in content_block["input"]:
+            if content_block["type"] == "tool_use":
                 result = self.tool_collection.run(
                     name=content_block["name"],
                     tool_input=cast(dict[str, Any], content_block["input"]),
