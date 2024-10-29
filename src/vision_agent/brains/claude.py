@@ -1,15 +1,19 @@
+import os
+import logging
 import anthropic
-from PIL import Image
+from pathlib import Path
+from PIL import Image, ImageDraw
 
 from ..utils import AutomationError
 from .utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
 
 
 class ClaudeHandler:
-    def __init__(self):
+    def __init__(self, log_level):
         self.model_name = "claude-3-5-sonnet-20241022"
         self.client = anthropic.Anthropic()
         self.resolution = (1280, 800)
+        self.log_level = log_level
 
     def inference(self, base64_image, prompt, system_prompt):
         message = self.client.messages.create(
@@ -39,18 +43,32 @@ class ClaudeHandler:
         )
         return message.content
     
+    @staticmethod
+    def draw_red_point(image, coordinates, size=5):
+        new_image = image.copy()
+        draw = ImageDraw.Draw(new_image)
+        x, y = coordinates
+        draw.ellipse((x - size, y - size, x + size, y + size), fill="red", outline="red")
+        return new_image
+    
     def click_inference(self, image: Image.Image, instruction: str):
         prompt = f"Click on {instruction}"
         screen_width, screen_height = self.resolution[0], self.resolution[1]
         system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"
-        scaled_image = scale_image_with_padding(image, self.resolution[0], self.resolution[1])
+        scaled_image = scale_image_with_padding(image, screen_width, screen_height)
         response = self.inference(image_to_base64(scaled_image), prompt, system_prompt)
         response = response[0].text
         try:
             scaled_x, scaled_y = extract_click_coordinates(response)
         except Exception as e:
             raise AutomationError(f"Couldn't locate '{instruction}' on the screen.")
-        x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, self.resolution[0], self.resolution[1])
+        x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
+
+        if self.log_level == logging.DEBUG:
+            os.makedirs("logs", exist_ok=True)
+            self.draw_red_point(image, (int(x), int(y))).save(Path("logs", "test_original.png"))
+            self.draw_red_point(scaled_image, (int(scaled_x), int(scaled_y))).save(Path("logs", "test_scaled.png"))
+
         return int(x), int(y)
 
     def get_inference(self, image: Image.Image, instruction: str):

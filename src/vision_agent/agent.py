@@ -18,7 +18,7 @@ class VisionAgent:
         self.controller.start(True)
         self.client = AskUiControllerClient()
         self.client.connect()
-        self.claude = ClaudeHandler()
+        self.claude = ClaudeHandler(log_level=log_level)
 
     def click(self, instruction: str):
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
