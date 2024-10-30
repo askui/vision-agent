@@ -23,8 +23,8 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
-from ..tools.anthropic import ComputerTool, ToolCollection, ToolResult
-from ..logging import logger
+from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
+from ...logging import logger
 
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"

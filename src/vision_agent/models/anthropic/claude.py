@@ -1,12 +1,9 @@
-import os
-import logging
 import anthropic
-from pathlib import Path
-from PIL import Image, ImageDraw
+from PIL import Image
 
-from ..logging import logger
-from ..utils import AutomationError
-from .utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
+from ...logging import logger
+from ...utils import AutomationError
+from ..utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
 
 
 class ClaudeHandler:

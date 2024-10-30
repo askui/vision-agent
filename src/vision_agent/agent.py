@@ -2,8 +2,8 @@ import logging
 import subprocess
 from typing import Literal
 from .tools.askui_controller import AskUiControllerClient, AskUiControllerServer
-from .brains.claude import ClaudeHandler
-from .brains.claude_agent import ClaudeComputerAgent
+from .models.anthropic.claude import ClaudeHandler
+from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
 
 
