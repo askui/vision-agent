@@ -2,7 +2,7 @@
 
 ## 🔧 Setup
 
-### 1. Install AskUI Controller
+### 1. Install AskUI Agent OS
 
 <details>
   <summary>Windows</summary>
@@ -35,7 +35,7 @@
 
 
 <details>
-  <summary>MacOs</summary>
+  <summary>MacOS</summary>
   
 `curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run`
 
