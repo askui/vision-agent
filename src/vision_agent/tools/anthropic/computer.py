@@ -1,4 +1,3 @@
-import os
 from typing import Literal, TypedDict
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
@@ -45,10 +44,6 @@ class ComputerToolOptions(TypedDict):
     display_number: int | None
 
 
-def chunks(s: str, chunk_size: int) -> list[str]:
-    return [s[i : i + chunk_size] for i in range(0, len(s), chunk_size)]
-
-
 class ComputerTool(BaseAnthropicTool):
     """
     A tool that allows the agent to interact with the screen, keyboard, and mouse of the current computer.
@@ -59,22 +54,17 @@ class ComputerTool(BaseAnthropicTool):
     api_type: Literal["computer_20241022"] = "computer_20241022"
     width: int
     height: int
-    display_num: int | None
 
     _screenshot_delay = 2.0
     _scaling_enabled = True
 
     @property
     def options(self) -> ComputerToolOptions:
-        # width, height = self.scale_coordinates(
-        #     ScalingSource.COMPUTER, self.width, self.height
-        # )
         width = self.width
         height = self.height
         return {
             "display_width_px": width,
             "display_height_px": height,
-            "display_number": self.display_num,
         }
 
     def to_params(self) -> BetaToolComputerUse20241022Param:
@@ -84,21 +74,11 @@ class ComputerTool(BaseAnthropicTool):
         super().__init__()
         self.controller_client = controller_client
 
-        #self.width = int(os.getenv("WIDTH") or 0)
-        #self.height = int(os.getenv("HEIGHT") or 0)
         self.width = 1280
         self.height = 800
 
         self.real_screen_width = None
         self.real_screen_height = None
-
-        assert self.width and self.height, "WIDTH, HEIGHT must be set"
-        if (display_num := os.getenv("DISPLAY_NUM")) is not None:
-            self.display_num = int(display_num)
-            self._display_prefix = f"DISPLAY=:{self.display_num} "
-        else:
-            self.display_num = None
-            self._display_prefix = ""
 
     def __call__(
         self,
@@ -121,7 +101,7 @@ class ComputerTool(BaseAnthropicTool):
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
                 raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
 
-            x, y = scale_coordinates_back(coordinate[0], coordinate[1], self.real_screen_width, self.real_screen_height, 1280, 800)
+            x, y = scale_coordinates_back(coordinate[0], coordinate[1], self.real_screen_width, self.real_screen_height, self.width, self.height)
             x, y = int(x), int(y)
 
             if action == "mouse_move":
