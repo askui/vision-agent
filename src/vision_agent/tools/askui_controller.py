@@ -28,7 +28,7 @@ class AskUiControllerServer():
         if sys.platform == 'win32':
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}Binaries\\resources\\assets\\binaries\\AskuiRemoteDeviceController.exe"
         if sys.platform == 'darwin':
-            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
+            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
     
     def __start_process(self, path):
