@@ -78,8 +78,8 @@ from vision_agent import VisionAgent
 
 # Initialize your agent context manager
 with VisionAgent() as agent:
-    # Launch you target application via CLI
-    agent.cli("firefox")
+    # Use the webbrowser tool to start browsing
+    agent.webbrowser.open_new("http://www.google.com")
 
     # Start to automate individual steps
     agent.click("url bar")

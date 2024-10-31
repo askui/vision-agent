@@ -1,4 +1,5 @@
 import logging
+import webbrowser
 import subprocess
 from typing import Literal
 from .tools.askui_controller import AskUiControllerClient, AskUiControllerServer
@@ -19,6 +20,7 @@ class VisionAgent:
         self.client = AskUiControllerClient()
         self.client.connect()
         self.claude = ClaudeHandler(log_level=log_level)
+        self.webbrowser: webbrowser = webbrowser
 
     def click(self, instruction: str):
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
