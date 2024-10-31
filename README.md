@@ -53,7 +53,23 @@
 
 ### 4. Authenticate with Anthropic
 
-`export ANTHROPIC_API_KEY=<your-api-key-here>`
+Set the `ANTHROPIC_API_KEY` environment variable to access the Claude computer use model.
+
+<details>
+  <summary>Linux & MacOS</summary>
+  
+  Use export to set an evironment variable:
+
+  `export ANTHROPIC_API_KEY=<your-api-key-here>`
+</details>
+
+<details>
+  <summary>Windows PowerShell</summary>
+  
+  Set an environment variable with $env:
+
+  `$env:ANTHROPIC_API_KEY="<your-api-key-here>"`
+</details>
 
 ## ▶️ Start Building
 
