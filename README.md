@@ -47,11 +47,7 @@
 
 `pip install git+https://github.com/askui/vision-agent.git`
 
-### 3. Set Controller Environment
-
-`export ASKUI_INSTALL_DIRECTORY=<path-to-askui-controller>`
-
-### 4. Authenticate with Anthropic
+### 3. Authenticate with Anthropic
 
 Set the `ANTHROPIC_API_KEY` environment variable to access the Claude computer use model.
 
