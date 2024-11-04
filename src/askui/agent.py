@@ -12,13 +12,14 @@ PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 
 
 
 class VisionAgent:
-    def __init__(self, log_level=logging.DEBUG):
+    def __init__(self, log_level=logging.DEBUG, display: int = 1):
         configure_logging(level=log_level)
 
         self.controller = AskUiControllerServer()
         self.controller.start(True)
         self.client = AskUiControllerClient()
         self.client.connect()
+        self.client.set_display(display)
         self.claude = ClaudeHandler(log_level=log_level)
         self.webbrowser: webbrowser = webbrowser
 
