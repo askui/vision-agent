@@ -1,7 +1,7 @@
 import logging
 
 
-logger = logging.getLogger("vision-agent")
+logger = logging.getLogger("askui")
 if not logger.hasHandlers():
     handler = logging.StreamHandler()
     formatter = logging.Formatter(

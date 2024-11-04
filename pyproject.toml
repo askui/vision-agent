@@ -1,5 +1,5 @@
 [project]
-name = "vision-agent"
+name = "askui"
 version = "0.1.0"
 description = "Automate anything with a vision agent."
 authors = [
@@ -14,7 +14,7 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-license = {text = "UNKNOWN"}
+license = {text = "MIT"}
 
 [build-system]
 requires = ["hatchling"]

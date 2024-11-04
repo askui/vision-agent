@@ -83,7 +83,7 @@ Set the `ANTHROPIC_API_KEY` environment variable to access the [Claude computer 
 ## ▶️ Start Building
 
 ```python
-from vision_agent import VisionAgent
+from askui import VisionAgent
 
 # Initialize your agent context manager
 with VisionAgent() as agent:
