@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2 as Controller__V1__pb2
+import askui.tools.askui_ui_controller_grpc.Controller_V1_pb2 as Controller__V1__pb2
 
 GRPC_GENERATED_VERSION = '1.64.1'
 GRPC_VERSION = grpc.__version__

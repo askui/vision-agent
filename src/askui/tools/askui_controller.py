@@ -1,7 +1,7 @@
 from typing import List, Literal
 import grpc
-import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
-import vision_agent.tools.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
+import askui.tools.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
+import askui.tools.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
 
 import time
 from PIL import Image
