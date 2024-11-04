@@ -22,41 +22,52 @@
   
 ##### AMD64
 
-`curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run`
+```shell
+curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
 
-`bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run`
+bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
+```
 
 ##### ARM64
 
-`curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run`
 
-`bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run`
+```shell
+curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
+
+bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
+```
 </details>
 
 
 <details>
   <summary>MacOS</summary>
   
-`curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run`
+```shell
+curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
 
-`bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run`
+bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
+```
 </details>
 
 
 ### 2. Install vision-agent in your Python environment
 
-`pip install git+https://github.com/askui/vision-agent.git`
+```shell
+pip install git+https://github.com/askui/vision-agent.git
+```
 
 ### 3. Authenticate with Anthropic
 
-Set the `ANTHROPIC_API_KEY` environment variable to access the Claude computer use model.
+Set the `ANTHROPIC_API_KEY` environment variable to access the [Claude computer use model](https://docs.anthropic.com/en/docs/build-with-claude/computer-use). (Create a Anthropic key [here](https://console.anthropic.com/settings/keys))
 
 <details>
   <summary>Linux & MacOS</summary>
   
   Use export to set an evironment variable:
 
-  `export ANTHROPIC_API_KEY=<your-api-key-here>`
+  ```shell
+  export ANTHROPIC_API_KEY=<your-api-key-here>
+  ```
 </details>
 
 <details>
@@ -64,7 +75,9 @@ Set the `ANTHROPIC_API_KEY` environment variable to access the Claude computer u
   
   Set an environment variable with $env:
 
-  `$env:ANTHROPIC_API_KEY="<your-api-key-here>"`
+  ```shell
+  $env:ANTHROPIC_API_KEY="<your-api-key-here>"
+  ```
 </details>
 
 ## ▶️ Start Building
