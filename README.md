@@ -53,7 +53,7 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
 ### 2. Install vision-agent in your Python environment
 
 ```shell
-pip install git+https://github.com/askui/vision-agent.git
+pip install askui
 ```
 
 ### 3. Authenticate with Anthropic
