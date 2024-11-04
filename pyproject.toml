@@ -3,7 +3,7 @@ name = "askui"
 version = "0.1.0"
 description = "Automate anything with a vision agent."
 authors = [
-    {name = "Maximilian Wessendorf", email = "maximilian.wessendorf@askui.com"},
+    {name = "askui GmbH", email = "info@askui.com"},
 ]
 dependencies = [
     "grpcio>=1.67.0",
