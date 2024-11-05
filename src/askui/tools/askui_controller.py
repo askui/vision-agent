@@ -32,7 +32,7 @@ class AskUiControllerServer():
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
     
     def __start_process(self, path):
-        self.process = subprocess.Popen([path, "--debugDraw", "true"])
+        self.process = subprocess.Popen(path)
         wait_for_port(23000)
         
     def start(self, clean_up=False):
