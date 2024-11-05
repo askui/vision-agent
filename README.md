@@ -19,12 +19,15 @@
 
 <details>
   <summary>Linux</summary>
+
+  **⚠️ Warning:** Agent OS currently does not work on Wayland. Switch to XOrg to use it.
   
 ##### AMD64
 
 ```shell
 curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
-
+```
+```shell
 bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
 ```
 
@@ -33,7 +36,8 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
 
 ```shell
 curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
-
+```
+```shell
 bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
 ```
 </details>
@@ -44,7 +48,8 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
   
 ```shell
 curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
-
+```
+```shell
 bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
 ```
 </details>
