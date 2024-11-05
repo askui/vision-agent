@@ -25,6 +25,7 @@ from anthropic.types.beta import (
 
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logging import logger
+from ...utils import truncate_long_strings
 
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
@@ -103,13 +104,12 @@ class ClaudeComputerAgent:
         
         response = raw_response.parse()
         response_params = self._response_to_params(response)
-        logger.debug("ClaudeComputerAgent received instruction: %s", response_params)
-        messages.append(
-            {
-                "role": "assistant",
-                "content": response_params,
-            }
-        )
+        new_message = {
+            "role": "assistant",
+            "content": response_params,
+        }
+        logger.debug(new_message)
+        messages.append(new_message)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
@@ -123,12 +123,15 @@ class ClaudeComputerAgent:
                 )
 
         if len(tool_result_content) > 0:
-            messages.append({"content": tool_result_content, "role": "user"})
+            new_message = {"content": tool_result_content, "role": "user"}
+            logger.debug(truncate_long_strings(new_message, max_length=200))
+            messages.append(new_message)
         return messages
 
     
     def run(self, instruction: str):
         messages = [{"role": "user", "content": instruction}]
+        logger.debug(messages[0])
         while messages[-1]["role"] == "user":
             messages = self.step(messages)
 
