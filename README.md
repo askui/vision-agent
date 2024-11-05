@@ -111,11 +111,20 @@ with VisionAgent() as agent:
 
 ### 📜 Logging
 
-You want a better understanding of what you agent is doing? Set the log_level to DEBUG.
+You want a better understanding of what you agent is doing? Set the `log_level` to DEBUG.
 
 ```python
 import logging
 
 with VisionAgent(log_level=logging.DEBUG) as agent:
+    agent...
+```
+
+### 🖥️ Multi-Monitor Support
+
+You have multiple monitors? Choose which one to automate by setting `display` to 1 or 2.
+
+```python
+with VisionAgent(display=1) as agent:
     agent...
 ```
