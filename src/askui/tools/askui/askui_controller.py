@@ -1,7 +1,7 @@
 from typing import List, Literal
 import grpc
-import askui.tools.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
-import askui.tools.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
+import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
+import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
 
 import time
 from PIL import Image
@@ -14,7 +14,7 @@ import sys
 import time
 import subprocess
 
-from .utils import process_exists, wait_for_port
+from ..utils import process_exists, wait_for_port
 
 
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']

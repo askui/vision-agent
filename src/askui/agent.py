@@ -2,7 +2,7 @@ import logging
 import webbrowser
 import subprocess
 from typing import Literal
-from .tools.askui_controller import AskUiControllerClient, AskUiControllerServer
+from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
