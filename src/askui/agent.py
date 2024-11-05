@@ -6,6 +6,7 @@ from .tools.askui.askui_controller import AskUiControllerClient, AskUiController
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
+from .tools.toolbox import AgentToolbox
 
 
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
@@ -21,7 +22,7 @@ class VisionAgent:
         self.client.connect()
         self.client.set_display(display)
         self.claude = ClaudeHandler(log_level=log_level)
-        self.webbrowser: webbrowser = webbrowser
+        self.tools = AgentToolbox()
 
     def click(self, instruction: str):
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
