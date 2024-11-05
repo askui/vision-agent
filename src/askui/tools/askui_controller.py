@@ -32,7 +32,7 @@ class AskUiControllerServer():
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
     
     def __start_process(self, path):
-        self.process = subprocess.Popen(path)
+        self.process = subprocess.Popen([path, "--debugDraw", "true"])
         wait_for_port(23000)
         
     def start(self, clean_up=False):
@@ -54,13 +54,14 @@ class AskUiControllerServer():
         
 
 class AskUiControllerClient():
-    def __init__(self) -> None:
+    def __init__(self, display: int = 1) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
         self.pre_action_wait = 0
         self.post_action_wait = 0.05
         self.max_retries = 10
+        self.display = display
 
     def connect(self):
         self.channel = grpc.insecure_channel('localhost:23000', options=[
@@ -103,8 +104,8 @@ class AskUiControllerClient():
     def __stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
 
-    def screenshot(self, display=1) -> Image:
-        screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=display)))        
+    def screenshot(self) -> Image:
+        screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
         return image
@@ -165,3 +166,4 @@ class AskUiControllerClient():
 
     def set_display(self, displayNumber: int = 1):
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
+        self.display = displayNumber

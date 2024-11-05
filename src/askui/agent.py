@@ -17,7 +17,7 @@ class VisionAgent:
 
         self.controller = AskUiControllerServer()
         self.controller.start(True)
-        self.client = AskUiControllerClient()
+        self.client = AskUiControllerClient(display)
         self.client.connect()
         self.client.set_display(display)
         self.claude = ClaudeHandler(log_level=log_level)
