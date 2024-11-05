@@ -1,6 +1,6 @@
 [project]
 name = "askui"
-version = "0.1.0"
+version = "0.1.1"
 description = "Automate anything with a vision agent."
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
