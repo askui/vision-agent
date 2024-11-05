@@ -1,7 +1,7 @@
 [project]
 name = "askui"
 version = "0.1.2"
-description = "Automate anything with a vision agent."
+description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
 ]
