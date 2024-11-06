@@ -1,4 +1,6 @@
 import logging
+
+from pathlib import Path
 from rich.logging import RichHandler
 
 
@@ -11,3 +13,10 @@ if not logger.hasHandlers():
 
 def configure_logging(level=logging.INFO):
     logger.setLevel(level)
+
+
+def add_file_log(path: str = "./"):
+    file_handler = logging.FileHandler(Path(path, "vision_agent.log"))
+    file_formatter = logging.Formatter("%(message)s")
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
