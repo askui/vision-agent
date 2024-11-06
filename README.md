@@ -1,5 +1,11 @@
 # 🤖 AskUI Vision Agent
 
+⚡ Automate computer tasks in Python ⚡
+
+[![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
+[![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
+
+
 ## 🔧 Setup
 
 ### 1. Install AskUI Agent OS
