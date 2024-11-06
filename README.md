@@ -134,3 +134,25 @@ You have multiple monitors? Choose which one to automate by setting `display` to
 with VisionAgent(display=1) as agent:
     agent...
 ```
+
+
+## What is AskUI Vision Agent?
+
+**AskUI Vision Agent** is a versatile AI powered framework that enables you to automate computer tasks in Python. 
+
+It connects **Agent OS** with powerful computer use models like Anthropic's Claude Sonnet 3.5 v2 and the AskUI Prompt-to-Action series. It is your entry point for building complex automation scenarios with detailed instructions or let the agent explore new challenges on its own. 
+
+
+![image](docs/assets/Architecture.svg)
+
+### Agent OS
+
+**Agent OS** is a custom-built OS controller designed to enhance your automation experience.
+
+ It offers powerful features like 
+ - multi-screen support,
+ - support for all major operating systems (incl. Windows, MacOS and Linux),
+ - process visualizations,
+ - real Unicode character typing
+
+and more exciting features like application selection, in background automation and video streaming are to be released soon.
