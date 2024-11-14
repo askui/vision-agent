@@ -24,6 +24,36 @@ Action = Literal[
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
+KEYSYM_MAP = {
+    "BackSpace": "backspace",
+    "Delete": "delete",
+    "Return": "enter",
+    "Enter": "enter",
+    "Tab": "tab",
+    "Escpage": "escape",
+    "Up": "up",
+    "Down": "down",
+    "Right": "right",
+    "Left": "left",
+    "Home": "home",
+    "End": "end",
+    "Page_Up": 'pageup',
+    "Page_Down": 'pagedown',
+    "F1": "f1",
+    "F2": "f2",
+    "F3": "f3",
+    "F4": "f4",
+    "F5": "f5",
+    "F6": "f6",
+    "F7": "f7",
+    "F8": "f8",
+    "F9": "f9",
+    "F10": "f10",
+    "F11": "f11",
+    "F12": "f12"
+}
+
+
 class Resolution(TypedDict):
     width: int
     height: int
@@ -122,9 +152,8 @@ class ComputerTool(BaseAnthropicTool):
                 raise ToolError(output=f"{text} must be a string")
 
             if action == "key":
-                # TODO: claude has other names for keys
-                if text == "Return":
-                    text = "enter"
+                if text in KEYSYM_MAP.keys():
+                    text = KEYSYM_MAP[text]
 
                 if text not in PC_KEY.__args__:
                     raise ToolError(f"Key {text} is not a valid PC_KEY from {', '.join(list(PC_KEY.__args__))}")
