@@ -22,7 +22,7 @@ class VisionAgent:
         self.client.connect()
         self.client.set_display(display)
         self.claude = ClaudeHandler(log_level=log_level)
-        self.tools = AgentToolbox()
+        self.tools = AgentToolbox(os_controller=self.client)
 
     def click(self, instruction: str):
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
