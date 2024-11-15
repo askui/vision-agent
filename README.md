@@ -11,6 +11,8 @@ Join the [AskUI Community](https://community.askui.com).
 
 ### 1. Install AskUI Agent OS
 
+Agent OS is a device controller that allows agents to take screenshots, move the mouse, click, and type on the keyboard across any operating system.
+
 <details>
   <summary>Windows</summary>
   
@@ -115,6 +117,37 @@ with VisionAgent() as agent:
     agent.act("search for a flight from Berlin to Paris in January")
 ```
 
+### 🛠️ Direct Tool Use
+
+Under the hood agents are using a set of tools. You can also directly access these tools.
+
+#### Agent OS
+
+The controller for the operating system.
+
+```python
+agent.tools.os.click("left", 2) # clicking
+agent.tools.os.mouse(100, 100) # mouse movement
+# and many more
+```
+
+#### Web browser
+
+The webbrowser tool powered by [webbrowser](https://docs.python.org/3/library/webbrowser.html) allows you to directly access webbrowsers in your environment.
+
+```python
+agent.tools.webbrowser.open_new("http://www.google.com")
+# also check out open and open_new_tab
+```
+
+#### Clipboard
+
+The clipboard tool powered by [pyperclip](https://github.com/asweigart/pyperclip) allows you to interact with the clipboard.
+
+```python
+agent.tools.clipboard.copy("...")
+result = agent.tools.clipboard.paste()
+```
 
 ### 📜 Logging
 
