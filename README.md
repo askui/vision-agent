@@ -124,6 +124,16 @@ with VisionAgent() as agent:
     agent.act("search for a flight from Berlin to Paris in January")
 ```
 
+### 🎛️ Model Selection
+
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click` command using the `model_name` parameter.
+
+|  | AskUI | Anthropic |
+|----------|----------|----------|
+| `click("...", model_name=...)`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
+
+**Example:** `agent.click("Preview", model_name="askui-combo")`
+
 ### 🛠️ Direct Tool Use
 
 Under the hood agents are using a set of tools. You can also directly access these tools.

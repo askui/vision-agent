@@ -35,7 +35,7 @@ class ModelRouter:
             if x is None or y is None:
                 x, y = self.askui.click_ocr_prediction(screenshot, instruction)
             return self.handle_response((x, y), instruction)
-        if self.claude.authenticated and model_name == "anthropic-claude-sonnet-3.5":
+        if self.claude.authenticated and model_name == "anthropic-claude-3-5-sonnet-20241022":
             logger.debug("Routing click prediction to Anthropic")
             x, y = self.claude.click_inference(screenshot, instruction)
             return self.handle_response((x, y), instruction)
