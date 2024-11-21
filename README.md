@@ -5,7 +5,7 @@
 [![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
 [![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
 
-Join the [AskUI Discord]([https://community.askui.com](https://discord.gg/Gu35zMGxbx)).
+Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
 ## 🔧 Setup
 
