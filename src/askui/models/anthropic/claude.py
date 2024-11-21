@@ -1,3 +1,4 @@
+import os
 import anthropic
 from PIL import Image
 
@@ -12,6 +13,9 @@ class ClaudeHandler:
         self.client = anthropic.Anthropic()
         self.resolution = (1280, 800)
         self.log_level = log_level
+        self.authenticated = True
+        if os.getenv("ANTHROPIC_API_KEY") is None:
+            self.authenticated = False
 
     def inference(self, base64_image, prompt, system_prompt):
         message = self.client.messages.create(

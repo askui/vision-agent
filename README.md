@@ -70,10 +70,17 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
 pip install askui
 ```
 
-### 3. Authenticate with Anthropic
+### 3. Authenticate with an Automation Model Provider
 
-Set the `ANTHROPIC_API_KEY` environment variable to access the [Claude computer use model](https://docs.anthropic.com/en/docs/build-with-claude/computer-use). (Create a Anthropic key [here](https://console.anthropic.com/settings/keys))
+|  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
+|----------|----------|----------|
+| ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
+| Supported Commands    | `click()`   | `click()`, `get()`, `act()`   |
+| Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 
+To get started, set the environment variables required to authenticate with your chosen model provider.
+
+#### How to set an environment variable?
 <details>
   <summary>Linux & MacOS</summary>
   
@@ -116,6 +123,16 @@ with VisionAgent() as agent:
     # Or let the agent work on its own
     agent.act("search for a flight from Berlin to Paris in January")
 ```
+
+### 🎛️ Model Selection
+
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click` command using the `model_name` parameter.
+
+|  | AskUI | Anthropic |
+|----------|----------|----------|
+| `click()`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
+
+**Example:** `agent.click("Preview", model_name="askui-combo")`
 
 ### 🛠️ Direct Tool Use
 
