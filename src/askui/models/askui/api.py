@@ -15,6 +15,7 @@ class AskUIHandler:
         self.workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         self.token = os.getenv("ASKUI_TOKEN")
 
+        self.authenticated = True
         if self.workspace_id is None or self.token is None:
             logger.warning("ASKUI_WORKSPACE_ID or ASKUI_TOKEN missing.")
             self.authenticated = False
@@ -48,7 +49,12 @@ class AskUIHandler:
         content = response.json()
         assert content["type"] == "COMMANDS", f"Received unknown content type {content['type']}"
         actions = [el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"]
-        assert len(actions) == 1, "Unkown case of more than one action returned."
+        if len(actions) == 0:
+            return None, None
         position = actions[0]["position"]
 
         return int(position["x"]), int(position["y"])
+    
+    def click_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+        askui_instruction = f'Click on pta "{instruction}"'
+        return self.predict(image, askui_instruction)
