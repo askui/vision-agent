@@ -130,7 +130,7 @@ Instead of relying on the default model for the entire automation script, you ca
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
-| `click("...", model_name=...)`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
+| `click()`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
 
 **Example:** `agent.click("Preview", model_name="askui-combo")`
 
