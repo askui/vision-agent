@@ -55,6 +55,11 @@ class AskUIHandler:
 
         return int(position["x"]), int(position["y"])
     
-    def click_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+    def click_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
         askui_instruction = f'Click on pta "{instruction}"'
         return self.predict(image, askui_instruction)
+    
+    def click_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+        askui_instruction = f'Click on with text "{instruction}"'
+        return self.predict(image, askui_instruction)
+

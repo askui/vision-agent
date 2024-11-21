@@ -26,10 +26,10 @@ class VisionAgent:
         self.claude = ClaudeHandler(log_level=log_level)
         self.tools = AgentToolbox(os_controller=self.client)
 
-    def click(self, instruction: str):
+    def click(self, instruction: str, model_name: str = None):
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
         screenshot = self.client.screenshot()
-        x, y = self.model_router.click(screenshot, instruction)
+        x, y = self.model_router.click(screenshot, instruction, model_name)
         self.client.mouse(x, y)
         self.client.click("left")
 
