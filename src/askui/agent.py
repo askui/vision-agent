@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer, PC_KEY, MODIFIER_KEY
+from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer, PC_AND_MODIFIER_KEY, MODIFIER_KEY
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
@@ -43,7 +43,7 @@ class VisionAgent:
         agent = ClaudeComputerAgent(self.client)
         agent.run(goal)
     
-    def keyboard(self, key: PC_KEY, modifier_keys: list[MODIFIER_KEY] = None):
+    def keyboard(self, key: PC_AND_MODIFIER_KEY, modifier_keys: list[MODIFIER_KEY] = None):
         logger.debug("VisionAgent received instruction to press '%s'", key)
         self.client.keyboard_tap(key, modifier_keys)
     
