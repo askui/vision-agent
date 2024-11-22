@@ -70,6 +70,8 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
 pip install askui
 ```
 
+**Note:** Requires Python version >=3.10.
+
 ### 3. Authenticate with an Automation Model Provider
 
 |  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
