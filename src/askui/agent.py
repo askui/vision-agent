@@ -1,16 +1,11 @@
 import logging
-import webbrowser
 import subprocess
-from typing import Literal
-from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer
+from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer, PC_KEY, MODIFIER_KEY
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
-
-
-PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
 class VisionAgent:
@@ -48,10 +43,9 @@ class VisionAgent:
         agent = ClaudeComputerAgent(self.client)
         agent.run(goal)
     
-    def keyboard(self, key: PC_KEY):
+    def keyboard(self, key: PC_KEY, modifier_keys: list[MODIFIER_KEY] = None):
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.client.keyboard_pressed(key)
-        self.client.keyboard_release(key)
+        self.client.keyboard_tap(key, modifier_keys)
     
     def cli(self, command: str):
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)

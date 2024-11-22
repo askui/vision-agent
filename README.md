@@ -147,6 +147,7 @@ The controller for the operating system.
 ```python
 agent.tools.os.click("left", 2) # clicking
 agent.tools.os.mouse(100, 100) # mouse movement
+agent.tools.os.keyboard_tap("v", modifier_keys=["control"]) # Paste
 # and many more
 ```
 
