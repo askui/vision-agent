@@ -1,6 +1,7 @@
 from PIL import Image
 from .askui.api import AskUIHandler
 from .anthropic.claude import ClaudeHandler
+from .huggingface.spaces_api import HFSpacesHandler
 from ..logging import logger
 from ..utils import AutomationError
 
@@ -9,6 +10,7 @@ class ModelRouter:
     def __init__(self, log_level):
         self.askui = AskUIHandler()
         self.claude = ClaudeHandler(log_level)
+        self.huggingface_spaces = HFSpacesHandler()
 
     def handle_response(self, response: tuple[int, int], instruction: str):
         if response[0] is None or response[1] is None:
