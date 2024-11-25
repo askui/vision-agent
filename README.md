@@ -18,11 +18,11 @@ Agent OS is a device controller that allows agents to take screenshots, move the
   
   ##### AMD64
 
-[AskUI Installer for AMD64](https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-Installer-Win-AMD64-Full.exe)
+[AskUI Installer for AMD64](https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-Installer-Win-AMD64-Full.exe)
 
 ##### ARM64
 
-[AskUI Installer for ARM64](https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-Installer-Win-ARM64-Full.exe)
+[AskUI Installer for ARM64](https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-Installer-Win-ARM64-Full.exe)
 </details>
 
 
@@ -34,20 +34,20 @@ Agent OS is a device controller that allows agents to take screenshots, move the
 ##### AMD64
 
 ```shell
-curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
+curl -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
 ```
 ```shell
-bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-x64-Full.run
+bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
 ```
 
 ##### ARM64
 
 
 ```shell
-curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
+curl -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
 ```
 ```shell
-bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
+bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
 ```
 </details>
 
@@ -56,10 +56,10 @@ bash /tmp/AskUI-Suite-24.9.1-User-Installer-Linux-ARM64-Full.run
   <summary>MacOS</summary>
   
 ```shell
-curl -o /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/24.9.1/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
+curl -o /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run
 ```
 ```shell
-bash /tmp/AskUI-Suite-24.9.1-User-Installer-MacOS-ARM64-Full.run
+bash /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run
 ```
 </details>
 
