@@ -18,6 +18,9 @@ class ModelRouter:
         return response
 
     def click(self, screenshot: Image.Image, instruction: str, model_name: str = None):
+        if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
+            x, y = self.huggingface_spaces.predict(screenshot, instruction, model_name)
+            return self.handle_response((x, y), instruction)
         if model_name is not None:
             if model_name.startswith("askui") and not self.askui.authenticated:
                 raise AutomationError("You need to provide AskUI credentials to use AskUI models.")
