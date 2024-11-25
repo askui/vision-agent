@@ -72,7 +72,7 @@ pip install askui
 
 **Note:** Requires Python version >=3.10.
 
-### 3. Authenticate with an Automation Model Provider
+### 3a. Authenticate with an Automation Model Provider
 
 |  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
@@ -102,6 +102,25 @@ To get started, set the environment variables required to authenticate with your
   $env:ANTHROPIC_API_KEY="<your-api-key-here>"
   ```
 </details>
+
+
+### 3b. Test with 🤗 Hugging Face Model Demos
+
+You can test the Vision Agent with Hugging Face models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
+
+**Note:** Hugging Face Spaces host model demos provided by individuals not associated with Hugging Face or AskUI. Don't use these models on screens with sensible information.
+
+**Supported Models:**
+- `AskUI/PTA-1`
+- `OS-Copilot/OS-Atlas-Base-7B`
+- `Qwen/Qwen2-VL-2B-Instruct`
+- `Qwen/Qwen2-VL-7B-Instruct`
+
+**Example Code:**
+```python
+agent.click("search field", model_name="OS-Copilot/OS-Atlas-Base-7B")
+```
+
 
 ## ▶️ Start Building
 
