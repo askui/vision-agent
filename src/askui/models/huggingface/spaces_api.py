@@ -12,7 +12,8 @@ class HFSpacesHandler:
             "AskUI/PTA-1": self.predict_askui_pta1,
             "Qwen/Qwen2-VL-7B-Instruct": self.predict_qwen2_vl,
             "Qwen/Qwen2-VL-2B-Instruct": self.predict_qwen2_vl,
-            "OS-Copilot/OS-Atlas-Base-7B": self.predict_os_atlas
+            "OS-Copilot/OS-Atlas-Base-7B": self.predict_os_atlas,
+            "showlab/ShowUI-2B": self.predict_showui
         }
 
     def get_spaces_names(self):
@@ -102,3 +103,19 @@ class HFSpacesHandler:
         x = int((x1 + x2) / 2)
         y = int((y1 + y2) / 2)
         return x, y
+    
+    def predict_showui(self, screenshot, instruction: str, model_name: str = None):
+        client = self.get_space_client("showlab/ShowUI")
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+            screenshot.save(temp_file, format='PNG')
+            temp_file_path = temp_file.name
+            result = client.predict(
+                image=handle_file(temp_file_path),
+                query=instruction,
+                api_name="/on_submit"
+            )
+            output_value = json.loads(result[1])
+            relative_x, relative_y = output_value
+            x = int(relative_x * screenshot.width)
+            y = int(relative_y * screenshot.height)
+            return x, y
