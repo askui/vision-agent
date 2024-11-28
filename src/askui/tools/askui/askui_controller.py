@@ -15,6 +15,7 @@ import time
 import subprocess
 
 from ..utils import process_exists, wait_for_port
+from askui.reporting.report import SimpleReportGenerator
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
@@ -56,7 +57,7 @@ class AskUiControllerServer():
         
 
 class AskUiControllerClient():
-    def __init__(self, display: int = 1) -> None:
+    def __init__(self, display: int = 1, report: SimpleReportGenerator = None) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
@@ -64,6 +65,7 @@ class AskUiControllerClient():
         self.post_action_wait = 0.05
         self.max_retries = 10
         self.display = display
+        self.report = report
 
     def connect(self):
         self.channel = grpc.insecure_channel('localhost:23000', options=[
@@ -110,6 +112,8 @@ class AskUiControllerClient():
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "", image)
         return image
     
     def mouse(self, x, y):

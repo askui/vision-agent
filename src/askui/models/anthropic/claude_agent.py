@@ -26,6 +26,7 @@ from anthropic.types.beta import (
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logging import logger
 from ...utils import truncate_long_strings
+from askui.reporting.report import SimpleReportGenerator
 
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
@@ -62,7 +63,8 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 
 
 class ClaudeComputerAgent:
-    def __init__(self, controller_client):
+    def __init__(self, controller_client, report: SimpleReportGenerator):
+        self.report = report
         self.tool_collection = ToolCollection(
             ComputerTool(controller_client),
         )
@@ -110,6 +112,7 @@ class ClaudeComputerAgent:
         }
         logger.debug(new_message)
         messages.append(new_message)
+        self.report.add_message("Anthropic Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
@@ -121,7 +124,6 @@ class ClaudeComputerAgent:
                 tool_result_content.append(
                     self._make_api_tool_result(result, content_block["id"])
                 )
-
         if len(tool_result_content) > 0:
             new_message = {"content": tool_result_content, "role": "user"}
             logger.debug(truncate_long_strings(new_message, max_length=200))
