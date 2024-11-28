@@ -23,11 +23,11 @@ class VisionAgent:
         self.tools = AgentToolbox(os_controller=self.client)
         
     def click(self, instruction: str, model_name: str = None):
-        self.report.add_message("User", f'Click on "{instruction}"')
+        self.report.add_message("User", f'click: "{instruction}"')
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
         screenshot = self.client.screenshot()
         x, y = self.model_router.click(screenshot, instruction, model_name)
-        self.report.add_message("ModelRouter", f"Click at ({x}, {y})", draw_point_on_image(screenshot, x, y, size=5))
+        self.report.add_message("Agent", f"click: ({x}, {y})", draw_point_on_image(screenshot, x, y, size=5))
         self.client.mouse(x, y)
         self.client.click("left")
 
@@ -36,9 +36,11 @@ class VisionAgent:
         self.client.type(text)
 
     def get(self, instruction: str) -> str:
+        self.report.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
         screenshot = self.client.screenshot()
         reponse = self.claude.get_inference(screenshot, instruction)
+        self.report.add_message("Agent", reponse)
         return reponse
 
     def act(self, goal: str):
