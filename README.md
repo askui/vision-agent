@@ -113,6 +113,7 @@ You can test the Vision Agent with Hugging Face models via their Spaces API. Ple
 **Supported Models:**
 - `AskUI/PTA-1`
 - `OS-Copilot/OS-Atlas-Base-7B`
+- `showlab/ShowUI-2B`
 - `Qwen/Qwen2-VL-2B-Instruct`
 - `Qwen/Qwen2-VL-7B-Instruct`
 
