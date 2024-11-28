@@ -15,6 +15,7 @@ dependencies = [
     "pyperclip>=1.9.0",
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
+    "Jinja2>=3.1.4",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
