@@ -27,7 +27,8 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
         screenshot = self.client.screenshot()
         x, y = self.model_router.click(screenshot, instruction, model_name)
-        self.report.add_message("Agent", f"click: ({x}, {y})", draw_point_on_image(screenshot, x, y, size=5))
+        self.report.add_message("ModelRouter", f"click: ({x}, {y})")
+        #self.report.add_message("Agent", f"click: ({x}, {y})", draw_point_on_image(screenshot, x, y, size=5))
         self.client.mouse(x, y)
         self.client.click("left")
 
