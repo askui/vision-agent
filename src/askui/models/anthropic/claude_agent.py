@@ -112,7 +112,8 @@ class ClaudeComputerAgent:
         }
         logger.debug(new_message)
         messages.append(new_message)
-        self.report.add_message("Anthropic Computer Use", response_params)
+        if self.report is not None: 
+            self.report.add_message("Anthropic Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:

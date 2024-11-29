@@ -126,7 +126,8 @@ class AskUiControllerClient():
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
     def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1):
-        self.report.add_message("AgentOS", f"click: {count} x {button}")
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"click: {count} x {button}")
         mouse_button = None
         match button:
             case 'left':

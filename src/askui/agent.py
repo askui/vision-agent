@@ -10,9 +10,11 @@ from .reporting.report import SimpleReportGenerator
 from .utils import draw_point_on_image
 
 class VisionAgent:
-    def __init__(self, log_level=logging.INFO, display: int = 1):
+    def __init__(self, log_level=logging.INFO, display: int = 1, enable_report: bool = False):
         configure_logging(level=log_level)
-        self.report = SimpleReportGenerator()
+        self.report = None
+        if enable_report: 
+            self.report = SimpleReportGenerator()
         self.controller = AskUiControllerServer()
         self.controller.start(True)
         self.client = AskUiControllerClient(display, self.report)
@@ -23,28 +25,35 @@ class VisionAgent:
         self.tools = AgentToolbox(os_controller=self.client)
         
     def click(self, instruction: str, model_name: str = None):
-        self.report.add_message("User", f'click: "{instruction}"')
+        if self.report is not None: 
+            self.report.add_message("User", f'click: "{instruction}"')
         logger.debug("VisionAgent received instruction to click '%s'", instruction)
         screenshot = self.client.screenshot()
         x, y = self.model_router.click(screenshot, instruction, model_name)
-        self.report.add_message("ModelRouter", f"click: ({x}, {y})")
-        #self.report.add_message("Agent", f"click: ({x}, {y})", draw_point_on_image(screenshot, x, y, size=5))
+        if self.report is not None: 
+            self.report.add_message("ModelRouter", f"click: ({x}, {y})")
         self.client.mouse(x, y)
         self.client.click("left")
 
     def type(self, text: str):
+        if self.report is not None: 
+            self.report.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text)
 
     def get(self, instruction: str) -> str:
-        self.report.add_message("User", f'get: "{instruction}"')
+        if self.report is not None: 
+            self.report.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
         screenshot = self.client.screenshot()
         reponse = self.claude.get_inference(screenshot, instruction)
-        self.report.add_message("Agent", reponse)
+        if self.report is not None: 
+            self.report.add_message("Agent", reponse)
         return reponse
-
+    
     def act(self, goal: str):
+        if self.report is not None: 
+            self.report.add_message("User", f'act: "{goal}"')
         logger.debug("VisionAgent received instruction to act towards the goal '%s'", goal)
         agent = ClaudeComputerAgent(self.client, self.report)
         agent.run(goal)
@@ -65,5 +74,6 @@ class VisionAgent:
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
-        self.report.generate_report()
         self.close()
+        if self.report is not None: 
+            self.report.generate_report()
