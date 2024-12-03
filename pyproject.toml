@@ -1,6 +1,6 @@
 [project]
 name = "askui"
-version = "0.1.8"
+version = "0.1.9"
 description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
