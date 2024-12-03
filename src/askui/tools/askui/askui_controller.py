@@ -15,6 +15,8 @@ import time
 import subprocess
 
 from ..utils import process_exists, wait_for_port
+from askui.reporting.report import SimpleReportGenerator
+from askui.utils import draw_point_on_image
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
@@ -56,7 +58,7 @@ class AskUiControllerServer():
         
 
 class AskUiControllerClient():
-    def __init__(self, display: int = 1) -> None:
+    def __init__(self, display: int = 1, report: SimpleReportGenerator = None) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
@@ -64,6 +66,7 @@ class AskUiControllerClient():
         self.post_action_wait = 0.05
         self.max_retries = 10
         self.display = display
+        self.report = report
 
     def connect(self):
         self.channel = grpc.insecure_channel('localhost:23000', options=[
@@ -106,19 +109,25 @@ class AskUiControllerClient():
     def __stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
 
-    def screenshot(self) -> Image:
+    def screenshot(self, report: bool = True) -> Image:
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
+        if self.report is not None and report: 
+            self.report.add_message("AgentOS", "", image)
         return image
     
     def mouse(self, x, y):
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"mouse: ({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseMove, action_parameters=controller_v1_pbs.ActionParameters(mouseMove=controller_v1_pbs.ActionParameters_MouseMove(position=controller_v1_pbs.Coordinate2(x=x, y=y))))
         
     def type(self, text, typing_speed=50):
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
-    def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1):        
+    def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1):
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"click: {count} x {button}")
         mouse_button = None
         match button:
             case 'left':

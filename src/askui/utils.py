@@ -2,7 +2,7 @@ import io
 import base64
 import pathlib
 
-from PIL import Image
+from PIL import Image, ImageDraw
 from typing import Union
 
 
@@ -47,3 +47,18 @@ def image_to_base64(image: Union[pathlib.Path, Image.Image]) -> str:
             )
 
         return base64.b64encode(image_bytes).decode("utf-8")
+
+
+def draw_point_on_image(image: Image.Image, x: int, y: int, size: int = 3) -> Image.Image:
+    """
+    Draw a red point at the specified x,y coordinates on a copy of the input image.
+    
+    :param image: PIL Image to draw on
+    :param x: X coordinate for the point
+    :param y: Y coordinate for the point
+    :return: New PIL Image with the point drawn
+    """    
+    img_copy = image.copy()
+    draw = ImageDraw.Draw(img_copy)
+    draw.ellipse([x-size, y-size, x+size, y+size], fill='red')
+    return img_copy
