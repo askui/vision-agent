@@ -1,5 +1,7 @@
 import logging
 import subprocess
+
+from askui.tools.askui.hub import Hub
 from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer, PC_AND_MODIFIER_KEY, MODIFIER_KEY
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
@@ -7,10 +9,11 @@ from .logging import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
-from .utils import draw_point_on_image
+from langchain_core.language_models import BaseChatModel
+
 
 class VisionAgent:
-    def __init__(self, log_level=logging.INFO, display: int = 1, enable_report: bool = False):
+    def __init__(self, log_level=logging.INFO, display: int = 1, enable_report: bool = False, chat_model: BaseChatModel | None = None):
         configure_logging(level=log_level)
         self.report = None
         if enable_report: 
@@ -22,7 +25,7 @@ class VisionAgent:
         self.client.set_display(display)
         self.model_router = ModelRouter(log_level)
         self.claude = ClaudeHandler(log_level=log_level)
-        self.tools = AgentToolbox(os_controller=self.client)
+        self.tools = AgentToolbox(os_controller=self.client, hub=Hub(chat_model) if chat_model is not None else None)
         
     def click(self, instruction: str, model_name: str = None):
         if self.report is not None: 

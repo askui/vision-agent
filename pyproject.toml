@@ -8,7 +8,7 @@ authors = [
 dependencies = [
     "grpcio>=1.67.0",
     "grpcio-tools>=1.67.0",
-    "Pillow>=11.0.0",
+    "pillow>=11.0.0",
     "pydantic>=2.9.2",
     "anthropic>=0.37.1",
     "rich>=13.9.4",
@@ -16,6 +16,10 @@ dependencies = [
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
     "Jinja2>=3.1.4",
+    "langchain>=0.3.10",
+    "langchain-openai>=0.2.11",
+    "loguru>=0.7.3",
+    "pdf2image>=1.17.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
