@@ -1,7 +1,8 @@
 import logging
 import subprocess
 
-from askui.tools.askui.hub import Hub
+from askui.tools.askui.extractor import Extractor
+from .tools.askui.hub import HubSettings
 from .tools.askui.askui_controller import AskUiControllerClient, AskUiControllerServer, PC_AND_MODIFIER_KEY, MODIFIER_KEY
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
@@ -13,7 +14,7 @@ from langchain_core.language_models import BaseChatModel
 
 
 class VisionAgent:
-    def __init__(self, log_level=logging.INFO, display: int = 1, enable_report: bool = False, chat_model: BaseChatModel | None = None):
+    def __init__(self, hub_settings: HubSettings, log_level=logging.INFO, display: int = 1, enable_report: bool = False, chat_model: BaseChatModel | None = None):
         configure_logging(level=log_level)
         self.report = None
         if enable_report: 
@@ -25,7 +26,7 @@ class VisionAgent:
         self.client.set_display(display)
         self.model_router = ModelRouter(log_level)
         self.claude = ClaudeHandler(log_level=log_level)
-        self.tools = AgentToolbox(os_controller=self.client, hub=Hub(chat_model) if chat_model is not None else None)
+        self.tools = AgentToolbox(os_controller=self.client, hub_settings=hub_settings, extractor=Extractor(chat_model) if chat_model is not None else None)
         
     def click(self, instruction: str, model_name: str = None):
         if self.report is not None: 
@@ -72,6 +73,7 @@ class VisionAgent:
     def close(self):
         self.client.disconnect()
         self.controller.stop(True)
+        pass
 
     def __enter__(self):
         return self
