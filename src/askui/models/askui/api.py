@@ -4,7 +4,7 @@ import pathlib
 import requests
 
 from PIL import Image
-from typing import Dict, Union
+from typing import Union
 from askui.utils import image_to_base64
 from askui.logging import logger
 
@@ -20,8 +20,8 @@ class AskUIHandler:
             logger.warning("ASKUI_WORKSPACE_ID or ASKUI_TOKEN missing.")
             self.authenticated = False
 
-    def __build_askui_token_auth_header(self, bearer_token: str = None) -> Dict[str, str]:
-        if bearer_token != None:
+    def __build_askui_token_auth_header(self, bearer_token: str | None = None) -> dict[str, str]:
+        if bearer_token is not None:
             return {"Authorization": f"Bearer {bearer_token}"}
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
         return {"Authorization": f"Basic {token_base64}"}
@@ -32,7 +32,7 @@ class AskUIHandler:
     def __build_base_url(self, endpoint: str = "inference") -> str:
         return f"{self.inference_endpoint}/api/v3/workspaces/{self.workspace_id}/{endpoint}"
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+    def predict(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         response = requests.post(
             self.__build_base_url(),
             json={
@@ -55,11 +55,10 @@ class AskUIHandler:
 
         return int(position["x"]), int(position["y"])
     
-    def click_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+    def click_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on pta "{instruction}"'
         return self.predict(image, askui_instruction)
     
-    def click_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str):
+    def click_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on with text "{instruction}"'
         return self.predict(image, askui_instruction)
-

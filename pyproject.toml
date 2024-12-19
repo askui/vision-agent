@@ -1,6 +1,6 @@
 [project]
 name = "askui"
-version = "0.1.9"
+version = "0.1.10"
 description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
@@ -8,7 +8,7 @@ authors = [
 dependencies = [
     "grpcio>=1.67.0",
     "grpcio-tools>=1.67.0",
-    "Pillow>=11.0.0",
+    "pillow>=11.0.0",
     "pydantic>=2.9.2",
     "anthropic>=0.37.1",
     "rich>=13.9.4",
@@ -16,6 +16,9 @@ dependencies = [
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
     "Jinja2>=3.1.4",
+    "pydantic-settings>=2.7.0",
+    "tenacity>=9.0.0",
+    "python-dateutil>=2.9.0.post0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -25,13 +28,12 @@ license = {text = "MIT"}
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
 [tool.pdm]
 distribution = true
 
 [tool.pdm.dev-dependencies]
 test = [
-    "pytest>=8.3.3",
+    "pytest>=8.3.4",
 ]
 
 [tool.pdm.scripts]
