@@ -58,7 +58,7 @@ class AskUiControllerServer():
         
 
 class AskUiControllerClient():
-    def __init__(self, display: int = 1, report: SimpleReportGenerator = None) -> None:
+    def __init__(self, display: int = 1, report: SimpleReportGenerator | None = None) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
