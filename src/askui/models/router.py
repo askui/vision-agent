@@ -17,7 +17,7 @@ class ModelRouter:
             raise AutomationError(f'Could not locate "{instruction}"')
         return response
 
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str = None):
+    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, instruction, model_name)
             return self.handle_response((x, y), instruction)

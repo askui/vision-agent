@@ -5,15 +5,12 @@ from typing import Any, cast, Literal
 
 from anthropic import (
     Anthropic,
-    AnthropicBedrock,
-    AnthropicVertex,
     APIError,
     APIResponseValidationError,
     APIStatusError,
 )
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam,
-    BetaContentBlockParam,
     BetaImageBlockParam,
     BetaMessage,
     BetaMessageParam,
@@ -63,7 +60,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 
 
 class ClaudeComputerAgent:
-    def __init__(self, controller_client, report: SimpleReportGenerator):
+    def __init__(self, controller_client, report: SimpleReportGenerator | None = None) -> None:
         self.report = report
         self.tool_collection = ToolCollection(
             ComputerTool(controller_client),
