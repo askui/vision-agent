@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from typing import Literal
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -14,6 +15,10 @@ from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
 
+
+class InvalidParameterError(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 class VisionAgent:
     def __init__(
@@ -45,7 +50,9 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    def click(self, instruction: str, model_name: str | None = None) -> None:
+    def click(self, instruction: str, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: str | None = None) -> None:
+        if repeat < 1:
+            raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'click: "{instruction}"')
@@ -55,7 +62,7 @@ class VisionAgent:
         if self.report is not None:
             self.report.add_message("ModelRouter", f"click: ({x}, {y})")
         self.client.mouse(x, y) # type: ignore
-        self.client.click("left") # type: ignore
+        self.client.click(button, repeat) # type: ignore
 
     def type(self, text: str) -> None:
         self._check_askui_controller_enabled()
