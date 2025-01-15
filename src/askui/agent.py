@@ -17,8 +17,7 @@ from .reporting.report import SimpleReportGenerator
 
 
 class InvalidParameterError(Exception):
-    def __init__(self, *args):
-        super().__init__(*args)
+    pass
 
 class VisionAgent:
     def __init__(
@@ -51,6 +50,18 @@ class VisionAgent:
             )
 
     def click(self, instruction: str, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: str | None = None) -> None:
+        """
+        Simulates a mouse click on the user interface element identified by the provided instruction.
+
+        Parameters:
+            instruction (str): The identifier or description of the element to click.
+            button (Literal['left', 'middle', 'right']): Specifies which mouse button to click. Defaults to 'left'.
+            repeat (int): The number of times to click. Must be greater than 0. Defaults to 1.
+            model_name (str | None): The model name to be used for element detection. Optional.
+
+        Raises:
+            InvalidParameterError: If the 'repeat' parameter is less than 1.
+        """
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
