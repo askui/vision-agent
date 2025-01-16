@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Literal
+from typing import Literal, Optional
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -49,13 +49,13 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    def click(self, instruction: str, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: str | None = None) -> None:
+    def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.
 
         Parameters:
-            instruction (str): The identifier or description of the element to click.
-            button (Literal['left', 'middle', 'right']): Specifies which mouse button to click. Defaults to 'left'.
+            instruction (str | None): The identifier or description of the element to click.
+            button ('left' | 'middle' | 'right'): Specifies which mouse button to click. Defaults to 'left'.
             repeat (int): The number of times to click. Must be greater than 0. Defaults to 1.
             model_name (str | None): The model name to be used for element detection. Optional.
 
@@ -65,14 +65,15 @@ class VisionAgent:
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'click: "{instruction}"')
-        logger.debug("VisionAgent received instruction to click '%s'", instruction)
-        screenshot = self.client.screenshot() # type: ignore
-        x, y = self.model_router.click(screenshot, instruction, model_name)
-        if self.report is not None:
-            self.report.add_message("ModelRouter", f"click: ({x}, {y})")
-        self.client.mouse(x, y) # type: ignore
+        if instruction is not None:
+            if self.report is not None:
+                self.report.add_message("User", f'click: "{instruction}"')
+            logger.debug("VisionAgent received instruction to click '%s'", instruction)
+            screenshot = self.client.screenshot() # type: ignore
+            x, y = self.model_router.click(screenshot, instruction, model_name)
+            if self.report is not None:
+                self.report.add_message("ModelRouter", f"click: ({x}, {y})")
+            self.client.mouse(x, y) # type: ignore
         self.client.click(button, repeat) # type: ignore
 
     def type(self, text: str) -> None:
