@@ -1,6 +1,8 @@
 import logging
 import subprocess
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
+
+from pydantic import Field, validate_call
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -14,6 +16,7 @@ from .logging import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
+import time
 
 
 class InvalidParameterError(Exception):
@@ -93,6 +96,24 @@ class VisionAgent:
         if self.report is not None:
             self.report.add_message("Agent", response)
         return response
+    
+    @validate_call
+    def wait(self, sec: Annotated[float, Field(gt=0, alias="second")]):
+        """
+        Pauses the execution of the program for the specified number of seconds.
+
+        Args:
+            sec (float): The number of seconds to wait. Must be a non-negative integer.
+
+        Raises:
+            ValueError: If the provided `sec` is negative.
+
+        Example:
+            >>> agent = VisionAgent()
+            >>> agent.wait(5)  # Pauses execution for 5 seconds.
+        """
+        self._check_askui_controller_enabled()
+        time.sleep(sec)
 
     def act(self, goal: str) -> None:
         self._check_askui_controller_enabled()
