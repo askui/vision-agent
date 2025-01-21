@@ -34,7 +34,7 @@ Agent OS is a device controller that allows agents to take screenshots, move the
 ##### AMD64
 
 ```shell
-curl -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
+curl -L -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
 ```
 ```shell
 bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
@@ -44,7 +44,7 @@ bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-x64-Full.run
 
 
 ```shell
-curl -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
+curl -L -o /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
 ```
 ```shell
 bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
@@ -56,7 +56,7 @@ bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Full.run
   <summary>MacOS</summary>
   
 ```shell
-curl -o /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run
+curl -L -o /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run
 ```
 ```shell
 bash /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Full.run
