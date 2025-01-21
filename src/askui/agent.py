@@ -103,7 +103,8 @@ class VisionAgent:
         Pauses the execution of the program for the specified number of seconds.
 
         Args:
-            sec (float): The number of seconds to wait. Must be a non-negative integer.
+            sec (float): The number of seconds to wait. Must be greater than 0.
+            
 
         Raises:
             ValueError: If the provided `sec` is negative.
