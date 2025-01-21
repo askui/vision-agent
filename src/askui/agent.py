@@ -64,6 +64,14 @@ class VisionAgent:
 
         Raises:
             InvalidParameterError: If the 'repeat' parameter is less than 1.
+
+        Example:
+            >>> with VisionAgent() as agent:
+            >>>     agent.click()              # Left click on current position
+            >>>     agent.click("Edit")        # Left click on text "Edit"
+            >>>     agent.click("Edit", button=right)  # Left click on text "Edit"
+            >>>     agent.click(repeat=2)      # Double left click on current position
+            >>>     agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "edit
         """
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
@@ -116,8 +124,8 @@ class VisionAgent:
             ValueError: If the provided `sec` is negative.
 
         Example:
-            >>> agent = VisionAgent()
-            >>> agent.wait(5)  # Pauses execution for 5 seconds.
+            >>> with VisionAgent() agent:
+            >>>     agent.wait(5)  # Pauses execution for 5 seconds.
         """
         self._check_askui_controller_enabled()
         time.sleep(sec)
