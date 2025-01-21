@@ -68,9 +68,16 @@ class VisionAgent:
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
+        if self.report is not None:
+            msg = f'click'
+            if button is not 'left':
+                msg = f'{button} ' + msg 
+            if repeat is not 1:
+                msg += f' {repeat}x times'
+            if instruction is not None:
+                msg += f' on "{instruction}"'
+            self.report.add_message("User", msg)
         if instruction is not None:
-            if self.report is not None:
-                self.report.add_message("User", f'click: "{instruction}"')
             logger.debug("VisionAgent received instruction to click '%s'", instruction)
             screenshot = self.client.screenshot() # type: ignore
             x, y = self.model_router.click(screenshot, instruction, model_name)
@@ -104,7 +111,6 @@ class VisionAgent:
 
         Args:
             sec (float): The number of seconds to wait. Must be greater than 0.
-            
 
         Raises:
             ValueError: If the provided `sec` is negative.
