@@ -139,8 +139,10 @@ class VisionAgent:
             key (PC_AND_MODIFIER_KEY): The key to be released. This can be any key or a combination of keys with modifiers.
 
         Example:
-            >>> agent.key_up('a')  # Release the 'a' key.
-            >>> agent.key_up('shift')  # Release the 'Shift' key.
+            This example demonstrates how to simulate the release of the 'a' key and the 'shift' key:
+
+                >>> agent.key_up('a')  # Release the 'a' key.
+                >>> agent.key_up('shift')  # Release the 'shift' key.
         """
         if self.report is not None:
             self.report.add_message("User", f'key_down "{key}"')

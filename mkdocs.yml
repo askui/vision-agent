@@ -1,0 +1,18 @@
+site_name: Vision Agent
+theme:
+  name: material
+  palette:
+    primary: white
+  logo: https://assets-global.website-files.com/62ee4472fd829cd8879660a6/654794aa91effeb5a0b70eb1_askui-logo.svg
+repo_url: https://github.com/askui/vision-agent
+edit_uri: blob/main/docs/
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+- mkdocstrings:
+    default_handler: python
