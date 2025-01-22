@@ -113,7 +113,7 @@ class VisionAgent:
         return response
     
     @validate_call
-    def wait(self, sec: Annotated[float, Field(gt=0, alias="second")]):
+    def wait(self, sec: Annotated[float, Field(gt=0)]):
         """
         Pauses the execution of the program for the specified number of seconds.
 
@@ -126,6 +126,7 @@ class VisionAgent:
         Example:
             >>> with VisionAgent() agent:
             >>>     agent.wait(5)  # Pauses execution for 5 seconds.
+            >>>     agent.wait(0.5)  # Pauses execution for 500 milliseconds.
         """
         self._check_askui_controller_enabled()
         time.sleep(sec)
