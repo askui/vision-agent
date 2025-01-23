@@ -136,7 +136,7 @@ class VisionAgent:
         Simulates the release of a key.
 
         Args:
-            key (PC_AND_MODIFIER_KEY): The key to be released. This can be any key or a combination of keys with modifiers.
+            key (PC_AND_MODIFIER_KEY): The key to be released.
 
         Example:
             >>> agent.key_up('a')  # Release the 'a' key.
