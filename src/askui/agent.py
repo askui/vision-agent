@@ -143,7 +143,7 @@ class VisionAgent:
             >>> agent.key_up('shift')  # Release the 'Shift' key.
         """
         if self.report is not None:
-            self.report.add_message("User", f'key_down "{key}"')
+            self.report.add_message("User", f'key_up "{key}"')
         self.client.keyboard_release(key)
 
     def key_down(self, key: PC_AND_MODIFIER_KEY):
