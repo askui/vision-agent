@@ -36,11 +36,9 @@ test = [
     "pytest>=8.3.4",
 ]
 dev = [
-    "mkdocstrings-python>=1.13.0",
-    "mkdocs-material>=9.4.5",
+    "pydoc-markdown>=4.8.2",
 ]
 
 [tool.pdm.scripts]
 test = "pytest"
-"docs:serve" = "mkdocs serve"
-"docs:build" = "mkdocs build"
+"docs:api:generate" = {shell  = " pydoc-markdown -I src -m askui.agent --render-toc > api-vision-agent-docs.md"}
