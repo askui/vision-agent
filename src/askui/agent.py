@@ -142,6 +142,7 @@ class VisionAgent:
             >>> agent.key_up('a')  # Release the 'a' key.
             >>> agent.key_up('shift')  # Release the 'Shift' key.
         """
+        self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'key_up "{key}"')
         self.client.keyboard_release(key)
@@ -157,6 +158,7 @@ class VisionAgent:
             >>> agent.key_down('a')  # Press the 'a' key.
             >>> agent.key_down('shift')  # Press the 'Shift' key.
         """
+        self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'key_down "{key}"')
         self.client.keyboard_pressed(key)
