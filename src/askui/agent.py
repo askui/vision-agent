@@ -130,6 +130,38 @@ class VisionAgent:
         """
         time.sleep(sec)
 
+    def key_up(self, key: PC_AND_MODIFIER_KEY):
+        """
+        Simulates the release of a key.
+
+        Args:
+            key (PC_AND_MODIFIER_KEY): The key to be released.
+
+        Example:
+            >>> agent.key_up('a')  # Release the 'a' key.
+            >>> agent.key_up('shift')  # Release the 'Shift' key.
+        """
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'key_up "{key}"')
+        self.client.keyboard_release(key)
+
+    def key_down(self, key: PC_AND_MODIFIER_KEY):
+        """
+        Simulates the pressing of a key.
+
+        Args:
+            key (PC_AND_MODIFIER_KEY): The key to be pressed.
+
+        Example:
+            >>> agent.key_down('a')  # Press the 'a' key.
+            >>> agent.key_down('shift')  # Press the 'Shift' key.
+        """
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'key_down "{key}"')
+        self.client.keyboard_pressed(key)
+
     def act(self, goal: str) -> None:
         self._check_askui_controller_enabled()
         if self.report is not None:
