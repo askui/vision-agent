@@ -151,7 +151,7 @@ class VisionAgent:
         Simulates the pressing of a key.
 
         Args:
-            key (PC_AND_MODIFIER_KEY): The key to be pressed. This can be any key or a combination of keys with modifiers.
+            key (PC_AND_MODIFIER_KEY): The key to be pressed.
 
         Example:
             >>> agent.key_down('a')  # Press the 'a' key.
