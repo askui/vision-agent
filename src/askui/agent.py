@@ -128,7 +128,6 @@ class VisionAgent:
             >>>     agent.wait(5)  # Pauses execution for 5 seconds.
             >>>     agent.wait(0.5)  # Pauses execution for 500 milliseconds.
         """
-        self._check_askui_controller_enabled()
         time.sleep(sec)
 
     def act(self, goal: str) -> None:
