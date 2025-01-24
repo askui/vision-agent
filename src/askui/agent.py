@@ -9,6 +9,8 @@ from .tools.askui.askui_controller import (
     AskUiControllerServer,
     PC_AND_MODIFIER_KEY,
     MODIFIER_KEY,
+    MOUSE_BUTTON
+    
 )
 from .models.anthropic.claude import ClaudeHandler
 from .models.anthropic.claude_agent import ClaudeComputerAgent
@@ -52,7 +54,7 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
+    def click(self, instruction: Optional[str] = None, button: MOUSE_BUTTON = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.
 
@@ -161,6 +163,38 @@ class VisionAgent:
         if self.report is not None:
             self.report.add_message("User", f'key_down "{key}"')
         self.client.keyboard_pressed(key)
+
+    def mouse_up(self, button: MOUSE_BUTTON = "left"):
+        """
+        Simulates the release of a mouse button.
+    
+        Args:
+            button (MOUSE_BUTTON): The mouse button to be released. This can be 'left', 'right', or 'middle'. Default to "left".
+    
+        Example:
+            >>> agent.mouse_up('left')  # Release the left mouse button.
+            >>> agent.mouse_up('right')  # Release the right mouse button.
+        """
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'mouse_up "{button}"')
+        self.client.mouse_up(button)
+    
+    def mouse_down(self, button: MOUSE_BUTTON = "left"):
+        """
+        Simulates the pressing of a mouse button.
+    
+        Args:
+            button (MOUSE_BUTTON): The mouse button to be pressed. This can be 'left', 'right', or 'middle'. Default to "left".
+    
+        Example:
+            >>> agent.mouse_down('left')  # Press the left mouse button.
+            >>> agent.mouse_down('right')  # Press the right mouse button.
+        """
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'mouse_down "{button}"')
+        self.client.mouse_down(button)
 
     def act(self, goal: str) -> None:
         self._check_askui_controller_enabled()
