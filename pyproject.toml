@@ -35,6 +35,10 @@ distribution = true
 test = [
     "pytest>=8.3.4",
 ]
+dev = [
+    "pydoc-markdown>=4.8.2",
+]
 
 [tool.pdm.scripts]
 test = "pytest"
+"docs:api:generate" = {shell  = " pydoc-markdown -I src -m askui.agent --render-toc > api-vision-agent-docs.md"}

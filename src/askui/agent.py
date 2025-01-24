@@ -138,8 +138,10 @@ class VisionAgent:
             key (PC_AND_MODIFIER_KEY): The key to be released.
 
         Example:
-            >>> agent.key_up('a')  # Release the 'a' key.
-            >>> agent.key_up('shift')  # Release the 'Shift' key.
+            This example demonstrates how to simulate the release of the 'a' key and the 'shift' key:
+
+                >>> agent.key_up('a')  # Release the 'a' key.
+                >>> agent.key_up('shift')  # Release the 'shift' key.
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
