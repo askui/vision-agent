@@ -1,21 +1,20 @@
-import os
 import anthropic
 from PIL import Image
 
 from ...logging import logger
 from ...utils import AutomationError
 from ..utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
-
+from .claude_provider import ClaudeApiProvider
 
 class ClaudeHandler:
     def __init__(self, log_level):
-        self.model_name = "claude-3-5-sonnet-20241022"
-        self.client = anthropic.Anthropic()
+        claude_api_provider = ClaudeApiProvider()
+        self.client = claude_api_provider.get_api_client()
+        self.model_name = claude_api_provider.get_model_name()
+
         self.resolution = (1280, 800)
         self.log_level = log_level
-        self.authenticated = True
-        if os.getenv("ANTHROPIC_API_KEY") is None:
-            self.authenticated = False
+
 
     def inference(self, base64_image, prompt, system_prompt) -> list[anthropic.types.ContentBlock]:
         message = self.client.messages.create(
