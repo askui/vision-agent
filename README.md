@@ -76,7 +76,7 @@ pip install askui
 
 |  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
-| ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
+| ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`/`ANTHROPIC_BEDROCK_PROFILE`   |
 | Supported Commands    | `click()`   | `click()`, `get()`, `act()`   |
 | Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 

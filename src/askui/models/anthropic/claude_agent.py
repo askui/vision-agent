@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Any, cast, Literal
 
 from anthropic import (
-    Anthropic,
     APIError,
     APIResponseValidationError,
     APIStatusError,
@@ -24,6 +23,7 @@ from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logging import logger
 from ...utils import truncate_long_strings
 from askui.reporting.report import SimpleReportGenerator
+from askui.models.anthropic.claude_provider import ClaudeApiProvider
 
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
@@ -31,17 +31,6 @@ PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
 PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
-# class APIProvider(StrEnum):
-#     ANTHROPIC = "anthropic"
-#     BEDROCK = "bedrock"
-#     VERTEX = "vertex"
-
-
-# PROVIDER_TO_DEFAULT_MODEL_NAME: dict[APIProvider, str] = {
-#     APIProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
-#     APIProvider.BEDROCK: "anthropic.claude-3-5-sonnet-20241022-v2:0",
-#     APIProvider.VERTEX: "claude-3-5-sonnet-v2@20241022",
-# }
 
 
 SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
@@ -74,8 +63,10 @@ class ClaudeComputerAgent:
         self.image_truncation_threshold = 10
         self.only_n_most_recent_images = 3
         self.max_tokens = 4096
-        self.client = Anthropic()
-        self.model = "claude-3-5-sonnet-20241022"
+
+        claude_api_provider = ClaudeApiProvider()
+        self.client = claude_api_provider.get_api_client()
+        self.model = claude_api_provider.get_model_name()
 
     def step(self, messages: list):
         if self.only_n_most_recent_images:
