@@ -32,10 +32,18 @@ build-backend = "hatchling.build"
 [tool.pdm]
 distribution = true
 
-[tool.pdm.dev-dependencies]
-test = [
-    "pytest>=8.3.4",
-]
-
 [tool.pdm.scripts]
 test = "pytest"
+sort = "isort ."
+format = "black ."
+lint = "ruff check ."
+checks = {composite = ["sort . -c", "format . --check"]}
+fix = {composite = ["sort", "format", "lint"]}
+
+[dependency-groups]
+test = [
+    "pytest>=8.3.4",
+    "isort>=6.0.0",
+    "black>=25.1.0",
+    "ruff>=0.9.5",
+]
