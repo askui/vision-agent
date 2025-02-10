@@ -1,6 +1,6 @@
 [project]
 name = "askui"
-version = "0.1.11"
+version = "0.1.12"
 description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
@@ -19,6 +19,7 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "tenacity>=9.0.0",
     "python-dateutil>=2.9.0.post0",
+    "openai>=1.61.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

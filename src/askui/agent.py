@@ -17,6 +17,7 @@ from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
 import time
+from dotenv import load_dotenv
 
 
 class InvalidParameterError(Exception):
@@ -30,6 +31,7 @@ class VisionAgent:
         enable_report: bool = False,
         enable_askui_controller: bool = True,
     ):
+        load_dotenv()
         configure_logging(level=log_level)
         self.report = None
         if enable_report:
@@ -101,13 +103,13 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text) # type: ignore
 
-    def get(self, instruction: str) -> str:
+    def get(self, instruction: str, model_name: Optional[str] = None) -> str:
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
         screenshot = self.client.screenshot() # type: ignore
-        response = self.claude.get_inference(screenshot, instruction)
+        response = self.model_router.get_inference(screenshot, instruction, model_name)
         if self.report is not None:
             self.report.add_message("Agent", response)
         return response
