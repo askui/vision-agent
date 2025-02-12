@@ -5,19 +5,30 @@ from .huggingface.spaces_api import HFSpacesHandler
 from ..logging import logger
 from ..utils import AutomationError
 from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
+from .anthropic.claude_agent import ClaudeComputerAgent
 
 
 class ModelRouter:
-    def __init__(self, log_level):
+    def __init__(self, log_level, report):
+        self.report = report
         self.askui = AskUIHandler()
         self.claude = ClaudeHandler(log_level)
         self.huggingface_spaces = HFSpacesHandler()
-        self.tars = UITarsAPIHandler()
-
+        self.tars = UITarsAPIHandler(self.report)
+    
     def handle_response(self, response: tuple[int, int], instruction: str):
         if response[0] is None or response[1] is None:
             raise AutomationError(f'Could not locate "{instruction}"')
         return response
+    
+    def act(self, controller_client, instruction: str, model_name: str | None = None):
+        if model_name == "tars":
+            return self.tars.act(controller_client, instruction)
+        elif model_name == "claude":
+            agent = ClaudeComputerAgent(controller_client, self.report)
+            agent.run(instruction)
+        else:
+            raise AutomationError("Invalid model name for act")
     
     def get_inference(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
         if model_name == "tars":

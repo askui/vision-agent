@@ -11,7 +11,6 @@ from .tools.askui.askui_controller import (
     MODIFIER_KEY,
 )
 from .models.anthropic.claude import ClaudeHandler
-from .models.anthropic.claude_agent import ClaudeComputerAgent
 from .logging import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
@@ -44,7 +43,7 @@ class VisionAgent:
             self.client = AskUiControllerClient(display, self.report)
             self.client.connect()
             self.client.set_display(display)
-        self.model_router = ModelRouter(log_level)
+        self.model_router = ModelRouter(log_level, self.report)
         self.claude = ClaudeHandler(log_level=log_level)
         self.tools = AgentToolbox(os_controller=self.client)
 
@@ -164,15 +163,14 @@ class VisionAgent:
             self.report.add_message("User", f'key_down "{key}"')
         self.client.keyboard_pressed(key)
 
-    def act(self, goal: str) -> None:
+    def act(self, goal: str, model_name: Optional[str] = None) -> None:
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'act: "{goal}"')
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        agent = ClaudeComputerAgent(self.client, self.report)
-        agent.run(goal)
+        self.model_router.act(self.client, goal, model_name)
 
     def keyboard(
         self, key: PC_AND_MODIFIER_KEY, modifier_keys: list[MODIFIER_KEY] | None = None

@@ -10,18 +10,15 @@ left_double(start_box='<|box_start|>(x1,y1)<|box_end|>')
 right_single(start_box='<|box_start|>(x1,y1)<|box_end|>')
 drag(start_box='<|box_start|>(x1,y1)<|box_end|>', end_box='<|box_start|>(x3,y3)<|box_end|>')
 hotkey(key='')
-type(content='') #If you want to submit your input, use \"\
-\" at the end of `content`.
+type(content='') #If you want to submit your input, use \"\\" at the end of `content`.
 scroll(start_box='<|box_start|>(x1,y1)<|box_end|>', direction='down or up or right or left')
 wait() #Sleep for 5s and take a screenshot to check for any changes.
 finished()
 call_user() # Submit the task and call the user when the task is unsolvable, or when you need the user's help.
 
-
 ## Note
 - Use English in `Thought` part.
 - Summarize your next action (with its target element) in one sentence in `Thought` part.
-- If you get a question from the user, answer it in `Thought` part and give no action.
 
 ## User Instruction
 """
