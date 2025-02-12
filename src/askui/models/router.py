@@ -16,7 +16,7 @@ class ModelRouter:
         self.huggingface_spaces = HFSpacesHandler()
         self.tars = UITarsAPIHandler(self.report)
     
-    def handle_response(self, response: tuple[int, int], instruction: str):
+    def handle_response(self, response: tuple[int | None, int | None], instruction: str):
         if response[0] is None or response[1] is None:
             raise AutomationError(f'Could not locate "{instruction}"')
         return response
