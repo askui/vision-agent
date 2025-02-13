@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional, Callable
 
 from pydantic import Field, validate_call
 
@@ -29,12 +29,13 @@ class VisionAgent:
         display: int = 1,
         enable_report: bool = False,
         enable_askui_controller: bool = True,
+        report_callback: Callable[[str], None] = None,
     ):
         load_dotenv()
         configure_logging(level=log_level)
         self.report = None
         if enable_report:
-            self.report = SimpleReportGenerator()
+            self.report = SimpleReportGenerator(report_callback=report_callback)
         self.controller = None
         self.client = None
         if enable_askui_controller:

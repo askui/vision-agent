@@ -16,6 +16,7 @@ class UITarsAPIHandler:
         if os.getenv("TARS_URL") is None or os.getenv("TARS_API_KEY") is None:
             self.authenticated = False
         else:
+            self.authenticated = True
             self.client = OpenAI(
                 base_url=os.getenv("TARS_URL"), 
                 api_key=os.getenv("TARS_API_KEY")
