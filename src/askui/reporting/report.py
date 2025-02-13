@@ -1,7 +1,7 @@
 from pathlib import Path
 from jinja2 import Template
 from datetime import datetime
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Callable
 import platform
 import sys
 from importlib.metadata import distributions
@@ -12,12 +12,13 @@ import json
 
 
 class SimpleReportGenerator:
-    def __init__(self, report_dir: str = "reports"):
+    def __init__(self, report_dir: str = "reports", report_callback: Callable[[str], None] = None):
         self.report_dir = Path(report_dir)
         self.report_dir.mkdir(exist_ok=True)
         self.messages: List[Dict] = []
         self.system_info = self._collect_system_info()
-        
+        self.report_callback = report_callback
+
     def _collect_system_info(self) -> Dict[str, str]:
         """Collect system and Python information"""
         return {
@@ -49,6 +50,7 @@ class SimpleReportGenerator:
             "image": self._image_to_base64(image) if image else None
         }
         self.messages.append(message)
+        self.report_callback(message)
     
     def generate_report(self) -> str:
         """Generate HTML report using a Jinja template"""
