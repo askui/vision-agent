@@ -342,6 +342,7 @@ class VisionAgent:
             self.client.disconnect()
         if self.controller:
             self.controller.stop(True)
+        self.wait(10) # TODO Remove hack to actually wait for the controller to stop
 
     def __enter__(self):
         return self
