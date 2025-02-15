@@ -27,6 +27,7 @@ class ModelRouter:
         if self.claude.authenticated and model_name == "claude":
             agent = ClaudeComputerAgent(controller_client, self.report)
             agent.run(instruction)
+            return
         raise AutomationError("Invalid model name for act")
     
     def get_inference(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
