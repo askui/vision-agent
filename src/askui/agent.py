@@ -55,6 +55,24 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
+    # TODO Improve validation
+    def mouse(self, coordinate: Optional[tuple[int, int]] = None, instruction: Optional[str] = None, model_name: Optional[str] = None) -> None:
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            msg = 'move mouse'
+            if coordinate is not None:
+                msg += f' to x={coordinate[0]}, y={coordinate[1]}'
+            if instruction is not None:
+                msg += f' to "{instruction}"'
+            self.report.add_message("User", msg)
+        if instruction is not None:
+            logger.debug("VisionAgent received instruction to click '%s'", instruction)
+            screenshot = self.client.screenshot() # type: ignore
+            x, y = self.model_router.click(screenshot, instruction, model_name)
+            if self.report is not None:
+                self.report.add_message("ModelRouter", f"mouse: ({x}, {y})")
+            self.client.mouse(x, y) # type: ignore
+
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.
@@ -81,19 +99,22 @@ class VisionAgent:
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
+        if instruction is not None:
+            logger.debug("VisionAgent received instruction to click '%s'", instruction)
+            self.mouse(instruction=instruction, model_name=model_name)
         if self.report is not None:
-            msg = f'click'
+            msg = 'click'
             if button != 'left':
                 msg = f'{button} ' + msg 
             if repeat > 1:
                 msg += f' {repeat}x times'
-            if instruction is not None:
-                msg += f' on "{instruction}"'
             self.report.add_message("User", msg)
         if instruction is not None:
             logger.debug("VisionAgent received instruction to click '%s'", instruction)
             self.__mouse_move(instruction, model_name)
         self.client.click(button, repeat) # type: ignore
+        if self.report is not None:
+            self.report.add_message("ModelRouter", "click")
 
     def __mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
         self._check_askui_controller_enabled()
@@ -196,7 +217,8 @@ class VisionAgent:
         if self.report is not None:
             self.report.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
-        screenshot = self.client.screenshot() # type: ignore
+        if screenshot is None:
+            screenshot = self.client.screenshot() # type: ignore
         response = self.model_router.get_inference(screenshot, instruction, model_name)
         if self.report is not None:
             self.report.add_message("Agent", response)
