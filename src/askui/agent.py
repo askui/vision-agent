@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 class InvalidParameterError(Exception):
     pass
 
+
 class VisionAgent:
     def __init__(
         self,
