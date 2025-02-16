@@ -34,6 +34,7 @@ class ModelRouter:
             return
         raise AutomationError("Invalid model name for act")
     
+    # TODO Fix that I don't have to pass a model name to not have the function fail
     def get_inference(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
         if self.tars.authenticated and model_name == "tars":
             return self.tars.get_prediction(screenshot, instruction)

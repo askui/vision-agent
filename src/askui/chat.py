@@ -1,5 +1,5 @@
 from random import randint
-from PIL import Image
+from PIL import Image, ImageDraw
 from typing import Callable, Literal
 import streamlit as st
 from askui import VisionAgent
@@ -9,6 +9,7 @@ import json
 from datetime import date, datetime
 import os
 import glob
+import re
 
 
 CHAT_SESSIONS_DIR_PATH = "./chat/sessions"
@@ -48,6 +49,12 @@ ROLE_MAP = {"user": "user", "anthropic computer use": "ai", "agentos": "assistan
 UNKNOWN_ROLE = "unknown"
 
 
+def get_image(img_b64_str_or_path: str) -> Image.Image:
+    if os.path.isfile(img_b64_str_or_path):
+        return Image.open(img_b64_str_or_path)
+    return base64_to_image(img_b64_str_or_path)
+
+
 def write_message(
     role: Literal["User", "Anthropic Computer Use", "AgentOS"],
     content: str,
@@ -60,12 +67,8 @@ def write_message(
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
         st.markdown(content)
         if image:
-            if os.path.isfile(image):
-                img: Image.Image = Image.open(image)
-                st.image(img)
-            else:
-                img = base64_to_image(image)
-                st.image(img)
+            img = get_image(image)
+            st.image(img)
 
 
 def chat_history_appender(session_id: str) -> Callable[[str | dict], None]:
@@ -114,19 +117,63 @@ def create_new_session() -> str:
     return session_id
 
 
+def paint_crosshair(image: Image.Image, coordinates: tuple[int, int], size: int | None = None, color: str = "red", width: int = 2) -> Image.Image:
+    """
+    Paints a crosshair at the given coordinates on the image.
+
+    :param image: A PIL Image object.
+    :param coordinates: A tuple (x, y) representing the coordinates of the point.
+    :param size: Optional length of each line in the crosshair. Defaults to min(width,height)/20
+    :param color: The color of the crosshair.
+    :param width: The width of the crosshair.
+    :return: A new image with the crosshair.
+    """
+    if size is None:
+        size = min(image.width, image.height) // 20  # Makes crosshair ~5% of smallest image dimension
+    
+    image_copy = image.copy()
+    draw = ImageDraw.Draw(image_copy)
+    x, y = coordinates
+    # Draw horizontal and vertical lines
+    draw.line((x - size, y, x + size, y), fill=color, width=width)
+    draw.line((x, y - size, x, y + size), fill=color, width=width)
+    return image_copy
+
+prompt = '''The following image is a screenshot with a red crosshair on top of an element that the user wants to interact with. Give me a description that uniquely describes the element as concise as possible across all elements on the screen that the user most likely wants to interact with. Examples:
+
+- "Submit button"
+- "Cell within the table about European countries in the third row and 6th column (area in km^2) in the right-hand browser window"
+- "Avatar in the top right hand corner of the browser in focus that looks like a woman"
+'''
+
 def rerun():
     with VisionAgent(
         log_level=logging.DEBUG,
     ) as agent:
+        screenshot: Image.Image | None = None
         for message in st.session_state.messages:
             try:
-                if (
-                    message.get("role") == "AgentOS"
-                    and message.get("content") != "screenshot()"
-                ):
-                    func_call = f"agent.tools.os.{message['content']}"
-                    print(func_call)
-                    eval(func_call)
+                if message.get("role") == "AgentOS":
+                    if message.get("content") == "screenshot()":
+                        screenshot = get_image(message["image"])
+                        continue
+                    else:
+                        if match := re.match(r"mouse\((\d+),\s*(\d+)\)", message["content"]):
+                            if not screenshot:
+                                raise ValueError("Screenshot is required to paint crosshair")
+                            x, y = map(int, match.groups())
+                            screenshot_with_crosshair = paint_crosshair(screenshot, (x, y))
+                            element_description = agent.get(
+                                prompt,
+                                screenshot=screenshot_with_crosshair,
+                                model_name="anthropic-claude-3-5-sonnet-20241022",
+                            )
+                            st.write(f"move mouse to {element_description}")
+                            agent.mouse(instruction=element_description.replace('"', ''))
+                        else:
+                            st.write(message['content'])
+                            func_call = f"agent.tools.os.{message['content']}"
+                            eval(func_call)
             except json.JSONDecodeError:
                 continue
             except AttributeError:
