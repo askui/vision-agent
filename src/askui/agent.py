@@ -23,6 +23,7 @@ from PIL import Image
 class InvalidParameterError(Exception):
     pass
 
+
 class VisionAgent:
     def __init__(
         self,

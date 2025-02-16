@@ -4,7 +4,8 @@ from typing import Callable, Literal
 import streamlit as st
 from askui import VisionAgent
 import logging
-from askui.utils import base64_to_image
+from askui.click_recorder import ClickRecorder
+from askui.utils import base64_to_image, draw_point_on_image
 import json
 from datetime import date, datetime
 import os
@@ -14,6 +15,8 @@ import re
 
 CHAT_SESSIONS_DIR_PATH = "./chat/sessions"
 CHAT_IMAGES_DIR_PATH = "./chat/images"
+
+click_recorder = ClickRecorder()
 
 
 def json_serial(obj):
@@ -43,7 +46,12 @@ def load_chat_history(session_id):
     return messages
 
 
-ROLE_MAP = {"user": "user", "anthropic computer use": "ai", "agentos": "assistant"}
+ROLE_MAP = {
+    "user": "user",
+    "anthropic computer use": "ai",
+    "agentos": "assistant",
+    "user (demonstration)": "user",
+}
 
 
 UNKNOWN_ROLE = "unknown"
@@ -56,7 +64,7 @@ def get_image(img_b64_str_or_path: str) -> Image.Image:
 
 
 def write_message(
-    role: Literal["User", "Anthropic Computer Use", "AgentOS"],
+    role: Literal["User", "Anthropic Computer Use", "AgentOS", "User (Demonstration)"],
     content: str,
     timestamp: str,
     image: str | None = None,
@@ -71,17 +79,19 @@ def write_message(
             st.image(img)
 
 
+def save_image(image: Image.Image) -> str:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    image_path = os.path.join(CHAT_IMAGES_DIR_PATH, f"image_{timestamp}.png")
+    image.save(image_path)
+    return image_path
+
+
 def chat_history_appender(session_id: str) -> Callable[[str | dict], None]:
     def append_to_chat_history(report: str | dict) -> None:
         if isinstance(report, dict):
             if report.get("image"):
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                image_path = os.path.join(
-                    CHAT_IMAGES_DIR_PATH, f"image_{timestamp}.png"
-                )
-                img = base64_to_image(report["image"])
-                img.save(image_path)
-                report["image"] = image_path
+                if not os.path.isfile(report["image"]):
+                    report["image"] = save_image(base64_to_image(report["image"]))
         else:
             report = {
                 "role": "unknown",
@@ -117,7 +127,13 @@ def create_new_session() -> str:
     return session_id
 
 
-def paint_crosshair(image: Image.Image, coordinates: tuple[int, int], size: int | None = None, color: str = "red", width: int = 2) -> Image.Image:
+def paint_crosshair(
+    image: Image.Image,
+    coordinates: tuple[int, int],
+    size: int | None = None,
+    color: str = "red",
+    width: int = 4,
+) -> Image.Image:
     """
     Paints a crosshair at the given coordinates on the image.
 
@@ -129,8 +145,10 @@ def paint_crosshair(image: Image.Image, coordinates: tuple[int, int], size: int 
     :return: A new image with the crosshair.
     """
     if size is None:
-        size = min(image.width, image.height) // 20  # Makes crosshair ~5% of smallest image dimension
-    
+        size = (
+            min(image.width, image.height) // 20
+        )  # Makes crosshair ~5% of smallest image dimension
+
     image_copy = image.copy()
     draw = ImageDraw.Draw(image_copy)
     x, y = coordinates
@@ -139,39 +157,62 @@ def paint_crosshair(image: Image.Image, coordinates: tuple[int, int], size: int 
     draw.line((x, y - size, x, y + size), fill=color, width=width)
     return image_copy
 
-prompt = '''The following image is a screenshot with a red crosshair on top of an element that the user wants to interact with. Give me a description that uniquely describes the element as concise as possible across all elements on the screen that the user most likely wants to interact with. Examples:
+
+prompt = """The following image is a screenshot with a red crosshair on top of an element that the user wants to interact with. Give me a description that uniquely describes the element as concise as possible across all elements on the screen that the user most likely wants to interact with. Examples:
 
 - "Submit button"
 - "Cell within the table about European countries in the third row and 6th column (area in km^2) in the right-hand browser window"
 - "Avatar in the top right hand corner of the browser in focus that looks like a woman"
-'''
+"""
+
 
 def rerun():
+    st.markdown("### Re-running...")
     with VisionAgent(
         log_level=logging.DEBUG,
     ) as agent:
         screenshot: Image.Image | None = None
         for message in st.session_state.messages:
             try:
-                if message.get("role") == "AgentOS":
+                if (
+                    message.get("role") == "AgentOS"
+                    or message.get("role") == "User (Demonstration)"
+                ):
                     if message.get("content") == "screenshot()":
                         screenshot = get_image(message["image"])
                         continue
                     else:
-                        if match := re.match(r"mouse\((\d+),\s*(\d+)\)", message["content"]):
+                        if match := re.match(
+                            r"mouse\((\d+),\s*(\d+)\)", message["content"]
+                        ):
                             if not screenshot:
-                                raise ValueError("Screenshot is required to paint crosshair")
+                                raise ValueError(
+                                    "Screenshot is required to paint crosshair"
+                                )
                             x, y = map(int, match.groups())
-                            screenshot_with_crosshair = paint_crosshair(screenshot, (x, y))
+                            screenshot_with_crosshair = paint_crosshair(
+                                screenshot, (x, y)
+                            )
                             element_description = agent.get(
                                 prompt,
                                 screenshot=screenshot_with_crosshair,
                                 model_name="anthropic-claude-3-5-sonnet-20241022",
                             )
-                            st.write(f"move mouse to {element_description}")
-                            agent.mouse(instruction=element_description.replace('"', ''))
+                            write_message(
+                                message["role"],
+                                f"Move mouse to {element_description}",
+                                datetime.now().isoformat(),
+                            )
+                            agent.mouse(
+                                instruction=element_description.replace('"', "")
+                            )
                         else:
-                            st.write(message['content'])
+                            write_message(
+                                message["role"],
+                                message["content"],
+                                datetime.now().isoformat(),
+                                message.get("image"),
+                            )
                             func_call = f"agent.tools.os.{message['content']}"
                             eval(func_call)
             except json.JSONDecodeError:
@@ -215,19 +256,68 @@ def main():
             message.get("image"),
         )
 
+    if prompt := st.chat_input("Simulate Typing for User (Demonstration)"):
+        report_callback(
+            {
+                "role": "User (Demonstration)",
+                "content": f'type("{prompt}", 50)',
+                "timestamp": datetime.now().isoformat(),
+                "is_json": False,
+                "image": None,
+            }
+        )
+        st.rerun()
+
+    if st.button("Simulate left click"):
+        report_callback(
+            {
+                "role": "User (Demonstration)",
+                "content": 'click("left", 1)',
+                "timestamp": datetime.now().isoformat(),
+                "is_json": False,
+                "image": None,
+            }
+        )
+        st.rerun()
+
     # Chat input
-    if len(st.session_state.messages) == 0:
-        if prompt := st.chat_input("Say something"):
-            with VisionAgent(
-                log_level=logging.DEBUG,
-                enable_report=True,
-                report_callback=report_callback,
-            ) as agent:
-                agent.act(prompt, model_name="claude")
-                st.rerun()
-    else:
-        if st.button("Rerun"):
-            rerun()
+    if st.button(
+        "Demonstrate where to move mouse"
+    ):  # only single step, only click supported for now, independent of click always registered as click
+        image, coordinates = click_recorder.record()
+        report_callback(
+            {
+                "role": "User (Demonstration)",
+                "content": "screenshot()",
+                "timestamp": datetime.now().isoformat(),
+                "is_json": False,
+                "image": save_image(image),
+            }
+        )
+        report_callback(
+            {
+                "role": "User (Demonstration)",
+                "content": f"mouse({coordinates[0]}, {coordinates[1]})",
+                "timestamp": datetime.now().isoformat(),
+                "is_json": False,
+                "image": save_image(
+                    draw_point_on_image(image, coordinates[0], coordinates[1])
+                ),
+            }
+        )
+        st.rerun()
+
+    if prompt := st.chat_input("Ask AI"):
+        with VisionAgent(
+            log_level=logging.DEBUG,
+            enable_report=True,
+            report_callback=report_callback,
+        ) as agent:
+            agent.act(prompt, model_name="claude")
+            st.rerun()
+
+    if st.button("Rerun"):
+        rerun()
 
 
 if __name__ == "__main__":
