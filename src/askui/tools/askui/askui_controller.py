@@ -114,20 +114,23 @@ class AskUiControllerClient():
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
         if self.report is not None and report: 
-            self.report.add_message("AgentOS", "", image)
+            self.report.add_message("AgentOS", "screenshot()", image)
         return image
     
-    def mouse(self, x, y):
+    def mouse(self, x: int, y: int):
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"mouse: ({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
+            self.report.add_message("AgentOS", f"mouse({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseMove, action_parameters=controller_v1_pbs.ActionParameters(mouseMove=controller_v1_pbs.ActionParameters_MouseMove(position=controller_v1_pbs.Coordinate2(x=x, y=y))))
         
-    def type(self, text, typing_speed=50):
+    def type(self, text: str, typing_speed: int = 50):
+        if self.report is not None:
+            serialized_text = text.replace('"', '\\"')
+            self.report.add_message("AgentOS", f"type(\"{serialized_text}\", {typing_speed})")
         self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
     def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1):
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"click: {count} x {button}")
+            self.report.add_message("AgentOS", f"click(\"{button}\", {count})")
         mouse_button = None
         match button:
             case 'left':

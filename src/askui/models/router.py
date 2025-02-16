@@ -22,9 +22,13 @@ class ModelRouter:
         return response
     
     def act(self, controller_client, instruction: str, model_name: str | None = None):
-        if self.tars.authenticated and model_name == "tars":
+        if model_name == "tars":
+            if not self.tars.authenticated:
+                raise AutomationError("You need to provide UI-TARS HF Endpoint credentials to use UI-TARS models.")
             return self.tars.act(controller_client, instruction)
-        if self.claude.authenticated and model_name == "claude":
+        if model_name == "claude":
+            if not self.claude.authenticated:
+                raise AutomationError("You need to provide Anthropic credentials to use Anthropic models.")
             agent = ClaudeComputerAgent(controller_client, self.report)
             agent.run(instruction)
             return
