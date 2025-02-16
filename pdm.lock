@@ -2,10 +2,10 @@
 # It is not intended for manual editing.
 
 [metadata]
-groups = ["default", "test"]
+groups = ["default", "dev", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:8fcd09725823cb20ae0a1dc8c6102129f6e2a6fdfa91f0d1276cc21c3d2f93c5"
+content_hash = "sha256:1d5d7ca6bf410918f5ca9a8968aa953d6968038d8cb27c482b3d557604786fe0"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -1658,8 +1658,7 @@ name = "watchdog"
 version = "6.0.0"
 requires_python = ">=3.9"
 summary = "Filesystem events monitoring"
-groups = ["default"]
-marker = "platform_system != \"Darwin\""
+groups = ["default", "dev"]
 files = [
     {file = "watchdog-6.0.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d1cdb490583ebd691c012b3d6dae011000fe42edb7a82ece80965b42abd61f26"},
     {file = "watchdog-6.0.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bc64ab3bdb6a04d69d4023b29422170b74681784ffb9463ed4870cf2f3e66112"},

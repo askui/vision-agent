@@ -285,7 +285,7 @@ class VisionAgent:
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
-            self.report.add_message("User", f'act: "{goal}"')
+            self.report.add_message("User", goal)
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
