@@ -7,6 +7,9 @@
 
 Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
+https://github.com/user-attachments/assets/a74326f2-088f-48a2-ba1c-4d94d327cbdf
+
+
 ## 🔧 Setup
 
 ### 1. Install AskUI Agent OS
