@@ -73,7 +73,7 @@ class AskUiControllerServer():
         component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
 
         if component_registry["DefinitionVersion"] != "1":
-            raise ValueError("Invalid registry version format: ", component_registry["DefinitionVersion"])
+            raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
         
         for (key, value) in component_registry['InstalledPackages'].items():
             if value['Label'] == "AskUIRemoteDeviceController":
