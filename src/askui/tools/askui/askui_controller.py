@@ -1,22 +1,57 @@
 from typing import List, Literal
 import grpc
-import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
-import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
+import os
 
 import time
 from PIL import Image
 
 import subprocess
 import uuid
-import os
 import time
 import sys
+import json
 import time
 import subprocess
 
 from ..utils import process_exists, wait_for_port
 from askui.reporting.report import SimpleReportGenerator
 from askui.utils import draw_point_on_image
+
+AGENT_OS_PROTO_BUFFERS_VERSION = ">=25.2.1" if os.getenv("ASKUI_COMPONENT_REGISTRY_FILE") is not None else "<25.2.1"
+
+if AGENT_OS_PROTO_BUFFERS_VERSION == ">=25.2.1":
+    import askui.tools.askui.askui_ui_controller_grpc_v1.Controller_V1_pb2_grpc as controller_v1
+    import askui.tools.askui.askui_ui_controller_grpc_v1.Controller_V1_pb2 as controller_v1_pbs
+else:
+    import askui.tools.askui.askui_ui_controller_grpc_v0.Controller_V1_pb2_grpc as controller_v1
+    import askui.tools.askui.askui_ui_controller_grpc_v0.Controller_V1_pb2 as controller_v1_pbs
+
+def load_json_file(file_path: str) -> dict:
+    """
+    Loads a JSON file and returns its contents as a dictionary.
+    
+    Args:
+        file_path (str): Path to the JSON file
+        
+    Returns:
+        dict: Contents of the JSON file
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        json.JSONDecodeError: If the file contains invalid JSON
+    """
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found")
+        raise
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in file '{file_path}': {str(e)}")
+        raise
+
+class AgentOSBinaryNotFoundException(Exception):
+    pass
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
@@ -29,12 +64,32 @@ class AskUiControllerServer():
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
+        print("AGENT_OS_PROTO_BUFFERS_VERSION", AGENT_OS_PROTO_BUFFERS_VERSION)
+        if AGENT_OS_PROTO_BUFFERS_VERSION == ">=25.2.1":
+            return self.__find_remote_device_controller_qe_25_2_1()
+        return self.__find_remote_device_controller_lt_25_2_1()
+    
+    def __find_remote_device_controller_qe_25_2_1(self) -> str:
+        component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
+
+        if component_registry["DefinitionVersion"] != "1":
+            raise ValueError("Invalid registry version format: ", component_registry["DefinitionVersion"])
+        
+        for (key, value) in component_registry['InstalledPackages'].items():
+            if value['Label'] == "AskUIRemoteDeviceController":
+                return value['Executables']['AskUIRemoteDeviceController']
+        raise AgentOSBinaryNotFoundException("AgentOSBinaryNotFoundException! AskUIRemoteDeviceController not found in the component registry.") 
+
+        
+    def __find_remote_device_controller_lt_25_2_1(self) -> str:
         if sys.platform == 'win32':
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}Binaries\\resources\\assets\\binaries\\AskuiRemoteDeviceController.exe"
         if sys.platform == 'darwin':
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
-    
+
+
+
     def __start_process(self, path):
         self.process = subprocess.Popen(path)
         wait_for_port(23000)
