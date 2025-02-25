@@ -107,7 +107,7 @@ To get started, set the environment variables required to authenticate with your
 </details>
 
 
-### 3b. Test with 🤗 Hugging Face Model Demos
+### 3b. Test with 🤗 Hugging Face Spaces API
 
 You can test the Vision Agent with Hugging Face models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
 
@@ -124,6 +124,18 @@ You can test the Vision Agent with Hugging Face models via their Spaces API. Ple
 ```python
 agent.click("search field", model_name="OS-Copilot/OS-Atlas-Base-7B")
 ```
+
+### 3c. Custom Model Implementations
+
+#### UI-TARS
+
+You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoint.
+
+1. Step: Host the model locally or in the cloud. More information about hosting UI-TARS can be found [here](https://github.com/bytedance/UI-TARS?tab=readme-ov-file#deployment).
+
+2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
+
+3. Step: Use the `model_name="tars"` parameter in your `click()`, `get()` and `act()` commands.
 
 
 ## ▶️ Start Building
