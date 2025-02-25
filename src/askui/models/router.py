@@ -9,6 +9,8 @@ from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
 from abc import ABC, abstractmethod
 
+POINT = tuple[int, int]
+
 def handle_response(response: tuple[int | None, int | None], instruction: str):
     if response[0] is None or response[1] is None:
         raise AutomationError(f'Could not locate "{instruction}"')
@@ -21,7 +23,7 @@ class GroundingModelRouter(ABC):
         pass
 
     @abstractmethod
-    def is_responsible(self, model_nam: Optional[str]):
+    def is_responsible(self, model_nam: Optional[str]) -> POINT:
         pass
     
     @abstractmethod
@@ -34,7 +36,7 @@ class AskUIModelRouter(GroundingModelRouter):
     def __init__(self):
         self.askui = AskUIHandler()
 
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
+    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None) -> POINT:
         if not self.askui.authenticated:
             raise AutomationError(f"NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or 'ASKUI_TOKEN' as env variables!")
 
@@ -51,6 +53,10 @@ class AskUIModelRouter(GroundingModelRouter):
             x, y = self.askui.click_pta_prediction(screenshot, instruction)
             if x is None or y is None:
                 x, y = self.askui.click_ocr_prediction(screenshot, instruction)
+            return handle_response((x, y), instruction)
+        if model_name == "askui-ai-element":
+            logger.debug(f"Routing click prediction to askui-ai-element")
+            x, y = self.askui.click_ai_element_prediction(screenshot, instruction)
             return handle_response((x, y), instruction)
         raise AutomationError(f"Invalid model name {model_name} for click")
         
@@ -88,7 +94,7 @@ class ModelRouter:
             return self.claude.get_inference(screenshot, instruction)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
     
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
+    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None) -> POINT:
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, instruction, model_name)
             return handle_response((x, y), instruction)

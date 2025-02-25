@@ -2,6 +2,7 @@ import os
 import base64
 import pathlib
 import requests
+import json
 
 from PIL import Image
 from typing import Union
@@ -14,6 +15,8 @@ class AskUIHandler:
         self.inference_endpoint = os.getenv("ASKUI_INFERENCE_ENDPOINT", "https://inference.askui.com")
         self.workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         self.token = os.getenv("ASKUI_TOKEN")
+        self.ai_element_locations = [
+            ]
 
         self.authenticated = True
         if self.workspace_id is None or self.token is None:
@@ -61,4 +64,45 @@ class AskUIHandler:
     
     def click_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on with text "{instruction}"'
+        return self.predict(image, askui_instruction)
+    
+    def click_ai_element_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+        ai_elements_path = []
+
+        for location in self.ai_element_locations:
+            path = pathlib.Path(location)
+            
+            json_files = list(path.glob("*.json"))
+            
+            if not json_files:
+                logger.warning(f"No JSON files found in: {location}")
+                continue
+                
+            for json_file in json_files:
+                try:
+                    with json_file.open('r') as f:
+                        data = json.load(f)
+                        name = data.get("name")
+                        if name is None:
+                            raise Exception(f"Could not locate 'name' key in AI element file: {json_file}")
+                        
+                        id = data.get("id")
+                        if id is None:
+                            raise Exception(f"Could not locate 'id' key in AI element file: {json_file}")
+                    
+                        if name == instruction:
+                            ai_elements_path.append(path / f"{id}.png")
+                            continue
+                except json.JSONDecodeError:
+                    logger.error(f"Invalid JSON in file: {json_file}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Error processing {json_file}: {str(e)}")
+                    continue
+
+        for ai_element_path in ai_elements_path:
+            ai_element = Image.open(ai_element_path)
+        raise Exception(f"Could not locate AI element with text '{ai_elements_path}'")
+        
+        askui_instruction = f'Click on custom element with text "{instruction}"'
         return self.predict(image, askui_instruction)
