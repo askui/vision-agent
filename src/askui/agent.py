@@ -118,6 +118,20 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to mouse_move '%s'", instruction)
         self.__mouse_move(instruction, model_name)
 
+
+    def mouse_wheel(self, direction_x: int, direction_y: int) -> None:
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'mouse_wheel: "{direction_x}", "{direction_y}"')
+        self.client.mouse_scroll(direction_x, direction_y)
+
+
+    def mouse_wheel(self, direction_x: int, direction_y: int) -> None:
+        self._check_askui_controller_enabled()
+        if self.report is not None:
+            self.report.add_message("User", f'mouse_wheel: "{direction_x}", "{direction_y}"')
+        self.client.mouse_scroll(direction_x, direction_y)
+
     def type(self, text: str) -> None:
         self._check_askui_controller_enabled()
         if self.report is not None:
