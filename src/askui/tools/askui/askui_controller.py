@@ -17,14 +17,8 @@ from ..utils import process_exists, wait_for_port
 from askui.reporting.report import SimpleReportGenerator
 from askui.utils import draw_point_on_image
 
-AGENT_OS_PROTO_BUFFERS_VERSION = ">=25.2.1" if os.getenv("ASKUI_COMPONENT_REGISTRY_FILE") is not None else "<25.2.1"
-
-if AGENT_OS_PROTO_BUFFERS_VERSION == ">=25.2.1":
-    import askui.tools.askui.askui_ui_controller_grpc_v1.Controller_V1_pb2_grpc as controller_v1
-    import askui.tools.askui.askui_ui_controller_grpc_v1.Controller_V1_pb2 as controller_v1_pbs
-else:
-    import askui.tools.askui.askui_ui_controller_grpc_v0.Controller_V1_pb2_grpc as controller_v1
-    import askui.tools.askui.askui_ui_controller_grpc_v0.Controller_V1_pb2 as controller_v1_pbs
+import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
+import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
 
 def load_json_file(file_path: str) -> dict:
     """
@@ -59,29 +53,48 @@ PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 
 PC_AND_MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift', 'backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
+HAS_ASKUI_COMPONENT_REGISTRY = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE") is not None
 class AskUiControllerServer():
     def __init__(self) -> None:
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
-        print("AGENT_OS_PROTO_BUFFERS_VERSION", AGENT_OS_PROTO_BUFFERS_VERSION)
-        if AGENT_OS_PROTO_BUFFERS_VERSION == ">=25.2.1":
-            return self.__find_remote_device_controller_qe_25_2_1()
-        return self.__find_remote_device_controller_lt_25_2_1()
+        if HAS_ASKUI_COMPONENT_REGISTRY:
+            return self.__find_remote_device_controller_by_component_registry()
+        return self.__find_remote_device_controller_by_legacy_path()
     
-    def __find_remote_device_controller_qe_25_2_1(self) -> str:
+    def __find_remote_device_controller_by_component_registry(self) -> str:
         component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
 
         if component_registry["DefinitionVersion"] != "1":
             raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
         
-        for (key, value) in component_registry['InstalledPackages'].items():
-            if value['Label'] == "AskUIRemoteDeviceController":
-                return value['Executables']['AskUIRemoteDeviceController']
-        raise AgentOSBinaryNotFoundException("AgentOSBinaryNotFoundException! AskUIRemoteDeviceController not found in the component registry.") 
 
+        installed_packages = component_registry.get('InstalledPackages')
+        if installed_packages is None:
+            raise ValueError("InstalledPackages not found in the component registry.")
         
-    def __find_remote_device_controller_lt_25_2_1(self) -> str:
+        remote_device_controller_package_id = "{aed1b543-e856-43ad-b1bc-19365d35c33e}"
+        remote_device_controller = installed_packages.get(remote_device_controller_package_id)
+
+        if remote_device_controller is None:
+            raise ValueError("RemoteDeviceController is not installed in the component registry.")
+        
+        execcutables = remote_device_controller.get('Executables')
+        if execcutables is None:
+            raise ValueError("Executables does not exists.")
+        
+        
+        askui_remote_device_controller_path = execcutables.get('AskUIRemoteDeviceController')
+        if askui_remote_device_controller_path is None:
+            raise ValueError("AskUIRemoteDeviceController executables does not exists.")
+        
+        if not os.path.isfile(askui_remote_device_controller_path):
+            raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
+        
+        return askui_remote_device_controller_path
+        
+    def __find_remote_device_controller_by_legacy_path(self) -> str:
         if sys.platform == 'win32':
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}Binaries\\resources\\assets\\binaries\\AskuiRemoteDeviceController.exe"
         if sys.platform == 'darwin':

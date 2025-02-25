@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import askui.tools.askui.askui_ui_controller_grpc_v1.Controller_V1_pb2 as Controller__V1__pb2
+import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as Controller__V1__pb2
 
 GRPC_GENERATED_VERSION = '1.64.1'
 GRPC_VERSION = grpc.__version__
@@ -134,34 +134,9 @@ class ControllerAPIStub(object):
                 request_serializer=Controller__V1__pb2.Request_Void.SerializeToString,
                 response_deserializer=Controller__V1__pb2.Response_GetMousePosition.FromString,
                 _registered_method=True)
-        self.GetProcessList = channel.unary_unary(
-                '/Askui.API.TDKv1.ControllerAPI/GetProcessList',
-                request_serializer=Controller__V1__pb2.Request_GetProcessList.SerializeToString,
-                response_deserializer=Controller__V1__pb2.Response_GetProcessList.FromString,
-                _registered_method=True)
-        self.GetWindowList = channel.unary_unary(
-                '/Askui.API.TDKv1.ControllerAPI/GetWindowList',
-                request_serializer=Controller__V1__pb2.Request_GetWindowList.SerializeToString,
-                response_deserializer=Controller__V1__pb2.Response_GetWindowList.FromString,
-                _registered_method=True)
-        self.GetAutomationTargetList = channel.unary_unary(
-                '/Askui.API.TDKv1.ControllerAPI/GetAutomationTargetList',
-                request_serializer=Controller__V1__pb2.Request_Void.SerializeToString,
-                response_deserializer=Controller__V1__pb2.Response_GetAutomationTargetList.FromString,
-                _registered_method=True)
         self.SetActiveDisplay = channel.unary_unary(
                 '/Askui.API.TDKv1.ControllerAPI/SetActiveDisplay',
                 request_serializer=Controller__V1__pb2.Request_SetActiveDisplay.SerializeToString,
-                response_deserializer=Controller__V1__pb2.Response_Void.FromString,
-                _registered_method=True)
-        self.SetActiveWindow = channel.unary_unary(
-                '/Askui.API.TDKv1.ControllerAPI/SetActiveWindow',
-                request_serializer=Controller__V1__pb2.Request_SetActiveWindow.SerializeToString,
-                response_deserializer=Controller__V1__pb2.Response_Void.FromString,
-                _registered_method=True)
-        self.SetActiveAutomationTarget = channel.unary_unary(
-                '/Askui.API.TDKv1.ControllerAPI/SetActiveAutomationTarget',
-                request_serializer=Controller__V1__pb2.Request_SetActiveAutomationTarget.SerializeToString,
                 response_deserializer=Controller__V1__pb2.Response_Void.FromString,
                 _registered_method=True)
         self.GetColor = channel.unary_unary(
@@ -256,7 +231,7 @@ class ControllerAPIServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def RemoveAction(self, request, context):
-        """Modify actions batch
+        """Modify acvtions batch
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -308,39 +283,9 @@ class ControllerAPIServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetProcessList(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetWindowList(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def GetAutomationTargetList(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def SetActiveDisplay(self, request, context):
         """Device Configuration
         """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetActiveWindow(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def SetActiveAutomationTarget(self, request, context):
-        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -462,34 +407,9 @@ def add_ControllerAPIServicer_to_server(servicer, server):
                     request_deserializer=Controller__V1__pb2.Request_Void.FromString,
                     response_serializer=Controller__V1__pb2.Response_GetMousePosition.SerializeToString,
             ),
-            'GetProcessList': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetProcessList,
-                    request_deserializer=Controller__V1__pb2.Request_GetProcessList.FromString,
-                    response_serializer=Controller__V1__pb2.Response_GetProcessList.SerializeToString,
-            ),
-            'GetWindowList': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetWindowList,
-                    request_deserializer=Controller__V1__pb2.Request_GetWindowList.FromString,
-                    response_serializer=Controller__V1__pb2.Response_GetWindowList.SerializeToString,
-            ),
-            'GetAutomationTargetList': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetAutomationTargetList,
-                    request_deserializer=Controller__V1__pb2.Request_Void.FromString,
-                    response_serializer=Controller__V1__pb2.Response_GetAutomationTargetList.SerializeToString,
-            ),
             'SetActiveDisplay': grpc.unary_unary_rpc_method_handler(
                     servicer.SetActiveDisplay,
                     request_deserializer=Controller__V1__pb2.Request_SetActiveDisplay.FromString,
-                    response_serializer=Controller__V1__pb2.Response_Void.SerializeToString,
-            ),
-            'SetActiveWindow': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetActiveWindow,
-                    request_deserializer=Controller__V1__pb2.Request_SetActiveWindow.FromString,
-                    response_serializer=Controller__V1__pb2.Response_Void.SerializeToString,
-            ),
-            'SetActiveAutomationTarget': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetActiveAutomationTarget,
-                    request_deserializer=Controller__V1__pb2.Request_SetActiveAutomationTarget.FromString,
                     response_serializer=Controller__V1__pb2.Response_Void.SerializeToString,
             ),
             'GetColor': grpc.unary_unary_rpc_method_handler(
@@ -1032,87 +952,6 @@ class ControllerAPI(object):
             _registered_method=True)
 
     @staticmethod
-    def GetProcessList(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Askui.API.TDKv1.ControllerAPI/GetProcessList',
-            Controller__V1__pb2.Request_GetProcessList.SerializeToString,
-            Controller__V1__pb2.Response_GetProcessList.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetWindowList(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Askui.API.TDKv1.ControllerAPI/GetWindowList',
-            Controller__V1__pb2.Request_GetWindowList.SerializeToString,
-            Controller__V1__pb2.Response_GetWindowList.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def GetAutomationTargetList(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Askui.API.TDKv1.ControllerAPI/GetAutomationTargetList',
-            Controller__V1__pb2.Request_Void.SerializeToString,
-            Controller__V1__pb2.Response_GetAutomationTargetList.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
     def SetActiveDisplay(request,
             target,
             options=(),
@@ -1128,60 +967,6 @@ class ControllerAPI(object):
             target,
             '/Askui.API.TDKv1.ControllerAPI/SetActiveDisplay',
             Controller__V1__pb2.Request_SetActiveDisplay.SerializeToString,
-            Controller__V1__pb2.Response_Void.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SetActiveWindow(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Askui.API.TDKv1.ControllerAPI/SetActiveWindow',
-            Controller__V1__pb2.Request_SetActiveWindow.SerializeToString,
-            Controller__V1__pb2.Response_Void.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def SetActiveAutomationTarget(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/Askui.API.TDKv1.ControllerAPI/SetActiveAutomationTarget',
-            Controller__V1__pb2.Request_SetActiveAutomationTarget.SerializeToString,
             Controller__V1__pb2.Response_Void.FromString,
             options,
             channel_credentials,
