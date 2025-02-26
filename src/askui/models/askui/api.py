@@ -55,10 +55,10 @@ class AskUIHandler:
 
         return int(position["x"]), int(position["y"])
     
-    def click_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+    def locate_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on pta "{instruction}"'
         return self.predict(image, askui_instruction)
     
-    def click_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+    def locate_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on with text "{instruction}"'
         return self.predict(image, askui_instruction)

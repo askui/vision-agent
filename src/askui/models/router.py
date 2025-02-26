@@ -17,7 +17,7 @@ def handle_response(response: tuple[int | None, int | None], instruction: str):
 class GroundingModelRouter(ABC):
 
     @abstractmethod
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None) -> tuple[int, int]:
+    def locate(self, screenshot: Image.Image, instruction: str, model_name: str | None = None) -> tuple[int, int]:
         pass
 
     @abstractmethod
@@ -34,23 +34,23 @@ class AskUIModelRouter(GroundingModelRouter):
     def __init__(self):
         self.askui = AskUIHandler()
 
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
+    def locate(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
         if not self.askui.authenticated:
             raise AutomationError(f"NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or 'ASKUI_TOKEN' as env variables!")
 
         if  model_name == "askui-pta":
-            logger.debug(f"Routing click prediction to askui-pta")
-            x, y = self.askui.click_pta_prediction(screenshot, instruction)
+            logger.debug(f"Routing locate prediction to askui-pta")
+            x, y = self.askui.locate_pta_prediction(screenshot, instruction)
             return handle_response((x, y), instruction)
         if model_name == "askui-ocr":
-            logger.debug(f"Routing click prediction to askui-ocr")
-            x, y = self.askui.click_ocr_prediction(screenshot, instruction)
+            logger.debug(f"Routing locate prediction to askui-ocr")
+            x, y = self.askui.locate_ocr_prediction(screenshot, instruction)
             return handle_response((x, y), instruction)
         if model_name == "askui-combo" or model_name is None:
-            logger.debug(f"Routing click prediction to askui-combo")
-            x, y = self.askui.click_pta_prediction(screenshot, instruction)
+            logger.debug(f"Routing locate prediction to askui-combo")
+            x, y = self.askui.locate_pta_prediction(screenshot, instruction)
             if x is None or y is None:
-                x, y = self.askui.click_ocr_prediction(screenshot, instruction)
+                x, y = self.askui.locate_ocr_prediction(screenshot, instruction)
             return handle_response((x, y), instruction)
         raise AutomationError(f"Invalid model name {model_name} for click")
         
@@ -88,7 +88,7 @@ class ModelRouter:
             return self.claude.get_inference(screenshot, instruction)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
     
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
+    def locate(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, instruction, model_name)
             return handle_response((x, y), instruction)
@@ -98,21 +98,21 @@ class ModelRouter:
             if model_name.startswith("tars") and not self.tars.authenticated:
                 raise AutomationError("You need to provide UI-TARS HF Endpoint credentials to use UI-TARS models.")
         if self.tars.authenticated and model_name == "tars":
-            x, y = self.tars.click_pta_prediction(screenshot, instruction)
+            x, y = self.tars.locate_prediction(screenshot, instruction)
             return handle_response((x, y), instruction)
         if self.claude.authenticated and model_name == "anthropic-claude-3-5-sonnet-20241022":
-            logger.debug("Routing click prediction to Anthropic")
-            x, y = self.claude.click_inference(screenshot, instruction)
+            logger.debug("Routing locate prediction to Anthropic")
+            x, y = self.claude.locate_inference(screenshot, instruction)
             return handle_response((x, y), instruction)
         
         for grounding_model_router in self.grounding_model_routers:
             if grounding_model_router.is_responsible(model_name) and grounding_model_router.is_authenticated():
-                return grounding_model_router.click(screenshot, instruction, model_name)
+                return grounding_model_router.locate(screenshot, instruction, model_name)
 
         if model_name is None:
             if self.claude.authenticated:
-                logger.debug("Routing click prediction to Anthropic")
-                x, y = self.claude.click_inference(screenshot, instruction)
+                logger.debug("Routing locate prediction to Anthropic")
+                x, y = self.claude.locate_inference(screenshot, instruction)
                 return handle_response((x, y), instruction)
             
-        raise AutomationError("Executing click commands requires to authenticate with an Automation Model Provider.")
+        raise AutomationError("Executing locate commands requires to authenticate with an Automation Model Provider.")

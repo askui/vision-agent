@@ -52,7 +52,7 @@ class UITarsAPIHandler:
         )
         return chat_completion.choices[0].message.content
 
-    def click_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+    def locate_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
         askui_instruction = f'Click on "{instruction}"'
         prediction = self.predict(image, askui_instruction, PROMPT)
         pattern = r"click\(start_box='(\(\d+,\d+\))'\)"
