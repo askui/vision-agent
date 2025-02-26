@@ -21,7 +21,7 @@ class GroundingModelRouter(ABC):
         pass
 
     @abstractmethod
-    def is_responsible(self, model_nam: Optional[str]) -> bool:
+    def is_responsible(self, model_name: Optional[str]) -> bool:
         pass
     
     @abstractmethod
