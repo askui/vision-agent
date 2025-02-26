@@ -17,7 +17,7 @@ def handle_response(response: tuple[int | None, int | None], instruction: str):
 class GroundingModelRouter(ABC):
 
     @abstractmethod
-    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None):
+    def click(self, screenshot: Image.Image, instruction: str, model_name: str | None = None) -> tuple[int, int]:
         pass
 
     @abstractmethod
