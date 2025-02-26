@@ -2,12 +2,13 @@ import os
 import base64
 import pathlib
 import requests
-import json
 
 from PIL import Image
-from typing import Union
+from typing import List, Union
+from askui.models.askui.ai_element_utils import AiElement, AiElementCollection
 from askui.utils import image_to_base64
 from askui.logging import logger
+
 
 
 class AskUIHandler:
@@ -15,13 +16,15 @@ class AskUIHandler:
         self.inference_endpoint = os.getenv("ASKUI_INFERENCE_ENDPOINT", "https://inference.askui.com")
         self.workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         self.token = os.getenv("ASKUI_TOKEN")
-        self.ai_element_locations = [
-            ]
-
+    
         self.authenticated = True
         if self.workspace_id is None or self.token is None:
             logger.warning("ASKUI_WORKSPACE_ID or ASKUI_TOKEN missing.")
             self.authenticated = False
+
+        self.ai_element_collection = AiElementCollection()
+
+
 
     def __build_askui_token_auth_header(self, bearer_token: str | None = None) -> dict[str, str]:
         if bearer_token is not None:
@@ -29,19 +32,45 @@ class AskUIHandler:
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
         return {"Authorization": f"Basic {token_base64}"}
     
+    def __build_custom_elements(self, ai_elements: List[AiElement]):
+        """
+        Converts AiElements to the CustomElementDto format expected by the backend.
+        
+        Args:
+            ai_elements (List[AiElement]): List of AI elements to convert
+            
+        Returns:
+            dict: Custom elements in the format expected by the backend
+        """
+        if not ai_elements:
+            return {}
+        
+        custom_elements = []
+        for element in ai_elements:
+            custom_element = {
+                "customImage": "," + image_to_base64(element.image),            
+                "imageCompareFormat": "grayscale",
+                "name": element.metadata.name
+            }
+            custom_elements.append(custom_element)
+        
+        return {
+            "customElements": custom_elements
+        }  
     def __build_model_composition(self):
         return {}
     
     def __build_base_url(self, endpoint: str = "inference") -> str:
         return f"{self.inference_endpoint}/api/v3/workspaces/{self.workspace_id}/{endpoint}"
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+    def predict(self, image: Union[pathlib.Path, Image.Image], instruction: str, ai_elements: List[pathlib.Path] = None) -> tuple[int | None, int | None]:
         response = requests.post(
             self.__build_base_url(),
             json={
                 "image": f",{image_to_base64(image)}",
                 **({"instruction": instruction} if instruction is not None else {}),
                 **self.__build_model_composition(),
+                **self.__build_custom_elements(ai_elements)
             },
             headers={"Content-Type": "application/json", **self.__build_askui_token_auth_header()},
             timeout=30,
@@ -67,42 +96,10 @@ class AskUIHandler:
         return self.predict(image, askui_instruction)
     
     def click_ai_element_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
-        ai_elements_path = []
+        ai_elements = self.ai_element_collection.find(instruction)
 
-        for location in self.ai_element_locations:
-            path = pathlib.Path(location)
-            
-            json_files = list(path.glob("*.json"))
-            
-            if not json_files:
-                logger.warning(f"No JSON files found in: {location}")
-                continue
-                
-            for json_file in json_files:
-                try:
-                    with json_file.open('r') as f:
-                        data = json.load(f)
-                        name = data.get("name")
-                        if name is None:
-                            raise Exception(f"Could not locate 'name' key in AI element file: {json_file}")
-                        
-                        id = data.get("id")
-                        if id is None:
-                            raise Exception(f"Could not locate 'id' key in AI element file: {json_file}")
-                    
-                        if name == instruction:
-                            ai_elements_path.append(path / f"{id}.png")
-                            continue
-                except json.JSONDecodeError:
-                    logger.error(f"Invalid JSON in file: {json_file}")
-                    continue
-                except Exception as e:
-                    logger.error(f"Error processing {json_file}: {str(e)}")
-                    continue
-
-        for ai_element_path in ai_elements_path:
-            ai_element = Image.open(ai_element_path)
-        raise Exception(f"Could not locate AI element with text '{ai_elements_path}'")
+        if len(ai_elements) == 0:
+            raise AiElementNotFound(f"Could not locate AI element with name '{instruction}'")
         
         askui_instruction = f'Click on custom element with text "{instruction}"'
-        return self.predict(image, askui_instruction)
+        return self.predict(image, askui_instruction, ai_elements=ai_elements)
