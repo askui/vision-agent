@@ -72,7 +72,11 @@ class AskUiControllerServer():
 
         askui_remote_device_controller_path = component_registry.get('InstalledPackages', {}).get('{aed1b543-e856-43ad-b1bc-19365d35c33e}', {}).get('Executables', {}).get('AskUIRemoteDeviceController'})
         if askui_remote_device_controller_path is None:
-            raise ValueError("AskUIRemoteDeviceController executables does not exists.")
+            raise ValueError(
+            "Unexpected installation registry structure. Possible broken installation.\n"
+            "Verify that you have installed the Remote Device Controller correctly.\n"
+            "If the issue persists, try reinstalling it or contact support."
+            )
         
         if not os.path.isfile(askui_remote_device_controller_path):
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
