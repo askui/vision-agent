@@ -70,22 +70,7 @@ class AskUiControllerServer():
             raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
         
 
-        installed_packages = component_registry.get('InstalledPackages')
-        if installed_packages is None:
-            raise ValueError("InstalledPackages not found in the component registry.")
-        
-        remote_device_controller_package_id = "{aed1b543-e856-43ad-b1bc-19365d35c33e}"
-        remote_device_controller = installed_packages.get(remote_device_controller_package_id)
-
-        if remote_device_controller is None:
-            raise ValueError("RemoteDeviceController is not installed in the component registry.")
-        
-        execcutables = remote_device_controller.get('Executables')
-        if execcutables is None:
-            raise ValueError("Executables does not exists.")
-        
-        
-        askui_remote_device_controller_path = execcutables.get('AskUIRemoteDeviceController')
+        askui_remote_device_controller_path = component_registry.get('InstalledPackages', {}).get('{aed1b543-e856-43ad-b1bc-19365d35c33e}', {}).get('Executables', {}).get('AskUIRemoteDeviceController'})
         if askui_remote_device_controller_path is None:
             raise ValueError("AskUIRemoteDeviceController executables does not exists.")
         
