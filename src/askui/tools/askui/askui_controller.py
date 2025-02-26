@@ -59,35 +59,30 @@ class AskUiControllerServer():
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
-        if HAS_ASKUI_COMPONENT_REGISTRY:
-            return self.__find_remote_device_controller_by_component_registry()
-        return self.__find_remote_device_controller_by_legacy_path()
+        askui_remote_device_controller_path = self.__find_remote_device_controller_by_legacy_path()
+        if os.path.isfile(askui_remote_device_controller_path) and not HAS_ASKUI_COMPONENT_REGISTRY:
+                logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
+                return askui_remote_device_controller_path
+                
+        if not HAS_ASKUI_COMPONENT_REGISTRY:
+            raise AskUISuiteNotInstalledError()
+        
+        return self.__find_remote_device_controller_by_component_registry()
     
     def __find_remote_device_controller_by_component_registry(self) -> str:
         component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
 
-        if component_registry["DefinitionVersion"] != "1":
+        if component_registry.get("DefinitionVersion") != "1":
             raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
         
 
-        installed_packages = component_registry.get('InstalledPackages')
-        if installed_packages is None:
-            raise ValueError("InstalledPackages not found in the component registry.")
-        
-        remote_device_controller_package_id = "{aed1b543-e856-43ad-b1bc-19365d35c33e}"
-        remote_device_controller = installed_packages.get(remote_device_controller_package_id)
-
-        if remote_device_controller is None:
-            raise ValueError("RemoteDeviceController is not installed in the component registry.")
-        
-        execcutables = remote_device_controller.get('Executables')
-        if execcutables is None:
-            raise ValueError("Executables does not exists.")
-        
-        
-        askui_remote_device_controller_path = execcutables.get('AskUIRemoteDeviceController')
+        askui_remote_device_controller_path = component_registry.get('InstalledPackages', {}).get('{aed1b543-e856-43ad-b1bc-19365d35c33e}', {}).get('Executables', {}).get('AskUIRemoteDeviceController'})
         if askui_remote_device_controller_path is None:
-            raise ValueError("AskUIRemoteDeviceController executables does not exists.")
+            raise ValueError(
+            "Unexpected installation registry structure. Possible broken installation.\n"
+            "Verify that you have installed the Remote Device Controller correctly.\n"
+            "If the issue persists, try reinstalling it or contact support."
+            )
         
         if not os.path.isfile(askui_remote_device_controller_path):
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
@@ -100,8 +95,6 @@ class AskUiControllerServer():
         if sys.platform == 'darwin':
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
-
-
 
     def __start_process(self, path):
         self.process = subprocess.Popen(path)
