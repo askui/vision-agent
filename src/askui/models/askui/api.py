@@ -32,12 +32,12 @@ class AskUIHandler:
     def __build_base_url(self, endpoint: str = "inference") -> str:
         return f"{self.inference_endpoint}/api/v3/workspaces/{self.workspace_id}/{endpoint}"
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
+    def predict(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
         response = requests.post(
             self.__build_base_url(),
             json={
                 "image": f",{image_to_base64(image)}",
-                **({"instruction": instruction} if instruction is not None else {}),
+                **({"locator": locator} if locator is not None else {}),
                 **self.__build_model_composition(),
             },
             headers={"Content-Type": "application/json", **self.__build_askui_token_auth_header()},
@@ -55,10 +55,10 @@ class AskUIHandler:
 
         return int(position["x"]), int(position["y"])
     
-    def locate_pta_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
-        askui_instruction = f'Click on pta "{instruction}"'
-        return self.predict(image, askui_instruction)
+    def locate_pta_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
+        askui_locator = f'Click on pta "{locator}"'
+        return self.predict(image, askui_locator)
     
-    def locate_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
-        askui_instruction = f'Click on with text "{instruction}"'
-        return self.predict(image, askui_instruction)
+    def locate_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
+        askui_locator = f'Click on with text "{locator}"'
+        return self.predict(image, askui_locator)
