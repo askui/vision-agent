@@ -66,7 +66,7 @@ class AskUiControllerServer():
     def __find_remote_device_controller_by_component_registry(self) -> str:
         component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
 
-        if component_registry["DefinitionVersion"] != "1":
+        if component_registry.get("DefinitionVersion") != "1":
             raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
         
 
