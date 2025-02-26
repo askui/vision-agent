@@ -1,3 +1,4 @@
+import pathlib
 from typing import List, Literal
 import grpc
 import os
@@ -16,36 +17,59 @@ import subprocess
 from ..utils import process_exists, wait_for_port
 from askui.reporting.report import SimpleReportGenerator
 from askui.utils import draw_point_on_image
+from askui.logging import logger
 
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
 
-def load_json_file(file_path: str) -> dict:
-    """
-    Loads a JSON file and returns its contents as a dictionary.
-    
-    Args:
-        file_path (str): Path to the JSON file
-        
-    Returns:
-        dict: Contents of the JSON file
-        
-    Raises:
-        FileNotFoundError: If the file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
-    """
-    try:
-        with open(file_path, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
-        raise
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in file '{file_path}': {str(e)}")
-        raise
+
+import os
+from typing import Tuple, Type
+
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource, JsonConfigSettingsSource, SettingsConfigDict
 
 class AgentOSBinaryNotFoundException(Exception):
     pass
+class AskUISuiteNotInstalledError(Exception):
+    pass
+
+
+class RemoteDeviceController(BaseModel):
+    askui_remote_device_controller: pathlib.Path = Field(alias="AskUIRemoteDeviceController")
+     
+
+class Executables(BaseModel):
+     executables: RemoteDeviceController = Field(alias="Executables")
+
+
+class InstalledPackages(BaseModel):
+    remote_device_controller_uuid: Executables = Field(alias="{aed1b543-e856-43ad-b1bc-19365d35c33e}")
+    
+class AskUIComponentRegistry(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="ASKUI_COMPONENT_REGISTRY_",
+        env_nested_delimiter="__",
+        extra="ignore",
+        case_sensitive=False
+    )
+
+    definition_version: int = Field(alias="DefinitionVersion")
+    installed_packages: InstalledPackages = Field(alias="InstalledPackages")
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        component_registry = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE")
+        if component_registry is None:
+             raise AskUISuiteNotInstalledError()
+        return (JsonConfigSettingsSource(settings_cls, component_registry),)
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
@@ -53,30 +77,23 @@ PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 
 PC_AND_MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift', 'backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
 
 
-HAS_ASKUI_COMPONENT_REGISTRY = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE") is not None
 class AskUiControllerServer():
     def __init__(self) -> None:
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
         askui_remote_device_controller_path = self.__find_remote_device_controller_by_legacy_path()
-        if os.path.isfile(askui_remote_device_controller_path) and not HAS_ASKUI_COMPONENT_REGISTRY:
+        if os.path.isfile(askui_remote_device_controller_path):
                 logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
                 return askui_remote_device_controller_path
-                
-        if not HAS_ASKUI_COMPONENT_REGISTRY:
-            raise AskUISuiteNotInstalledError()
         
         return self.__find_remote_device_controller_by_component_registry()
     
     def __find_remote_device_controller_by_component_registry(self) -> str:
-        component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
-
-        if component_registry.get("DefinitionVersion") != "1":
-            raise ValueError("ValueError! Invalid AskUIComponentRegistry DefinitionVersion format: ", component_registry["DefinitionVersion"])
+        component_registry = AskUIComponentRegistry()
         
 
-        askui_remote_device_controller_path = component_registry.get('InstalledPackages', {}).get('{aed1b543-e856-43ad-b1bc-19365d35c33e}', {}).get('Executables', {}).get('AskUIRemoteDeviceController'})
+        askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
         if askui_remote_device_controller_path is None:
             raise ValueError(
             "Unexpected installation registry structure. Possible broken installation.\n"
