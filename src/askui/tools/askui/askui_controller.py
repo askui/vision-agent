@@ -59,9 +59,15 @@ class AskUiControllerServer():
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
-        if HAS_ASKUI_COMPONENT_REGISTRY:
-            return self.__find_remote_device_controller_by_component_registry()
-        return self.__find_remote_device_controller_by_legacy_path()
+        askui_remote_device_controller_path = self.__find_remote_device_controller_by_legacy_path()
+        if os.path.isfile(askui_remote_device_controller_path) and not HAS_ASKUI_COMPONENT_REGISTRY:
+                logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
+                return askui_remote_device_controller_path
+                
+        if not HAS_ASKUI_COMPONENT_REGISTRY:
+            raise AskUISuiteNotInstalledError()
+        
+        return self.__find_remote_device_controller_by_component_registry()
     
     def __find_remote_device_controller_by_component_registry(self) -> str:
         component_registry = load_json_file(os.getenv("ASKUI_COMPONENT_REGISTRY_FILE"))
