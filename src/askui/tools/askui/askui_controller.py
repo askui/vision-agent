@@ -101,8 +101,6 @@ class AskUiControllerServer():
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
         return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
 
-
-
     def __start_process(self, path):
         self.process = subprocess.Popen(path)
         wait_for_port(23000)
