@@ -64,10 +64,10 @@ class AskUIComponentRegistry(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        component_registry = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE")
-        if component_registry is None:
-             raise AskUISuiteNotInstalledError("AskUI Suite is not installed.")
-        return (JsonConfigSettingsSource(settings_cls, component_registry),)
+        component_registry_file = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE")
+        if component_registry_file is None:
+             raise AskUISuiteNotInstalledError("AskUI Suite is not installed. Please install it.")
+        return (JsonConfigSettingsSource(settings_cls, component_registry_file),)
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
