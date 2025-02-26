@@ -37,11 +37,9 @@ class AskUISuiteNotInstalledError(Exception):
 
 class RemoteDeviceController(BaseModel):
     askui_remote_device_controller: pathlib.Path = Field(alias="AskUIRemoteDeviceController")
-     
 
 class Executables(BaseModel):
      executables: RemoteDeviceController = Field(alias="Executables")
-
 
 class InstalledPackages(BaseModel):
     remote_device_controller_uuid: Executables = Field(alias="{aed1b543-e856-43ad-b1bc-19365d35c33e}")
@@ -68,7 +66,7 @@ class AskUIComponentRegistry(BaseSettings):
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
         component_registry = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE")
         if component_registry is None:
-             raise AskUISuiteNotInstalledError()
+             raise AskUISuiteNotInstalledError("AskUI Suite is not installed.")
         return (JsonConfigSettingsSource(settings_cls, component_registry),)
 
 
