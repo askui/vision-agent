@@ -9,6 +9,9 @@ from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
 from abc import ABC, abstractmethod
 
+
+Point = tuple[int, int]
+
 def handle_response(response: tuple[int | None, int | None], locator: str):
     if response[0] is None or response[1] is None:
         raise AutomationError(f'Could not locate "{locator}"')
@@ -17,7 +20,7 @@ def handle_response(response: tuple[int | None, int | None], locator: str):
 class GroundingModelRouter(ABC):
 
     @abstractmethod
-    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> tuple[int, int]:
+    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> Point:
         pass
 
     @abstractmethod
@@ -34,7 +37,7 @@ class AskUIModelRouter(GroundingModelRouter):
     def __init__(self):
         self.askui = AskUIHandler()
 
-    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None):
+    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> :
         if not self.askui.authenticated:
             raise AutomationError(f"NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or 'ASKUI_TOKEN' as env variables!")
 
@@ -51,6 +54,10 @@ class AskUIModelRouter(GroundingModelRouter):
             x, y = self.askui.locate_pta_prediction(screenshot, locator)
             if x is None or y is None:
                 x, y = self.askui.locate_ocr_prediction(screenshot, locator)
+            return handle_response((x, y), locator)
+        if model_name == "askui-ai-element":
+            logger.debug(f"Routing click prediction to askui-ai-element")
+            x, y = self.askui.locate_ai_element_prediction(screenshot, locator)
             return handle_response((x, y), locator)
         raise AutomationError(f"Invalid model name {model_name} for click")
         
@@ -88,7 +95,7 @@ class ModelRouter:
             return self.claude.get_inference(screenshot, locator)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
     
-    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None):
+    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> Point:
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, locator, model_name)
             return handle_response((x, y), locator)

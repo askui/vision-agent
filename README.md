@@ -75,7 +75,7 @@ pip install askui
 
 **Note:** Requires Python version >=3.10.
 
-### 3a. Authenticate with an Automation Model Provider
+### 3a. Authenticate with an **AI Model** Provider
 
 |  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
@@ -107,25 +107,25 @@ To get started, set the environment variables required to authenticate with your
 </details>
 
 
-### 3b. Test with 🤗 Hugging Face Spaces API
+### 3b. Test with 🤗 Hugging Face **AI Models** (Space API)
 
 You can test the Vision Agent with Hugging Face models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
 
 **Note:** Hugging Face Spaces host model demos provided by individuals not associated with Hugging Face or AskUI. Don't use these models on screens with sensible information.
 
 **Supported Models:**
-- `AskUI/PTA-1`
-- `OS-Copilot/OS-Atlas-Base-7B`
-- `showlab/ShowUI-2B`
-- `Qwen/Qwen2-VL-2B-Instruct`
-- `Qwen/Qwen2-VL-7B-Instruct`
+- [`AskUI/PTA-1`](https://huggingface.co/spaces/AskUI/PTA-1)
+- [`OS-Copilot/OS-Atlas-Base-7B`](https://huggingface.co/spaces/maxiw/OS-ATLAS)
+- [`showlab/ShowUI-2B`](https://huggingface.co/spaces/showlab/ShowUI)
+- [`Qwen/Qwen2-VL-2B-Instruct`](https://huggingface.co/spaces/maxiw/Qwen2-VL-Detection)
+- [`Qwen/Qwen2-VL-7B-Instruct`](https://huggingface.co/spaces/maxiw/Qwen2-VL-Detection)
 
 **Example Code:**
 ```python
 agent.click("search field", model_name="OS-Copilot/OS-Atlas-Base-7B")
 ```
 
-### 3c. Custom Model Implementations
+### 3c. Host your own **AI Models**
 
 #### UI-TARS
 
@@ -170,6 +170,63 @@ Instead of relying on the default model for the entire automation script, you ca
 | `click()`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
 
 **Example:** `agent.click("Preview", model_name="askui-combo")`
+
+<details>
+  <summary>Antrophic AI Models</summary>
+
+Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
+| Model Name  | Info | Production Ready? |  Enterprise? |
+|-------------|--------------------|--------------|--------------|
+| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is an Large Action model (LAM), which can autonoumsly achive goals. e.g. `"Book me a flight from Berlin to Rom"` | ❌ | ❌
+> **Note:** Configure your Antrophic Model Provider [here]()
+
+
+</details>
+
+<details>
+  <summary>AskUI AI Models</summary>
+
+Supported commands are: `click()`, `type()`, `mouse_move()`
+| Model Name  | Info | Production Ready? |  Enterprise? | Teachable? |
+|-------------|--------------------|--------------|--------------|--------------|
+| `askui-pta` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() is trained to address all kindes of UI  elements by a textual description e.g. "`Login button`", "`Text login`" | ✅ | ✅ | ✅ |
+| `askui-ocr` | `AskUI OCR` is an OCR model trained to address texts on UI Screens e.g. "`Login`", "`Search`" | ✅ | ✅ | ✅ |
+| `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | ✅ | ✅ | ✅ |
+| `askui-ai-element`| [AskUI AI Element](https://docs.askui.com/docs/general/Element%20Selection/aielement) allows you to address visual elements like icons or images by demonstrating what you looking for. Therfore you have to crop out the element and give it a name.  | ✅ | ✅ | ✅ |
+
+> **Note:** Configure your AskUI Model Provider [here]()
+
+</details>
+
+
+<details>
+  <summary>Huggingface AI Models (Spaces API)</summary>
+
+Supported commands are: `click()`, `type()`, `mouse_move()`
+| Model Name  | Info | Production Ready? |  Enterprise? |
+|-------------|--------------------|--------------|--------------|
+| `AskUI/PTA-1` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() is trained to address all kindes of UI  elements by a textual description e.g. "`Login button`", "`Text login`" | ❌ | ❌ |
+| `OS-Copilot/OS-Atlas-Base-7B` | [`OS-Atlas-Base-7B`](https://github.com/OS-Copilot/OS-Atlas) is a Large Action Model (LAM), which can autonoumsly achive goals. e.g. `"Please help me modify VS Code setting to hide all folders in the explorer view"`. This model is not in the `act()` command available | ❌ | ❌ |
+| `showlab/ShowUI-2B` | [`showlab/ShowUI-2B`](https://huggingface.co/showlab/ShowUI-2B) is a Large Action Model (LAM), which can autonoumsly achive goals. e.g. `"Search in google maps for Nahant"`. This model is not in the `act()` command available | ❌ | ❌ |
+| `Qwen/Qwen2-VL-2B-Instruct` | [`Qwen/Qwen2-VL-2B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple dataset including UI data. This model is not in the `act()` command available | ❌ | ❌ |
+| `Qwen/Qwen2-VL-7B-Instruct` | [Qwen/Qwen2-VL-7B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple dataset including UI data. This model is not in the `act()` command available | ❌ | ❌ |
+
+> **Note:** No authentication required! But rate-limited!
+
+</details>
+
+<details>
+  <summary>Self Hosted UI Models</summary>
+
+Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
+| Model Name  | Info | Production Ready? |  Enterprise? |
+|-------------|--------------------|--------------|--------------|
+| `tars` | [`UI-Tars`](https://github.com/bytedance/UI-TARS) is a Large Action Model (LAM) based on Qwen2 and fine-tuned by [ByteDance](https://www.bytedance.com/) on UI data e.g. "`Book me a flight to rom`" | ❌ | ❌ |
+
+
+> **Note:** These models needs to been self hosted by yourself. (See [here]())
+
+</details>
 
 ### 🛠️ Direct Tool Use
 
