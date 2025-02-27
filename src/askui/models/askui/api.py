@@ -32,7 +32,7 @@ class AskUIHandler:
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
         return {"Authorization": f"Basic {token_base64}"}
     
-    def __build_custom_elements(self, ai_elements: List[AiElement]):
+    def _build_custom_elements(self, ai_elements: List[AiElement] | None):
         """
         Converts AiElements to the CustomElementDto format expected by the backend.
         
@@ -70,7 +70,7 @@ class AskUIHandler:
                 "image": f",{image_to_base64(image)}",
                 **({"instruction": locator} if locator is not None else {}),
                 **self.__build_model_composition(),
-                **self.__build_custom_elements(ai_elements)
+                **self._build_custom_elements(ai_elements)
             },
             headers={"Content-Type": "application/json", **self.__build_askui_token_auth_header()},
             timeout=30,

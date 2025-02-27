@@ -77,7 +77,7 @@ pip install askui
 
 ### 3a. Authenticate with an **AI Model** Provider
 
-|  | AskUI [INFO](https://app.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
+|  | AskUI [INFO](https://hub.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
 | ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
 | Supported Commands    | `click()`   | `click()`, `get()`, `act()`   |
