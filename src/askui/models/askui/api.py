@@ -5,7 +5,7 @@ import requests
 
 from PIL import Image
 from typing import List, Union
-from askui.models.askui.ai_element_utils import AiElement, AiElementCollection
+from askui.models.askui.ai_element_utils import AiElement, AiElementCollection, AiElementNotFound
 from askui.utils import image_to_base64
 from askui.logging import logger
 
@@ -26,7 +26,7 @@ class AskUIHandler:
 
 
 
-    def __build_askui_token_auth_header(self, bearer_token: str | None = None) -> dict[str, str]:
+    def _build_askui_token_auth_header(self, bearer_token: str | None = None) -> dict[str, str]:
         if bearer_token is not None:
             return {"Authorization": f"Bearer {bearer_token}"}
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
@@ -72,7 +72,7 @@ class AskUIHandler:
                 **self.__build_model_composition(),
                 **self._build_custom_elements(ai_elements)
             },
-            headers={"Content-Type": "application/json", **self.__build_askui_token_auth_header()},
+            headers={"Content-Type": "application/json", **self._build_askui_token_auth_header()},
             timeout=30,
         )
         if response.status_code != 200:
@@ -95,11 +95,11 @@ class AskUIHandler:
         askui_locator = f'Click on with text "{locator}"'
         return self.predict(image, askui_locator)
     
-    def locate_ai_element_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
-        ai_elements = self.ai_element_collection.find(instruction)
+    def locate_ai_element_prediction(self, image: Union[pathlib.Path, Image.Image], name: str) -> tuple[int | None, int | None]:
+        ai_elements = self.ai_element_collection.find(name)
 
         if len(ai_elements) == 0:
-            raise AiElementNotFound(f"Could not locate AI element with name '{locator}'")
+            raise AiElementNotFound(f"Could not locate AI element with name '{name}'")
         
-        askui_instruction = f'Click on custom element with text "{locator}"'
+        askui_instruction = f'Click on custom element with text "{name}"'
         return self.predict(image, askui_instruction, ai_elements=ai_elements)

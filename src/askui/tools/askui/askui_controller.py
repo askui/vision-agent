@@ -10,9 +10,7 @@ import subprocess
 import uuid
 import time
 import sys
-import json
 import time
-import subprocess
 
 from ..utils import process_exists, wait_for_port
 from askui.reporting.report import SimpleReportGenerator
@@ -24,10 +22,9 @@ import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controlle
 
 
 import os
-from typing import Tuple, Type
 
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource, JsonConfigSettingsSource, SettingsConfigDict
+from pydantic import BaseModel, Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsConfigDict
 
 class AgentOSBinaryNotFoundException(Exception):
     pass
@@ -63,20 +60,26 @@ class AskUiControllerSettings(BaseSettings):
             raise ValueError("Either ASKUI_COMPONENT_REGISTRY_FILE or ASKUI_INSTALLATION_DIRECTORY environment variable must be set")
         return self
 
-# keys ...
+MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
+PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
+PC_AND_MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift', 'backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
+
 
 class AskUiControllerServer():
     def __init__(self) -> None:
         self._process = None
         self._settings = AskUiControllerSettings() # type: ignore
 
-    def __find_remote_device_controller(self) -> pathlib.Path:
-        if self._settings.installation_directory is not None:
+    def _find_remote_device_controller(self) -> pathlib.Path:
+        if self._settings.installation_directory is not None and self._settings.component_registry_file is None:
             logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
-            return  self.__find_remote_device_controller_by_legacy_path()
-        return self.__find_remote_device_controller_by_component_registry()
+            askui_remote_device_controller_path = self._find_remote_device_controller_by_legacy_path()
+            if not os.path.isfile(askui_remote_device_controller_path):
+                raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
+            return 
+        return self._find_remote_device_controller_by_component_registry()
     
-    def __find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
+    def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
         assert self._settings.component_registry_file is not None, "Component registry file is not set"
         component_registry = AskUiComponentRegistry.model_validate_json(self._settings.component_registry_file.read_text())
         askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
@@ -84,7 +87,7 @@ class AskUiControllerServer():
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
         return askui_remote_device_controller_path
         
-    def __find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
+    def _find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
         assert self._settings.installation_directory is not None, "Installation directory is not set"
         match sys.platform:
             case 'win32':
@@ -95,79 +98,18 @@ class AskUiControllerServer():
                 return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "resources", "assets", "binaries", "AskuiRemoteDeviceController"))
             case _:
                 raise NotImplementedError(f"Platform {sys.platform} not supported by AskUI Remote Device Controller")
-
+            
     def __start_process(self, path):
-        self._process = subprocess.Popen(path)
-        wait_for_port(23000)
-        
-    def start(self, clean_up=False):
-        if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
-            self.clean_up()
-        self.__start_process(str(self.__find_remote_device_controller()))
-
-    def clean_up(self):
-        if sys.platform == 'win32':
-            subprocess.run("taskkill.exe /IM AskUI*")
-            time.sleep(0.1)
-
-    def stop(self, force=False):
-        if force:
-            self._process.terminate()
-            self.clean_up()
-            return
-        self._process.kill()
-
-
-MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
-PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
-PC_AND_MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift', 'backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
-
-
-class AskUiControllerServer():
-    def __init__(self) -> None:
-        self.process = None
-
-    def _find_remote_device_controller(self) -> str:
-        askui_remote_device_controller_path = self._find_remote_device_controller_by_legacy_path()
-        if os.path.isfile(askui_remote_device_controller_path):
-                logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
-                return askui_remote_device_controller_path
-        
-        return self._find_remote_device_controller_by_component_registry()
-    
-    def _find_remote_device_controller_by_component_registry(self) -> str:
-        component_registry = AskUIComponentRegistry()
-        
-
-        askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
-        if askui_remote_device_controller_path is None:
-            raise ValueError(
-            "Unexpected installation registry structure. Possible broken installation.\n"
-            "Verify that you have installed the Remote Device Controller correctly.\n"
-            "If the issue persists, try reinstalling it or contact support."
-            )
-        
-        if not os.path.isfile(askui_remote_device_controller_path):
-            raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
-        
-        return askui_remote_device_controller_path
-        
-    def _find_remote_device_controller_by_legacy_path(self) -> str:
-        if sys.platform == 'win32':
-            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}Binaries\\resources\\assets\\binaries\\AskuiRemoteDeviceController.exe"
-        if sys.platform == 'darwin':
-            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceController"
-        return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceController"
-
-    def _start_process(self, path):
         self.process = subprocess.Popen(path)
         wait_for_port(23000)
         
     def start(self, clean_up=False):
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
-        self._start_process(self._find_remote_device_controller())
-
+        remote_device_controller_path = self._find_remote_device_controller()
+        logger.debug("Starting AskUI Remote Device Controller: %s", remote_device_controller_path)
+        self.__start_process(remote_device_controller_path)
+        
     def clean_up(self):
         if sys.platform == 'win32':
             subprocess.run("taskkill.exe /IM AskUI*")

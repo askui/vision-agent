@@ -36,7 +36,7 @@ class AiElementMetadata(BaseModel):
     id: UUID4
     name: str
     creation_date_time: datetime
-    image_meta_data: AskUIImageMetadata = Field(alias="image")
+    image_metadata: AskUIImageMetadata = Field(alias="image")
 
 class AiElement():
     image_path: pathlib.Path
@@ -85,7 +85,7 @@ class AiElementCollection:
             *additional_ai_element_locations
         ]
 
-        logger.warning("AI Element locations: %s", self.ai_element_locations)
+        logger.debug("AI Element locations: %s", self.ai_element_locations)
 
     def find(self, name: str):
         ai_elements = []

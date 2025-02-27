@@ -37,7 +37,7 @@ class AskUIModelRouter(GroundingModelRouter):
     def __init__(self):
         self.askui = AskUIHandler()
 
-    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> :
+    def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> Point:
         if not self.askui.authenticated:
             raise AutomationError(f"NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or 'ASKUI_TOKEN' as env variables!")
 
@@ -85,7 +85,7 @@ class ModelRouter:
             return self.tars.act(controller_client, goal)
         if self.claude.authenticated and model_name == "claude":
             agent = ClaudeComputerAgent(controller_client, self.report)
-            agent.run(goal)
+            return agent.run(goal)
         raise AutomationError("Invalid model name for act")
     
     def get_inference(self, screenshot: Image.Image, locator: str, model_name: str | None = None):
