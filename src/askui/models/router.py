@@ -73,12 +73,12 @@ class ModelRouter:
         self.huggingface_spaces = HFSpacesHandler()
         self.tars = UITarsAPIHandler(self.report)
     
-    def act(self, controller_client, locator: str, model_name: str | None = None):
+    def act(self, controller_client, goal: str, model_name: str | None = None):
         if self.tars.authenticated and model_name == "tars":
-            return self.tars.act(controller_client, locator)
+            return self.tars.act(controller_client, goal)
         if self.claude.authenticated and model_name == "claude":
             agent = ClaudeComputerAgent(controller_client, self.report)
-            agent.run(locator)
+            agent.run(goal)
         raise AutomationError("Invalid model name for act")
     
     def get_inference(self, screenshot: Image.Image, locator: str, model_name: str | None = None):

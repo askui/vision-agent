@@ -52,9 +52,9 @@ class UITarsAPIHandler:
         )
         return chat_completion.choices[0].message.content
 
-    def locate_prediction(self, image: Union[pathlib.Path, Image.Image], instruction: str) -> tuple[int | None, int | None]:
-        askui_instruction = f'Click on "{instruction}"'
-        prediction = self.predict(image, askui_instruction, PROMPT)
+    def locate_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
+        askui_locator = f'Click on "{locator}"'
+        prediction = self.predict(image, askui_locator, PROMPT)
         pattern = r"click\(start_box='(\(\d+,\d+\))'\)"
         match = re.search(pattern, prediction)
         if match:
@@ -71,7 +71,7 @@ class UITarsAPIHandler:
     def get_prediction(self, image: Image.Image, instruction: str) -> str:
         return self.predict(image, instruction, PROMPT_QA)
 
-    def act(self, controller_client, instruction: str) -> str:
+    def act(self, controller_client, goal: str) -> str:
         screenshot = controller_client.screenshot()
         self.act_history = [
             {
@@ -85,7 +85,7 @@ class UITarsAPIHandler:
                     },
                     {
                         "type": "text",
-                        "text": PROMPT + instruction
+                        "text": PROMPT + goal
                     }
                 ]
             }

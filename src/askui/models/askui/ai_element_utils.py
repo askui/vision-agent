@@ -9,7 +9,7 @@ from askui.logging import logger
 
 
 
-class Recangel(BaseModel):
+class Rectangle(BaseModel):
     xmin: int
     ymin: int
     ymax: int
@@ -17,34 +17,34 @@ class Recangel(BaseModel):
 
 class Annotation(BaseModel):
     id: UUID4
-    rectangle: Recangel
+    rectangle: Rectangle
 
 class Size(BaseModel):
     width: int
     height: int
 
-class AskUIImageMetaData(BaseModel):
+class AskUIImageMetadata(BaseModel):
     size: Size
 
-class AiElementJson(BaseModel):    
+class AiElementMetadata(BaseModel):    
     model_config = ConfigDict(
-        alias_generator=lambda field_name: to_camel(field_name),
-        serialization_alias=lambda field_name: to_camel(field_name),
+        alias_generator=to_camel,
+        serialization_alias=to_camel,
     )
 
     version: int
     id: UUID4
     name: str
     creation_date_time: datetime
-    image_meta_data: AskUIImageMetaData = Field(alias="image")
+    image_meta_data: AskUIImageMetadata = Field(alias="image")
 
 class AiElement():
     image_path: pathlib.Path
     image: Image.Image
     json_path: pathlib.Path
-    metadata: AiElementJson
+    metadata: AiElementMetadata
 
-    def __init__(self, image_path: pathlib.Path, image: Image.Image, metadata_path: pathlib.Path, metadata: AiElementJson):
+    def __init__(self, image_path: pathlib.Path, image: Image.Image, metadata_path: pathlib.Path, metadata: AiElementMetadata):
         self.image_path = image_path
         self.image = image
         self.metadata_path = metadata_path
@@ -57,7 +57,7 @@ class AiElement():
                 return cls(
                     metadata_path= json_file_path,
                     image_path= image_path,
-                    metadata = AiElementJson.model_validate_json(f.read()),
+                    metadata = AiElementMetadata.model_validate_json(f.read()),
                     image = Image.open(image_path))
 
 
