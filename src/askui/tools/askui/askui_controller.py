@@ -44,30 +44,78 @@ class Executables(BaseModel):
 class InstalledPackages(BaseModel):
     remote_device_controller_uuid: Executables = Field(alias="{aed1b543-e856-43ad-b1bc-19365d35c33e}")
     
-class AskUIComponentRegistry(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="ASKUI_COMPONENT_REGISTRY_",
-        env_nested_delimiter="__",
-        extra="ignore",
-        case_sensitive=False
-    )
-
+class AskUiComponentRegistry(BaseModel):
     definition_version: int = Field(alias="DefinitionVersion")
     installed_packages: InstalledPackages = Field(alias="InstalledPackages")
 
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: Type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        component_registry_file = os.getenv("ASKUI_COMPONENT_REGISTRY_FILE")
-        if component_registry_file is None:
-             raise AskUISuiteNotInstalledError("AskUI Suite is not installed. Please install it.")
-        return (JsonConfigSettingsSource(settings_cls, component_registry_file),)
+
+class AskUiControllerSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="ASKUI_",
+    )
+    
+    component_registry_file: pathlib.Path | None = None
+    installation_directory: pathlib.Path | None = None
+
+    @model_validator(mode="after")
+    def validate_either_component_registry_or_installation_directory_is_set(self) -> "AskUiControllerSettings":
+        if self.component_registry_file is None and self.installation_directory is None:
+            raise ValueError("Either ASKUI_COMPONENT_REGISTRY_FILE or ASKUI_INSTALLATION_DIRECTORY environment variable must be set")
+        return self
+
+# keys ...
+
+class AskUiControllerServer():
+    def __init__(self) -> None:
+        self._process = None
+        self._settings = AskUiControllerSettings() # type: ignore
+
+    def __find_remote_device_controller(self) -> pathlib.Path:
+        if self._settings.installation_directory is not None:
+            logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
+            return  self.__find_remote_device_controller_by_legacy_path()
+        return self.__find_remote_device_controller_by_component_registry()
+    
+    def __find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
+        assert self._settings.component_registry_file is not None, "Component registry file is not set"
+        component_registry = AskUiComponentRegistry.model_validate_json(self._settings.component_registry_file.read_text())
+        askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
+        if not os.path.isfile(askui_remote_device_controller_path):
+            raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
+        return askui_remote_device_controller_path
+        
+    def __find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
+        assert self._settings.installation_directory is not None, "Installation directory is not set"
+        match sys.platform:
+            case 'win32':
+                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "resources", "assets", "binaries", "AskuiRemoteDeviceController.exe"))
+            case 'darwin':
+                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "askui-ui-controller.app", "Contents", "Resources", "assets", "binaries", "AskuiRemoteDeviceController"))
+            case 'linux':
+                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "resources", "assets", "binaries", "AskuiRemoteDeviceController"))
+            case _:
+                raise NotImplementedError(f"Platform {sys.platform} not supported by AskUI Remote Device Controller")
+
+    def __start_process(self, path):
+        self._process = subprocess.Popen(path)
+        wait_for_port(23000)
+        
+    def start(self, clean_up=False):
+        if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
+            self.clean_up()
+        self.__start_process(str(self.__find_remote_device_controller()))
+
+    def clean_up(self):
+        if sys.platform == 'win32':
+            subprocess.run("taskkill.exe /IM AskUI*")
+            time.sleep(0.1)
+
+    def stop(self, force=False):
+        if force:
+            self._process.terminate()
+            self.clean_up()
+            return
+        self._process.kill()
 
 
 MODIFIER_KEY = Literal['command', 'alt', 'control', 'shift', 'right_shift']
