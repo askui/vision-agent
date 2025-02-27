@@ -76,7 +76,7 @@ class AskUiControllerServer():
             askui_remote_device_controller_path = self._find_remote_device_controller_by_legacy_path()
             if not os.path.isfile(askui_remote_device_controller_path):
                 raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
-            return 
+            return askui_remote_device_controller_path
         return self._find_remote_device_controller_by_component_registry()
     
     def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:

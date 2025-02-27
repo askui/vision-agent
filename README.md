@@ -107,7 +107,7 @@ To get started, set the environment variables required to authenticate with your
 </details>
 
 
-### 3b. Test with 🤗 Hugging Face **AI Models** (Space API)
+### 3b. Test with 🤗 Hugging Face **AI Models** (Spaces API)
 
 You can test the Vision Agent with Hugging Face models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
 
