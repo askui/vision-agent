@@ -79,7 +79,7 @@ class VisionAgent:
         self._check_askui_controller_enabled()
         if self.report is not None:
             msg = f'click'
-            if button is not 'left':
+            if button != 'left':
                 msg = f'{button} ' + msg 
             if repeat > 1:
                 msg += f' {repeat}x times'
@@ -119,18 +119,28 @@ class VisionAgent:
         self.__mouse_move(instruction, model_name)
 
 
-    def mouse_wheel(self, direction_x: int, direction_y: int) -> None:
+    def mouse_scroll(self, x: int, y: int) -> None:
+        """
+        Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
+
+        Parameters:
+            x (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
+            y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
+
+        Note:
+            The actual scroll direction depends on the operating system's configuration.
+            Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
+
+        Example:
+            >>> with VisionAgent() as agent:
+            >>>     agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
+            >>>     agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
+            >>>     agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
+        """
         self._check_askui_controller_enabled()
         if self.report is not None:
-            self.report.add_message("User", f'mouse_wheel: "{direction_x}", "{direction_y}"')
-        self.client.mouse_scroll(direction_x, direction_y)
-
-
-    def mouse_wheel(self, direction_x: int, direction_y: int) -> None:
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'mouse_wheel: "{direction_x}", "{direction_y}"')
-        self.client.mouse_scroll(direction_x, direction_y)
+            self.report.add_message("User", f'mouse_scroll: "{x}", "{y}"')
+        self.client.mouse_scroll(x, y)
 
     def type(self, text: str) -> None:
         self._check_askui_controller_enabled()
