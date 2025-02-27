@@ -129,8 +129,8 @@ class ClaudeComputerAgent:
         return messages
 
     
-    def run(self, instruction: str):
-        messages = [{"role": "user", "content": instruction}]
+    def run(self, goal: str):
+        messages = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
             messages = self.step(messages)

@@ -41,20 +41,20 @@ class HFSpacesHandler:
             rescaled_boxes.append(rescaled_box)
         return rescaled_boxes
 
-    def predict(self, screenshot, instruction: str, model_name: str = "AskUI/PTA-1"):
+    def predict(self, screenshot, locator: str, model_name: str = "AskUI/PTA-1"):
         try:
-            return self.spaces[model_name](screenshot, instruction, model_name)
+            return self.spaces[model_name](screenshot, locator, model_name)
         except Exception as e:
             raise AutomationError(f"Hugging Face Spaces Exception: {e}")
 
-    def predict_askui_pta1(self, screenshot, instruction: str, model_name: str = None):
+    def predict_askui_pta1(self, screenshot, locator: str, model_name: str = None):
         client = self.get_space_client("AskUI/PTA-1")
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
             screenshot.save(temp_file, format='PNG')
             temp_file_path = temp_file.name
             result = client.predict(
                 image=handle_file(temp_file_path),
-                text_input=instruction,
+                text_input=locator,
                 model_id=model_name,
                 api_name="/run_example"
             )
@@ -65,14 +65,14 @@ class HFSpacesHandler:
         y = int((y1 + y2) / 2)
         return x, y
     
-    def predict_os_atlas(self, screenshot, instruction: str, model_name: str = None):
+    def predict_os_atlas(self, screenshot, locator: str, model_name: str = None):
         client = self.get_space_client("maxiw/OS-ATLAS")
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
             screenshot.save(temp_file, format='PNG')
             temp_file_path = temp_file.name
             result = client.predict(
                 image=handle_file(temp_file_path),
-                text_input=instruction,
+                text_input=locator,
                 model_id=model_name,
                 api_name="/run_example"
             )
@@ -83,7 +83,7 @@ class HFSpacesHandler:
         y = int((y1 + y2) / 2)
         return x, y
     
-    def predict_qwen2_vl(self, screenshot, instruction: str, model_name: str = None):
+    def predict_qwen2_vl(self, screenshot, locator: str, model_name: str = None):
         client = self.get_space_client("maxiw/Qwen2-VL-Detection")
         system_prompt = "You are a helpfull assistant to detect objects in images. When asked to detect elements based on a description you return bounding boxes for all elements in the form of [xmin, ymin, xmax, ymax] whith the values beeing scaled to 1000 by 1000 pixels. When there are more than one result, answer with a list of bounding boxes in the form of [[xmin, ymin, xmax, ymax], [xmin, ymin, xmax, ymax], ...]."
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
@@ -91,7 +91,7 @@ class HFSpacesHandler:
             temp_file_path = temp_file.name
             result = client.predict(
                 image=handle_file(temp_file_path),
-                text_input=instruction,
+                text_input=locator,
                 system_prompt=system_prompt,
                 model_id=model_name,
                 api_name="/run_example"
@@ -104,14 +104,14 @@ class HFSpacesHandler:
         y = int((y1 + y2) / 2)
         return x, y
     
-    def predict_showui(self, screenshot, instruction: str, model_name: str = None):
+    def predict_showui(self, screenshot, locator: str, model_name: str = None):
         client = self.get_space_client("showlab/ShowUI")
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
             screenshot.save(temp_file, format='PNG')
             temp_file_path = temp_file.name
             result = client.predict(
                 image=handle_file(temp_file_path),
-                query=instruction,
+                query=locator,
                 api_name="/on_submit"
             )
             output_value = json.loads(result[1])
