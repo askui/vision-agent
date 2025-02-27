@@ -96,7 +96,7 @@ class VisionAgent:
         screenshot = self.client.screenshot() # type: ignore
         x, y = self.model_router.locate(screenshot, instruction, model_name)
         if self.report is not None:
-            self.report.add_message("ModelRouter", f"click: ({x}, {y})")
+            self.report.add_message("ModelRouter", f"locate: ({x}, {y})")
         self.client.mouse(x, y) # type: ignore
 
     def mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
