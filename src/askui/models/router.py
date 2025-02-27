@@ -83,7 +83,7 @@ class ModelRouter:
     def act(self, controller_client, goal: str, model_name: str | None = None):
         if self.tars.authenticated and model_name == "tars":
             return self.tars.act(controller_client, goal)
-        if self.claude.authenticated and model_name == "claude":
+        if self.claude.authenticated and (model_name == "claude" or model_name is None):
             agent = ClaudeComputerAgent(controller_client, self.report)
             return agent.run(goal)
         raise AutomationError("Invalid model name for act")
@@ -91,7 +91,7 @@ class ModelRouter:
     def get_inference(self, screenshot: Image.Image, locator: str, model_name: str | None = None):
         if self.tars.authenticated and model_name == "tars":
             return self.tars.get_prediction(screenshot, locator)
-        if self.claude.authenticated and model_name == "anthropic-claude-3-5-sonnet-20241022":
+        if self.claude.authenticated and (model_name == "anthropic-claude-3-5-sonnet-20241022"  or model_name is None):
             return self.claude.get_inference(screenshot, locator)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
     
