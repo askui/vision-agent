@@ -37,7 +37,7 @@ class AskUIHandler:
             self.__build_base_url(),
             json={
                 "image": f",{image_to_base64(image)}",
-                **({"locator": locator} if locator is not None else {}),
+                **({"instruction": locator} if locator is not None else {}),
                 **self.__build_model_composition(),
             },
             headers={"Content-Type": "application/json", **self.__build_askui_token_auth_header()},
