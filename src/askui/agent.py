@@ -128,8 +128,11 @@ class VisionAgent:
             y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
 
         Note:
-            The actual scroll direction depends on the operating system's configuration.
+            The actual `scroll direction` depends on the operating system's configuration.
             Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
+            
+            The meaning of scroll `units` varies across operating systems and applications.
+            A scroll value of 10 might result in different distances depending on the application and system settings.
 
         Example:
             >>> with VisionAgent() as agent:
