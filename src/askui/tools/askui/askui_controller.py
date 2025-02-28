@@ -204,7 +204,9 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPressAndRelease=controller_v1_pbs.ActionParameters_MouseButton_PressAndRelease(mouseButton=mouse_button, count=count)))
         
-    def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left'):        
+    def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left'):
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"mouse_down: {button}")
         mouse_button = None
         match button:
             case 'left':
@@ -215,7 +217,9 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Press, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPress=controller_v1_pbs.ActionParameters_MouseButton_Press(mouseButton=mouse_button)))
 
-    def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left'):        
+    def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left'):      
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"mouse_up: {button}")  
         mouse_button = None
         match button:
             case 'left':
@@ -225,6 +229,43 @@ class AskUiControllerClient():
             case 'right':
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Release, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonRelease=controller_v1_pbs.ActionParameters_MouseButton_Release(mouseButton=mouse_button)))
+
+    def mouse_scroll(self, x: int, y: int):
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"mouse_scroll: {x}x {y}y")
+        if x != 0:
+            self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+                direction = controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Horizontal,
+                deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
+                delta = x,
+                milliseconds = 50
+            )))
+        if y != 0:
+            self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+                direction =  controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Vertical,
+                deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
+                delta = y,
+                milliseconds = 50
+            )))
+
+
+    def mouse_scroll(self, direction_x: int, direction_y: int):
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"mouse_scroll: {direction_x}x {direction_y}y")
+        if direction_x != 0:
+            self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+                direction = controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Horizontal,
+                deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
+                delta = direction_x,
+                milliseconds = 50
+            )))
+        if direction_y != 0:
+            self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+                direction =  controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Vertical,
+                deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
+                delta = direction_y,
+                milliseconds = 50
+            )))
 
     def keyboard_pressed(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] = None):
         if modifier_keys is None:
