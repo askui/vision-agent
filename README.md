@@ -1,6 +1,14 @@
 # 🤖 AskUI Vision Agent
 
-⚡ Automate computer tasks in Python ⚡
+**AskUI is building the Vision Agent for enterprises, enabling secure automation of native devices.**
+
+Key features of AskUI include:
+
+- Support for Windows, Linux, MacOS, Android and iOS device automation (Citrix supported)
+- Support for single-step UI automation commands (RPA like) as well as agentic intent-based instructions
+- In-background automation on Windows machines (agent can create a second session; you do not have to watch it take over mouse and keyboard)
+- Flexible model use (hot swap of models) and infrastructure for reteaching of models (available on-premise)
+- Secure deployment of agents in enterprise environments
 
 [![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
 [![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -109,7 +117,7 @@ To get started, set the environment variables required to authenticate with your
 
 ### 3b. Test with 🤗 Hugging Face **AI Models** (Spaces API)
 
-You can test the Vision Agent with Hugging Face models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
+You can test the Vision Agent with Huggingface models via their Spaces API. Please note that the API is rate-limited so for production use cases, it is recommended to choose step 3a.
 
 **Note:** Hugging Face Spaces host model demos provided by individuals not associated with Hugging Face or AskUI. Don't use these models on screens with sensible information.
 
@@ -157,7 +165,7 @@ with VisionAgent() as agent:
     datetime = agent.get("What is the datetime at the top of the screen?")
     print(datetime)
 
-    # Or let the agent work on its own
+    # Or let the agent work on its own, needs an Anthropic key set
     agent.act("search for a flight from Berlin to Paris in January")
 ```
 
@@ -175,9 +183,9 @@ Instead of relying on the default model for the entire automation script, you ca
   <summary>Antrophic AI Models</summary>
 
 Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
-| Model Name  | Info | Production Ready? |  Enterprise? |
-|-------------|--------------------|--------------|--------------|
-| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is an Large Action model (LAM), which can autonoumsly achive goals. e.g. `"Book me a flight from Berlin to Rom"` | ❌ | ❌
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+|-------------|--------------------|--------------|--------------|--------------|--------------|
+| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
 > **Note:** Configure your Antrophic Model Provider [here]()
 
 
@@ -187,12 +195,12 @@ Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
   <summary>AskUI AI Models</summary>
 
 Supported commands are: `click()`, `type()`, `mouse_move()`
-| Model Name  | Info | Production Ready? |  Enterprise? | Teachable? |
-|-------------|--------------------|--------------|--------------|--------------|
-| `askui-pta` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() is trained to address all kindes of UI  elements by a textual description e.g. "`Login button`", "`Text login`" | ✅ | ✅ | ✅ |
-| `askui-ocr` | `AskUI OCR` is an OCR model trained to address texts on UI Screens e.g. "`Login`", "`Search`" | ✅ | ✅ | ✅ |
-| `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | ✅ | ✅ | ✅ |
-| `askui-ai-element`| [AskUI AI Element](https://docs.askui.com/docs/general/Element%20Selection/aielement) allows you to address visual elements like icons or images by demonstrating what you looking for. Therfore you have to crop out the element and give it a name.  | ✅ | ✅ | ✅ |
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+|-------------|--------------------|--------------|--------------|--------------|--------------|
+| `askui-pta` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, can be retrained |
+| `askui-ocr` | `AskUI OCR` is an OCR model trained to address texts on UI Screens e.g. "`Login`", "`Search`" | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
+| `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
+| `askui-ai-element`| [AskUI AI Element](https://docs.askui.com/docs/general/Element%20Selection/aielement) allows you to address visual elements like icons or images by demonstrating what you looking for. Therefore, you have to crop out the element and give it a name.  | Very fast, <5ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, determinitic behaviour |
 
 > **Note:** Configure your AskUI Model Provider [here]()
 
@@ -203,13 +211,13 @@ Supported commands are: `click()`, `type()`, `mouse_move()`
   <summary>Huggingface AI Models (Spaces API)</summary>
 
 Supported commands are: `click()`, `type()`, `mouse_move()`
-| Model Name  | Info | Production Ready? |  Enterprise? |
-|-------------|--------------------|--------------|--------------|
-| `AskUI/PTA-1` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() is trained to address all kindes of UI  elements by a textual description e.g. "`Login button`", "`Text login`" | ❌ | ❌ |
-| `OS-Copilot/OS-Atlas-Base-7B` | [`OS-Atlas-Base-7B`](https://github.com/OS-Copilot/OS-Atlas) is a Large Action Model (LAM), which can autonoumsly achive goals. e.g. `"Please help me modify VS Code setting to hide all folders in the explorer view"`. This model is not in the `act()` command available | ❌ | ❌ |
-| `showlab/ShowUI-2B` | [`showlab/ShowUI-2B`](https://huggingface.co/showlab/ShowUI-2B) is a Large Action Model (LAM), which can autonoumsly achive goals. e.g. `"Search in google maps for Nahant"`. This model is not in the `act()` command available | ❌ | ❌ |
-| `Qwen/Qwen2-VL-2B-Instruct` | [`Qwen/Qwen2-VL-2B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple dataset including UI data. This model is not in the `act()` command available | ❌ | ❌ |
-| `Qwen/Qwen2-VL-7B-Instruct` | [Qwen/Qwen2-VL-7B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple dataset including UI data. This model is not in the `act()` command available | ❌ | ❌ |
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+|-------------|--------------------|--------------|--------------|--------------|--------------|
+| `AskUI/PTA-1` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI which]() to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production applications |
+| `OS-Copilot/OS-Atlas-Base-7B` | [`OS-Atlas-Base-7B`](https://github.com/OS-Copilot/OS-Atlas) is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Please help me modify VS Code settings to hide all folders in the explorer view"`. This model is not available in the `act()` command | Slow, >1s per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production applications |
+| `showlab/ShowUI-2B` | [`showlab/ShowUI-2B`](https://huggingface.co/showlab/ShowUI-2B) is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Search in google maps for Nahant"`. This model is not available in the `act()` command | slow, >1s per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production usage |
+| `Qwen/Qwen2-VL-2B-Instruct` | [`Qwen/Qwen2-VL-2B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple datasets including UI data. This model is not available in the `act()` command | slow, >1s per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production usage |
+| `Qwen/Qwen2-VL-7B-Instruct` | [Qwen/Qwen2-VL-7B-Instruct`](https://github.com/QwenLM/Qwen2.5-VLB) is a Visual Language Model (VLM) pre-trained on multiple dataset including UI data. This model is not available in the `act()` command available | slow, >1s per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production usage |
 
 > **Note:** No authentication required! But rate-limited!
 
@@ -219,18 +227,18 @@ Supported commands are: `click()`, `type()`, `mouse_move()`
   <summary>Self Hosted UI Models</summary>
 
 Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
-| Model Name  | Info | Production Ready? |  Enterprise? |
-|-------------|--------------------|--------------|--------------|
-| `tars` | [`UI-Tars`](https://github.com/bytedance/UI-TARS) is a Large Action Model (LAM) based on Qwen2 and fine-tuned by [ByteDance](https://www.bytedance.com/) on UI data e.g. "`Book me a flight to rom`" | ❌ | ❌ |
+| Model Name  | Info | Execution Speed |  Security | Cost | Reliability | 
+|-------------|--------------------|--------------|--------------|--------------|--------------|
+| `tars` | [`UI-Tars`](https://github.com/bytedance/UI-TARS) is a Large Action Model (LAM) based on Qwen2 and fine-tuned by [ByteDance](https://www.bytedance.com/) on UI data e.g. "`Book me a flight to rom`" | slow, >1s per step | Self-hosted | Depening on infrastructure | Out-of-the-box not recommended for production usage |
 
 
-> **Note:** These models needs to been self hosted by yourself. (See [here]())
+> **Note:** These models need to been self hosted by yourself. (See [here]())
 
 </details>
 
 ### 🛠️ Direct Tool Use
 
-Under the hood agents are using a set of tools. You can also directly access these tools.
+Under the hood, agents are using a set of tools. You can directly access these tools.
 
 #### Agent OS
 
