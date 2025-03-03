@@ -186,7 +186,7 @@ Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
 | Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
-> **Note:** Configure your Antrophic Model Provider [here]()
+> **Note:** Configure your Antrophic Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
 
 
 </details>
@@ -202,7 +202,7 @@ Supported commands are: `click()`, `type()`, `mouse_move()`
 | `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
 | `askui-ai-element`| [AskUI AI Element](https://docs.askui.com/docs/general/Element%20Selection/aielement) allows you to address visual elements like icons or images by demonstrating what you looking for. Therefore, you have to crop out the element and give it a name.  | Very fast, <5ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, determinitic behaviour |
 
-> **Note:** Configure your AskUI Model Provider [here]()
+> **Note:** Configure your AskUI Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
 
 </details>
 
