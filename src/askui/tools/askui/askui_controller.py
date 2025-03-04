@@ -253,14 +253,14 @@ class AskUiControllerClient():
         if self.report is not None: 
             self.report.add_message("AgentOS", f"mouse_scroll: {direction_x}x {direction_y}y")
         if direction_x != 0:
-            self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+            self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
                 direction = controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Horizontal,
                 deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
                 delta = direction_x,
                 milliseconds = 50
             )))
         if direction_y != 0:
-            self.__run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
+            self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
                 direction =  controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Vertical,
                 deltaType =  controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
                 delta = direction_y,
