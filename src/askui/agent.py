@@ -40,6 +40,7 @@ class VisionAgent:
         if enable_askui_controller:
             self.controller = AskUiControllerServer()
             self.controller.start(True)
+            time.sleep(0.5)
             self.client = AskUiControllerClient(display, self.report)
             self.client.connect()
             self.client.set_display(display)
