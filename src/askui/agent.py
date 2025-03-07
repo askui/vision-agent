@@ -171,16 +171,18 @@ class VisionAgent:
         """
         Pauses the execution of the program for the specified number of seconds.
 
-        Args:
+        Parameters:
             sec (float): The number of seconds to wait. Must be greater than 0.
 
         Raises:
             ValueError: If the provided `sec` is negative.
 
         Example:
-            >>> with VisionAgent() agent:
-            >>>     agent.wait(5)  # Pauses execution for 5 seconds.
-            >>>     agent.wait(0.5)  # Pauses execution for 500 milliseconds.
+        ```python
+        with VisionAgent() as agent:
+            agent.wait(5)  # Pauses execution for 5 seconds
+            agent.wait(0.5)  # Pauses execution for 500 milliseconds
+        ```
         """
         time.sleep(sec)
 
@@ -188,12 +190,15 @@ class VisionAgent:
         """
         Simulates the release of a key.
 
-        Args:
+        Parameters:
             key (PC_AND_MODIFIER_KEY): The key to be released.
 
         Example:
-            >>> agent.key_up('a')  # Release the 'a' key.
-            >>> agent.key_up('shift')  # Release the 'Shift' key.
+        ```python
+        with VisionAgent() as agent:
+            agent.key_up('a')  # Release the 'a' key
+            agent.key_up('shift')  # Release the 'Shift' key
+        ```
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
@@ -205,12 +210,15 @@ class VisionAgent:
         """
         Simulates the pressing of a key.
 
-        Args:
+        Parameters:
             key (PC_AND_MODIFIER_KEY): The key to be pressed.
 
         Example:
-            >>> agent.key_down('a')  # Press the 'a' key.
-            >>> agent.key_down('shift')  # Press the 'Shift' key.
+        ```python
+        with VisionAgent() as agent:
+            agent.key_down('a')  # Press the 'a' key
+            agent.key_down('shift')  # Press the 'Shift' key
+        ```
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
@@ -219,6 +227,26 @@ class VisionAgent:
         self.client.keyboard_pressed(key)
 
     def act(self, goal: str, model_name: Optional[str] = None) -> None:
+        """
+        Instructs the agent to achieve a specified goal through autonomous actions.
+
+        The agent will analyze the screen, determine necessary steps, and perform actions
+        to accomplish the goal. This may include clicking, typing, scrolling, and other
+        interface interactions.
+
+        Parameters:
+            goal (str): A description of what the agent should achieve.
+            model_name (str | None): The specific model to use for vision analysis.
+                If None, uses the default model.
+
+        Example:
+        ```python
+        with VisionAgent() as agent:
+            agent.act("Open the settings menu")
+            agent.act("Search for 'printer' in the search box")
+            agent.act("Log in with username 'admin' and password '1234'")
+        ```
+        """
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'act: "{goal}"')
@@ -230,11 +258,46 @@ class VisionAgent:
     def keyboard(
         self, key: PC_AND_MODIFIER_KEY, modifier_keys: list[MODIFIER_KEY] | None = None
     ) -> None:
+        """
+        Simulates pressing a key or key combination on the keyboard.
+
+        Parameters:
+            key (PC_AND_MODIFIER_KEY): The main key to press. This can be a letter, number, 
+                special character, or function key.
+            modifier_keys (list[MODIFIER_KEY] | None): Optional list of modifier keys to press 
+                along with the main key. Common modifier keys include 'ctrl', 'alt', 'shift'.
+
+        Example:
+        ```python
+        with VisionAgent() as agent:
+            agent.keyboard('a')  # Press 'a' key
+            agent.keyboard('enter')  # Press 'Enter' key
+            agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
+            agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
+        ```
+        """
         self._check_askui_controller_enabled()
         logger.debug("VisionAgent received instruction to press '%s'", key)
         self.client.keyboard_tap(key, modifier_keys)  # type: ignore
 
-    def cli(self, command: str):
+    def cli(self, command: str) -> None:
+        """
+        Executes a command on the command line interface.
+
+        This method allows running shell commands directly from the agent. The command
+        is split on spaces and executed as a subprocess.
+
+        Parameters:
+            command (str): The command to execute on the command line.
+
+        Example:
+        ```python
+        with VisionAgent() as agent:
+            agent.cli("echo Hello World")  # Prints "Hello World"
+            agent.cli("ls -la")  # Lists files in current directory with details
+            agent.cli("python --version")  # Displays Python version
+        ```
+        """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         subprocess.run(command.split(" "))
 
