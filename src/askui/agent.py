@@ -68,12 +68,14 @@ class VisionAgent:
             InvalidParameterError: If the 'repeat' parameter is less than 1.
 
         Example:
-            >>> with VisionAgent() as agent:
-            >>>     agent.click()              # Left click on current position
-            >>>     agent.click("Edit")        # Left click on text "Edit"
-            >>>     agent.click("Edit", button="right")  # Right click on text "Edit"
-            >>>     agent.click(repeat=2)      # Double left click on current position
-            >>>     agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
+        ```python
+        with VisionAgent() as agent:
+            agent.click()              # Left click on current position
+            agent.click("Edit")        # Left click on text "Edit"
+            agent.click("Edit", button="right")  # Right click on text "Edit"
+            agent.click(repeat=2)      # Double left click on current position
+            agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
+        ```
         """
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
