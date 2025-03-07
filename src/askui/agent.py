@@ -111,16 +111,17 @@ class VisionAgent:
             model_name (str | None): The model name to be used for element detection. Optional.
 
         Example:
-            >>> with VisionAgent() as agent:
-            >>>     agent.mouse_move("Submit button")  # Moves cursor to submit button
-            >>>     agent.mouse_move("Close")  # Moves cursor to close element
-            >>>     agent.mouse_move("Profile picture", model_name="custom_model")  # Uses specific model
+        ```python
+        with VisionAgent() as agent:
+            agent.mouse_move("Submit button")  # Moves cursor to submit button
+            agent.mouse_move("Close")  # Moves cursor to close element
+            agent.mouse_move("Profile picture", model_name="custom_model")  # Uses specific model
+        ```
         """
         if self.report is not None:
             self.report.add_message("User", f'mouse_move: "{instruction}"')
         logger.debug("VisionAgent received instruction to mouse_move '%s'", instruction)
         self.__mouse_move(instruction, model_name)
-
 
     def mouse_scroll(self, x: int, y: int) -> None:
         """
@@ -134,14 +135,16 @@ class VisionAgent:
             The actual `scroll direction` depends on the operating system's configuration.
             Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
             
-            The meaning of scroll `units` varies across operating systems and applications.
+            The meaning of scroll `units` varies` acro`ss oper`ating` systems and applications.
             A scroll value of 10 might result in different distances depending on the application and system settings.
 
         Example:
-            >>> with VisionAgent() as agent:
-            >>>     agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
-            >>>     agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
-            >>>     agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
+        ```python
+        with VisionAgent() as agent:
+            agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
+            agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
+            agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
+        ```
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
@@ -149,6 +152,20 @@ class VisionAgent:
         self.client.mouse_scroll(x, y)
 
     def type(self, text: str) -> None:
+        """
+        Types the specified text as if it were entered on a keyboard.
+
+        Parameters:
+            text (str): The text to be typed.
+
+        Example:
+        ```python
+        with VisionAgent() as agent:
+            agent.type("Hello, world!")  # Types "Hello, world!"
+            agent.type("user@example.com")  # Types an email address
+            agent.type("password123")  # Types a password
+        ```
+        """
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'type: "{text}"')
@@ -156,6 +173,24 @@ class VisionAgent:
         self.client.type(text) # type: ignore
 
     def get(self, instruction: str, model_name: Optional[str] = None) -> str:
+        """
+        Retrieves text or information from the screen based on the provided instruction.
+
+        Parameters:
+            instruction (str): The instruction describing what information to retrieve.
+            model_name (str | None): The model name to be used for information extraction. Optional.
+
+        Returns:
+            str: The extracted text or information.
+
+        Example:
+        ```python
+        with VisionAgent() as agent:
+            price = agent.get("What is the price displayed?")
+            username = agent.get("What is the username shown in the profile?")
+            error_message = agent.get("What does the error message say?")
+        ```
+        """
         self._check_askui_controller_enabled()
         if self.report is not None:
             self.report.add_message("User", f'get: "{instruction}"')
