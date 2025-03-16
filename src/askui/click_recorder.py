@@ -61,11 +61,9 @@ class AskUiTeachService():
         self.process = None
 
     def __find_remote_device_controller(self) -> str:
-        if sys.platform == 'win32':
-            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}Binaries\\resources\\assets\\binaries\\AskuiRemoteDeviceSnippingTool.exe"
         if sys.platform == 'darwin':
-            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/askui-ui-controller.app/Contents/Resources/assets/binaries/AskuiRemoteDeviceSnippingTool"
-        return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/Binaries/resources/assets/binaries/AskuiRemoteDeviceSnippingTool"
+            return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/DependencyCache/AskUIRemoteDeviceSnippingTool-0.2.0/AskuiRemoteDeviceSnippingTool"
+        raise NotImplementedError("Snipping tool not supported on this platform, yet, as the path was unknown at the time of writing")
     
     def __start_process(self, binary_path, output_directory):
             self.process = subprocess.check_output((binary_path, "-Annotate", "-OneShot", "-OutDirectory", output_directory))

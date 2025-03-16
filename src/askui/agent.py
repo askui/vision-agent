@@ -17,7 +17,7 @@ from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
 import time
 from dotenv import load_dotenv
-
+from PIL import Image
 
 class InvalidParameterError(Exception):
     pass
@@ -195,7 +195,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text) # type: ignore
 
-    def get(self, instruction: str, model_name: Optional[str] = None) -> str:
+    def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
         """
         Retrieves text or information from the screen based on the provided instruction.
 

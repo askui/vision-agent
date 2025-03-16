@@ -29,7 +29,6 @@ license = {text = "MIT"}
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
 [tool.pdm]
 distribution = true
 
@@ -40,10 +39,7 @@ format = "black ."
 lint = "ruff check ."
 checks = {composite = ["sort . -c", "format . --check"]}
 fix = {composite = ["sort", "format", "lint"]}
-chat = "streamlit run src/askui/cli.py"
-
-[project.scripts]
-askui = "askui.cli:main"
+chat = "streamlit run src/askui/chat.py"
 
 [dependency-groups]
 test = [

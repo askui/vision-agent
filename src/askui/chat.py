@@ -67,7 +67,7 @@ def write_message(
     role: Literal["User", "Anthropic Computer Use", "AgentOS", "User (Demonstration)"],
     content: str,
     timestamp: str,
-    image: str | None = None,
+    image: Image.Image |str | None = None,
 ):
     _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
     avatar = None if _role != UNKNOWN_ROLE else "❔"
@@ -75,7 +75,7 @@ def write_message(
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
         st.markdown(content)
         if image:
-            img = get_image(image)
+            img = get_image(image) if isinstance(image, str) else image
             st.image(img)
 
 
@@ -181,7 +181,7 @@ def rerun():
                     if message.get("content") == "screenshot()":
                         screenshot = get_image(message["image"])
                         continue
-                    else:
+                    elif message.get("content"):
                         if match := re.match(
                             r"mouse\((\d+),\s*(\d+)\)", message["content"]
                         ):
@@ -202,9 +202,11 @@ def rerun():
                                 message["role"],
                                 f"Move mouse to {element_description}",
                                 datetime.now().isoformat(),
+                                image=screenshot_with_crosshair,
                             )
-                            agent.mouse(
-                                instruction=element_description.replace('"', "")
+                            agent.mouse_move(
+                                instruction=element_description.replace('"', ""),
+                                model_name="anthropic-claude-3-5-sonnet-20241022",
                             )
                         else:
                             write_message(
@@ -223,102 +225,97 @@ def rerun():
                 st.write(f"Error executing {message['content']}: {str(e)}")
 
 
-def main():
-    setup_chat_dirs()
+setup_chat_dirs()
 
-    if st.sidebar.button("New Chat"):
-        st.session_state.session_id = create_new_session()
-        st.rerun()
+if st.sidebar.button("New Chat"):
+    st.session_state.session_id = create_new_session()
+    st.rerun()
 
-    available_sessions = get_available_sessions()
-    session_id = st.session_state.get("session_id", None)
-    index_of_new_session = available_sessions.index(session_id) if session_id else 0
-    session_id = st.sidebar.radio(
-        "Sessions",
-        available_sessions,
-        index=index_of_new_session,
+available_sessions = get_available_sessions()
+session_id = st.session_state.get("session_id", None)
+index_of_new_session = available_sessions.index(session_id) if session_id else 0
+session_id = st.sidebar.radio(
+    "Sessions",
+    available_sessions,
+    index=index_of_new_session,
+)
+if session_id != st.session_state.get("session_id"):
+    st.session_state.session_id = session_id
+    st.rerun()
+
+report_callback = chat_history_appender(session_id)
+
+st.title(f"Agent Chat - {session_id}")
+st.session_state.messages = load_chat_history(session_id)
+
+# Display chat history
+for message in st.session_state.messages:
+    write_message(
+        message["role"],
+        message["content"],
+        message["timestamp"],
+        message.get("image"),
     )
-    if session_id != st.session_state.get("session_id"):
-        st.session_state.session_id = session_id
+
+if value_to_type := st.chat_input("Simulate Typing for User (Demonstration)"):
+    report_callback(
+        {
+            "role": "User (Demonstration)",
+            "content": f'type("{value_to_type}", 50)',
+            "timestamp": datetime.now().isoformat(),
+            "is_json": False,
+            "image": None,
+        }
+    )
+    st.rerun()
+
+if st.button("Simulate left click"):
+    report_callback(
+        {
+            "role": "User (Demonstration)",
+            "content": 'click("left", 1)',
+            "timestamp": datetime.now().isoformat(),
+            "is_json": False,
+            "image": None,
+        }
+    )
+    st.rerun()
+
+# Chat input
+if st.button(
+    "Demonstrate where to move mouse"
+):  # only single step, only click supported for now, independent of click always registered as click
+    image, coordinates = click_recorder.record()
+    report_callback(
+        {
+            "role": "User (Demonstration)",
+            "content": "screenshot()",
+            "timestamp": datetime.now().isoformat(),
+            "is_json": False,
+            "image": save_image(image),
+        }
+    )
+    report_callback(
+        {
+            "role": "User (Demonstration)",
+            "content": f"mouse({coordinates[0]}, {coordinates[1]})",
+            "timestamp": datetime.now().isoformat(),
+            "is_json": False,
+            "image": save_image(
+                draw_point_on_image(image, coordinates[0], coordinates[1])
+            ),
+        }
+    )
+    st.rerun()
+
+if act_prompt := st.chat_input("Ask AI"):
+    with VisionAgent(
+        log_level=logging.DEBUG,
+        enable_report=True,
+        report_callback=report_callback,
+    ) as agent:
+        agent.act(act_prompt, model_name="claude")
         st.rerun()
 
-    report_callback = chat_history_appender(session_id)
-
-    st.title(f"Agent Chat - {session_id}")
-    st.session_state.messages = load_chat_history(session_id)
-
-    # Display chat history
-    for message in st.session_state.messages:
-        write_message(
-            message["role"],
-            message["content"],
-            message["timestamp"],
-            message.get("image"),
-        )
-
-    if prompt := st.chat_input("Simulate Typing for User (Demonstration)"):
-        report_callback(
-            {
-                "role": "User (Demonstration)",
-                "content": f'type("{prompt}", 50)',
-                "timestamp": datetime.now().isoformat(),
-                "is_json": False,
-                "image": None,
-            }
-        )
-        st.rerun()
-
-    if st.button("Simulate left click"):
-        report_callback(
-            {
-                "role": "User (Demonstration)",
-                "content": 'click("left", 1)',
-                "timestamp": datetime.now().isoformat(),
-                "is_json": False,
-                "image": None,
-            }
-        )
-        st.rerun()
-
-    # Chat input
-    if st.button(
-        "Demonstrate where to move mouse"
-    ):  # only single step, only click supported for now, independent of click always registered as click
-        image, coordinates = click_recorder.record()
-        report_callback(
-            {
-                "role": "User (Demonstration)",
-                "content": "screenshot()",
-                "timestamp": datetime.now().isoformat(),
-                "is_json": False,
-                "image": save_image(image),
-            }
-        )
-        report_callback(
-            {
-                "role": "User (Demonstration)",
-                "content": f"mouse({coordinates[0]}, {coordinates[1]})",
-                "timestamp": datetime.now().isoformat(),
-                "is_json": False,
-                "image": save_image(
-                    draw_point_on_image(image, coordinates[0], coordinates[1])
-                ),
-            }
-        )
-        st.rerun()
-
-    if prompt := st.chat_input("Ask AI"):
-        with VisionAgent(
-            log_level=logging.DEBUG,
-            enable_report=True,
-            report_callback=report_callback,
-        ) as agent:
-            agent.act(prompt, model_name="claude")
-            st.rerun()
-
-    if st.button("Rerun"):
-        rerun()
-
-
-if __name__ == "__main__":
-    main()
+if st.button("Rerun"):
+    rerun()

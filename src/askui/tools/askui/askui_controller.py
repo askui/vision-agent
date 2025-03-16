@@ -180,20 +180,22 @@ class AskUiControllerClient():
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
         if self.report is not None and report: 
-            self.report.add_message("AgentOS", "", image)
+            self.report.add_message("AgentOS", "screenshot()", image)
         return image
     
-    def mouse(self, x, y):
+    def mouse(self, x: int, y: int) -> None:
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"mouse: ({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
+            self.report.add_message("AgentOS", f"mouse({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseMove, action_parameters=controller_v1_pbs.ActionParameters(mouseMove=controller_v1_pbs.ActionParameters_MouseMove(position=controller_v1_pbs.Coordinate2(x=x, y=y))))
         
-    def type(self, text, typing_speed=50):
+    def type(self, text: str, typing_speed: int = 50) -> None:
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"type(\"{text}\", {typing_speed})")
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
-    def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1):
+    def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1) -> None:
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"click: {count} x {button}")
+            self.report.add_message("AgentOS", f"click(\"{button}\", {count})")
         mouse_button = None
         match button:
             case 'left':
@@ -204,9 +206,9 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPressAndRelease=controller_v1_pbs.ActionParameters_MouseButton_PressAndRelease(mouseButton=mouse_button, count=count)))
         
-    def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left'):
+    def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"mouse_down: {button}")
+            self.report.add_message("AgentOS", f"mouse_down(\"{button}\")")
         mouse_button = None
         match button:
             case 'left':
@@ -217,9 +219,9 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Press, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPress=controller_v1_pbs.ActionParameters_MouseButton_Press(mouseButton=mouse_button)))
 
-    def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left'):      
+    def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:      
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"mouse_up: {button}")  
+            self.report.add_message("AgentOS", f"mouse_up(\"{button}\")")  
         mouse_button = None
         match button:
             case 'left':
@@ -230,9 +232,9 @@ class AskUiControllerClient():
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Release, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonRelease=controller_v1_pbs.ActionParameters_MouseButton_Release(mouseButton=mouse_button)))
 
-    def mouse_scroll(self, x: int, y: int):
+    def mouse_scroll(self, x: int, y: int) -> None:
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"mouse_scroll: {x}x {y}y")
+            self.report.add_message("AgentOS", f"mouse_scroll({x}, {y})")
         if x != 0:
             self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
                 direction = controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Horizontal,
