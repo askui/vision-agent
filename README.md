@@ -317,13 +317,13 @@ and more exciting features like application selection, in background automation 
 
 The chat is a streamlit app that allows you to give an agent instructions and observe via messages by the agent given as a response the reasoning and actions taken by the action in return. The actions can be replayed afterwards.
 
-Instead of giving an agent instructions about what to do, it also allows you to demonstrate certain actions directly (left clicking, typing, mouse moving) and replay those actions.
+Instead of giving an agent instructions about what to do, it also allows demonstrating/simulating certain actions (left clicking, typing, mouse moving) directly and replay those actions.
 
-Configure the chat with the following environment variables:
+Configure the chat by setting the following environment variables:
 
-- `ANTHROPIC_API_KEY`: The API key for the Anthropic model.
-- `ASKUI_WORKSPACE_ID`: The workspace id to use for the chat.
-- `ASKUI_TOKEN`: The AskUI token to use for the chat.
+- `ANTHROPIC_API_KEY`
+- `ASKUI_WORKSPACE_ID`
+- `ASKUI_TOKEN`
 
 Start the chat with:
 
@@ -335,14 +335,14 @@ This should open the streamlit app in your default browser.
 
 Currently, the chat is in the experimental stage and has a lot of issues, for example:
 
-- You can not cancel/stop the agent while it is running except by terminating/killing streamlit or hitting "stop" within the streamlit app.
-- There is not option to retry a failed prompt.
+- You cannot cancel/stop the agent while it is running except by terminating/killing streamlit or hitting "stop" within the streamlit app.
+- There is no option to retry a failed prompt.
 - A chat/thread cannot be deleted.
-- Anthropic often responds with that it cannot solve an issue because it does not see what to do.
+- The agent often responds with that it cannot solve an issue because it does not see what to do.
 - No option to edit message in a thread or start a new thread from an existing thread by editing a message within it or retrying a certain message.
-- You have to rerun all actions taken by the agent even though they may have not lead to the goal / even though they are redundant.
+- You have to rerun all actions taken by the agent even though they may have not lead to the goal and are, in fact, redundant.
 - Often the agent does not get which window has focus --> You can tell it in the prompt and tell it to click on the window to interact with first to make sure it has focus.
 - Often the agent goes into crazy loops.
-- Display id cannot be configured but takes display 1 by default.
+- Display id cannot be configured but instead display 1 is taken by default.
 - Connection issues with controller, e.g., if there are multiple chat sessions open at the same time, or if the agent was killed/terminated --> Restart controller, restart streamlit app, make sure it is the only controller and streamlit app session running.
 - The chat sessions are identified by timestamp of when they were created.
