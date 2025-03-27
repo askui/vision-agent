@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional, Callable
+from typing import Annotated, Any, Literal, Optional, Callable
 
 from pydantic import Field, validate_call
 
@@ -30,7 +30,7 @@ class VisionAgent:
         display: int = 1,
         enable_report: bool = False,
         enable_askui_controller: bool = True,
-        report_callback: Callable[[str], None] = None,
+        report_callback: Callable[[str | dict[str, Any]], None] | None = None,
     ):
         load_dotenv()
         configure_logging(level=log_level)
@@ -56,23 +56,6 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    # TODO Improve validation
-    def mouse(self, coordinate: Optional[tuple[int, int]] = None, instruction: Optional[str] = None, model_name: Optional[str] = None) -> None:
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            msg = 'move mouse'
-            if coordinate is not None:
-                msg += f' to x={coordinate[0]}, y={coordinate[1]}'
-            if instruction is not None:
-                msg += f' to "{instruction}"'
-            self.report.add_message("User", msg)
-        if instruction is not None:
-            logger.debug("VisionAgent received instruction to click '%s'", instruction)
-            screenshot = self.client.screenshot() # type: ignore
-            x, y = self.model_router.click(screenshot, instruction, model_name)
-            if self.report is not None:
-                self.report.add_message("ModelRouter", f"mouse: ({x}, {y})")
-            self.client.mouse(x, y) # type: ignore
 
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
@@ -100,9 +83,6 @@ class VisionAgent:
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
-        if instruction is not None:
-            logger.debug("VisionAgent received instruction to click '%s'", instruction)
-            self.mouse(instruction=instruction, model_name=model_name)
         if self.report is not None:
             msg = 'click'
             if button != 'left':
@@ -114,8 +94,6 @@ class VisionAgent:
             logger.debug("VisionAgent received instruction to click '%s'", instruction)
             self.__mouse_move(instruction, model_name)
         self.client.click(button, repeat) # type: ignore
-        if self.report is not None:
-            self.report.add_message("ModelRouter", "click")
 
     def __mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
         self._check_askui_controller_enabled()
@@ -308,7 +286,7 @@ class VisionAgent:
         """
         self._check_askui_controller_enabled()
         if self.report is not None:
-            self.report.add_message("User", goal)
+            self.report.add_message("User", f'act: "{goal}"')
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
@@ -365,7 +343,6 @@ class VisionAgent:
             self.client.disconnect()
         if self.controller:
             self.controller.stop(True)
-        self.wait(10) # TODO Remove hack to actually wait for the controller to stop
 
     def __enter__(self):
         return self

@@ -145,10 +145,12 @@ class AskUiControllerClient():
 
     def _run_recorder_action(self, acion_class_id: controller_v1_pbs.ActionClassID, action_parameters: controller_v1_pbs.ActionParameters):
         time.sleep(self.pre_action_wait)
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         response: controller_v1_pbs.Response_RunRecordedAction = self.stub.RunRecordedAction(controller_v1_pbs.Request_RunRecordedAction(sessionInfo=self.session_info, actionClassID=acion_class_id, actionParameters=action_parameters))
         
         time.sleep((response.requiredMilliseconds / 1000))    
         for num_retries in range(self.max_retries):
+            assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
             poll_response: controller_v1_pbs.Response_Poll = self.stub.Poll(controller_v1_pbs.Request_Poll(sessionInfo=self.session_info, pollEventID=controller_v1_pbs.PollEventID.PollEventID_ActionFinished))
             if poll_response.pollEventParameters.actionFinished.actionID == response.actionID:
                 break
@@ -175,7 +177,8 @@ class AskUiControllerClient():
     def _stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
 
-    def screenshot(self, report: bool = True) -> Image:
+    def screenshot(self, report: bool = True) -> Image.Image:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
@@ -229,7 +232,7 @@ class AskUiControllerClient():
             case 'middle':
                 mouse_button = controller_v1_pbs.MouseButton_Middle
             case 'right':
-                mouse_button = controller_v1_pbs.MouseButton_Right        
+                mouse_button = controller_v1_pbs.MouseButton_Right
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Release, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonRelease=controller_v1_pbs.ActionParameters_MouseButton_Release(mouseButton=mouse_button)))
 
     def mouse_scroll(self, x: int, y: int) -> None:
@@ -251,22 +254,30 @@ class AskUiControllerClient():
             )))
 
 
-
-    def keyboard_pressed(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] = None):
+    def keyboard_pressed(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"keyboard_pressed(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Press, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyPress=controller_v1_pbs.ActionParameters_KeyboardKey_Press(keyName=key, modifierKeyNames=modifier_keys)))
 
-    def keyboard_release(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] = None):
+    def keyboard_release(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"keyboard_release(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Release, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyRelease=controller_v1_pbs.ActionParameters_KeyboardKey_Release(keyName=key, modifierKeyNames=modifier_keys)))
 
-    def keyboard_tap(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] = None):
+    def keyboard_tap(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"keyboard_tap(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyPressAndRelease=controller_v1_pbs.ActionParameters_KeyboardKey_PressAndRelease(keyName=key, modifierKeyNames=modifier_keys)))
 
-    def set_display(self, displayNumber: int = 1):
+    def set_display(self, displayNumber: int = 1) -> None:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_display({displayNumber})")
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
         self.display = displayNumber
