@@ -39,6 +39,7 @@ format = "black ."
 lint = "ruff check ."
 checks = {composite = ["sort . -c", "format . --check"]}
 fix = {composite = ["sort", "format", "lint"]}
+chat = "streamlit run src/askui/chat/__main__.py"
 
 [dependency-groups]
 test = [
@@ -46,4 +47,7 @@ test = [
     "isort>=6.0.0",
     "black>=25.1.0",
     "ruff>=0.9.5",
+]
+chat = [
+    "streamlit>=1.42.0",
 ]

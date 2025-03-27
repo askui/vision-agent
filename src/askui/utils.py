@@ -33,20 +33,28 @@ def truncate_long_strings(json_data, max_length=100, truncate_length=20, tag="[s
 
 
 def image_to_base64(image: Union[pathlib.Path, Image.Image]) -> str:
-        image_bytes = None
-        if isinstance(image, Image.Image):
-            with io.BytesIO() as bytes:
-                image.save(bytes, format="PNG")
-                image_bytes = bytes.getvalue()
-        elif isinstance(image, pathlib.Path):
-            with open(image, "rb") as f:
-                image_bytes = f.read()
-        else:
-            raise UnsupportedImageTypeException(
-                f"Unsupported Type! Type '{type(image)}' is not supported! Please use pathlib.Path or Pil Image instead"
-            )
+    image_bytes: bytes | None = None
+    if isinstance(image, Image.Image):
+        with io.BytesIO() as _bytes:
+            image.save(_bytes, format="PNG")
+            image_bytes = _bytes.getvalue()
+    elif isinstance(image, pathlib.Path):
+        with open(image, "rb") as f:
+            image_bytes = f.read()
 
-        return base64.b64encode(image_bytes).decode("utf-8")
+    return base64.b64encode(image_bytes).decode("utf-8")
+
+
+def base64_to_image(base64_string: str) -> Image.Image:
+    """
+    Convert a base64 string to a PIL Image.
+    
+    :param base64_string: The base64 encoded image string
+    :return: PIL Image object
+    """
+    image_bytes = base64.b64decode(base64_string)
+    image = Image.open(io.BytesIO(image_bytes))
+    return image
 
 
 def draw_point_on_image(image: Image.Image, x: int, y: int, size: int = 3) -> Image.Image:

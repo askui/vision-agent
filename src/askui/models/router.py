@@ -94,7 +94,7 @@ class ModelRouter:
         if self.claude.authenticated and (model_name == "anthropic-claude-3-5-sonnet-20241022"  or model_name is None):
             return self.claude.get_inference(screenshot, locator)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
-    
+
     def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> Point:
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, locator, model_name)

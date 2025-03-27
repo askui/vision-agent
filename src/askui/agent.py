@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional, Callable
 
 from pydantic import Field, validate_call
 
@@ -17,10 +17,11 @@ from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
 import time
 from dotenv import load_dotenv
-
+from PIL import Image
 
 class InvalidParameterError(Exception):
     pass
+
 
 class VisionAgent:
     def __init__(
@@ -29,12 +30,13 @@ class VisionAgent:
         display: int = 1,
         enable_report: bool = False,
         enable_askui_controller: bool = True,
+        report_callback: Callable[[str | dict[str, Any]], None] | None = None,
     ):
         load_dotenv()
         configure_logging(level=log_level)
         self.report = None
         if enable_report:
-            self.report = SimpleReportGenerator()
+            self.report = SimpleReportGenerator(report_callback=report_callback)
         self.controller = None
         self.client = None
         if enable_askui_controller:
@@ -53,6 +55,7 @@ class VisionAgent:
             raise ValueError(
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
+
 
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
@@ -81,7 +84,7 @@ class VisionAgent:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         self._check_askui_controller_enabled()
         if self.report is not None:
-            msg = f'click'
+            msg = 'click'
             if button != 'left':
                 msg = f'{button} ' + msg 
             if repeat > 1:
@@ -172,7 +175,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text) # type: ignore
 
-    def get(self, instruction: str, model_name: Optional[str] = None) -> str:
+    def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
         """
         Retrieves text or information from the screen based on the provided instruction.
 
@@ -195,7 +198,8 @@ class VisionAgent:
         if self.report is not None:
             self.report.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
-        screenshot = self.client.screenshot() # type: ignore
+        if screenshot is None:
+            screenshot = self.client.screenshot() # type: ignore
         response = self.model_router.get_inference(screenshot, instruction, model_name)
         if self.report is not None:
             self.report.add_message("Agent", response)
