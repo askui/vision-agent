@@ -89,6 +89,8 @@ class VisionAgent:
                 msg = f'{button} ' + msg 
             if repeat > 1:
                 msg += f' {repeat}x times'
+            if instruction is not None:
+                msg += f' on "{instruction}"'
             self.report.add_message("User", msg)
         if instruction is not None:
             logger.debug("VisionAgent received instruction to click '%s'", instruction)
