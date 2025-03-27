@@ -33,18 +33,14 @@ def truncate_long_strings(json_data, max_length=100, truncate_length=20, tag="[s
 
 
 def image_to_base64(image: Union[pathlib.Path, Image.Image]) -> str:
-    image_bytes = None
+    image_bytes: bytes | None = None
     if isinstance(image, Image.Image):
-        with io.BytesIO() as bytes:
-            image.save(bytes, format="PNG")
-            image_bytes = bytes.getvalue()
+        with io.BytesIO() as _bytes:
+            image.save(_bytes, format="PNG")
+            image_bytes = _bytes.getvalue()
     elif isinstance(image, pathlib.Path):
         with open(image, "rb") as f:
             image_bytes = f.read()
-    else:
-        raise UnsupportedImageTypeException(
-            f"Unsupported Type! Type '{type(image)}' is not supported! Please use pathlib.Path or Pil Image instead"
-        )
 
     return base64.b64encode(image_bytes).decode("utf-8")
 

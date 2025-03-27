@@ -13,8 +13,6 @@ from datetime import datetime
 
 from PIL import Image
 
-from askui.utils import draw_point_on_image
-
 
 Coordinate = Tuple[int, int]
 
@@ -46,7 +44,6 @@ class AskUIImage(BaseModel):
 class AnnoationContainer(BaseModel):    
     model_config = ConfigDict(
         alias_generator=lambda field_name: to_camel(field_name),
-        serialization_alias=lambda field_name: to_camel(field_name),
     )
 
     version: int
@@ -56,7 +53,7 @@ class AnnoationContainer(BaseModel):
     annotations: List[Annotation]
 
 
-class AskUiTeachService():
+class AskUiSnippingTool():
     def __init__(self) -> None:
         self.process = None
 
@@ -87,7 +84,7 @@ class AskUiTeachService():
 
 class ClickRecorder():
     def __init__(self) -> None:
-        self.snipping_tool = AskUiTeachService()
+        self.snipping_tool = AskUiSnippingTool()
 
     def record(self) -> Tuple[Image.Image, Coordinate]:
         image, annotation_container = self.snipping_tool.annotate()

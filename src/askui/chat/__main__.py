@@ -1,16 +1,22 @@
 from random import randint
 from PIL import Image, ImageDraw
-from typing import Callable, Literal
+from typing import Any, Callable, Literal
 import streamlit as st
 from askui import VisionAgent
 import logging
-from askui.click_recorder import ClickRecorder
+from askui.chat.click_recorder import ClickRecorder
 from askui.utils import base64_to_image, draw_point_on_image
 import json
 from datetime import date, datetime
 import os
 import glob
 import re
+
+
+st.set_page_config(
+    page_title="Vision Agent Chat",
+    page_icon="💬",
+)
 
 
 CHAT_SESSIONS_DIR_PATH = "./chat/sessions"
@@ -86,7 +92,7 @@ def save_image(image: Image.Image) -> str:
     return image_path
 
 
-def chat_history_appender(session_id: str) -> Callable[[str | dict], None]:
+def chat_history_appender(session_id: str) -> Callable[[str | dict[str, Any]], None]:
     def append_to_chat_history(report: str | dict) -> None:
         if isinstance(report, dict):
             if report.get("image"):
@@ -115,7 +121,7 @@ def chat_history_appender(session_id: str) -> Callable[[str | dict], None]:
 
 def get_available_sessions():
     session_files = glob.glob(os.path.join(CHAT_SESSIONS_DIR_PATH, "*.jsonl"))
-    return sorted([get_session_id_from_path(f) for f in session_files])
+    return sorted([get_session_id_from_path(f) for f in session_files], reverse=True)
 
 
 def create_new_session() -> str:
@@ -233,11 +239,17 @@ if st.sidebar.button("New Chat"):
 
 available_sessions = get_available_sessions()
 session_id = st.session_state.get("session_id", None)
-index_of_new_session = available_sessions.index(session_id) if session_id else 0
+
+if not session_id and not available_sessions:
+    session_id = create_new_session()
+    st.session_state.session_id = session_id
+    st.rerun()
+
+index_of_session = available_sessions.index(session_id) if session_id else 0
 session_id = st.sidebar.radio(
     "Sessions",
     available_sessions,
-    index=index_of_new_session,
+    index=index_of_session,
 )
 if session_id != st.session_state.get("session_id"):
     st.session_state.session_id = session_id
@@ -245,7 +257,7 @@ if session_id != st.session_state.get("session_id"):
 
 report_callback = chat_history_appender(session_id)
 
-st.title(f"Agent Chat - {session_id}")
+st.title(f"Vision Agent Chat - {session_id}")
 st.session_state.messages = load_chat_history(session_id)
 
 # Display chat history
