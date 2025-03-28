@@ -1,4 +1,5 @@
 import os
+import platform
 import time
 from functools import cached_property, wraps
 from typing import Any, Callable, Optional
@@ -8,7 +9,7 @@ from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from segment import analytics
 
 from askui.logger import logger
-from askui.telemetry.analytics import AnalyticsContext, AppContext
+from askui.telemetry.analytics import AnalyticsContext, AppContext, OSContext, PlatformContext
 from askui.telemetry.pkg_version import get_pkg_version
 from askui.telemetry.user_identification import (
     UserIdentification,
@@ -53,6 +54,15 @@ class TelemetrySettings(BaseModel):
     def analytics_context(self) -> AnalyticsContext:
         analytics_context = AnalyticsContext(
             app=AppContext(name=self.app_name, version=self.app_version),
+            os=OSContext(
+                name=platform.system(),
+                version=platform.version(),
+                release=platform.release(),
+            ),
+            platform=PlatformContext(
+                arch=platform.machine(),
+                python_version=platform.python_version(),
+            ),
         )
         if self.group_id:
             analytics_context["group_id"] = self.group_id
