@@ -4,6 +4,9 @@ from typing import Annotated, Any, Literal, Optional, Callable
 
 from pydantic import Field, validate_call
 
+from askui.settings import settings
+from askui.telemetry import Telemetry
+
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
     AskUiControllerServer,
@@ -11,7 +14,7 @@ from .tools.askui.askui_controller import (
     MODIFIER_KEY,
 )
 from .models.anthropic.claude import ClaudeHandler
-from .logging import logger, configure_logging
+from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
 from .reporting.report import SimpleReportGenerator
@@ -21,6 +24,9 @@ from PIL import Image
 
 class InvalidParameterError(Exception):
     pass
+
+
+_telemetry = Telemetry(settings.telemetry)
 
 
 class VisionAgent:
@@ -56,7 +62,7 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-
+    @_telemetry.track_method_call()
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.

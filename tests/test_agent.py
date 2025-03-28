@@ -1,5 +1,10 @@
 from askui import VisionAgent
-import time
+import logging
+# import time
+
+
+with VisionAgent(log_level=logging.DEBUG) as agent:
+    agent.click("search icon")
 
 
 # def test_agent():

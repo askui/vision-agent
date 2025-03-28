@@ -3,7 +3,7 @@ from PIL import Image
 from .askui.api import AskUIHandler
 from .anthropic.claude import ClaudeHandler
 from .huggingface.spaces_api import HFSpacesHandler
-from ..logging import logger
+from ..logger import logger
 from ..utils import AutomationError
 from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
