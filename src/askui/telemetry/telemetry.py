@@ -1,5 +1,6 @@
+import os
 import time
-from functools import wraps
+from functools import cached_property, wraps
 from typing import Any, Callable, Optional
 
 import machineid
@@ -7,10 +8,12 @@ from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from segment import analytics
 
 from askui.logger import logger
-from askui.telemetry.user_identification import UserIdentification, UserIdentificationSettings
-
-
-MACHINE_ID_HASHING_SALT = "askui"
+from askui.telemetry.analytics import AnalyticsContext, AppContext
+from askui.telemetry.pkg_version import get_pkg_version
+from askui.telemetry.user_identification import (
+    UserIdentification,
+    UserIdentificationSettings,
+)
 
 
 class SegmentSettings(BaseModel):
@@ -19,27 +22,41 @@ class SegmentSettings(BaseModel):
     api_url: HttpUrl = HttpUrl("https://tracking.askui.com/v1")
     write_key: SecretStr = SecretStr("Iae4oWbOo509Acu5ZeEb2ihqSpemjnhY")
     enabled: bool = True
-    app_name: str = "askui-vision-agent"
+
 
 class TelemetrySettings(BaseModel):
     """Settings for telemetry configuration"""
 
-    user_identification: UserIdentificationSettings | None = UserIdentificationSettings()
+    user_identification: UserIdentificationSettings | None = (
+        UserIdentificationSettings()
+    )
     segment: SegmentSettings | None = SegmentSettings()
+    app_name: str = "askui-vision-agent"
+    app_version: str = get_pkg_version()
+    group_id: str | None = Field(
+        default=os.environ.get("ASKUI_WORKSPACE_ID"),
+        description='The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" environment variable if set, otherwise None.',
+    )
     machine_id: str = Field(
-        default_factory=lambda: machineid.hashed_id(app_id=MACHINE_ID_HASHING_SALT),
+        default_factory=lambda: machineid.hashed_id(app_id="askui"),
         description=(
             "The machine ID of the host machine. "
             "This is used to identify the machine and the user (if anynomous) across AskUI components. "
-            "We hash it with an AskUI specific salt to avoid user tracking across (non-AskUI) applications or "
-            "exposing the actual machine ID. This is the trade-off we chose for now to protect user privacy while "
-            "still being able to improve the UX across components."
+            'We hash it with an AskUI specific salt ("askui") to avoid user tracking across (non-AskUI) '
+            "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
+            "protect user privacy while still being able to improve the UX across components."
         ),
     )
     enabled: bool = True
 
-
-# TODO Add analytics context
+    @cached_property
+    def analytics_context(self) -> AnalyticsContext:
+        analytics_context = AnalyticsContext(
+            app=AppContext(name=self.app_name, version=self.app_version),
+        )
+        if self.group_id:
+            analytics_context["group_id"] = self.group_id
+        return analytics_context
 
 
 class Telemetry:
@@ -48,7 +65,9 @@ class Telemetry:
         self._segment_enabled = False
         self._user_identification: UserIdentification | None = None
         if not self._settings.enabled:
-            logger.info("Telemetry is disabled")  # TODO Better logging, structured with Segment
+            logger.info(
+                "Telemetry is disabled"
+            )
             return
         else:
             logger.info("Telemetry is enabled")
@@ -59,16 +78,27 @@ class Telemetry:
             logger.info("Segment is enabled")
         else:
             logger.info("Segment is disabled")
-            
-        if self._settings.user_identification and self._settings.user_identification.enabled:
-            self._user_identification = UserIdentification(settings=self._settings.user_identification)
+
+        if (
+            self._settings.user_identification
+            and self._settings.user_identification.enabled
+        ):
+            self._user_identification = UserIdentification(
+                settings=self._settings.user_identification
+            )
             logger.info("User identification is enabled")
         else:
             logger.info("User identification is disabled")
-            
+
     def identify(self) -> None:
+        """Identify the user with AskUI if AskUI token is set
+
+        This method only needs to be called once per process, ideally as early as possible to correlate all following events with the user.
+        """
         if self._user_identification:
-            self._user_identification.identify(self._anonymous_user_id)
+            self._user_identification.identify(
+                anonymous_id=self._anonymous_user_id,
+            )
 
     @property
     def _anonymous_user_id(self) -> str:
@@ -90,6 +120,7 @@ class Telemetry:
                 event=f"method_called_{method_name}",
                 properties={"args": args, "kwargs": kwargs, "duration_ms": duration_ms},
                 anonymous_id=self._anonymous_user_id,
+                context=self._settings.analytics_context,
             )
             logger.debug(f"Tracked method {method_name} with duration {duration_ms}ms")
         except Exception as e:
@@ -109,6 +140,7 @@ class Telemetry:
                         **(context or {}),
                     },
                     anonymous_id=self._anonymous_user_id,
+                    context=self._settings.analytics_context,
                 )
                 logger.debug(f"Tracked error {error} with context {context}")
             except Exception as e:
@@ -128,8 +160,6 @@ class Telemetry:
                     result = func(*args, **kwargs)
                     duration_ms = (time.time() - start_time) * 1000
 
-                    # Track successful call
-                    # Maybe track before the actual call? Are there default values in Segment?
                     self._track_method(
                         func.__name__, args=args, kwargs=kwargs, duration_ms=duration_ms
                     )

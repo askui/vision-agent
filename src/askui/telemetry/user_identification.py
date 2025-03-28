@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from askui.logger import logger
+from askui.telemetry.analytics import AnalyticsContext
 
 
 def get_askui_token_from_env() -> SecretStr | None:
@@ -18,6 +19,7 @@ class UserIdentificationSettings(BaseModel):
 
     enabled: bool = True
     api_url: HttpUrl = HttpUrl("https://workspaces.askui.com/api/v1")
+    # retrieving directly through environment variable to circumvent pydantic-settings env_prefix
     askui_token: SecretStr | None = Field(default=get_askui_token_from_env())
 
     @property
@@ -49,7 +51,6 @@ class UserIdentification:
             askui_access_token: The access token of the user
             traits: The traits of the user
         """
-        logger.debug(f"ASKUI_TOKEN: {self._settings.askui_token and self._settings.askui_token.get_secret_value()}")
         if not self._settings.enabled or not self._settings.askui_token:
             return
 
@@ -58,7 +59,7 @@ class UserIdentification:
                 f"{self._settings.api_url}/analytics/identify",
                 json={
                     "anonymousId": anonymous_id,
-                    "traits": traits or {}
+                    "traits": traits or {},
                 },
                 headers={
                     "Authorization": f"Basic {self._settings.askui_token_encoded}",
