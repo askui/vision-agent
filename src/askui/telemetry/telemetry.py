@@ -3,10 +3,11 @@ from functools import wraps
 from typing import Any, Callable, Optional
 
 import machineid
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from segment import analytics
 
 from askui.logger import logger
+from askui.telemetry.user_identification import UserIdentification, UserIdentificationSettings
 
 
 MACHINE_ID_HASHING_SALT = "askui"
@@ -15,15 +16,15 @@ MACHINE_ID_HASHING_SALT = "askui"
 class SegmentSettings(BaseModel):
     """Settings for Segment telemetry"""
 
-    api_url: str = "https://tracking.askui.com/v1"
+    api_url: HttpUrl = HttpUrl("https://tracking.askui.com/v1")
     write_key: SecretStr = SecretStr("Iae4oWbOo509Acu5ZeEb2ihqSpemjnhY")
     enabled: bool = True
     app_name: str = "askui-vision-agent"
 
-
 class TelemetrySettings(BaseModel):
     """Settings for telemetry configuration"""
 
+    user_identification: UserIdentificationSettings | None = UserIdentificationSettings()
     segment: SegmentSettings | None = SegmentSettings()
     machine_id: str = Field(
         default_factory=lambda: machineid.hashed_id(app_id=MACHINE_ID_HASHING_SALT),
@@ -45,6 +46,7 @@ class Telemetry:
     def __init__(self, settings: TelemetrySettings) -> None:
         self._settings = settings
         self._segment_enabled = False
+        self._user_identification: UserIdentification | None = None
         if not self._settings.enabled:
             logger.info("Telemetry is disabled")  # TODO Better logging, structured with Segment
             return
@@ -57,6 +59,16 @@ class Telemetry:
             logger.info("Segment is enabled")
         else:
             logger.info("Segment is disabled")
+            
+        if self._settings.user_identification and self._settings.user_identification.enabled:
+            self._user_identification = UserIdentification(settings=self._settings.user_identification)
+            logger.info("User identification is enabled")
+        else:
+            logger.info("User identification is disabled")
+            
+    def identify(self) -> None:
+        if self._user_identification:
+            self._user_identification.identify(self._anonymous_user_id)
 
     @property
     def _anonymous_user_id(self) -> str:

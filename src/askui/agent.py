@@ -353,6 +353,7 @@ class VisionAgent:
             self.controller.stop(True)
 
     def __enter__(self):
+        _telemetry.identify()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
