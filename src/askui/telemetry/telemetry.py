@@ -2,27 +2,24 @@ import os
 import platform
 import time
 from functools import cached_property, wraps
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import machineid
-from pydantic import BaseModel, Field, HttpUrl, SecretStr
-from segment import analytics
+from pydantic import BaseModel, Field
 
 from askui.logger import logger
-from askui.telemetry.analytics import AnalyticsContext, AppContext, OSContext, PlatformContext
+from askui.telemetry.analytics import (
+    AnalyticsContext,
+    AppContext,
+    OSContext,
+    PlatformContext,
+)
 from askui.telemetry.pkg_version import get_pkg_version
+from askui.telemetry.processors import SegmentSettings, TelemetryProcessor
 from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
-
-
-class SegmentSettings(BaseModel):
-    """Settings for Segment telemetry"""
-
-    api_url: HttpUrl = HttpUrl("https://tracking.askui.com/v1")
-    write_key: SecretStr = SecretStr("Iae4oWbOo509Acu5ZeEb2ihqSpemjnhY")
-    enabled: bool = True
 
 
 class TelemetrySettings(BaseModel):
@@ -63,6 +60,7 @@ class TelemetrySettings(BaseModel):
                 arch=platform.machine(),
                 python_version=platform.python_version(),
             ),
+            anonymous_id=self.machine_id,
         )
         if self.group_id:
             analytics_context["group_id"] = self.group_id
@@ -72,22 +70,14 @@ class TelemetrySettings(BaseModel):
 class Telemetry:
     def __init__(self, settings: TelemetrySettings) -> None:
         self._settings = settings
-        self._segment_enabled = False
+        self._processors: list[TelemetryProcessor] = []
         self._user_identification: UserIdentification | None = None
+        
         if not self._settings.enabled:
-            logger.info(
-                "Telemetry is disabled"
-            )
+            logger.info("Telemetry is disabled")
             return
         else:
             logger.info("Telemetry is enabled")
-
-        if self._settings.segment and self._settings.segment.enabled:
-            self._segment_enabled = True
-            analytics.write_key = self._settings.segment.write_key.get_secret_value()
-            logger.info("Segment is enabled")
-        else:
-            logger.info("Segment is disabled")
 
         if (
             self._settings.user_identification
@@ -100,6 +90,11 @@ class Telemetry:
         else:
             logger.info("User identification is disabled")
 
+    def add_processor(self, processor: TelemetryProcessor) -> None:
+        """Add a telemetry processor that will be called in order of addition"""
+        self._processors.append(processor)
+
+    # TODO Make sure this is available in Segment as well / move to Segment
     def identify(self) -> None:
         """Identify the user with AskUI if AskUI token is set
 
@@ -107,88 +102,59 @@ class Telemetry:
         """
         if self._user_identification:
             self._user_identification.identify(
-                anonymous_id=self._anonymous_user_id,
+                anonymous_id=self._settings.analytics_context["anonymous_id"],
             )
 
-    @property
-    def _anonymous_user_id(self) -> str:
-        """Get the anonymous user ID"""
-        return self._settings.machine_id
-
-    def _track_method(
-        self,
-        method_name: str,
-        args: tuple[Any],
-        kwargs: dict[str, Any],
-        duration_ms: float,
-    ) -> None:
-        if not self._segment_enabled:
-            return
-
-        try:
-            analytics.track(  # TODO Configure properly
-                event=f"method_called_{method_name}",
-                properties={"args": args, "kwargs": kwargs, "duration_ms": duration_ms},
-                anonymous_id=self._anonymous_user_id,
-                context=self._settings.analytics_context,
-            )
-            logger.debug(f"Tracked method {method_name} with duration {duration_ms}ms")
-        except Exception as e:
-            logger.debug(f"Failed to track method {method_name}: {e}")
-
-    def _track_error(
-        self, error: Exception, context: Optional[dict[str, Any]] = None
-    ) -> None:
-        """Track errors in both Segment and Sentry"""
-        if self._segment_enabled:
-            try:
-                analytics.track(  # TODO Configure properly
-                    event="error_occurred",
-                    properties={
-                        "error_type": type(error).__name__,
-                        "error_message": str(error),
-                        **(context or {}),
-                    },
-                    anonymous_id=self._anonymous_user_id,
-                    context=self._settings.analytics_context,
-                )
-                logger.debug(f"Tracked error {error} with context {context}")
-            except Exception as e:
-                logger.debug(f"Failed to track error in Segment: {e}")
-
-    def track_method_call(self) -> Callable:
+    def track_call(self) -> Callable:
         """Decorator to track method calls, performance and errors"""
 
         def decorator(func: Callable) -> Callable:
             @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
+                if not self._settings.enabled:
+                    return func(*args, **kwargs)
+                
+                fn_name = f"{func.__module__}.{func.__qualname__}"
                 logger.debug(
-                    f"Tracking method call {func.__name__} with args {args} and kwargs {kwargs}"
+                    f"Tracking method call {fn_name} with args {args} and kwargs {kwargs}"
                 )
+                for processor in self._processors:
+                    processor.record_call_start(
+                        fn_name,
+                        args=args,
+                        kwargs=kwargs,
+                        context=self._settings.analytics_context,
+                    )
                 start_time = time.time()
                 try:
-                    result = func(*args, **kwargs)
+                    response = func(*args, **kwargs)
                     duration_ms = (time.time() - start_time) * 1000
-
-                    self._track_method(
-                        func.__name__, args=args, kwargs=kwargs, duration_ms=duration_ms
-                    )
-
-                    return result
+                    for processor in self._processors:
+                        processor.record_call_end(
+                            fn_name,
+                            args=args,
+                            kwargs=kwargs,
+                            response=response,
+                            duration_ms=duration_ms,
+                            context=self._settings.analytics_context,
+                        )
+                    return response
                 except Exception as e:
                     duration_ms = (time.time() - start_time) * 1000
-                    # Track error
-                    self._track_error(
-                        e,
-                        context={
-                            "method": func.__name__,
-                            "args": args,
-                            "kwargs": kwargs,
-                            "duration_ms": duration_ms,
-                        },
-                    )
+                    # TODO Type this fully
+                    context = {
+                        "method": fn_name,
+                        "args": args,
+                        "kwargs": kwargs,
+                        "duration_ms": duration_ms,
+                    }
+                    for processor in self._processors:
+                        processor.record_exception(
+                            e,
+                            context=context,
+                            analytics_context=self._settings.analytics_context,
+                        )
                     raise
-
             return wrapper
 
         return decorator

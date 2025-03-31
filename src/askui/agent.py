@@ -4,8 +4,7 @@ from typing import Annotated, Any, Literal, Optional, Callable
 
 from pydantic import Field, validate_call
 
-from askui.settings import settings
-from askui.telemetry import Telemetry
+from askui.container import telemetry
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -26,10 +25,8 @@ class InvalidParameterError(Exception):
     pass
 
 
-_telemetry = Telemetry(settings.telemetry)
-
-
 class VisionAgent:
+    @telemetry.track_call() # exclude report_callback
     def __init__(
         self,
         log_level=logging.INFO,
@@ -62,7 +59,7 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    @_telemetry.track_method_call()
+    @telemetry.track_call() # TODO Exclude instruction
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.
@@ -111,6 +108,7 @@ class VisionAgent:
             self.report.add_message("ModelRouter", f"locate: ({x}, {y})")
         self.client.mouse(x, y) # type: ignore
 
+    @telemetry.track_call() # TODO Exclude instruction
     def mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided instruction.
@@ -132,6 +130,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to mouse_move '%s'", instruction)
         self.__mouse_move(instruction, model_name)
 
+    @telemetry.track_call() # TODO Exclude x and y
     def mouse_scroll(self, x: int, y: int) -> None:
         """
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
@@ -160,6 +159,7 @@ class VisionAgent:
             self.report.add_message("User", f'mouse_scroll: "{x}", "{y}"')
         self.client.mouse_scroll(x, y)
 
+    @telemetry.track_call() # TODO Exclude text
     def type(self, text: str) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
@@ -181,6 +181,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text) # type: ignore
 
+    @telemetry.track_call() # TODO Exclude instruction and screenshot
     def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
         """
         Retrieves text or information from the screen based on the provided instruction.
@@ -211,6 +212,7 @@ class VisionAgent:
             self.report.add_message("Agent", response)
         return response
     
+    @telemetry.track_call()
     @validate_call
     def wait(self, sec: Annotated[float, Field(gt=0)]):
         """
@@ -231,6 +233,7 @@ class VisionAgent:
         """
         time.sleep(sec)
 
+    @telemetry.track_call()
     def key_up(self, key: PC_AND_MODIFIER_KEY):
         """
         Simulates the release of a key.
@@ -251,6 +254,7 @@ class VisionAgent:
         logger.debug("VisionAgent received in key_up '%s'", key)
         self.client.keyboard_release(key)
 
+    @telemetry.track_call()
     def key_down(self, key: PC_AND_MODIFIER_KEY):
         """
         Simulates the pressing of a key.
@@ -271,6 +275,7 @@ class VisionAgent:
         logger.debug("VisionAgent received in key_down '%s'", key)
         self.client.keyboard_pressed(key)
 
+    @telemetry.track_call() # TODO Exclude goal
     def act(self, goal: str, model_name: Optional[str] = None) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -300,6 +305,7 @@ class VisionAgent:
         )
         self.model_router.act(self.client, goal, model_name)
 
+    @telemetry.track_call()
     def keyboard(
         self, key: PC_AND_MODIFIER_KEY, modifier_keys: list[MODIFIER_KEY] | None = None
     ) -> None:
@@ -325,6 +331,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to press '%s'", key)
         self.client.keyboard_tap(key, modifier_keys)  # type: ignore
 
+    @telemetry.track_call() # TODO Exclude command
     def cli(self, command: str) -> None:
         """
         Executes a command on the command line interface.
@@ -346,16 +353,18 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         subprocess.run(command.split(" "))
 
+    @telemetry.track_call()
     def close(self):
         if self.client:
             self.client.disconnect()
         if self.controller:
             self.controller.stop(True)
 
+    @telemetry.track_call()
     def __enter__(self):
-        _telemetry.identify()
         return self
 
+    @telemetry.track_call()
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
         if self.report is not None:

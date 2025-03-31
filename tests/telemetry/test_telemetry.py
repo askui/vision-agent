@@ -1,0 +1,218 @@
+import pytest
+
+from askui.telemetry.processors import InMemoryProcessor
+from askui.telemetry.telemetry import Telemetry, TelemetrySettings
+
+
+def test_telemetry_disabled():
+    settings = TelemetrySettings(enabled=False)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call()
+    def test_func(x: int) -> int:
+        return x * 2
+
+    result = test_func(5)
+    assert result == 10
+    assert len(processor.get_events()) == 0
+
+
+def test_telemetry_enabled():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call()
+    def test_func(x: int) -> int:
+        return x * 2
+
+    result = test_func(5)
+    assert result == 10
+
+    events = processor.get_events()
+    assert len(events) == 2
+
+    start_event = events[0]
+    assert start_event.event_type == "method_started"
+    assert start_event.method_name.endswith("test_func")
+    assert start_event.args == (5,)
+    assert start_event.kwargs == {}
+
+    end_event = events[1]
+    assert end_event.event_type == "method_ended"
+    assert end_event.method_name.endswith("test_func")
+    assert end_event.args == (5,)
+    assert end_event.kwargs == {}
+    assert end_event.response == 10
+    assert end_event.duration_ms is not None
+    assert end_event.duration_ms > 0
+
+
+def test_telemetry_error():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call()
+    def test_func(x: int) -> int:
+        raise ValueError("Test error")
+
+    with pytest.raises(ValueError):
+        test_func(5)
+
+    events = processor.get_events()
+    assert len(events) == 2
+
+    start_event = events[0]
+    assert start_event.event_type == "method_started"
+    assert start_event.method_name.endswith("test_func")
+    assert start_event.args == (5,)
+    assert start_event.kwargs == {}
+
+    error_event = events[1]
+    assert error_event.event_type == "error_occurred"
+    assert error_event.method_name.endswith("test_func")
+    assert error_event.args == (5,)
+    assert error_event.kwargs == {}
+    assert isinstance(error_event.error, ValueError)
+    assert str(error_event.error) == "Test error"
+    assert error_event.error_context is not None
+    assert "duration_ms" in error_event.error_context
+
+
+def test_multiple_processors():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor1 = InMemoryProcessor()
+    processor2 = InMemoryProcessor()
+    telemetry.add_processor(processor1)
+    telemetry.add_processor(processor2)
+
+    @telemetry.track_call()
+    def test_func(x: int) -> int:
+        return x * 2
+
+    result = test_func(5)
+    assert result == 10
+
+    events1 = processor1.get_events()
+    events2 = processor2.get_events()
+    assert len(events1) == 2
+    assert len(events2) == 2
+    for e1, e2 in zip(events1, events2):
+        assert e1.event_type == e2.event_type
+        assert e1.method_name == e2.method_name
+        assert e1.args == e2.args
+        assert e1.kwargs == e2.kwargs
+        assert e1.response == e2.response
+        assert e1.error == e2.error
+        assert e1.error_context == e2.error_context
+        assert e1.duration_ms == e2.duration_ms
+        assert e1.timestamp <= e2.timestamp
+
+
+def test_function_tracking():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call()
+    def standalone_function(x: int) -> int:
+        return x * 2
+
+    result = standalone_function(5)
+    assert result == 10
+
+    events = processor.get_events()
+    assert len(events) == 2
+    assert events[0].method_name.endswith("standalone_function")
+    assert events[1].method_name.endswith("standalone_function")
+
+
+def test_instance_method_tracking():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        @telemetry.track_call()
+        def instance_method(self, x: int) -> int:
+            return x * 2
+
+    obj = TestClass()
+    result = obj.instance_method(5)
+    assert result == 10
+
+    events = processor.get_events()
+    assert len(events) == 2
+    assert events[0].method_name.endswith("TestClass.instance_method")
+    assert events[1].method_name.endswith("TestClass.instance_method")
+
+
+def test_class_method_tracking():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        @classmethod
+        @telemetry.track_call()
+        def class_method(cls, x: int) -> int:
+            return x * 3
+
+    result = TestClass.class_method(5)
+    assert result == 15
+
+    events = processor.get_events()
+    assert len(events) == 2
+    assert events[0].method_name.endswith("TestClass.class_method")
+    assert events[1].method_name.endswith("TestClass.class_method")
+
+
+def test_static_method_tracking():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        @staticmethod
+        @telemetry.track_call()
+        def static_method(x: int) -> int:
+            return x * 4
+
+    result = TestClass.static_method(5)
+    assert result == 20
+
+    events = processor.get_events()
+    assert len(events) == 2
+    assert events[0].method_name.endswith("TestClass.static_method")
+    assert events[1].method_name.endswith("TestClass.static_method")
+
+
+def test_nested_class_tracking():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class Outer:
+        class Inner:
+            @telemetry.track_call()
+            def nested_method(self, x: int) -> int:
+                return x * 2
+
+    result = Outer.Inner().nested_method(5)
+    assert result == 10
+
+    events = processor.get_events()
+    assert len(events) == 2
+    assert events[0].method_name.endswith("Outer.Inner.nested_method")
+    assert events[1].method_name.endswith("Outer.Inner.nested_method")

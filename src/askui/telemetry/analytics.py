@@ -42,3 +42,4 @@ class AnalyticsContext(TypedDict, total=False):
     group_id: NotRequired[str]
     os: OSContext
     platform: PlatformContext
+    anonymous_id: str
