@@ -97,7 +97,7 @@ class ModelRouter:
             return self.claude.get_inference(screenshot, locator)
         raise AutomationError("Executing get commands requires to authenticate with an Automation Model Provider supporting it.")
 
-    @telemetry.track_call() # TODO Exclude locator and screenshot
+    @telemetry.track_call(exclude={"locator", "screenshot"})
     def locate(self, screenshot: Image.Image, locator: str, model_name: str | None = None) -> Point:
         if model_name is not None and model_name in self.huggingface_spaces.get_spaces_names():
             x, y = self.huggingface_spaces.predict(screenshot, locator, model_name)

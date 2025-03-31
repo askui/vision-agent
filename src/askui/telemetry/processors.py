@@ -11,7 +11,7 @@ class TelemetryProcessor(Protocol):
     def record_call_start(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         context: AnalyticsContext,
     ) -> None: ...
@@ -19,7 +19,7 @@ class TelemetryProcessor(Protocol):
     def record_call_end(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         response: Any,
         duration_ms: float,
@@ -52,7 +52,7 @@ class Segment:
     def record_call_start(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         context: AnalyticsContext,
     ) -> None:
@@ -74,7 +74,7 @@ class Segment:
     def record_call_end(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         response: Any,
         duration_ms: float,
@@ -126,7 +126,7 @@ class TelemetryEvent:
     timestamp: datetime
     event_type: str
     method_name: str
-    args: tuple[Any]
+    args: tuple[Any, ...]
     kwargs: dict[str, Any]
     response: Optional[Any] = None
     duration_ms: Optional[float] = None
@@ -141,7 +141,7 @@ class InMemoryProcessor:
     def record_call_start(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         context: AnalyticsContext,
     ) -> None:
@@ -158,7 +158,7 @@ class InMemoryProcessor:
     def record_call_end(
         self,
         method_name: str,
-        args: tuple[Any],
+        args: tuple[Any, ...],
         kwargs: dict[str, Any],
         response: Any,
         duration_ms: float,

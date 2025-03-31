@@ -1,3 +1,4 @@
+import inspect
 import os
 import platform
 import time
@@ -67,7 +68,11 @@ class TelemetrySettings(BaseModel):
         return analytics_context
 
 
+
+
 class Telemetry:
+    _EXCLUDE_MASK = "masked"
+
     def __init__(self, settings: TelemetrySettings) -> None:
         self._settings = settings
         self._processors: list[TelemetryProcessor] = []
@@ -105,24 +110,45 @@ class Telemetry:
                 anonymous_id=self._settings.analytics_context["anonymous_id"],
             )
 
-    def track_call(self) -> Callable:
-        """Decorator to track method calls, performance and errors"""
+    def track_call(
+        self,
+        exclude: set[str] | None = None,
+        include_first_arg: bool = False,
+    ) -> Callable:
+        """Decorator to track calls to functions and methods
+        
+        Args:
+            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain structure of the call)
+            include_first_arg: Whether to include the first argument, e.g., self or cls for instance and class methods, defaults to `False`; for functions and static methods, it should be set to `True`
+        """
 
+        _exclude = exclude or set()
         def decorator(func: Callable) -> Callable:
+            param_names_sorted = list(inspect.signature(func).parameters.keys())
             @wraps(func)
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 if not self._settings.enabled:
                     return func(*args, **kwargs)
                 
                 fn_name = f"{func.__module__}.{func.__qualname__}"
+                processed_args: tuple[Any, ...] = tuple(
+                    arg if param_names_sorted[i] not in _exclude else self._EXCLUDE_MASK
+                    for i, arg in enumerate(args)
+                )
+                if not include_first_arg:
+                    processed_args = processed_args[1:] if processed_args else ()
+                processed_kwargs = {
+                    k: v if k not in _exclude else self._EXCLUDE_MASK
+                    for k, v in kwargs.items()
+                }
                 logger.debug(
                     f"Tracking method call {fn_name} with args {args} and kwargs {kwargs}"
                 )
                 for processor in self._processors:
                     processor.record_call_start(
                         fn_name,
-                        args=args,
-                        kwargs=kwargs,
+                        args=processed_args,
+                        kwargs=processed_kwargs,
                         context=self._settings.analytics_context,
                     )
                 start_time = time.time()
@@ -132,8 +158,8 @@ class Telemetry:
                     for processor in self._processors:
                         processor.record_call_end(
                             fn_name,
-                            args=args,
-                            kwargs=kwargs,
+                            args=processed_args,
+                            kwargs=processed_kwargs,
                             response=response,
                             duration_ms=duration_ms,
                             context=self._settings.analytics_context,
@@ -144,8 +170,8 @@ class Telemetry:
                     # TODO Type this fully
                     context = {
                         "method": fn_name,
-                        "args": args,
-                        "kwargs": kwargs,
+                        "args": processed_args,
+                        "kwargs": processed_kwargs,
                         "duration_ms": duration_ms,
                     }
                     for processor in self._processors:

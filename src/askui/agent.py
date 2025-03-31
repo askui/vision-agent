@@ -26,7 +26,7 @@ class InvalidParameterError(Exception):
 
 
 class VisionAgent:
-    @telemetry.track_call() # exclude report_callback
+    @telemetry.track_call(exclude={"report_callback"})
     def __init__(
         self,
         log_level=logging.INFO,
@@ -59,7 +59,7 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    @telemetry.track_call() # TODO Exclude instruction
+    @telemetry.track_call(exclude={"instruction"})
     def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided instruction.
@@ -108,7 +108,7 @@ class VisionAgent:
             self.report.add_message("ModelRouter", f"locate: ({x}, {y})")
         self.client.mouse(x, y) # type: ignore
 
-    @telemetry.track_call() # TODO Exclude instruction
+    @telemetry.track_call(exclude={"instruction"})
     def mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided instruction.
@@ -130,7 +130,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to mouse_move '%s'", instruction)
         self.__mouse_move(instruction, model_name)
 
-    @telemetry.track_call() # TODO Exclude x and y
+    @telemetry.track_call()
     def mouse_scroll(self, x: int, y: int) -> None:
         """
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
@@ -159,7 +159,7 @@ class VisionAgent:
             self.report.add_message("User", f'mouse_scroll: "{x}", "{y}"')
         self.client.mouse_scroll(x, y)
 
-    @telemetry.track_call() # TODO Exclude text
+    @telemetry.track_call(exclude={"text"})
     def type(self, text: str) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
@@ -181,7 +181,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.client.type(text) # type: ignore
 
-    @telemetry.track_call() # TODO Exclude instruction and screenshot
+    @telemetry.track_call(exclude={"instruction", "screenshot"})
     def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
         """
         Retrieves text or information from the screen based on the provided instruction.
@@ -275,7 +275,7 @@ class VisionAgent:
         logger.debug("VisionAgent received in key_down '%s'", key)
         self.client.keyboard_pressed(key)
 
-    @telemetry.track_call() # TODO Exclude goal
+    @telemetry.track_call(exclude={"goal"})
     def act(self, goal: str, model_name: Optional[str] = None) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -331,7 +331,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to press '%s'", key)
         self.client.keyboard_tap(key, modifier_keys)  # type: ignore
 
-    @telemetry.track_call() # TODO Exclude command
+    @telemetry.track_call(exclude={"command"})
     def cli(self, command: str) -> None:
         """
         Executes a command on the command line interface.

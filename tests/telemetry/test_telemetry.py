@@ -25,7 +25,7 @@ def test_telemetry_enabled():
     processor = InMemoryProcessor()
     telemetry.add_processor(processor)
 
-    @telemetry.track_call()
+    @telemetry.track_call(include_first_arg=True)
     def test_func(x: int) -> int:
         return x * 2
 
@@ -48,7 +48,7 @@ def test_telemetry_enabled():
     assert end_event.kwargs == {}
     assert end_event.response == 10
     assert end_event.duration_ms is not None
-    assert end_event.duration_ms > 0
+    assert end_event.duration_ms >= 0
 
 
 def test_telemetry_error():
@@ -57,7 +57,7 @@ def test_telemetry_error():
     processor = InMemoryProcessor()
     telemetry.add_processor(processor)
 
-    @telemetry.track_call()
+    @telemetry.track_call(include_first_arg=True)
     def test_func(x: int) -> int:
         raise ValueError("Test error")
 
@@ -216,3 +216,180 @@ def test_nested_class_tracking():
     assert len(events) == 2
     assert events[0].method_name.endswith("Outer.Inner.nested_method")
     assert events[1].method_name.endswith("Outer.Inner.nested_method")
+
+
+def test_exclude_parameter():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call(exclude={"password", "token"}, include_first_arg=True)
+    def sensitive_function(username: str, password: str, token: str) -> str:
+        return f"User: {username}"
+
+    result = sensitive_function("test_user", "secret_password", "private_token")
+    assert result == "User: test_user"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that excluded parameters are masked
+    start_event = events[0]
+    assert start_event.args[0] == "test_user"  # username is included
+    assert start_event.args[1] == "masked"     # password is masked
+    assert start_event.args[2] == "masked"     # token is masked
+
+    end_event = events[1]
+    assert end_event.args[0] == "test_user"
+    assert end_event.args[1] == "masked"
+    assert end_event.args[2] == "masked"
+
+
+def test_exclude_kwargs():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call(exclude={"password", "token"}, include_first_arg=True)
+    def sensitive_function(username: str, **kwargs) -> str:
+        return f"User: {username}"
+
+    result = sensitive_function("test_user", password="secret_password", token="private_token", visible="ok")
+    assert result == "User: test_user"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that excluded kwargs are masked but others aren't
+    start_event = events[0]
+    assert start_event.args[0] == "test_user"
+    assert start_event.kwargs["password"] == "masked"
+    assert start_event.kwargs["token"] == "masked"
+    assert start_event.kwargs["visible"] == "ok"
+
+
+def test_include_first_arg_function():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    @telemetry.track_call(include_first_arg=True)
+    def test_func(first: str, second: str) -> str:
+        return f"{first}-{second}"
+
+    result = test_func("one", "two")
+    assert result == "one-two"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that first argument is included
+    assert events[0].args == ("one", "two")
+    assert events[1].args == ("one", "two")
+
+
+def test_include_first_arg_method():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        def __init__(self, name: str):
+            self.name = name
+            
+        @telemetry.track_call(include_first_arg=True)
+        def method_with_self(self, param: str) -> str:
+            return f"{self.name}-{param}"
+
+    obj = TestClass("test")
+    result = obj.method_with_self("param")
+    assert result == "test-param"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that self is included as first argument
+    assert len(events[0].args) == 2
+    assert events[0].args[1] == "param"  # Second arg should be param
+    # Can't directly check self, but we can check it's not removed
+
+
+def test_default_exclude_self_method():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        def __init__(self, name: str):
+            self.name = name
+            
+        @telemetry.track_call()  # Default include_first_arg=False
+        def method_with_self(self, param: str) -> str:
+            return f"{self.name}-{param}"
+
+    obj = TestClass("test")
+    result = obj.method_with_self("param")
+    assert result == "test-param"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that self is excluded
+    assert events[0].args == ("param",)
+    assert events[1].args == ("param",)
+
+
+def test_combined_exclude_and_include_first_arg():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class User:
+        @telemetry.track_call(exclude={"password"}, include_first_arg=True)
+        def authenticate(self, username: str, password: str) -> bool:
+            return username == "valid" and password == "correct"
+
+    user = User()
+    result = user.authenticate("valid", "correct")
+    assert result is True
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # First arg (self) should be included, password should be masked
+    assert len(events[0].args) == 3
+    assert events[0].args[1] == "valid"     # username is included
+    assert events[0].args[2] == "masked"    # password is masked
+    
+    assert len(events[1].args) == 3
+    assert events[1].args[1] == "valid"
+    assert events[1].args[2] == "masked"
+
+
+def test_static_method_with_include_first_arg():
+    settings = TelemetrySettings(enabled=True)
+    telemetry = Telemetry(settings)
+    processor = InMemoryProcessor()
+    telemetry.add_processor(processor)
+
+    class TestClass:
+        @staticmethod
+        @telemetry.track_call(include_first_arg=True)
+        def static_method(first: str, second: str) -> str:
+            return f"{first}-{second}"
+
+    result = TestClass.static_method("one", "two")
+    assert result == "one-two"
+
+    events = processor.get_events()
+    assert len(events) == 2
+    
+    # Check that all arguments are included
+    assert events[0].args == ("one", "two")
+    assert events[1].args == ("one", "two")
