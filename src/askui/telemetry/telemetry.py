@@ -145,10 +145,13 @@ class Telemetry:
                     f"Tracking method call {fn_name} with args {args} and kwargs {kwargs}"
                 )
                 for processor in self._processors:
-                    processor.record_call_start(
-                        fn_name,
-                        args=processed_args,
-                        kwargs=processed_kwargs,
+                    processor.record_event(
+                        name="method_started",
+                        attributes={
+                            "method_name": fn_name,
+                            "args": processed_args,
+                            "kwargs": processed_kwargs,
+                        },
                         context=self._settings.analytics_context,
                     )
                 start_time = time.time()
@@ -156,29 +159,33 @@ class Telemetry:
                     response = func(*args, **kwargs)
                     duration_ms = (time.time() - start_time) * 1000
                     for processor in self._processors:
-                        processor.record_call_end(
-                            fn_name,
-                            args=processed_args,
-                            kwargs=processed_kwargs,
-                            response=response,
-                            duration_ms=duration_ms,
+                        processor.record_event(
+                            name="method_ended",
+                            attributes={
+                                "method_name": fn_name,
+                                "args": processed_args,
+                                "kwargs": processed_kwargs,
+                                "response": response,
+                                "duration_ms": duration_ms,
+                            },
                             context=self._settings.analytics_context,
                         )
                     return response
                 except Exception as e:
                     duration_ms = (time.time() - start_time) * 1000
-                    # TODO Type this fully
-                    context = {
-                        "method": fn_name,
-                        "args": processed_args,
-                        "kwargs": processed_kwargs,
-                        "duration_ms": duration_ms,
-                    }
                     for processor in self._processors:
-                        processor.record_exception(
-                            e,
-                            context=context,
-                            analytics_context=self._settings.analytics_context,
+                        processor.record_event(
+                            name="error_occurred",
+                            attributes={
+                                "method_name": fn_name,
+                                "args": processed_args,
+                                "kwargs": processed_kwargs,
+                                "duration_ms": duration_ms,
+                                "error": e,
+                                "error_type": type(e).__name__,
+                                "error_message": str(e),
+                            },
+                            context=self._settings.analytics_context,
                         )
                     raise
             return wrapper

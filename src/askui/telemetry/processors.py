@@ -1,37 +1,30 @@
+import abc
+
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, List, Optional, Protocol
+from datetime import datetime, timezone
+from typing import Any
 
 from pydantic import BaseModel, HttpUrl, SecretStr
 from askui.logger import logger
 from askui.telemetry.analytics import AnalyticsContext
 
 
-class TelemetryProcessor(Protocol):
-    def record_call_start(
+class TelemetryProcessor(abc.ABC):
+    @abc.abstractmethod
+    def record_event(
         self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
+        name: str,
+        attributes: dict[str, Any],
         context: AnalyticsContext,
     ) -> None: ...
 
-    def record_call_end(
-        self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        response: Any,
-        duration_ms: float,
-        context: AnalyticsContext,
-    ) -> None: ...
 
-    def record_exception(
-        self,
-        error: Exception,
-        context: Optional[dict[str, Any]],
-        analytics_context: AnalyticsContext,
-    ) -> None: ...
+@dataclass
+class TelemetryEvent:
+    name: str
+    attributes: dict[str, Any]
+    context: AnalyticsContext
+    timestamp: datetime
 
 
 class SegmentSettings(BaseModel):
@@ -40,7 +33,7 @@ class SegmentSettings(BaseModel):
     enabled: bool = True  # TODO Exclude from here
 
 
-class Segment:
+class Segment(TelemetryProcessor):
     def __init__(self, settings: SegmentSettings) -> None:
         self._settings = settings
 
@@ -49,152 +42,44 @@ class Segment:
         self._analytics = analytics
         self._analytics.write_key = settings.write_key.get_secret_value()
 
-    def record_call_start(
+    def record_event(
         self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
+        name: str,
+        attributes: dict[str, Any],
         context: AnalyticsContext,
     ) -> None:
         try:
             self._analytics.track(
-                event="method_started",
-                properties={
-                    "method_name": method_name,
-                    "args": args,
-                    "kwargs": kwargs,
-                },
+                event=name,
+                properties=attributes,
                 anonymous_id=context["anonymous_id"],
                 context=context,
+                timestamp=datetime.now(tz=timezone.utc),
             )
-            logger.debug(f"Tracked method start {method_name}")
+            logger.debug(f"Tracked event {name}")
         except Exception as e:
-            logger.debug(f"Failed to track method start {method_name}: {e}")
-
-    def record_call_end(
-        self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        response: Any,
-        duration_ms: float,
-        context: AnalyticsContext,
-    ) -> None:
-        try:
-            self._analytics.track(
-                event="method_ended",
-                properties={
-                    "method_name": method_name,
-                    "args": args,
-                    "kwargs": kwargs,
-                    "response": response,
-                    "duration_ms": duration_ms,
-                },
-                anonymous_id=context["anonymous_id"],
-                context=context,
-            )
-            logger.debug(
-                f"Tracked method end {method_name} with duration {duration_ms}ms"
-            )
-        except Exception as e:
-            logger.debug(f"Failed to track method end {method_name}: {e}")
-
-    def record_exception(
-        self,
-        error: Exception,
-        context: Optional[dict[str, Any]],
-        analytics_context: AnalyticsContext,
-    ) -> None:
-        try:
-            self._analytics.track(
-                event="error_occurred",
-                properties={
-                    "error_type": type(error).__name__,
-                    "error_message": str(error),
-                    **(context or {}),
-                },
-                anonymous_id=analytics_context["anonymous_id"],
-                context=analytics_context,
-            )
-            logger.debug(f"Tracked error {error} with context {context}")
-        except Exception as e:
-            logger.debug(f"Failed to track error in Segment: {e}")
+            logger.debug(f"Failed to track event {name}: {e}")
 
 
-@dataclass
-class TelemetryEvent:
-    timestamp: datetime
-    event_type: str
-    method_name: str
-    args: tuple[Any, ...]
-    kwargs: dict[str, Any]
-    response: Optional[Any] = None
-    duration_ms: Optional[float] = None
-    error: Optional[Exception] = None
-    error_context: Optional[dict[str, Any]] = None
-
-
-class InMemoryProcessor:
+class InMemoryProcessor(TelemetryProcessor):
     def __init__(self) -> None:
-        self._events: List[TelemetryEvent] = []
+        self._events: list[TelemetryEvent] = []
 
-    def record_call_start(
+    def record_event(
         self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
+        name: str,
+        attributes: dict[str, Any],
         context: AnalyticsContext,
     ) -> None:
-        self._events.append(
-            TelemetryEvent(
-                timestamp=datetime.now(),
-                event_type="method_started",
-                method_name=method_name,
-                args=args,
-                kwargs=kwargs,
-            )
+        event = TelemetryEvent(
+            name=name,
+            attributes=attributes,
+            context=context,
+            timestamp=datetime.now(tz=timezone.utc),
         )
+        self._events.append(event)
 
-    def record_call_end(
-        self,
-        method_name: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        response: Any,
-        duration_ms: float,
-        context: AnalyticsContext,
-    ) -> None:
-        self._events.append(
-            TelemetryEvent(
-                timestamp=datetime.now(),  # TODO
-                event_type="method_ended",
-                method_name=method_name,
-                args=args,
-                kwargs=kwargs,
-                response=response,
-                duration_ms=duration_ms,
-            )
-        )
-
-    def record_exception(
-        self,
-        error: Exception,
-        context: Optional[dict[str, Any]],
-        analytics_context: AnalyticsContext,
-    ) -> None:
-        self._events.append(
-            TelemetryEvent(
-                timestamp=datetime.now(),
-                event_type="error_occurred",
-                method_name=context.get("method", "unknown") if context else "unknown",
-                args=context.get("args", ()) if context else (),  # TODO
-                kwargs=context.get("kwargs", {}) if context else {},
-                error=error,
-                error_context=context,
-            )
-        )
-
-    def get_events(self) -> List[TelemetryEvent]:
+    def get_events(self) -> list[TelemetryEvent]:
         return self._events.copy()
 
     def clear(self) -> None:
