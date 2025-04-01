@@ -120,7 +120,7 @@ class AskUiControllerServer:
         
 
 class AskUiControllerClient:
-    @telemetry.track_call(exclude={"report"})
+    @telemetry.record_call(exclude={"report"})
     def __init__(self, display: int = 1, report: SimpleReportGenerator | None = None) -> None:
         self.stub = None
         self.channel = None
@@ -131,8 +131,8 @@ class AskUiControllerClient:
         self.display = display
         self.report = report
 
-    @telemetry.track_call()
-    def connect(self):
+    @telemetry.record_call()
+    def connect(self) -> None:
         self.channel = grpc.insecure_channel('localhost:23000', options=[
                 ('grpc.max_send_message_length', 2**30 ),
                 ('grpc.max_receive_message_length', 2**30 ),
@@ -157,8 +157,8 @@ class AskUiControllerClient:
             raise Exception("Action not yet done")
         return response
     
-    @telemetry.track_call()
-    def disconnect(self):
+    @telemetry.record_call()
+    def disconnect(self) -> None:
         self._stop_execution()
         self._stop_session()
         self.channel.close()
@@ -176,7 +176,7 @@ class AskUiControllerClient:
     def _stop_execution(self):
         self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def screenshot(self, report: bool = True) -> Image.Image:
         assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
@@ -186,20 +186,20 @@ class AskUiControllerClient:
             self.report.add_message("AgentOS", "screenshot()", image)
         return image
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def mouse(self, x: int, y: int) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"mouse({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseMove, action_parameters=controller_v1_pbs.ActionParameters(mouseMove=controller_v1_pbs.ActionParameters_MouseMove(position=controller_v1_pbs.Coordinate2(x=x, y=y))))
 
 
-    @telemetry.track_call(exclude={"text"})
+    @telemetry.record_call(exclude={"text"})
     def type(self, text: str, typing_speed: int = 50) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"type(\"{text}\", {typing_speed})")
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
-    @telemetry.track_call()
+    @telemetry.record_call()
     def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"click(\"{button}\", {count})")
@@ -213,7 +213,7 @@ class AskUiControllerClient:
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPressAndRelease=controller_v1_pbs.ActionParameters_MouseButton_PressAndRelease(mouseButton=mouse_button, count=count)))
         
-    @telemetry.track_call()
+    @telemetry.record_call()
     def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"mouse_down(\"{button}\")")
@@ -227,7 +227,7 @@ class AskUiControllerClient:
                 mouse_button = controller_v1_pbs.MouseButton_Right        
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Press, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonPress=controller_v1_pbs.ActionParameters_MouseButton_Press(mouseButton=mouse_button)))
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:      
         if self.report is not None: 
             self.report.add_message("AgentOS", f"mouse_up(\"{button}\")")  
@@ -241,7 +241,7 @@ class AskUiControllerClient:
                 mouse_button = controller_v1_pbs.MouseButton_Right
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseButton_Release, action_parameters=controller_v1_pbs.ActionParameters(mouseButtonRelease=controller_v1_pbs.ActionParameters_MouseButton_Release(mouseButton=mouse_button)))
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def mouse_scroll(self, x: int, y: int) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"mouse_scroll({x}, {y})")
@@ -261,7 +261,7 @@ class AskUiControllerClient:
             )))
 
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def keyboard_pressed(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"keyboard_pressed(\"{key}\", {modifier_keys})")
@@ -269,7 +269,7 @@ class AskUiControllerClient:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Press, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyPress=controller_v1_pbs.ActionParameters_KeyboardKey_Press(keyName=key, modifierKeyNames=modifier_keys)))
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def keyboard_release(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"keyboard_release(\"{key}\", {modifier_keys})")
@@ -277,7 +277,7 @@ class AskUiControllerClient:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_Release, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyRelease=controller_v1_pbs.ActionParameters_KeyboardKey_Release(keyName=key, modifierKeyNames=modifier_keys)))
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def keyboard_tap(self, key: PC_AND_MODIFIER_KEY,  modifier_keys: List[MODIFIER_KEY] | None = None) -> None:
         if self.report is not None: 
             self.report.add_message("AgentOS", f"keyboard_tap(\"{key}\", {modifier_keys})")
@@ -285,7 +285,7 @@ class AskUiControllerClient:
             modifier_keys = []   
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease, action_parameters=controller_v1_pbs.ActionParameters(keyboardKeyPressAndRelease=controller_v1_pbs.ActionParameters_KeyboardKey_PressAndRelease(keyName=key, modifierKeyNames=modifier_keys)))
 
-    @telemetry.track_call()
+    @telemetry.record_call()
     def set_display(self, displayNumber: int = 1) -> None:
         assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         if self.report is not None: 

@@ -1,10 +1,10 @@
 import base64
+from functools import cached_property
 import os
 from typing import Any
 import httpx
 from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from askui.logger import logger
-from askui.telemetry.analytics import AnalyticsContext
 
 
 def get_askui_token_from_env() -> SecretStr | None:
@@ -16,13 +16,11 @@ def get_askui_token_from_env() -> SecretStr | None:
 
 class UserIdentificationSettings(BaseModel):
     """Settings for user identification"""
-
-    enabled: bool = True
     api_url: HttpUrl = HttpUrl("https://workspaces.askui.com/api/v1")
     # retrieving directly through environment variable to circumvent pydantic-settings env_prefix
     askui_token: SecretStr | None = Field(default=get_askui_token_from_env())
 
-    @property
+    @cached_property
     def askui_token_encoded(self) -> str | None:
         if not self.askui_token:
             return None
@@ -32,6 +30,11 @@ class UserIdentificationSettings(BaseModel):
 class UserIdentification:
     def __init__(self, settings: UserIdentificationSettings):
         self._settings = settings
+        self._enabled = self._settings.askui_token
+        if not self._enabled:
+            logger.debug("User identification disabled. Set the `ASKUI_TOKEN` environment variable to your AskUI access token to allow user to be identified.")
+            return
+
         self._client = httpx.Client(timeout=30.0)
 
     def __enter__(self):
@@ -51,7 +54,7 @@ class UserIdentification:
             askui_access_token: The access token of the user
             traits: The traits of the user
         """
-        if not self._settings.enabled or not self._settings.askui_token:
+        if not self._enabled:
             return
 
         try:
