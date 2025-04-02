@@ -55,7 +55,8 @@ class Segment(TelemetryProcessor):
                 event=name,
                 properties={
                     "attributes": attributes,
-                    # Special context as Segment only supports predefined context keys (see https://segment.com/docs/connections/spec/track/#context)
+                    # Special context as Segment only supports predefined context keys
+                    # (see https://segment.com/docs/connections/spec/track/#context)
                     "context": {
                         "os": context["os"],
                         "platform": context["platform"],

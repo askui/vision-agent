@@ -38,7 +38,10 @@ class TelemetrySettings(BaseModel):
     app_version: str = get_pkg_version()
     group_id: str | None = Field(
         default=os.environ.get("ASKUI_WORKSPACE_ID"),
-        description='The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" environment variable if set, otherwise None.',
+        description=(
+            'The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" environment variable if set, '
+            "otherwise `None`."
+        ),
     )
     device_id: str = Field(
         default_factory=lambda: map_guid_to_uuid4(machineid.hashed_id("askui")),
@@ -47,12 +50,17 @@ class TelemetrySettings(BaseModel):
             "This is used to identify the device and the user (if anynomous) across AskUI components. "
             'We hash it with an AskUI specific salt ("askui") to avoid user tracking across (non-AskUI) '
             "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
-            "protect user privacy while still being able to improve the UX across components. We map it to a UUID4 as this is expected by our telemetry backend(s)."
+            "protect user privacy while still being able to improve the UX across components. We map it to a "
+            "UUID4 as this is expected by our telemetry backend(s)."
         ),
     )
     session_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
-        description="The session ID of the user. This is used to identify the current user session (process).",
+        description=(
+            "This is used to identify the current (test/automation) session. Defaults to a random UUID4. "
+            "This should be overridden if the test/automation is split across multiple processes to associate "
+            "all of them with a single session."
+        ),
     )
     enabled: bool = True
 
@@ -65,11 +73,15 @@ class Telemetry:
         self._processors: list[TelemetryProcessor] = []
         self._user_identification: UserIdentification | None = None
         if not self._settings.enabled:
-            logger.debug("Telemetry is disabled. To enable it, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `True`.")
+            logger.debug(
+                "Telemetry is disabled. To enable it, set the `ASKUI__VA__TELEMETRY__ENABLED` "
+                "environment variable to `True`."
+            )
             return
 
         logger.debug(
-            "Telemetry is enabled. To disable it, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `False`."
+            "Telemetry is enabled. To disable it, set the `ASKUI__VA__TELEMETRY__ENABLED` "
+            "environment variable to `False`."
         )
         if self._settings.user_identification:
             self._user_identification = UserIdentification(
@@ -117,13 +129,23 @@ class Telemetry:
         exclude_start: bool = True,
     ) -> Callable:
         """Decorator to record calls to functions and methods
+        
+        IMPORTANT: Parameters, responses and exceptions recorded must be serializable to JSON. Either make 
+        sure that they are serializable or exclude them using the `exclude` parameter or use the 
+        `exclude_response` and `exclude_exception` parameters.
 
         Args:
-            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain structure of the call)
-            exclude_first_arg: Whether to exclude the first argument, e.g., self or cls for instance and class methods. Defaults to `True`, for functions and static methods, it should be set to `False`
-            exclude_response: Whether to exclude the response of the function in the telemetry event. Defaults to `True`
-            exclude_exception: Whether to exclude the exception if one is raised in the telemetry event. Defaults to `False`
-            exclude_start: Whether to exclude the start of the function call as a telemetry event. Defaults to `True`
+            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain 
+                structure of the call)
+            exclude_first_arg: Whether to exclude the first argument, e.g., self or cls for instance and 
+                class methods. Defaults to `True`, for functions and static methods, it should be set to 
+                `False`
+            exclude_response: Whether to exclude the response of the function in the telemetry event. 
+                Defaults to `True`
+            exclude_exception: Whether to exclude the exception if one is raised in the telemetry event. 
+                Defaults to `False`
+            exclude_start: Whether to exclude the start of the function call as a telemetry event. 
+                Defaults to `True`
         """
 
         _exclude = exclude or set()

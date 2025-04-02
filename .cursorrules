@@ -1,2 +1,0 @@
-- Use `_` prefix for all private variables, functions, methods, properties, etc. that don't need to be accessible from outside the module.
-- Use type hints for all variables, functions, methods, properties, return values, parameters etc. so that the code is fully typed.

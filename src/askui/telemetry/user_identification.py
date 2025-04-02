@@ -32,7 +32,10 @@ class UserIdentification:
         self._settings = settings
         self._enabled = self._settings.askui_token and self._settings.askui_workspace_id
         if not self._enabled:
-            logger.debug("User identification disabled. Set the `ASKUI_TOKEN` and `ASKUI_WORKSPACE_ID` environment variables to allow user to be identified.")
+            logger.debug(
+                "User identification disabled. Set the `ASKUI_TOKEN` and `ASKUI_WORKSPACE_ID` "
+                "environment variables to allow user to be identified."
+            )
             return
 
         self._client = httpx.Client(timeout=30.0)
