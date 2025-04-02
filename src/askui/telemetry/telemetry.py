@@ -65,10 +65,10 @@ class Telemetry:
         self._processors: list[TelemetryProcessor] = []
         self._user_identification: UserIdentification | None = None
         if not self._settings.enabled:
-            logger.info("Telemetry is disabled")
+            logger.debug("Telemetry is disabled. To enable it, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `True`.")
             return
 
-        logger.info(
+        logger.debug(
             "Telemetry is enabled. To disable it, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `False`."
         )
         if self._settings.user_identification:
