@@ -41,7 +41,6 @@ class Segment(TelemetryProcessor):
 
         self._analytics = analytics
         self._analytics.write_key = settings.write_key
-        self._analytics.max_queue_size = 1
 
     def record_event(
         self,
@@ -51,10 +50,28 @@ class Segment(TelemetryProcessor):
     ) -> None:
         try:
             self._analytics.track(
+                user_id=context.get("user_id"),
+                anonymous_id=context["device"]["id"],
                 event=name,
-                properties=attributes,
-                anonymous_id=context["anonymous_id"],
-                context=context,
+                properties={
+                    "attributes": attributes,
+                    # Special context as Segment only supports predefined context keys (see https://segment.com/docs/connections/spec/track/#context)
+                    "context": {
+                        "os": context["os"],
+                        "platform": context["platform"],
+                        "session_id": context["session_id"],
+                        "call_stack": context["call_stack"],
+                    }
+                },
+                context={
+                    "app": context["app"],
+                    "groupId": context.get("group_id"),
+                    "os": {
+                        "name": context["os"]["name"],
+                        "version": context["os"]["version"],
+                    },
+                    "device": context["device"],
+                },
                 timestamp=datetime.now(tz=timezone.utc),
             )
         except Exception as e:

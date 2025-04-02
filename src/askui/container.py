@@ -4,7 +4,6 @@ from askui.telemetry.processors import Segment
 
 
 telemetry = Telemetry(settings.telemetry)
-telemetry.identify()
 
 if settings.telemetry.segment:
     telemetry.add_processor(Segment(settings.telemetry.segment))

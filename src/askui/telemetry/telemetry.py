@@ -2,7 +2,7 @@ import inspect
 import os
 import platform
 import time
-from functools import cached_property, wraps
+from functools import wraps
 from typing import Any, Callable
 import uuid
 
@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from askui.logger import logger
 from askui.telemetry.context import (
     CallStack,
+    DeviceContext,
     TelemetryContext,
     AppContext,
     OSContext,
@@ -23,6 +24,7 @@ from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
+from askui.telemetry.utils import map_guid_to_uuid4
 
 
 class TelemetrySettings(BaseModel):
@@ -38,14 +40,14 @@ class TelemetrySettings(BaseModel):
         default=os.environ.get("ASKUI_WORKSPACE_ID"),
         description='The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" environment variable if set, otherwise None.',
     )
-    machine_id: str = Field(
-        default_factory=lambda: machineid.hashed_id(app_id="askui"),
+    device_id: str = Field(
+        default_factory=lambda: map_guid_to_uuid4(machineid.hashed_id("askui")),
         description=(
-            "The machine ID of the host machine. "
-            "This is used to identify the machine and the user (if anynomous) across AskUI components. "
+            "The device ID of the host machine. "
+            "This is used to identify the device and the user (if anynomous) across AskUI components. "
             'We hash it with an AskUI specific salt ("askui") to avoid user tracking across (non-AskUI) '
             "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
-            "protect user privacy while still being able to improve the UX across components."
+            "protect user privacy while still being able to improve the UX across components. We map it to a UUID4 as this is expected by our telemetry backend(s)."
         ),
     )
     session_id: str = Field(
@@ -53,26 +55,6 @@ class TelemetrySettings(BaseModel):
         description="The session ID of the user. This is used to identify the current user session (process).",
     )
     enabled: bool = True
-
-    @cached_property
-    def context_base(self) -> TelemetryContext:
-        context_base = TelemetryContext(
-            app=AppContext(name=self.app_name, version=self.app_version),
-            os=OSContext(
-                name=platform.system(),
-                version=platform.version(),
-                release=platform.release(),
-            ),
-            platform=PlatformContext(
-                arch=platform.machine(),
-                python_version=platform.python_version(),
-            ),
-            anonymous_id=self.machine_id,
-            session_id=self.session_id,
-        )
-        if self.group_id:
-            context_base["group_id"] = self.group_id
-        return context_base
 
 
 class Telemetry:
@@ -94,21 +76,37 @@ class Telemetry:
                 settings=self._settings.user_identification
             )
         self._call_stack = CallStack()
-        self._context = self._settings.context_base
+        self._context = self._init_context()
 
     def add_processor(self, processor: TelemetryProcessor) -> None:
         """Add a telemetry processor that will be called in order of addition"""
         self._processors.append(processor)
 
-    def identify(self) -> None:
-        """Identify the user with AskUI if AskUI token is set
-
-        This method only needs to be called once per process, ideally as early as possible to correlate all following events with the user.
-        """
+    def _init_context(self) -> TelemetryContext:
+        context = TelemetryContext(
+            app=AppContext(
+                name=self._settings.app_name,
+                version=self._settings.app_version,
+            ),
+            os=OSContext(
+                name=platform.system(),
+                version=platform.version(),
+                release=platform.release(),
+            ),
+            platform=PlatformContext(
+                arch=platform.machine(),
+                python_version=platform.python_version(),
+            ),
+            device=DeviceContext(id=self._settings.device_id),
+            session_id=self._settings.session_id,
+        )
+        if self._settings.group_id:
+            context["group_id"] = self._settings.group_id
         if self._user_identification:
-            self._user_identification.identify(
-                anonymous_id=self._settings.context_base["anonymous_id"],
-            )
+            user_id = self._user_identification.get_user_id()
+            if user_id:
+                context["user_id"] = user_id
+        return context
 
     def record_call(
         self,
@@ -141,9 +139,7 @@ class Telemetry:
                 self._call_stack.push_call()
                 module = func.__module__
                 fn_name = func.__qualname__
-                logger.debug(
-                    f"Record call\tfn_name={fn_name} module={module}"
-                )
+                logger.debug(f"Record call\tfn_name={fn_name} module={module}")
                 processed_args: tuple[Any, ...] = tuple(
                     arg if param_names_sorted[i] not in _exclude else self._EXCLUDE_MASK
                     for i, arg in enumerate(args)
@@ -159,7 +155,7 @@ class Telemetry:
                     "fn_name": fn_name,
                     "args": processed_args,
                     "kwargs": processed_kwargs,
-                    "call_id": self._call_stack.current[-1], 
+                    "call_id": self._call_stack.current[-1],
                 }
                 self._context["call_stack"] = self._call_stack.current
                 if not exclude_start:

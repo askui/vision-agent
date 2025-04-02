@@ -33,16 +33,25 @@ class PlatformContext(TypedDict, total=False):
     python_version: str
 
 
+class DeviceContext(TypedDict, total=False):
+    """Device context information."""
+
+    __pydantic_config__ = ConfigDict(extra="allow")
+
+    id: str
+
+
 class TelemetryContext(TypedDict, total=False):
     """Context information."""
 
     __pydantic_config__ = ConfigDict(extra="allow")
 
     app: AppContext
+    user_id: NotRequired[str]
     group_id: NotRequired[str]
     os: OSContext
     platform: PlatformContext
-    anonymous_id: str
+    device: DeviceContext
     session_id: str
     call_stack: list[str]
 
