@@ -359,6 +359,7 @@ class VisionAgent:
             self.client.disconnect()
         if self.controller:
             self.controller.stop(True)
+        telemetry.flush()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":

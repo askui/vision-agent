@@ -204,3 +204,8 @@ class Telemetry:
             return wrapper
 
         return decorator
+
+    def flush(self) -> None:
+        """Flush the telemetry data to the backend"""
+        for processor in self._processors:
+            processor.flush()

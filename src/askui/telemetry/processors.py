@@ -17,6 +17,9 @@ class TelemetryProcessor(abc.ABC):
         context: TelemetryContext,
     ) -> None: ...
 
+    @abc.abstractmethod
+    def flush(self) -> None: ...
+
 
 class TelemetryEvent(TypedDict):
     name: str
@@ -38,6 +41,7 @@ class Segment(TelemetryProcessor):
 
         self._analytics = analytics
         self._analytics.write_key = settings.write_key
+        self._analytics.max_queue_size = 1
 
     def record_event(
         self,
@@ -54,7 +58,10 @@ class Segment(TelemetryProcessor):
                 timestamp=datetime.now(tz=timezone.utc),
             )
         except Exception as e:
-            logger.debug(f"Failed to track event \"{name}\" using Segment: {e}")
+            logger.debug(f'Failed to track event "{name}" using Segment: {e}')
+    
+    def flush(self) -> None:
+        self._analytics.flush()
 
 
 class InMemoryProcessor(TelemetryProcessor):
@@ -80,3 +87,6 @@ class InMemoryProcessor(TelemetryProcessor):
 
     def clear(self) -> None:
         self._events.clear()
+
+    def flush(self) -> None:
+        pass
