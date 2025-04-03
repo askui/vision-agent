@@ -34,9 +34,6 @@ def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
     "askui",
     "anthropic-claude-3-5-sonnet-20241022",
 ])
-@pytest.mark.xfail(
-    reason="Location may be inconsistent depending on the model used",
-)
 class TestVisionAgentLocate:
     """Test class for VisionAgent.locate() method."""
 
@@ -47,19 +44,26 @@ class TestVisionAgentLocate:
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
-    def test_locate_with_class_locator(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
+    def test_locate_with_textfield_class_locator(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
         """Test locating elements using a class locator."""
         locator = Class("textfield")
         x, y = vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
         assert 50 <= x <= 860 or 350 <= x <= 570 or 350 <= x <= 570
         assert 0 <= y <= 80 or 210 <= y <= 280 or 160 <= y <= 230
+        
+    def test_locate_with_unspecified_class_locator(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
+        """Test locating elements using a class locator."""
+        locator = Class()
+        x, y = vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
+        assert 0 <= x <= github_login_screenshot.width
+        assert 0 <= y <= github_login_screenshot.height
 
     def test_locate_with_description_locator(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
         """Test locating elements using a description locator."""
-        locator = Description("Green sign in button")
+        locator = Description("Username textfield")
         x, y = vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
         assert 350 <= x <= 570
-        assert 240 <= y <= 310
+        assert 160 <= y <= 230
 
     def test_locate_with_similar_text_locator(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
         """Test locating elements using a text locator."""

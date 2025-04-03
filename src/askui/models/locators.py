@@ -103,7 +103,10 @@ class VlmLocatorSerializer(LocatorSerializer[str]):
             raise ValueError(f"Unsupported locator type: {type(locator)}")
 
     def _serialize_class(self, class_: Class) -> str:
-        return class_.class_name or "ui element"
+        if class_.class_name:
+            return f"an arbitrary {class_.class_name} shown"
+        else:
+            return "an arbitrary ui element (e.g., text, button, textfield, etc.)"
         
     def _serialize_description(self, description: Description) -> str:
         return description.description
