@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal, Optional, Callable
 from pydantic import Field, validate_call
 
 from askui.container import telemetry
+from askui.models.locators import Locator
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -15,7 +16,7 @@ from .tools.askui.askui_controller import (
 from .models.anthropic.claude import ClaudeHandler
 from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
-from .models.router import ModelRouter
+from .models.router import ModelRouter, Point
 from .reporting.report import SimpleReportGenerator
 import time
 from dotenv import load_dotenv
@@ -59,13 +60,13 @@ class VisionAgent:
                 "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
             )
 
-    @telemetry.record_call(exclude={"instruction"})
-    def click(self, instruction: Optional[str] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
+    @telemetry.record_call(exclude={"locator"})
+    def click(self, locator: Optional[str | Locator] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
         """
-        Simulates a mouse click on the user interface element identified by the provided instruction.
+        Simulates a mouse click on the user interface element identified by the provided locator.
 
         Parameters:
-            instruction (str | None): The identifier or description of the element to click.
+            locator (str | Locator | None): The identifier or description of the element to click.
             button ('left' | 'middle' | 'right'): Specifies which mouse button to click. Defaults to 'left'.
             repeat (int): The number of times to click. Must be greater than 0. Defaults to 1.
             model_name (str | None): The model name to be used for element detection. Optional.
@@ -92,29 +93,34 @@ class VisionAgent:
                 msg = f'{button} ' + msg 
             if repeat > 1:
                 msg += f' {repeat}x times'
-            if instruction is not None:
-                msg += f' on "{instruction}"'
+            if locator is not None:
+                msg += f' on "{locator}"'
             self.report.add_message("User", msg)
-        if instruction is not None:
-            logger.debug("VisionAgent received instruction to click '%s'", instruction)
-            self.__mouse_move(instruction, model_name)
+        if locator is not None:
+            logger.debug("VisionAgent received instruction to click '%s'", locator)
+            self._mouse_move(locator, model_name)
         self.client.click(button, repeat) # type: ignore
-
-    def __mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
-        self._check_askui_controller_enabled()
-        screenshot = self.client.screenshot() # type: ignore
-        x, y = self.model_router.locate(screenshot, instruction, model_name)
+        
+    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model_name: Optional[str] = None) -> Point:
+        if screenshot is None:
+            self._check_askui_controller_enabled()
+            screenshot = self.client.screenshot() # type: ignore
+        point = self.model_router.locate(screenshot, locator, model_name)
         if self.report is not None:
-            self.report.add_message("ModelRouter", f"locate: ({x}, {y})")
-        self.client.mouse(x, y) # type: ignore
+            self.report.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
+        return point
 
-    @telemetry.record_call(exclude={"instruction"})
-    def mouse_move(self, instruction: str, model_name: Optional[str] = None) -> None:
+    def _mouse_move(self, locator: str | Locator, model_name: Optional[str] = None) -> None:
+        point = self.locate(locator=locator, model_name=model_name)
+        self.client.mouse(point[0], point[1]) # type: ignore
+
+    @telemetry.record_call(exclude={"locator"})
+    def mouse_move(self, locator: str | Locator, model_name: Optional[str] = None) -> None:
         """
-        Moves the mouse cursor to the UI element identified by the provided instruction.
+        Moves the mouse cursor to the UI element identified by the provided locator.
 
         Parameters:
-            instruction (str): The identifier or description of the element to move to.
+            locator (str | Locator): The identifier or description of the element to move to.
             model_name (str | None): The model name to be used for element detection. Optional.
 
         Example:
@@ -126,9 +132,9 @@ class VisionAgent:
         ```
         """
         if self.report is not None:
-            self.report.add_message("User", f'mouse_move: "{instruction}"')
-        logger.debug("VisionAgent received instruction to mouse_move '%s'", instruction)
-        self.__mouse_move(instruction, model_name)
+            self.report.add_message("User", f'mouse_move: "{locator}"')
+        logger.debug("VisionAgent received instruction to mouse_move to '%s'", locator)
+        self._mouse_move(locator, model_name)
 
     @telemetry.record_call()
     def mouse_scroll(self, x: int, y: int) -> None:

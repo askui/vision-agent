@@ -4,8 +4,9 @@ import pathlib
 import requests
 
 from PIL import Image
-from typing import List, Union
+from typing import Any, List, Union
 from askui.models.askui.ai_element_utils import AiElement, AiElementCollection, AiElementNotFound
+from askui.models.locators import AskUiLocatorSerializer, Locator
 from askui.utils import image_to_base64
 from askui.logger import logger
 
@@ -23,6 +24,7 @@ class AskUIHandler:
             self.authenticated = False
 
         self.ai_element_collection = AiElementCollection()
+        self._locator_serializer = AskUiLocatorSerializer()
 
 
 
@@ -32,7 +34,7 @@ class AskUIHandler:
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
         return {"Authorization": f"Basic {token_base64}"}
     
-    def _build_custom_elements(self, ai_elements: List[AiElement] | None):
+    def _build_custom_elements(self, ai_elements: List[AiElement] | None) -> list[dict[str, str]]:
         """
         Converts AiElements to the CustomElementDto format expected by the backend.
         
@@ -43,9 +45,9 @@ class AskUIHandler:
             dict: Custom elements in the format expected by the backend
         """
         if not ai_elements:
-            return {}
+            return []
         
-        custom_elements = []
+        custom_elements: list[dict[str, str]] = []
         for element in ai_elements:
             custom_element = {
                 "customImage": "," + image_to_base64(element.image),            
@@ -54,24 +56,22 @@ class AskUIHandler:
             }
             custom_elements.append(custom_element)
         
-        return {
-            "customElements": custom_elements
-        }  
-    def __build_model_composition(self):
-        return {}
+        return custom_elements
     
     def __build_base_url(self, endpoint: str = "inference") -> str:
         return f"{self.inference_endpoint}/api/v3/workspaces/{self.workspace_id}/{endpoint}"
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], locator: str, ai_elements: List[pathlib.Path] = None) -> tuple[int | None, int | None]:
+    def predict(self, image: Union[pathlib.Path, Image.Image], locator: str | Locator, ai_elements: List[AiElement] | None = None) -> tuple[int | None, int | None]:
+        json: dict[str, Any] = {
+            "image": f",{image_to_base64(image)}",
+        }
+        if locator is not None:
+            json["instruction"] = locator if isinstance(locator, str) else locator.serialize(serializer=self._locator_serializer)
+        if ai_elements is not None:
+            json["customElements"] = self._build_custom_elements(ai_elements)
         response = requests.post(
             self.__build_base_url(),
-            json={
-                "image": f",{image_to_base64(image)}",
-                **({"instruction": locator} if locator is not None else {}),
-                **self.__build_model_composition(),
-                **self._build_custom_elements(ai_elements)
-            },
+            json=json,
             headers={"Content-Type": "application/json", **self._build_askui_token_auth_header()},
             timeout=30,
         )
@@ -83,17 +83,17 @@ class AskUIHandler:
         actions = [el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"]
         if len(actions) == 0:
             return None, None
-        position = actions[0]["position"]
 
+        position = actions[0]["position"]
         return int(position["x"]), int(position["y"])
     
-    def locate_pta_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
-        askui_locator = f'Click on pta "{locator}"'
-        return self.predict(image, askui_locator)
+    def locate_pta_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str | Locator) -> tuple[int | None, int | None]:
+        _locator = f'Click on pta "{locator}"' if isinstance(locator, str) else locator
+        return self.predict(image, _locator)
     
-    def locate_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
-        askui_locator = f'Click on with text "{locator}"'
-        return self.predict(image, askui_locator)
+    def locate_ocr_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str | Locator) -> tuple[int | None, int | None]:
+        _locator = f'Click on with text "{locator}"' if isinstance(locator, str) else locator
+        return self.predict(image, _locator)
     
     def locate_ai_element_prediction(self, image: Union[pathlib.Path, Image.Image], name: str) -> tuple[int | None, int | None]:
         ai_elements = self.ai_element_collection.find(name)
@@ -101,5 +101,5 @@ class AskUIHandler:
         if len(ai_elements) == 0:
             raise AiElementNotFound(f"Could not locate AI element with name '{name}'")
         
-        askui_instruction = f'Click on custom element with text "{name}"'
-        return self.predict(image, askui_instruction, ai_elements=ai_elements)
+        _locator = f'Click on custom element with text "{name}"'
+        return self.predict(image, _locator, ai_elements=ai_elements)

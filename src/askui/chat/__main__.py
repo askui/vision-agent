@@ -211,7 +211,7 @@ def rerun():
                                 image=screenshot_with_crosshair,
                             )
                             agent.mouse_move(
-                                instruction=element_description.replace('"', ""),
+                                locator=element_description.replace('"', ""),
                                 model_name="anthropic-claude-3-5-sonnet-20241022",
                             )
                         else:
