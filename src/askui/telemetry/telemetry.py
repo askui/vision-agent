@@ -9,6 +9,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from askui.logger import logger
+from askui.telemetry.anonymous_id import get_anonymous_id
 from askui.telemetry.context import (
     CallStack,
     DeviceContext,
@@ -94,6 +95,7 @@ class Telemetry:
 
     def _init_context(self) -> TelemetryContext:
         context = TelemetryContext(
+            anonymous_id=get_anonymous_id(),
             app=AppContext(
                 name=self._settings.app_name,
                 version=self._settings.app_version,

@@ -48,10 +48,11 @@ class TelemetryContext(TypedDict, total=False):
 
     app: AppContext
     user_id: NotRequired[str]
+    anonymous_id: str
     group_id: NotRequired[str]
     os: OSContext
     platform: PlatformContext
-    device: DeviceContext
+    device: NotRequired[DeviceContext]
     session_id: str
     call_stack: list[str]
 

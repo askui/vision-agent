@@ -51,7 +51,7 @@ class Segment(TelemetryProcessor):
         try:
             self._analytics.track(
                 user_id=context.get("user_id"),
-                anonymous_id=context["device"]["id"],
+                anonymous_id=context["anonymous_id"],
                 event=name,
                 properties={
                     "attributes": attributes,
@@ -71,7 +71,7 @@ class Segment(TelemetryProcessor):
                         "name": context["os"]["name"],
                         "version": context["os"]["version"],
                     },
-                    "device": context["device"],
+                    "device": context.get("device"),
                 },
                 timestamp=datetime.now(tz=timezone.utc),
             )
