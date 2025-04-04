@@ -53,6 +53,7 @@ test = [
     "isort>=6.0.0",
     "black>=25.1.0",
     "ruff>=0.9.5",
+    "pytest-mock>=3.14.0",
 ]
 chat = [
     "streamlit>=1.42.0",

@@ -6,7 +6,6 @@ from functools import wraps
 from typing import Any, Callable
 import uuid
 
-import machineid
 from pydantic import BaseModel, Field
 
 from askui.logger import logger
@@ -18,13 +17,13 @@ from askui.telemetry.context import (
     OSContext,
     PlatformContext,
 )
+from askui.telemetry.device_id import get_device_id
 from askui.telemetry.pkg_version import get_pkg_version
 from askui.telemetry.processors import SegmentSettings, TelemetryProcessor
 from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
-from askui.telemetry.utils import map_guid_to_uuid4
 
 
 class TelemetrySettings(BaseModel):
@@ -43,15 +42,14 @@ class TelemetrySettings(BaseModel):
             "otherwise `None`."
         ),
     )
-    device_id: str = Field(
-        default_factory=lambda: map_guid_to_uuid4(machineid.hashed_id("askui")),
+    device_id: str | None = Field(
+        default_factory=get_device_id,
         description=(
             "The device ID of the host machine. "
             "This is used to identify the device and the user (if anynomous) across AskUI components. "
-            'We hash it with an AskUI specific salt ("askui") to avoid user tracking across (non-AskUI) '
+            'We hash it with an AskUI specific salt to avoid user tracking across (non-AskUI) '
             "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
-            "protect user privacy while still being able to improve the UX across components. We map it to a "
-            "UUID4 as this is expected by our telemetry backend(s)."
+            "protect user privacy while still being able to improve the UX across components."
         ),
     )
     session_id: str = Field(
@@ -109,7 +107,6 @@ class Telemetry:
                 arch=platform.machine(),
                 python_version=platform.python_version(),
             ),
-            device=DeviceContext(id=self._settings.device_id),
             session_id=self._settings.session_id,
         )
         if self._settings.group_id:
@@ -118,6 +115,8 @@ class Telemetry:
             user_id = self._user_identification.get_user_id()
             if user_id:
                 context["user_id"] = user_id
+        if self._settings.device_id:
+            context["device"] = DeviceContext(id=self._settings.device_id)
         return context
 
     def record_call(
