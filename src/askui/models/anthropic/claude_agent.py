@@ -21,7 +21,7 @@ from anthropic.types.beta import (
 )
 
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
-from ...logging import logger
+from ...logger import logger
 from ...utils import truncate_long_strings
 from askui.reporting.report import SimpleReportGenerator
 

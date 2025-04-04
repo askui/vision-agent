@@ -302,13 +302,26 @@ It connects Agent OS with powerful computer use models like Anthropic's Claude S
 
 **Agent OS** is a custom-built OS controller designed to enhance your automation experience.
 
- It offers powerful features like 
+ It offers powerful features like
  - multi-screen support,
  - support for all major operating systems (incl. Windows, MacOS and Linux),
  - process visualizations,
  - real Unicode character typing
 
 and more exciting features like application selection, in background automation and video streaming are to be released soon.
+
+
+## Telemetry
+
+By default, we record usage data to detect and fix bugs inside the package and improve the UX of the package including
+- version of the `askui` package used
+- information about the environment, e.g., operating system, architecture, device id (hashed to protect privacy), python version
+- session id
+- some of the methods called including (non-sensitive) method parameters and responses, e.g., the click coordinates in `click(x=100, y=100)`
+- exceptions (types and messages)
+- AskUI workspace and user id if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` are set
+
+If you would like to disable the recording of usage data, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `False`.
 
 
 ## Experimental Features

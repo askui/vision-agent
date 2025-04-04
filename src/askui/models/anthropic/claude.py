@@ -2,7 +2,7 @@ import os
 import anthropic
 from PIL import Image
 
-from ...logging import logger
+from ...logger import logger
 from ...utils import AutomationError
 from ..utils import scale_image_with_padding, scale_coordinates_back, extract_click_coordinates, image_to_base64
 

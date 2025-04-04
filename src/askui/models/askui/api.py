@@ -7,7 +7,7 @@ from PIL import Image
 from typing import List, Union
 from askui.models.askui.ai_element_utils import AiElement, AiElementCollection, AiElementNotFound
 from askui.utils import image_to_base64
-from askui.logging import logger
+from askui.logger import logger
 
 
 

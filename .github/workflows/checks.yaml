@@ -1,0 +1,21 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  checks:
+    name: Run Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: pdm-project/setup-pdm@v4
+        with:
+            cache: true
+      - run: pdm install
+      - run: pdm run test:unit
