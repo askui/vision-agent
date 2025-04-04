@@ -18,4 +18,4 @@ jobs:
         with:
             cache: true
       - run: pdm install
-      - run: pdm test
+      - run: pdm run test:unit

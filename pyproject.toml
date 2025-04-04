@@ -40,6 +40,8 @@ distribution = true
 
 [tool.pdm.scripts]
 test = "pytest"
+"test:unit" = "pytest tests/unit"
+"test:integration" = "pytest tests/integration"
 sort = "isort ."
 format = "black ."
 lint = "ruff check ."
