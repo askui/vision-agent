@@ -87,8 +87,8 @@ class AiElementCollection:
 
         logger.debug("AI Element locations: %s", self.ai_element_locations)
 
-    def find(self, name: str):
-        ai_elements = []
+    def find(self, name: str) -> list[AiElement]:
+        ai_elements: list[AiElement] = []
 
         for location in self.ai_element_locations:
             path = pathlib.Path(location)
