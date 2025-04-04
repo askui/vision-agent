@@ -127,6 +127,7 @@ class Telemetry:
         exclude_response: bool = True,
         exclude_exception: bool = False,
         exclude_start: bool = True,
+        flush: bool = False,
     ) -> Callable:
         """Decorator to record calls to functions and methods
         
@@ -146,6 +147,10 @@ class Telemetry:
                 Defaults to `False`
             exclude_start: Whether to exclude the start of the function call as a telemetry event. 
                 Defaults to `True`
+            flush: Whether to flush the telemetry data to the backend(s) after recording an event. 
+                Defaults to `False`. Should be set to `True` if the process is expected to exit afterwards. 
+                Setting it to `True` can have a slightly negative impact on performance but ensures that 
+                telemetry data is not lost in case of a crash.
         """
 
         _exclude = exclude or set()
@@ -200,6 +205,8 @@ class Telemetry:
                             attributes=attributes,
                             context=self._context,
                         )
+                    if flush:
+                        self.flush()
                     return response
                 except Exception as e:
                     duration_ms = (time.time() - start_time) * 1000
@@ -215,6 +222,8 @@ class Telemetry:
                             attributes=attributes,
                             context=self._context,
                         )
+                    if flush:
+                        self.flush()
                     raise
                 finally:
                     self._call_stack.pop_call()

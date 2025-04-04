@@ -353,19 +353,18 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         subprocess.run(command.split(" "))
 
-    @telemetry.record_call()
+    @telemetry.record_call(flush=True)
     def close(self) -> None:
         if self.client:
             self.client.disconnect()
         if self.controller:
             self.controller.stop(True)
-        telemetry.flush()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":
         return self
 
-    @telemetry.record_call()
+    @telemetry.record_call(exclude={"exc_value", "traceback"})
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
         if self.report is not None:
