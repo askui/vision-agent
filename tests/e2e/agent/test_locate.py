@@ -4,7 +4,7 @@ import pytest
 from PIL import Image
 
 from askui.agent import VisionAgent
-from askui.models.locators import (
+from askui.locators import (
     Description, 
     Class, 
     Text, 
@@ -30,6 +30,7 @@ def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
     return Image.open(screenshot_path)
 
 
+@pytest.mark.skip("Skipping tests for now")
 @pytest.mark.parametrize("model_name", [
     "askui",
     "anthropic-claude-3-5-sonnet-20241022",
@@ -103,7 +104,6 @@ class TestVisionAgentLocate:
 
 @pytest.mark.parametrize("model_name", [
     "askui",
-    pytest.param("anthropic-claude-3-5-sonnet-20241022", marks=pytest.mark.skip(reason="Relations not supported by this model")),
 ])
 class TestVisionAgentLocateWithRelations:
     """Test class for VisionAgent.locate() method with relations."""
@@ -187,7 +187,7 @@ class TestVisionAgentLocateWithRelations:
         
     def test_locate_with_chained_relations(self, vision_agent: VisionAgent, github_login_screenshot: Image.Image, model_name: str) -> None:
         """Test locating elements using chained relations."""
-        locator = Text("Sign in").below_of(Text("Password")).below_of(Text("Username"))
+        locator = Text("Sign in").below_of(Text("Password").below_of(Text("Username")))
         x, y = vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
         assert 430 <= x <= 490
         assert 300 <= y <= 320

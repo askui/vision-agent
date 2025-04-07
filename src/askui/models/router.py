@@ -2,7 +2,8 @@ from typing import Optional
 from PIL import Image
 
 from askui.container import telemetry
-from askui.models.locators import Locator, VlmLocatorSerializer
+from askui.locators.serializers import VlmLocatorSerializer
+from askui.locators import Locator
 from .askui.api import AskUIHandler
 from .anthropic.claude import ClaudeHandler
 from .huggingface.spaces_api import HFSpacesHandler
