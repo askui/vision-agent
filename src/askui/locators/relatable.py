@@ -26,10 +26,7 @@ class RelationBase(ABC):
     type: Literal["above_of", "below_of", "right_of", "left_of", "and", "or", "containing", "inside_of", "nearest_to"]
 
     def __str__(self):
-        base_str = str(self.other_locator)
-        if self.other_locator.relations:
-            base_str = base_str.split('\n')[0]  # Only take the first line for nested relations
-        return f"{RelationTypeMapping[self.type]} {base_str}"
+        return f"{RelationTypeMapping[self.type]} {self.other_locator}"
 
 
 @dataclass(kw_only=True)
@@ -60,9 +57,6 @@ class BoundingRelation(RelationBase):
 @dataclass(kw_only=True)
 class NearestToRelation(RelationBase):
     type: Literal["nearest_to"]
-    
-    def __str__(self):
-        return f"{RelationTypeMapping[self.type]} {self.other_locator}"
 
 
 Relation = NeighborRelation | LogicalRelation | BoundingRelation | NearestToRelation
@@ -181,15 +175,14 @@ class Relatable(ABC):
         )
         return self
 
-    def _relations_str(self, indent: int = 0):
+    def _relations_str(self) -> str:
         if not self.relations:
             return ""
         
         result = []
         for i, relation in enumerate(self.relations):
-            relation_str = f"{'  ' * indent}{i+1}. {relation}"
-            nested_relations_str = relation.other_locator._relations_str(indent + 1)
-            if nested_relations_str:
-                relation_str = f"{relation_str}{nested_relations_str}"
-            result.append(relation_str)
+            [other_locator_str, *nested_relation_strs] = str(relation).split("\n")
+            result.append(f"  {i + 1}. {other_locator_str}")
+            for nested_relation_str in nested_relation_strs:
+                result.append(f"  {nested_relation_str}")
         return "\n" + "\n".join(result)
