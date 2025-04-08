@@ -1,6 +1,5 @@
 [project]
 name = "askui"
-version = "0.2.4"
 description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
@@ -10,7 +9,7 @@ dependencies = [
     "grpcio-tools>=1.67.0",
     "pillow>=11.0.0",
     "pydantic>=2.9.2",
-    "anthropic>=0.37.1",
+    "anthropic>=0.49.0",
     "rich>=13.9.4",
     "pyperclip>=1.9.0",
     "gradio-client>=1.4.3",
@@ -20,20 +19,29 @@ dependencies = [
     "tenacity>=9.0.0",
     "python-dateutil>=2.9.0.post0",
     "openai>=1.61.1",
+    "segment-analytics-python>=2.3.4",
+    "py-machineid>=0.7.0",
+    "httpx>=0.28.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
 license = {text = "MIT"}
+dynamic = ["version"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/askui/__init__.py"
 
 [tool.pdm]
 distribution = true
 
 [tool.pdm.scripts]
 test = "pytest"
+"test:unit" = "pytest tests/unit"
+"test:integration" = "pytest tests/integration"
 sort = "isort ."
 format = "black ."
 lint = "ruff check ."
@@ -47,6 +55,7 @@ test = [
     "isort>=6.0.0",
     "black>=25.1.0",
     "ruff>=0.9.5",
+    "pytest-mock>=3.14.0",
 ]
 chat = [
     "streamlit>=1.42.0",
