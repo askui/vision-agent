@@ -92,7 +92,7 @@ class TestAskUiLocatorSerializer:
         text = Text("hello")
         text.inside_of(Text("world"))
         result = askui_serializer.serialize(text)
-        assert result == 'text with text <|string|>hello<|string|> that matches to 70 % inside text with text <|string|>world<|string|> that matches to 70 %'
+        assert result == 'text with text <|string|>hello<|string|> that matches to 70 % in text with text <|string|>world<|string|> that matches to 70 %'
 
     def test_serialize_nearest_to_relation(self, askui_serializer: AskUiLocatorSerializer) -> None:
         text = Text("hello")

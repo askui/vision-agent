@@ -8,7 +8,7 @@ from .askui.api import AskUIHandler
 from .anthropic.claude import ClaudeHandler
 from .huggingface.spaces_api import HFSpacesHandler
 from ..logger import logger
-from ..utils import AutomationError
+from ..utils import AutomationError, LocatingError
 from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
 from abc import ABC, abstractmethod
@@ -16,10 +16,12 @@ from abc import ABC, abstractmethod
 
 Point = tuple[int, int]
 
+
 def handle_response(response: tuple[int | None, int | None], locator: str | Locator):
     if response[0] is None or response[1] is None:
-        raise AutomationError(f'Could not locate {locator}')
+        raise LocatingError(f'Could not locate\n{locator}')
     return response
+
 
 class GroundingModelRouter(ABC):
 

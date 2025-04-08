@@ -41,8 +41,8 @@ class NeighborRelation(RelationBase):
             index_str = f"{i}th"
         else:
             index_str = f"{i}st" if i % 10 == 1 else f"{i}nd" if i % 10 == 2 else f"{i}rd" if i % 10 == 3 else f"{i}th"
-        reference_point_str = "center of" if self.reference_point == "center" else "boundary of" if self.reference_point == "boundary" else ""
-        return f"{RelationTypeMapping[self.type]} {reference_point_str} the {index_str} {self.other_locator}"
+        reference_point_str = " center of" if self.reference_point == "center" else " boundary of" if self.reference_point == "boundary" else ""
+        return f"{RelationTypeMapping[self.type]}{reference_point_str} the {index_str} {self.other_locator}"
 
 
 @dataclass(kw_only=True)

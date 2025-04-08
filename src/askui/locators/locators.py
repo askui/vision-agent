@@ -61,14 +61,17 @@ class Text(Class):
         self.similarity_threshold = similarity_threshold
 
     def __str__(self):
-        result = "text "
-        match self.match_type:
-            case "similar":
-                result += f'similar to "{self.text}" (similarity >= {self.similarity_threshold}%)'
-            case "exact":
-                result += f'"{self.text}"'
-            case "contains":
-                result += f'containing text "{self.text}"'
-            case "regex":
-                result += f'matching regex "{self.text}"'
+        if self.text is None:
+            result = "text"
+        else:
+            result = "text "
+            match self.match_type:
+                case "similar":
+                    result += f'similar to "{self.text}" (similarity >= {self.similarity_threshold}%)'
+                case "exact":
+                    result += f'"{self.text}"'
+                case "contains":
+                    result += f'containing text "{self.text}"'
+                case "regex":
+                    result += f'matching regex "{self.text}"'
         return result + super()._relations_str()

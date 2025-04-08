@@ -47,7 +47,7 @@ class AskUiLocatorSerializer(LocatorSerializer[str]):
         "right_of": "right of",
         "left_of": "left of",
         "containing": "contains",
-        "inside_of": "inside",
+        "inside_of": "in",
         "nearest_to": "nearest to",
         "and": "and",
         "or": "or",

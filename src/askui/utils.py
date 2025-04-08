@@ -8,9 +8,12 @@ from typing import Union
 
 class AutomationError(Exception):
     """Exception raised when the automation step cannot complete."""
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
+    pass
+        
+
+class LocatingError(AutomationError):
+    """Exception raised when an element cannot be located."""
+    pass
 
 
 def truncate_long_strings(json_data, max_length=100, truncate_length=20, tag="[shortened]"):
