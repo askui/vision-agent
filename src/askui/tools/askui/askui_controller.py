@@ -1,5 +1,5 @@
 import pathlib
-from typing import List, Literal
+from typing import List, Literal, Optional
 import grpc
 import os
 
@@ -99,8 +99,15 @@ class AskUiControllerServer():
             case _:
                 raise NotImplementedError(f"Platform {sys.platform} not supported by AskUI Remote Device Controller")
             
-    def __start_process(self, path):
-        self.process = subprocess.Popen(path)
+    def __start_process(self, path, verbose: bool = False) -> None:
+        if verbose:
+            self.process = subprocess.Popen(path)
+        else:
+            self.process = subprocess.Popen(
+                path,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
         wait_for_port(23000)
         
     def start(self, clean_up=False):
@@ -281,3 +288,40 @@ class AskUiControllerClient():
             self.report.add_message("AgentOS", f"set_display({displayNumber})")
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
         self.display = displayNumber
+
+    def get_windows_list(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_windows_list()")
+        response = self.stub.GetWindowList(controller_v1_pbs.Request_GetWindowList(processID=process_id))
+        return response.windows
+    
+    def get_process_list(self, has_window:bool = False) -> List[controller_v1_pbs.ProcessInfo]:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_process_list()")
+        response = self.stub.GetProcessList(controller_v1_pbs.Request_GetProcessList(getExtendedInfo=True))
+        if has_window:
+           return [process for process in response.processes if process.extendedInfo.hasWindow is True]
+        return response.processes
+    
+    def set_active_window(self, window_id: int, prcoess_id: int) -> None:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_active_window({window_id})")
+        self.stub.SetActiveWindow(controller_v1_pbs.Request_SetActiveWindow(windowID=window_id, processID=prcoess_id))
+
+    def set_active_window_by_name(self, window_name: str) -> None:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_active_window_by_name({window_name})")
+        process_list = self.get_process_list(has_window=True)
+        for process in process_list:
+            window_list = self.get_windows_list(process.ID)
+            for window in window_list:
+                if window.name == window_name:
+                    self.set_active_window(window.ID, process.ID)
+                    return
+                
+        raise Exception(f"No window found with name '{window_name}'. Please check the window name and try again.")
+ 
