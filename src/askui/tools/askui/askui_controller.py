@@ -324,4 +324,17 @@ class AskUiControllerClient():
                     return
                 
         raise Exception(f"No window found with name '{window_name}'. Please check the window name and try again.")
- 
+    
+    def get_display_information(self) -> List[controller_v1_pbs.DisplayInformation]:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_display_information()")
+        response = self.stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        return response.displays
+    
+    def set_window_as_display_by_name(self, window_name: str) -> None:
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_window_as_display_by_name({window_name})")
+        self.set_active_window_by_name(window_name)
+        self.set_display(len(self.get_display_information()))
