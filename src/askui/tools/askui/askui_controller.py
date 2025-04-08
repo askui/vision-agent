@@ -110,12 +110,12 @@ class AskUiControllerServer():
             )
         wait_for_port(23000)
         
-    def start(self, clean_up=False):
+    def start(self, clean_up=False, verbose: bool = False) -> None:
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
         logger.debug("Starting AskUI Remote Device Controller: %s", remote_device_controller_path)
-        self.__start_process(remote_device_controller_path)
+        self.__start_process(remote_device_controller_path, verbose=verbose)
         
     def clean_up(self):
         if sys.platform == 'win32':
