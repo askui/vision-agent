@@ -1,6 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from typing import Literal
+from pydantic import BaseModel, Field
 from typing_extensions import Self
 
 
@@ -62,13 +63,12 @@ class NearestToRelation(RelationBase):
 Relation = NeighborRelation | LogicalRelation | BoundingRelation | NearestToRelation
 
 
-class Relatable(ABC):
-    def __init__(self) -> None:
-        self.relations: list[Relation] = []
+class Relatable(BaseModel, ABC):
+    relations: list[Relation] = Field(default_factory=list)
 
     def above_of(
         self,
-        other_locator: Self,
+        other_locator: "Relatable",
         index: int = 0,
         reference_point: Literal["center", "boundary", "any"] = "boundary",
     ) -> Self:
@@ -84,7 +84,7 @@ class Relatable(ABC):
 
     def below_of(
         self,
-        other_locator: Self,
+        other_locator: "Relatable",
         index: int = 0,
         reference_point: Literal["center", "boundary", "any"] = "boundary",
     ) -> Self:
@@ -100,7 +100,7 @@ class Relatable(ABC):
 
     def right_of(
         self,
-        other_locator: Self,
+        other_locator: "Relatable",
         index: int = 0,
         reference_point: Literal["center", "boundary", "any"] = "boundary",
     ) -> Self:
@@ -116,7 +116,7 @@ class Relatable(ABC):
 
     def left_of(
         self,
-        other_locator: Self,
+        other_locator: "Relatable",
         index: int = 0,
         reference_point: Literal["center", "boundary", "any"] = "boundary",
     ) -> Self:
@@ -130,7 +130,7 @@ class Relatable(ABC):
         )
         return self
 
-    def containing(self, other_locator: Self) -> Self:
+    def containing(self, other_locator: "Relatable") -> Self:
         self.relations.append(
             BoundingRelation(
                 type="containing",
@@ -139,7 +139,7 @@ class Relatable(ABC):
         )
         return self
 
-    def inside_of(self, other_locator: Self) -> Self:
+    def inside_of(self, other_locator: "Relatable") -> Self:
         self.relations.append(
             BoundingRelation(
                 type="inside_of",
@@ -148,7 +148,7 @@ class Relatable(ABC):
         )
         return self
 
-    def nearest_to(self, other_locator: Self) -> Self:
+    def nearest_to(self, other_locator: "Relatable") -> Self:
         self.relations.append(
             NearestToRelation(
                 type="nearest_to",
@@ -157,7 +157,7 @@ class Relatable(ABC):
         )
         return self
 
-    def and_(self, other_locator: Self) -> Self:
+    def and_(self, other_locator: "Relatable") -> Self:
         self.relations.append(
             LogicalRelation(
                 type="and",
@@ -166,7 +166,7 @@ class Relatable(ABC):
         )
         return self
 
-    def or_(self, other_locator: Self) -> Self:
+    def or_(self, other_locator: "Relatable") -> Self:
         self.relations.append(
             LogicalRelation(
                 type="or",

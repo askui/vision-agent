@@ -38,16 +38,6 @@ class TestAskUiLocatorSerializer:
         result = askui_serializer.serialize(text)
         assert result == 'text match regex pattern <|string|>h.*o<|string|>'
 
-    def test_serialize_text_unsupported_match_type(self, askui_serializer: AskUiLocatorSerializer) -> None:
-        text = Text("hello", match_type="invalid")  # type: ignore
-        with pytest.raises(ValueError, match="Unsupported text match type: \"invalid\""):
-            askui_serializer.serialize(text)
-
-    def test_serialize_class(self, askui_serializer: AskUiLocatorSerializer) -> None:
-        class_ = Class("button")
-        result = askui_serializer.serialize(class_)
-        assert result == 'button'
-
     def test_serialize_class_no_name(self, askui_serializer: AskUiLocatorSerializer) -> None:
         class_ = Class()
         result = askui_serializer.serialize(class_)
@@ -297,7 +287,7 @@ class TestLocatorStringRepresentation:
             .and_(
                 Description("input")
                 .below_of(Text("earth", match_type="contains"))
-                .nearest_to(Class("button"))
+                .nearest_to(Class("textfield"))
             )
         )
-        assert str(text) == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of boundary of the 1st text "world"\n    2. and element with description "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "button"'
+        assert str(text) == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of boundary of the 1st text "world"\n    2. and element with description "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "textfield"'

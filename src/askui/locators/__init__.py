@@ -1,5 +1,5 @@
 from .relatable import ReferencePoint
-from .locators import Class, Description, Locator, Text, TextMatchType
+from .locators import Class, Description, Locator, Text, TextMatchType, Image
 from . import serializers
 
 __all__ = [
@@ -9,5 +9,6 @@ __all__ = [
     "ReferencePoint",
     "Text",
     "TextMatchType",
+    "Image",
     "serializers",
 ]
