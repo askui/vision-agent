@@ -10,7 +10,6 @@ from .tools.askui.askui_controller import (
     PC_AND_MODIFIER_KEY,
     MODIFIER_KEY,
 )
-from .models.anthropic.claude import ClaudeHandler
 from .logging import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter
@@ -47,7 +46,6 @@ class VisionAgent:
             self.client.connect()
             self.client.set_display(display)
         self.model_router = ModelRouter(log_level, self.report)
-        self.claude = ClaudeHandler(log_level=log_level)
         self.tools = AgentToolbox(os_controller=self.client)
 
     def _check_askui_controller_enabled(self) -> None:
