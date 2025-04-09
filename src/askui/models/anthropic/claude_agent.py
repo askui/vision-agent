@@ -77,6 +77,12 @@ class ClaudeComputerAgent:
         self.client = Anthropic()
         self.model = "claude-3-5-sonnet-20241022"
 
+    def set_system_prompt(self, system_prompt: str):
+        self.system = BetaTextBlockParam(
+            type="text",
+            text=f"{system_prompt}",
+        )
+
     def step(self, messages: list):
         if self.only_n_most_recent_images:
             self._maybe_filter_to_n_most_recent_images(
