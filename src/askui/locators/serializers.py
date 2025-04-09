@@ -1,5 +1,6 @@
+from typing_extensions import NotRequired, TypedDict
 from .locators import Class, Description, Image, Text
-from .relatable import NeighborRelation, ReferencePoint, Relatable, Relation
+from .relatable import BoundingRelation, LogicalRelation, NearestToRelation, NeighborRelation, ReferencePoint, Relatable, Relation
 
 
 class VlmLocatorSerializer:
@@ -15,6 +16,10 @@ class VlmLocatorSerializer:
             return self._serialize_class(locator)
         elif isinstance(locator, Description):
             return self._serialize_description(locator)
+        elif isinstance(locator, Image):
+            raise NotImplementedError(
+                "Serializing image locators is not yet supported for VLMs"
+            )
         else:
             raise ValueError(f"Unsupported locator type: {type(locator)}")
 
@@ -32,6 +37,21 @@ class VlmLocatorSerializer:
             return f'text similar to "{text.text}"'
 
         return str(text)
+
+
+class CustomElement(TypedDict):
+    threshold: NotRequired[float]
+    stopThreshold: NotRequired[float]
+    customImage: str
+    mask: NotRequired[list[tuple[float, float]]]
+    rotationDegreePerStep: NotRequired[int]
+    imageCompareFormat: NotRequired[str]
+    name: NotRequired[str]
+
+
+class AskUiSerializedLocator(TypedDict):
+    instruction: str
+    customElements: list[CustomElement]
 
 
 class AskUiLocatorSerializer:
@@ -53,27 +73,32 @@ class AskUiLocatorSerializer:
         "or": "or",
     }
 
-    def serialize(self, locator: Relatable) -> str:
+    def serialize(self, locator: Relatable) -> AskUiSerializedLocator:
         if len(locator.relations) > 1:
+            # If we lift this constraint, we also have to make sure that custom element references are still working + we need, e.g., some symbol or a structured format to indicate precedence
             raise NotImplementedError(
                 "Serializing locators with multiple relations is not yet supported by AskUI"
             )
-
+            
+        result = AskUiSerializedLocator(instruction="", customElements=[])
         if isinstance(locator, Text):
-            serialized = self._serialize_text(locator)
+            result["instruction"] = self._serialize_text(locator)
         elif isinstance(locator, Class):
-            serialized = self._serialize_class(locator)
+            result["instruction"] = self._serialize_class(locator)
         elif isinstance(locator, Description):
-            serialized = self._serialize_description(locator)
+            result["instruction"] = self._serialize_description(locator)
         elif isinstance(locator, Image):
-            serialized = self._serialize_image(locator)
+            result = self._serialize_image(locator)
         else:
             raise ValueError(f"Unsupported locator type: \"{type(locator)}\"")
 
         if len(locator.relations) == 0:
-            return serialized
-
-        return serialized + " " + self._serialize_relation(locator.relations[0])
+            return result
+        
+        serialized_relation = self._serialize_relation(locator.relations[0])
+        result["instruction"] += f" {serialized_relation['instruction']}"
+        result["customElements"] += serialized_relation["customElements"]
+        return result
 
     def _serialize_class(self, class_: Class) -> str:
         return class_.class_name or "element"
@@ -96,18 +121,43 @@ class AskUiLocatorSerializer:
             case _:
                 raise ValueError(f"Unsupported text match type: \"{text.match_type}\"")
 
-    def _serialize_relation(self, relation: Relation) -> str:
+    def _serialize_relation(self, relation: Relation) -> AskUiSerializedLocator:
         match relation.type:
             case "above_of" | "below_of" | "right_of" | "left_of":
                 assert isinstance(relation, NeighborRelation)
                 return self._serialize_neighbor_relation(relation)
             case "containing" | "inside_of" | "nearest_to" | "and" | "or":
-                return f"{self._RELATION_TYPE_MAPPING[relation.type]} {self.serialize(relation.other_locator)}"
+                assert isinstance(relation, LogicalRelation | BoundingRelation | NearestToRelation)
+                return self._serialize_non_neighbor_relation(relation)
             case _:
                 raise ValueError(f"Unsupported relation type: \"{relation.type}\"")
 
-    def _serialize_neighbor_relation(self, relation: NeighborRelation) -> str:
-        return f"index {relation.index} {self._RELATION_TYPE_MAPPING[relation.type]} intersection_area {self._RP_TO_INTERSECTION_AREA_MAPPING[relation.reference_point]} {self.serialize(relation.other_locator)}"
+    def _serialize_neighbor_relation(self, relation: NeighborRelation) -> AskUiSerializedLocator:
+        serialized_other_locator = self.serialize(relation.other_locator)
+        return AskUiSerializedLocator(
+            instruction=f"index {relation.index} {self._RELATION_TYPE_MAPPING[relation.type]} intersection_area {self._RP_TO_INTERSECTION_AREA_MAPPING[relation.reference_point]} {serialized_other_locator['instruction']}",
+            customElements=serialized_other_locator["customElements"],
+        )
+    
+    def _serialize_non_neighbor_relation(self, relation: LogicalRelation | BoundingRelation | NearestToRelation) -> AskUiSerializedLocator:
+        serialized_other_locator = self.serialize(relation.other_locator)
+        return AskUiSerializedLocator(
+            instruction=f"{self._RELATION_TYPE_MAPPING[relation.type]} {serialized_other_locator['instruction']}",
+            customElements=serialized_other_locator["customElements"]
+        )
 
-    def _serialize_image(self, image: Image) -> str:
-        return "custom element"
+    def _serialize_image(self, image: Image) -> AskUiSerializedLocator:
+        custom_element: CustomElement = CustomElement(
+            customImage=image.image.to_data_url(),
+            threshold=image.threshold,
+            stopThreshold=image.stop_threshold,
+            rotationDegreePerStep=image.rotation_degree_per_step,
+            imageCompareFormat=image.image_compare_format,
+            name=image.name,
+        )
+        if image.mask:
+            custom_element["mask"] = image.mask
+        return AskUiSerializedLocator(
+            instruction="custom element",
+            customElements=[custom_element],
+        )

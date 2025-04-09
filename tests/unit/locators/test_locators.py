@@ -1,11 +1,11 @@
 from pathlib import Path
 import pytest
-from PIL import Image
+from PIL import Image as PILImage
 
-from askui.locators import Description, Class, Text, Image as ImageLocator
+from askui.locators import Description, Class, Text, Image
 
 
-TEST_IMAGE_PATH = Path("tests/fixtures/images/github__icon.png")
+TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
 
 
 class TestDescriptionLocator:
@@ -107,11 +107,11 @@ class TestTextLocator:
 
 class TestImageLocator:
     @pytest.fixture
-    def test_image(self) -> Image.Image:
-        return Image.open(TEST_IMAGE_PATH)
+    def test_image(self) -> PILImage.Image:
+        return PILImage.open(TEST_IMAGE_PATH)
 
-    def test_initialization_with_basic_params(self, test_image: Image.Image) -> None:
-        locator = ImageLocator(image=test_image)
+    def test_initialization_with_basic_params(self, test_image: PILImage.Image) -> None:
+        locator = Image(image=test_image)
         assert locator.image.root == test_image
         assert locator.threshold == 0.5
         assert locator.stop_threshold == 0.9
@@ -120,12 +120,12 @@ class TestImageLocator:
         assert locator.image_compare_format == "grayscale"
         assert str(locator) == "element located by image"
 
-    def test_initialization_with_name(self, test_image: Image.Image) -> None:
-        locator = ImageLocator(image=test_image, name="test")
+    def test_initialization_with_name(self, test_image: PILImage.Image) -> None:
+        locator = Image(image=test_image, name="test")
         assert str(locator) == 'element "test" located by image'
 
-    def test_initialization_with_custom_params(self, test_image: Image.Image) -> None:
-        locator = ImageLocator(
+    def test_initialization_with_custom_params(self, test_image: PILImage.Image) -> None:
+        locator = Image(
             image=test_image,
             threshold=0.7,
             stop_threshold=0.95,
@@ -139,30 +139,30 @@ class TestImageLocator:
         assert locator.rotation_degree_per_step == 45
         assert locator.image_compare_format == "RGB"
 
-    def test_initialization_with_invalid_args(self, test_image: Image.Image) -> None:
+    def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
         with pytest.raises(ValueError):
-            ImageLocator(image="not_an_image")  # type: ignore
+            Image(image="not_an_image")  # type: ignore
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, threshold=-0.1)
+            Image(image=test_image, threshold=-0.1)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, threshold=1.1)
+            Image(image=test_image, threshold=1.1)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, stop_threshold=-0.1)
+            Image(image=test_image, stop_threshold=-0.1)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, stop_threshold=1.1)
+            Image(image=test_image, stop_threshold=1.1)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, rotation_degree_per_step=-1)
+            Image(image=test_image, rotation_degree_per_step=-1)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, rotation_degree_per_step=361)
+            Image(image=test_image, rotation_degree_per_step=361)
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, image_compare_format="invalid")  # type: ignore
+            Image(image=test_image, image_compare_format="invalid")  # type: ignore
 
         with pytest.raises(ValueError):
-            ImageLocator(image=test_image, mask=[(0, 0), (1)])  # type: ignore
+            Image(image=test_image, mask=[(0, 0), (1)])  # type: ignore

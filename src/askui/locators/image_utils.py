@@ -8,6 +8,8 @@ import binascii
 
 from pydantic import RootModel, field_validator, ConfigDict
 
+from askui.tools.utils import image_to_base64
+
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
 # e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
 _DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
@@ -63,3 +65,6 @@ class ImageSource(RootModel):
     @classmethod
     def validate_root(cls, v: Any) -> PILImage.Image:
         return load_image(v)
+    
+    def to_data_url(self) -> str:
+        return f"data:image/png;base64,{image_to_base64(self.root)}"

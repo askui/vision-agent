@@ -2,7 +2,7 @@
 
 import pathlib
 import pytest
-from PIL import Image
+from PIL import Image as PILImage
 
 from askui.utils import LocatingError
 from askui.agent import VisionAgent
@@ -10,6 +10,7 @@ from askui.locators import (
     Description,
     Class,
     Text,
+    Image,
 )
 
 
@@ -26,12 +27,12 @@ def path_fixtures() -> pathlib.Path:
 
 
 @pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
+def github_login_screenshot(path_fixtures: pathlib.Path) -> PILImage.Image:
     """Fixture providing the GitHub login screenshot."""
     screenshot_path = (
         path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
     )
-    return Image.open(screenshot_path)
+    return PILImage.open(screenshot_path)
 
 
 @pytest.mark.parametrize(
@@ -46,7 +47,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_above_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using above_of relation."""
@@ -60,7 +61,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_below_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using below_of relation."""
@@ -74,7 +75,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_right_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using right_of relation."""
@@ -88,7 +89,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_left_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using left_of relation."""
@@ -102,7 +103,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_containing_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using containing relation."""
@@ -116,7 +117,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_inside_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using inside_of relation."""
@@ -130,7 +131,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_nearest_to_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using nearest_to relation."""
@@ -145,7 +146,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_and_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using and_ relation."""
@@ -159,7 +160,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_or_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using or_ relation."""
@@ -175,7 +176,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_index(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -191,7 +192,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_index_greater_0(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -206,7 +207,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_index_greater_1(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -220,7 +221,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_reference_point_center(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with center reference point."""
@@ -236,7 +237,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_reference_point_center_raises_when_element_cannot_be_located(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with center reference point."""
@@ -247,7 +248,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_reference_point_boundary(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
@@ -263,7 +264,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_reference_point_boundary_raises_when_element_cannot_be_located(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
@@ -274,7 +275,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_reference_point_any(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with any reference point."""
@@ -288,7 +289,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_multiple_relations_with_same_locator_raises(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using multiple relations with same locator which is not supported by AskUI."""
@@ -303,7 +304,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_chained_relations(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using chained relations."""
@@ -320,7 +321,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_relation_different_locator_types(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using relation with different locator types."""
@@ -337,7 +338,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_description_and_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using description with relation."""
@@ -352,7 +353,7 @@ class TestVisionAgentLocateWithRelations:
     def test_locate_with_description_and_complex_relation(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using description with relation."""
@@ -364,3 +365,118 @@ class TestVisionAgentLocateWithRelations:
         )
         assert 350 <= x <= 570
         assert 240 <= y <= 320
+
+    def test_locate_with_image(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(image=image)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_and_relation(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with relation."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(image=image).containing(Text("Sign in"))
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_in_relation_to_other_image(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with relation."""
+        github_icon_image_path = path_fixtures / "images" / "github_com__icon.png"
+        signin_button_image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        github_icon_image = PILImage.open(github_icon_image_path)
+        signin_button_image = PILImage.open(signin_button_image_path)
+        github_icon = Image(image=github_icon_image)
+        signin_button = Image(image=signin_button_image).below_of(github_icon)
+        x, y = vision_agent.locate(
+            signin_button, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_and_complex_relation(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with complex relation."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(image=image).below_of(
+            Class("textfield").below_of(Text("Password"))
+        )
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_and_custom_params(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with custom parameters."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(
+            image=image,
+            threshold=0.7,
+            stop_threshold=0.95,
+            rotation_degree_per_step=45,
+            image_compare_format="RGB",
+            name="Sign in button"
+        )
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_should_fail_when_threshold_is_too_high(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with custom parameters."""
+        image_path = path_fixtures / "images" / "github_com__icon.png"
+        image = PILImage.open(image_path)
+        locator = Image(
+            image=image,
+            threshold=1.0,
+            stop_threshold=1.0
+        )
+        with pytest.raises(LocatingError):
+            vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
