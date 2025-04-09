@@ -12,7 +12,6 @@ from pydantic import RootModel, field_validator, ConfigDict
 # e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
 _DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
 
-# TODO Add info about input to errors
 
 def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
     """
@@ -36,7 +35,7 @@ def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
         try:
             return Image.open(source)
         except (OSError, FileNotFoundError, UnidentifiedImageError) as e:
-            raise ValueError("Could not open image from file path.") from e
+            raise ValueError(f"Could not open image from file path: {source}") from e
 
     if isinstance(source, str):
         match = _DATA_URL_GENERIC_RE.match(source)
@@ -48,9 +47,9 @@ def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
                 try:
                     return Image.open(source)
                 except (FileNotFoundError, UnidentifiedImageError) as e:
-                    raise ValueError("Could not decode or identify image from base64 input or file path.") from e
+                    raise ValueError(f"Could not decode or identify image from input: {source[:100]}{'...' if len(source) > 100 else ''}") from e
 
-    raise ValueError("Unsupported image input type.")
+    raise ValueError(f"Unsupported image input type: {type(source)}")
 
 
 class ImageSource(RootModel):
