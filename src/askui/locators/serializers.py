@@ -1,8 +1,8 @@
-from .locators import Class, Description, LocatorSerializer, Text
+from .locators import Class, Description, Image, Text
 from .relatable import NeighborRelation, ReferencePoint, Relatable, Relation
 
 
-class VlmLocatorSerializer(LocatorSerializer[str]):
+class VlmLocatorSerializer:
     def serialize(self, locator: Relatable) -> str:
         if len(locator.relations) > 0:
             raise NotImplementedError(
@@ -34,7 +34,7 @@ class VlmLocatorSerializer(LocatorSerializer[str]):
         return str(text)
 
 
-class AskUiLocatorSerializer(LocatorSerializer[str]):
+class AskUiLocatorSerializer:
     _TEXT_DELIMITER = "<|string|>"
     _RP_TO_INTERSECTION_AREA_MAPPING: dict[ReferencePoint, str] = {
         "center": "element_center_line",
@@ -65,6 +65,8 @@ class AskUiLocatorSerializer(LocatorSerializer[str]):
             serialized = self._serialize_class(locator)
         elif isinstance(locator, Description):
             serialized = self._serialize_description(locator)
+        elif isinstance(locator, Image):
+            serialized = self._serialize_image(locator)
         else:
             raise ValueError(f"Unsupported locator type: \"{type(locator)}\"")
 
@@ -106,3 +108,6 @@ class AskUiLocatorSerializer(LocatorSerializer[str]):
 
     def _serialize_neighbor_relation(self, relation: NeighborRelation) -> str:
         return f"index {relation.index} {self._RELATION_TYPE_MAPPING[relation.type]} intersection_area {self._RP_TO_INTERSECTION_AREA_MAPPING[relation.reference_point]} {self.serialize(relation.other_locator)}"
+
+    def _serialize_image(self, image: Image) -> str:
+        return "custom element"

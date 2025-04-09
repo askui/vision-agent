@@ -110,7 +110,7 @@ class ModelRouter:
 
     def _serialize_locator(self, locator: str | Locator) -> str:
         if isinstance(locator, Locator):
-            return self._locator_serializer.serialize(locator)
+            return self._locator_serializer.serialize(locator=locator)
         return locator
 
     @telemetry.record_call(exclude={"locator", "screenshot"})

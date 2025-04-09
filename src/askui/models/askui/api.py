@@ -67,7 +67,7 @@ class AskUIHandler:
             "image": f",{image_to_base64(image)}",
         }
         if locator is not None:
-            json["instruction"] = locator if isinstance(locator, str) else f"Click on {locator.serialize(serializer=self._locator_serializer)}"
+            json["instruction"] = locator if isinstance(locator, str) else f"Click on {self._locator_serializer.serialize(locator=locator)}"
         if ai_elements is not None:
             json["customElements"] = self._build_custom_elements(ai_elements)
         response = requests.post(

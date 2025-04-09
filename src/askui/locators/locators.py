@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 import pathlib
-from typing import Generic, Literal, TypeVar, Union
+from typing import Literal, Union
 
 from PIL import Image as PILImage
 from pydantic import BaseModel, Field
@@ -9,20 +9,8 @@ from askui.locators.image_utils import ImageSource
 from askui.locators.relatable import Relatable
 
 
-SerializedLocator = TypeVar("SerializedLocator")
-
-
-class LocatorSerializer(Generic[SerializedLocator], ABC):
-    @abstractmethod
-    def serialize(self, locator: "Locator") -> SerializedLocator:
-        raise NotImplementedError()
-
-
 class Locator(Relatable, BaseModel, ABC):
-    def serialize(
-        self, serializer: LocatorSerializer[SerializedLocator]
-    ) -> SerializedLocator:
-        return serializer.serialize(self)
+    pass
 
 
 class Description(Locator):
