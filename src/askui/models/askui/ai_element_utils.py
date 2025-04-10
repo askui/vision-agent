@@ -66,7 +66,6 @@ class AiElementNotFound(Exception):
 
 
 class AiElementCollection:
-
     def __init__(self, additional_ai_element_locations: Optional[List[pathlib.Path]] = None):
         workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         if workspace_id is None:
@@ -89,20 +88,11 @@ class AiElementCollection:
 
     def find(self, name: str) -> list[AiElement]:
         ai_elements: list[AiElement] = []
-
         for location in self.ai_element_locations:
             path = pathlib.Path(location)
-            
             json_files = list(path.glob("*.json"))
-            
-            if not json_files:
-                logger.warning(f"No JSON files found in: {location}")
-                continue
-                
             for json_file in json_files:
                 ai_element = AiElement.from_json_file(json_file)
-
                 if ai_element.metadata.name == name:
                     ai_elements.append(ai_element)
-
         return ai_elements

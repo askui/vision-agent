@@ -1,6 +1,7 @@
 from abc import ABC
 import pathlib
 from typing import Literal, Union
+import uuid
 
 from PIL import Image as PILImage
 from pydantic import BaseModel, Field
@@ -84,14 +85,21 @@ class Text(Class):
         return result + super()._relations_str()
 
 
-class Image(Locator):
-    image: ImageSource
+class ImageMetadata(Locator):
     threshold: float = Field(default=0.5, ge=0, le=1)
     stop_threshold: float = Field(default=0.9, ge=0, le=1)
     mask: list[tuple[float, float]] | None = Field(default=None, min_length=3)
     rotation_degree_per_step: int = Field(default=0, ge=0, lt=360)
     image_compare_format: Literal["RGB", "grayscale", "edges"] = "grayscale"
-    name: str = ""
+    name: str
+
+
+def _generate_name() -> str:
+    return f"anonymous custom element {uuid.uuid4()}"
+
+
+class Image(ImageMetadata):
+    image: ImageSource
 
     def __init__(
         self,
@@ -101,7 +109,7 @@ class Image(Locator):
         mask: list[tuple[float, float]] | None = None,
         rotation_degree_per_step: int = 0,
         image_compare_format: Literal["RGB", "grayscale", "edges"] = "grayscale",
-        name: str = "",
+        name: str | None = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -111,13 +119,36 @@ class Image(Locator):
             mask=mask,
             rotation_degree_per_step=rotation_degree_per_step,
             image_compare_format=image_compare_format,
-            name=name,
+            name=_generate_name() if name is None else name,
             **kwargs,
         )  # type: ignore
 
     def __str__(self):
-        result = "element"
-        if self.name:
-            result += f' "{self.name}"'
-        result += " located by image"
+        result = f'element "{self.name}" located by image'
+        return result + super()._relations_str()
+
+
+class AiElement(ImageMetadata):
+    def __init__(
+        self,
+        name: str,
+        threshold: float = 0.5,
+        stop_threshold: float = 0.9,
+        mask: list[tuple[float, float]] | None = None,
+        rotation_degree_per_step: int = 0,
+        image_compare_format: Literal["RGB", "grayscale", "edges"] = "grayscale",
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            name=name,
+            threshold=threshold,
+            stop_threshold=stop_threshold,
+            mask=mask,
+            rotation_degree_per_step=rotation_degree_per_step,
+            image_compare_format=image_compare_format,
+            **kwargs,
+        )  # type: ignore
+
+    def __str__(self):
+        result = f'ai element named "{self.name}"'
         return result + super()._relations_str()

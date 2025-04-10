@@ -2,35 +2,17 @@
 
 import pathlib
 import pytest
-from PIL import Image
+from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import (
     Description,
     Class,
     Text,
+    AiElement,
 )
-
-
-@pytest.fixture
-def vision_agent() -> VisionAgent:
-    """Fixture providing a VisionAgent instance."""
-    return VisionAgent(enable_askui_controller=False, enable_report=False)
-
-
-@pytest.fixture
-def path_fixtures() -> pathlib.Path:
-    """Fixture providing the path to the fixtures directory."""
-    return pathlib.Path().absolute() / "tests" / "fixtures"
-
-
-@pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
-    """Fixture providing the GitHub login screenshot."""
-    screenshot_path = (
-        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
-    )
-    return Image.open(screenshot_path)
+from askui.locators.locators import Image
+from askui.utils import LocatingError
 
 
 @pytest.mark.skip("Skipping tests for now")
@@ -47,7 +29,7 @@ class TestVisionAgentLocate:
     def test_locate_with_string_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a simple string locator."""
@@ -61,7 +43,7 @@ class TestVisionAgentLocate:
     def test_locate_with_textfield_class_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a class locator."""
@@ -75,7 +57,7 @@ class TestVisionAgentLocate:
     def test_locate_with_unspecified_class_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a class locator."""
@@ -89,7 +71,7 @@ class TestVisionAgentLocate:
     def test_locate_with_description_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a description locator."""
@@ -103,7 +85,7 @@ class TestVisionAgentLocate:
     def test_locate_with_similar_text_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a text locator."""
@@ -117,7 +99,7 @@ class TestVisionAgentLocate:
     def test_locate_with_typo_text_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a text locator with a typo."""
@@ -131,7 +113,7 @@ class TestVisionAgentLocate:
     def test_locate_with_exact_text_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a text locator."""
@@ -145,7 +127,7 @@ class TestVisionAgentLocate:
     def test_locate_with_regex_text_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a text locator."""
@@ -159,7 +141,7 @@ class TestVisionAgentLocate:
     def test_locate_with_contains_text_locator(
         self,
         vision_agent: VisionAgent,
-        github_login_screenshot: Image.Image,
+        github_login_screenshot: PILImage.Image,
         model_name: str,
     ) -> None:
         """Test locating elements using a text locator."""
@@ -169,3 +151,87 @@ class TestVisionAgentLocate:
         )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
+        
+    def test_locate_with_image(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(image=image)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_and_custom_params(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with custom parameters."""
+        image_path = path_fixtures / "images" / "github_com__signin__button.png"
+        image = PILImage.open(image_path)
+        locator = Image(
+            image=image,
+            threshold=0.7,
+            stop_threshold=0.95,
+            rotation_degree_per_step=45,
+            image_compare_format="RGB",
+            name="Sign in button"
+        )
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+
+    def test_locate_with_image_should_fail_when_threshold_is_too_high(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+        path_fixtures: pathlib.Path,
+    ) -> None:
+        """Test locating elements using image locator with custom parameters."""
+        image_path = path_fixtures / "images" / "github_com__icon.png"
+        image = PILImage.open(image_path)
+        locator = Image(
+            image=image,
+            threshold=1.0,
+            stop_threshold=1.0
+        )
+        with pytest.raises(LocatingError):
+            vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
+
+    def test_locate_with_ai_element_locator(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+    ) -> None:
+        """Test locating elements using an AI element locator."""
+        locator = AiElement("github_com__icon")
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, model_name=model_name
+        )
+        assert 350 <= x <= 570
+        assert 240 <= y <= 320
+        
+    def test_locate_with_ai_element_locator_should_fail_when_threshold_is_too_high(
+        self,
+        vision_agent: VisionAgent,
+        github_login_screenshot: PILImage.Image,
+        model_name: str,
+    ) -> None:
+        """Test locating elements using image locator with custom parameters."""
+        locator = AiElement("github_com__icon")
+        with pytest.raises(LocatingError):
+            vision_agent.locate(locator, github_login_screenshot, model_name=model_name)

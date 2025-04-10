@@ -1,3 +1,4 @@
+import re
 from askui.locators import Class, Description, Text, Image
 from PIL import Image as PILImage
 
@@ -175,9 +176,12 @@ def test_complex_relation_chain_str() -> None:
     )
 
 
+IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image$')
+
+
 def test_image_str() -> None:
     image = Image(TEST_IMAGE)
-    assert str(image) == "element located by image"
+    assert re.match(IMAGE_STR_PATTERN, str(image))
 
 
 def test_image_with_name_str() -> None:
@@ -186,9 +190,8 @@ def test_image_with_name_str() -> None:
 
 
 def test_image_with_relation_str() -> None:
-    image = Image(TEST_IMAGE)
+    image = Image(TEST_IMAGE, name="image")
     image.above_of(Text("hello"))
-    assert (
-        str(image)
-        == 'element located by image\n  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
-    )
+    lines = str(image).split("\n")
+    assert lines[0] == 'element "image" located by image'
+    assert lines[1] == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'

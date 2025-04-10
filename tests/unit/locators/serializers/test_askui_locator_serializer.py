@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import pathlib
+import re
 from typing import Literal
 import pytest
 from PIL import Image as PILImage
@@ -6,6 +8,7 @@ from PIL import Image as PILImage
 from askui.locators import Class, Description, Locator, Text, Image
 from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
+from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils import image_to_base64
 
 
@@ -14,8 +17,14 @@ TEST_IMAGE_BASE64 = image_to_base64(TEST_IMAGE)
 
 
 @pytest.fixture
-def askui_serializer() -> AskUiLocatorSerializer:
-    return AskUiLocatorSerializer()
+def askui_serializer(path_fixtures: pathlib.Path) -> AskUiLocatorSerializer:
+    return AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[
+                path_fixtures / "images"
+            ]
+        )
+    )
 
 
 def test_serialize_text_similar(askui_serializer: AskUiLocatorSerializer) -> None:
@@ -63,10 +72,13 @@ def test_serialize_description(askui_serializer: AskUiLocatorSerializer) -> None
     assert result["customElements"] == []
 
 
+CUSTOM_ELEMENT_STR_PATTERN = re.compile(r'^custom element with text <|string|>.*<|string|>$')
+
+
 def test_serialize_image(askui_serializer: AskUiLocatorSerializer) -> None:
     image = Image(TEST_IMAGE)
     result = askui_serializer.serialize(image)
-    assert result["instruction"] == "custom element"
+    assert re.match(CUSTOM_ELEMENT_STR_PATTERN, result["instruction"])
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
     assert custom_element["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
@@ -91,7 +103,7 @@ def test_serialize_image_with_all_options(
         name="test_image",
     )
     result = askui_serializer.serialize(image)
-    assert result["instruction"] == "custom element"
+    assert result["instruction"] == "custom element with text <|string|>test_image<|string|>"
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
     assert custom_element["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
@@ -257,12 +269,12 @@ def test_serialize_unsupported_relation_type(
 def test_serialize_image_with_relation(
     askui_serializer: AskUiLocatorSerializer,
 ) -> None:
-    image = Image(TEST_IMAGE)
+    image = Image(TEST_IMAGE, name="image")
     image.above_of(Text("world"))
     result = askui_serializer.serialize(image)
     assert (
         result["instruction"]
-        == "custom element index 0 above intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
+        == "custom element with text <|string|>image<|string|> index 0 above intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
     )
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
@@ -273,18 +285,18 @@ def test_serialize_text_with_image_relation(
     askui_serializer: AskUiLocatorSerializer,
 ) -> None:
     text = Text("hello")
-    text.above_of(Image(TEST_IMAGE))
+    text.above_of(Image(TEST_IMAGE, name="image"))
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 above intersection_area element_edge_area custom element"
+        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 above intersection_area element_edge_area custom element with text <|string|>image<|string|>"
     )
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
     assert custom_element["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
 
 
-def test_serialize_multiple_custom_elements_with_relation(
+def test_serialize_multiple_images_with_relation(
     askui_serializer: AskUiLocatorSerializer,
 ) -> None:
     image1 = Image(TEST_IMAGE, name="image1")
@@ -293,7 +305,7 @@ def test_serialize_multiple_custom_elements_with_relation(
     result = askui_serializer.serialize(image1)
     assert (
         result["instruction"]
-        == "custom element index 0 above intersection_area element_edge_area custom element"
+        == "custom element with text <|string|>image1<|string|> index 0 above intersection_area element_edge_area custom element with text <|string|>image2<|string|>"
     )
     assert len(result["customElements"]) == 2
     assert result["customElements"][0]["name"] == "image1"
@@ -302,7 +314,7 @@ def test_serialize_multiple_custom_elements_with_relation(
     assert result["customElements"][1]["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
 
 
-def test_serialize_custom_elements_with_non_neighbor_relation(
+def test_serialize_images_with_non_neighbor_relation(
     askui_serializer: AskUiLocatorSerializer,
 ) -> None:
     image1 = Image(TEST_IMAGE, name="image1")
@@ -311,7 +323,7 @@ def test_serialize_custom_elements_with_non_neighbor_relation(
     result = askui_serializer.serialize(image1)
     assert (
         result["instruction"]
-        == "custom element and custom element"
+        == "custom element with text <|string|>image1<|string|> and custom element with text <|string|>image2<|string|>"
     )
     assert len(result["customElements"]) == 2
     assert result["customElements"][0]["name"] == "image1"

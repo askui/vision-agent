@@ -1,34 +1,30 @@
+import pathlib
 import pytest
-from pathlib import Path
 import base64
 from PIL import Image
 
 from askui.locators.image_utils import load_image, ImageSource
 
-
-TEST_IMAGE_PATH = Path("tests/fixtures/images/github__icon.png")
-
-
 class TestLoadImage:
-    def test_load_image_from_pil(self) -> None:
-        img = Image.open(TEST_IMAGE_PATH)
+    def test_load_image_from_pil(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
+        img = Image.open(path_fixtures_github_com__icon)
         loaded = load_image(img)
         assert loaded == img
 
-    def test_load_image_from_path(self) -> None:
+    def test_load_image_from_path(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
         # Test loading from Path
-        loaded = load_image(TEST_IMAGE_PATH)
+        loaded = load_image(path_fixtures_github_com__icon)
         assert isinstance(loaded, Image.Image)
         assert loaded.size == (128, 125)  # GitHub icon size
 
         # Test loading from str path
-        loaded = load_image(str(TEST_IMAGE_PATH))
+        loaded = load_image(str(path_fixtures_github_com__icon))
         assert isinstance(loaded, Image.Image)
         assert loaded.size == (128, 125)
 
-    def test_load_image_from_base64(self) -> None:
+    def test_load_image_from_base64(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
         # Load test image and convert to base64
-        with open(TEST_IMAGE_PATH, "rb") as f:
+        with open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
 
@@ -45,7 +41,7 @@ class TestLoadImage:
             assert isinstance(loaded, Image.Image)
             assert loaded.size == (128, 125)
 
-    def test_load_image_invalid(self) -> None:
+    def test_load_image_invalid(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
         with pytest.raises(ValueError):
             load_image("invalid_path.png")
 
@@ -53,26 +49,26 @@ class TestLoadImage:
             load_image("invalid_base64")
             
         with pytest.raises(ValueError):
-            with open(TEST_IMAGE_PATH, "rb") as f:
+            with open(path_fixtures_github_com__icon, "rb") as f:
                 img_bytes = f.read()
                 img_str = base64.b64encode(img_bytes).decode()
                 load_image(img_str)
 
 
 class TestImageSource:
-    def test_image_source(self) -> None:
+    def test_image_source(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
         # Test with PIL Image
-        img = Image.open(TEST_IMAGE_PATH)
+        img = Image.open(path_fixtures_github_com__icon)
         source = ImageSource(root=img)
         assert source.root == img
 
         # Test with path
-        source = ImageSource(root=TEST_IMAGE_PATH)
+        source = ImageSource(root=path_fixtures_github_com__icon)
         assert isinstance(source.root, Image.Image)
         assert source.root.size == (128, 125)
 
         # Test with base64
-        with open(TEST_IMAGE_PATH, "rb") as f:
+        with open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
         source = ImageSource(root=f"data:image/png;base64,{img_str}")

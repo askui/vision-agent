@@ -3,7 +3,7 @@
 import pathlib
 import pytest
 from PIL import Image as PILImage
-
+from askui.locators.locators import AiElement
 from askui.utils import LocatingError
 from askui.agent import VisionAgent
 from askui.locators import (
@@ -12,27 +12,6 @@ from askui.locators import (
     Text,
     Image,
 )
-
-
-@pytest.fixture
-def vision_agent() -> VisionAgent:
-    """Fixture providing a VisionAgent instance."""
-    return VisionAgent(enable_askui_controller=False, enable_report=False)
-
-
-@pytest.fixture
-def path_fixtures() -> pathlib.Path:
-    """Fixture providing the path to the fixtures directory."""
-    return pathlib.Path().absolute() / "tests" / "fixtures"
-
-
-@pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> PILImage.Image:
-    """Fixture providing the GitHub login screenshot."""
-    screenshot_path = (
-        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
-    )
-    return PILImage.open(screenshot_path)
 
 
 @pytest.mark.parametrize(
@@ -366,23 +345,6 @@ class TestVisionAgentLocateWithRelations:
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
-    def test_locate_with_image(
-        self,
-        vision_agent: VisionAgent,
-        github_login_screenshot: PILImage.Image,
-        model_name: str,
-        path_fixtures: pathlib.Path,
-    ) -> None:
-        """Test locating elements using image locator."""
-        image_path = path_fixtures / "images" / "github_com__signin__button.png"
-        image = PILImage.open(image_path)
-        locator = Image(image=image)
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model_name=model_name
-        )
-        assert 350 <= x <= 570
-        assert 240 <= y <= 320
-
     def test_locate_with_image_and_relation(
         self,
         vision_agent: VisionAgent,
@@ -439,44 +401,17 @@ class TestVisionAgentLocateWithRelations:
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
-    def test_locate_with_image_and_custom_params(
+    def test_locate_with_ai_element_locator_relation(
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
         model_name: str,
-        path_fixtures: pathlib.Path,
     ) -> None:
-        """Test locating elements using image locator with custom parameters."""
-        image_path = path_fixtures / "images" / "github_com__signin__button.png"
-        image = PILImage.open(image_path)
-        locator = Image(
-            image=image,
-            threshold=0.7,
-            stop_threshold=0.95,
-            rotation_degree_per_step=45,
-            image_compare_format="RGB",
-            name="Sign in button"
-        )
+        """Test locating elements using an AI element locator with relation."""
+        icon_locator = AiElement("github_com__icon")
+        signin_locator = AiElement("github_com__signin__button")
         x, y = vision_agent.locate(
-            locator, github_login_screenshot, model_name=model_name
+            signin_locator.below_of(icon_locator), github_login_screenshot, model_name=model_name
         )
         assert 350 <= x <= 570
         assert 240 <= y <= 320
-
-    def test_locate_with_image_should_fail_when_threshold_is_too_high(
-        self,
-        vision_agent: VisionAgent,
-        github_login_screenshot: PILImage.Image,
-        model_name: str,
-        path_fixtures: pathlib.Path,
-    ) -> None:
-        """Test locating elements using image locator with custom parameters."""
-        image_path = path_fixtures / "images" / "github_com__icon.png"
-        image = PILImage.open(image_path)
-        locator = Image(
-            image=image,
-            threshold=1.0,
-            stop_threshold=1.0
-        )
-        with pytest.raises(LocatingError):
-            vision_agent.locate(locator, github_login_screenshot, model_name=model_name)

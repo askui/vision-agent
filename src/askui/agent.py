@@ -27,7 +27,7 @@ class InvalidParameterError(Exception):
 
 
 class VisionAgent:
-    @telemetry.record_call(exclude={"report_callback"})
+    @telemetry.record_call(exclude={"report_callback", "model_router"})
     def __init__(
         self,
         log_level=logging.INFO,
@@ -35,6 +35,7 @@ class VisionAgent:
         enable_report: bool = False,
         enable_askui_controller: bool = True,
         report_callback: Callable[[str | dict[str, Any]], None] | None = None,
+        model_router: ModelRouter | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
@@ -50,7 +51,11 @@ class VisionAgent:
             self.client = AskUiControllerClient(display, self.report)
             self.client.connect()
             self.client.set_display(display)
-        self.model_router = ModelRouter(log_level, self.report)
+        self.model_router = (
+            ModelRouter(log_level, self.report)
+            if model_router is None
+            else model_router
+        )
         self.claude = ClaudeHandler(log_level=log_level)
         self.tools = AgentToolbox(os_controller=self.client)
 
