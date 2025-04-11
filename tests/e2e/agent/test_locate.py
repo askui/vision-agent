@@ -12,7 +12,7 @@ from askui.locators import (
     AiElement,
 )
 from askui.locators.locators import Image
-from askui.utils import LocatingError
+from askui.utils import ElementNotFoundError
 
 
 @pytest.mark.skip("Skipping tests for now")
@@ -208,7 +208,7 @@ class TestVisionAgentLocate:
             threshold=1.0,
             stop_threshold=1.0
         )
-        with pytest.raises(LocatingError):
+        with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
 
     def test_locate_with_ai_element_locator(
@@ -233,5 +233,5 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
         locator = AiElement("github_com__icon")
-        with pytest.raises(LocatingError):
+        with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot, model_name=model_name)

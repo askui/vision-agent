@@ -1,18 +1,15 @@
 """Tests for VisionAgent.locate() with different AskUI models"""
 
-import pathlib
 import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import (
     Description,
-    Class,
     Text,
     AiElement,
 )
-from askui.locators.locators import Image
-from askui.utils import LocatingError, AutomationError
+from askui.utils import AutomationError
 
 
 class TestVisionAgentLocateWithDifferentModels:

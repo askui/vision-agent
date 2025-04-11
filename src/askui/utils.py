@@ -11,7 +11,7 @@ class AutomationError(Exception):
     pass
         
 
-class LocatingError(AutomationError):
+class ElementNotFoundError(AutomationError):
     """Exception raised when an element cannot be located."""
     pass
 

@@ -4,7 +4,7 @@ import pathlib
 import pytest
 from PIL import Image as PILImage
 from askui.locators.locators import AiElement
-from askui.utils import LocatingError
+from askui.utils import ElementNotFoundError
 from askui.agent import VisionAgent
 from askui.locators import (
     Description,
@@ -221,7 +221,7 @@ class TestVisionAgentLocateWithRelations:
     ) -> None:
         """Test locating elements using relation with center reference point."""
         locator = Text("Sign in").below_of(Text("Password"), reference_point="center")
-        with pytest.raises(LocatingError):
+        with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
 
     def test_locate_with_relation_reference_point_boundary(
@@ -248,7 +248,7 @@ class TestVisionAgentLocateWithRelations:
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
         locator = Text("Sign in").below_of(Text("Password"), reference_point="boundary")
-        with pytest.raises(LocatingError):
+        with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot, model_name=model_name)
 
     def test_locate_with_relation_reference_point_any(
