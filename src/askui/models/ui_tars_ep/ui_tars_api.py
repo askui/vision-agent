@@ -3,6 +3,7 @@ import os
 import pathlib
 from typing import Union
 from openai import OpenAI
+from askui.reporting import Reporter
 from askui.utils import image_to_base64
 from PIL import Image
 from .prompts import PROMPT, PROMPT_QA
@@ -11,8 +12,8 @@ import time
 
 
 class UITarsAPIHandler:
-    def __init__(self, report):
-        self.report = report
+    def __init__(self, reporter: Reporter):
+        self._reporter = reporter
         if os.getenv("TARS_URL") is None or os.getenv("TARS_API_KEY") is None:
             self.authenticated = False
         else:
@@ -166,8 +167,8 @@ class UITarsAPIHandler:
         raw_message = chat_completion.choices[-1].message.content
         print(raw_message)
 
-        if self.report is not None: 
-            self.report.add_message("UI-TARS", raw_message)
+        if self._reporter is not None: 
+            self._reporter.add_message("UI-TARS", raw_message)
 
         try:
             message = UITarsEPMessage.parse_message(raw_message)
