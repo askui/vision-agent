@@ -271,12 +271,12 @@ result = agent.tools.clipboard.paste()
 
 ### 📜 Logging & Reporting
 
-You want a better understanding of what you agent is doing? Set the `log_level` to DEBUG. You can also generate a report of the automation run by setting `enable_report` to `True`.
+You want a better understanding of what you agent is doing? Set the `log_level` to DEBUG.
 
 ```python
 import logging
 
-with VisionAgent(log_level=logging.DEBUG, enable_report=True) as agent:
+with VisionAgent(log_level=logging.DEBUG) as agent:
     agent...
 ```
 

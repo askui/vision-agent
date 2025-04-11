@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Any, Literal, Optional, Callable
+from typing import Annotated, Literal, Optional
 
 from pydantic import Field, validate_call
 
@@ -10,14 +10,14 @@ from askui.locators.locators import Locator
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
     AskUiControllerServer,
-    PC_AND_MODIFIER_KEY,
-    MODIFIER_KEY,
+    ModifierKey,
+    PcKey,
 )
 from .models.anthropic.claude import ClaudeHandler
 from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter, Point
-from .reporting.report import SimpleReportGenerator
+from .reporting import CompositeReporter, Reporter, SimpleHtmlReporter
 import time
 from dotenv import load_dotenv
 from PIL import Image
@@ -27,43 +27,27 @@ class InvalidParameterError(Exception):
 
 
 class VisionAgent:
-    @telemetry.record_call(exclude={"report_callback", "model_router"})
+    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     def __init__(
         self,
         log_level=logging.INFO,
         display: int = 1,
-        enable_report: bool = False,
-        enable_askui_controller: bool = True,
-        report_callback: Callable[[str | dict[str, Any]], None] | None = None,
         model_router: ModelRouter | None = None,
+        reporters: list[Reporter] | None = None,
+        tools: AgentToolbox | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
-        self.report = None
-        if enable_report:
-            self.report = SimpleReportGenerator(report_callback=report_callback)
-        self.controller = None
-        self.client = None
-        if enable_askui_controller:
-            self.controller = AskUiControllerServer()
-            self.controller.start(True)
-            time.sleep(0.5)
-            self.client = AskUiControllerClient(display, self.report)
-            self.client.connect()
-            self.client.set_display(display)
+        self._reporter = CompositeReporter(reports=[SimpleHtmlReporter()] if reporters is None else reporters)
         self.model_router = (
-            ModelRouter(log_level, self.report)
+            ModelRouter(log_level=log_level, reporter=self._reporter)
             if model_router is None
             else model_router
         )
         self.claude = ClaudeHandler(log_level=log_level)
-        self.tools = AgentToolbox(os_controller=self.client)
-
-    def _check_askui_controller_enabled(self) -> None:
-        if not self.client:
-            raise ValueError(
-                "AskUI Controller is not initialized. Please, set `enable_askui_controller` to `True` when initializing the `VisionAgent`."
-            )
+        self.tools = tools or AgentToolbox(os=AskUiControllerClient(display=display, reporter=self._reporter))
+        self._display = display
+        self._controller = AskUiControllerServer()
 
     @telemetry.record_call(exclude={"locator"})
     def click(self, locator: Optional[str | Locator] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model_name: Optional[str] = None) -> None:
@@ -91,33 +75,34 @@ class VisionAgent:
         """
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            msg = 'click'
-            if button != 'left':
-                msg = f'{button} ' + msg 
-            if repeat > 1:
-                msg += f' {repeat}x times'
-            if locator is not None:
-                msg += f' on "{locator}"'
-            self.report.add_message("User", msg)
+        msg = 'click'
+        if button != 'left':
+            msg = f'{button} ' + msg 
+        if repeat > 1:
+            msg += f' {repeat}x times'
         if locator is not None:
-            logger.debug("VisionAgent received instruction to click '%s'", locator)
+            msg += f' on {locator}'
+        self._reporter.add_message("User", msg)
+        if locator is not None:
+            logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model_name)
-        self.client.click(button, repeat) # type: ignore
-        
-    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model_name: Optional[str] = None) -> Point:
+        self.tools.os.click(button, repeat) # type: ignore
+    
+    def _locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model_name: Optional[str] = None) -> Point:
         if screenshot is None:
-            self._check_askui_controller_enabled()
-            screenshot = self.client.screenshot() # type: ignore
+            screenshot = self.tools.os.screenshot() # type: ignore
         point = self.model_router.locate(screenshot, locator, model_name)
-        if self.report is not None:
-            self.report.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
+        self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
+    
+    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model_name: Optional[str] = None) -> Point:
+        self._reporter.add_message("User", f"locate {locator}")
+        logger.debug("VisionAgent received instruction to locate %s", locator)
+        return self._locate(locator, screenshot, model_name)
 
     def _mouse_move(self, locator: str | Locator, model_name: Optional[str] = None) -> None:
-        point = self.locate(locator=locator, model_name=model_name)
-        self.client.mouse(point[0], point[1]) # type: ignore
+        point = self._locate(locator=locator, model_name=model_name)
+        self.tools.os.mouse(point[0], point[1]) # type: ignore
 
     @telemetry.record_call(exclude={"locator"})
     def mouse_move(self, locator: str | Locator, model_name: Optional[str] = None) -> None:
@@ -136,9 +121,8 @@ class VisionAgent:
             agent.mouse_move("Profile picture", model_name="custom_model")  # Uses specific model
         ```
         """
-        if self.report is not None:
-            self.report.add_message("User", f'mouse_move: "{locator}"')
-        logger.debug("VisionAgent received instruction to mouse_move to '%s'", locator)
+        self._reporter.add_message("User", f'mouse_move: {locator}')
+        logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
         self._mouse_move(locator, model_name)
 
     @telemetry.record_call()
@@ -165,10 +149,8 @@ class VisionAgent:
             agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.client.mouse_scroll(x, y)
+        self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
+        self.tools.os.mouse_scroll(x, y)
 
     @telemetry.record_call(exclude={"text"})
     def type(self, text: str) -> None:
@@ -186,11 +168,9 @@ class VisionAgent:
             agent.type("password123")  # Types a password
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'type: "{text}"')
+        self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.client.type(text) # type: ignore
+        self.tools.os.type(text) # type: ignore
 
     @telemetry.record_call(exclude={"instruction", "screenshot"})
     def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
@@ -212,15 +192,13 @@ class VisionAgent:
             error_message = agent.get("What does the error message say?")
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'get: "{instruction}"')
+        self._reporter.add_message("User", f'get: "{instruction}"')
         logger.debug("VisionAgent received instruction to get '%s'", instruction)
         if screenshot is None:
-            screenshot = self.client.screenshot() # type: ignore
+            screenshot = self.tools.os.screenshot() # type: ignore
         response = self.model_router.get_inference(screenshot, instruction, model_name)
-        if self.report is not None:
-            self.report.add_message("Agent", response)
+        if self._reporter is not None:
+            self._reporter.add_message("Agent", response)
         return response
     
     @telemetry.record_call()
@@ -245,12 +223,12 @@ class VisionAgent:
         time.sleep(sec)
 
     @telemetry.record_call()
-    def key_up(self, key: PC_AND_MODIFIER_KEY) -> None:
+    def key_up(self, key: PcKey | ModifierKey) -> None:
         """
         Simulates the release of a key.
 
         Parameters:
-            key (PC_AND_MODIFIER_KEY): The key to be released.
+            key (PcKey | ModifierKey): The key to be released.
 
         Example:
         ```python
@@ -259,19 +237,17 @@ class VisionAgent:
             agent.key_up('shift')  # Release the 'Shift' key
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'key_up "{key}"')
+        self._reporter.add_message("User", f'key_up "{key}"')
         logger.debug("VisionAgent received in key_up '%s'", key)
-        self.client.keyboard_release(key)
+        self.tools.os.keyboard_release(key)
 
     @telemetry.record_call()
-    def key_down(self, key: PC_AND_MODIFIER_KEY) -> None:
+    def key_down(self, key: PcKey | ModifierKey) -> None:
         """
         Simulates the pressing of a key.
 
         Parameters:
-            key (PC_AND_MODIFIER_KEY): The key to be pressed.
+            key (PcKey | ModifierKey): The key to be pressed.
 
         Example:
         ```python
@@ -280,11 +256,9 @@ class VisionAgent:
             agent.key_down('shift')  # Press the 'Shift' key
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'key_down "{key}"')
+        self._reporter.add_message("User", f'key_down "{key}"')
         logger.debug("VisionAgent received in key_down '%s'", key)
-        self.client.keyboard_pressed(key)
+        self.tools.os.keyboard_pressed(key)
 
     @telemetry.record_call(exclude={"goal"})
     def act(self, goal: str, model_name: Optional[str] = None) -> None:
@@ -308,23 +282,21 @@ class VisionAgent:
             agent.act("Log in with username 'admin' and password '1234'")
         ```
         """
-        self._check_askui_controller_enabled()
-        if self.report is not None:
-            self.report.add_message("User", f'act: "{goal}"')
+        self._reporter.add_message("User", f'act: "{goal}"')
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        self.model_router.act(self.client, goal, model_name)
+        self.model_router.act(self.tools.os, goal, model_name)
 
     @telemetry.record_call()
     def keyboard(
-        self, key: PC_AND_MODIFIER_KEY, modifier_keys: list[MODIFIER_KEY] | None = None
+        self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
         """
         Simulates pressing a key or key combination on the keyboard.
 
         Parameters:
-            key (PC_AND_MODIFIER_KEY): The main key to press. This can be a letter, number, 
+            key (PcKey | ModifierKey): The main key to press. This can be a letter, number, 
                 special character, or function key.
             modifier_keys (list[MODIFIER_KEY] | None): Optional list of modifier keys to press 
                 along with the main key. Common modifier keys include 'ctrl', 'alt', 'shift'.
@@ -338,9 +310,8 @@ class VisionAgent:
             agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
         ```
         """
-        self._check_askui_controller_enabled()
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.client.keyboard_tap(key, modifier_keys)  # type: ignore
+        self.tools.os.keyboard_tap(key, modifier_keys)  # type: ignore
 
     @telemetry.record_call(exclude={"command"})
     def cli(self, command: str) -> None:
@@ -366,17 +337,21 @@ class VisionAgent:
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
-        if self.client:
-            self.client.disconnect()
-        if self.controller:
-            self.controller.stop(True)
+        self.tools.os.disconnect()
+        if self._controller:
+            self._controller.stop(True)
+        self._reporter.generate()
+            
+    @telemetry.record_call()
+    def open(self) -> None:
+        self._controller.start(True)
+        self.tools.os.connect()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":
+        self.open()
         return self
 
     @telemetry.record_call(exclude={"exc_value", "traceback"})
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
-        if self.report is not None:
-            self.report.generate_report()

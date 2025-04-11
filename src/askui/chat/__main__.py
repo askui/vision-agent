@@ -1,13 +1,15 @@
 from random import randint
 from PIL import Image, ImageDraw
-from typing import Any, Callable, Literal
+from typing import Union
+from typing_extensions import override, TypedDict
 import streamlit as st
 from askui import VisionAgent
 import logging
 from askui.chat.click_recorder import ClickRecorder
+from askui.reporting import Reporter
 from askui.utils import base64_to_image, draw_point_on_image
 import json
-from datetime import date, datetime
+from datetime import datetime
 import os
 import glob
 import re
@@ -23,14 +25,6 @@ CHAT_SESSIONS_DIR_PATH = "./chat/sessions"
 CHAT_IMAGES_DIR_PATH = "./chat/images"
 
 click_recorder = ClickRecorder()
-
-
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError("Type %s not serializable" % type(obj))
 
 
 def setup_chat_dirs():
@@ -70,8 +64,8 @@ def get_image(img_b64_str_or_path: str) -> Image.Image:
 
 
 def write_message(
-    role: Literal["User", "Anthropic Computer Use", "AgentOS", "User (Demonstration)"],
-    content: str,
+    role: str,
+    content: str | dict | list,
     timestamp: str,
     image: Image.Image |str | None = None,
 ):
@@ -79,7 +73,7 @@ def write_message(
     avatar = None if _role != UNKNOWN_ROLE else "❔"
     with st.chat_message(_role, avatar=avatar):
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
-        st.markdown(content)
+        st.markdown(json.dumps(content, indent=2) if isinstance(content, (dict, list)) else content)
         if image:
             img = get_image(image) if isinstance(image, str) else image
             st.image(img)
@@ -92,31 +86,36 @@ def save_image(image: Image.Image) -> str:
     return image_path
 
 
-def chat_history_appender(session_id: str) -> Callable[[str | dict[str, Any]], None]:
-    def append_to_chat_history(report: str | dict) -> None:
-        if isinstance(report, dict):
-            if report.get("image"):
-                if not os.path.isfile(report["image"]):
-                    report["image"] = save_image(base64_to_image(report["image"]))
-        else:
-            report = {
-                "role": "unknown",
-                "content": f"🔄 {report}",
-                "timestamp": datetime.now().isoformat(),
-            }
-        write_message(
-            report["role"],
-            report["content"],
-            report["timestamp"],
-            report.get("image"),
+class Message(TypedDict):
+    role: str
+    content: str | dict | list
+    timestamp: str
+    image: str | None
+
+
+class ChatHistoryAppender(Reporter):
+    def __init__(self, session_id: str) -> None:
+        self._session_id = session_id
+
+    @override
+    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | None = None) -> None:
+        image_path = save_image(image) if image else None
+        message = Message(
+            role=role,
+            content=content,
+            timestamp=datetime.now().isoformat(),
+            image=image_path,
         )
+        write_message(**message)
         with open(
-            os.path.join(CHAT_SESSIONS_DIR_PATH, f"{session_id}.jsonl"), "a"
+            os.path.join(CHAT_SESSIONS_DIR_PATH, f"{self._session_id}.jsonl"), "a"
         ) as f:
-            json.dump(report, f, default=json_serial)
+            json.dump(message, f)
             f.write("\n")
 
-    return append_to_chat_history
+    @override
+    def generate(self) -> None:
+        pass
 
 
 def get_available_sessions():
@@ -255,7 +254,7 @@ if session_id != st.session_state.get("session_id"):
     st.session_state.session_id = session_id
     st.rerun()
 
-report_callback = chat_history_appender(session_id)
+reporter = ChatHistoryAppender(session_id)
 
 st.title(f"Vision Agent Chat - {session_id}")
 st.session_state.messages = load_chat_history(session_id)
@@ -270,26 +269,16 @@ for message in st.session_state.messages:
     )
 
 if value_to_type := st.chat_input("Simulate Typing for User (Demonstration)"):
-    report_callback(
-        {
-            "role": "User (Demonstration)",
-            "content": f'type("{value_to_type}", 50)',
-            "timestamp": datetime.now().isoformat(),
-            "is_json": False,
-            "image": None,
-        }
+    reporter.add_message(
+        role="User (Demonstration)",
+        content=f'type("{value_to_type}", 50)',
     )
     st.rerun()
 
 if st.button("Simulate left click"):
-    report_callback(
-        {
-            "role": "User (Demonstration)",
-            "content": 'click("left", 1)',
-            "timestamp": datetime.now().isoformat(),
-            "is_json": False,
-            "image": None,
-        }
+    reporter.add_message(
+        role="User (Demonstration)",
+        content='click("left", 1)',
     )
     st.rerun()
 
@@ -298,33 +287,22 @@ if st.button(
     "Demonstrate where to move mouse"
 ):  # only single step, only click supported for now, independent of click always registered as click
     image, coordinates = click_recorder.record()
-    report_callback(
-        {
-            "role": "User (Demonstration)",
-            "content": "screenshot()",
-            "timestamp": datetime.now().isoformat(),
-            "is_json": False,
-            "image": save_image(image),
-        }
+    reporter.add_message(
+        role="User (Demonstration)",
+        content="screenshot()",
+        image=image,
     )
-    report_callback(
-        {
-            "role": "User (Demonstration)",
-            "content": f"mouse({coordinates[0]}, {coordinates[1]})",
-            "timestamp": datetime.now().isoformat(),
-            "is_json": False,
-            "image": save_image(
-                draw_point_on_image(image, coordinates[0], coordinates[1])
-            ),
-        }
+    reporter.add_message(
+        role="User (Demonstration)",
+        content=f"mouse({coordinates[0]}, {coordinates[1]})",
+        image=draw_point_on_image(image, coordinates[0], coordinates[1]),
     )
     st.rerun()
 
 if act_prompt := st.chat_input("Ask AI"):
     with VisionAgent(
         log_level=logging.DEBUG,
-        enable_report=True,
-        report_callback=report_callback,
+        reporters=[reporter],
     ) as agent:
         agent.act(act_prompt, model_name="claude")
         st.rerun()
