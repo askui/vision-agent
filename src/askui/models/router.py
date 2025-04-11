@@ -50,6 +50,11 @@ class GroundingModelRouter(ABC):
 class AskUiModelRouter(GroundingModelRouter):
     def __init__(self, inference_api: AskUiInferenceApi):
         self._inference_api = inference_api
+        
+    def _locate_with_askui_ocr(self, screenshot: Image.Image, locator: str | Text) -> Point:
+        locator = Text(locator) if isinstance(locator, str) else locator
+        x, y = self._inference_api.predict(screenshot, locator)
+        return handle_response((x, y), locator)
 
     def locate(
         self,
@@ -66,43 +71,29 @@ class AskUiModelRouter(GroundingModelRouter):
             locator = Text(locator) if isinstance(locator, str) else locator
             x, y = self._inference_api.predict(screenshot, locator)
             return handle_response((x, y), locator)
+        if not isinstance(locator, str):
+            raise AutomationError(
+                f'Locators of type `{type(locator)}` are not supported for models "askui-pta", "askui-ocr" and "askui-combo" and "askui-ai-element". Please provide a `str`.'
+            )
         if model_name == "askui-pta":
             logger.debug("Routing locate prediction to askui-pta")
-            locator = Description(locator) if isinstance(locator, str) else locator
-            if not isinstance(locator, Description):
-                raise AutomationError(
-                    f'Invalid locator type `{type(locator)}` for model "askui-pta". Please provide a `Description` or a `str`.'
-                )
-            x, y = self._inference_api.predict(screenshot, locator)
+            x, y = self._inference_api.predict(screenshot, Description(locator))
             return handle_response((x, y), locator)
         if model_name == "askui-ocr":
             logger.debug("Routing locate prediction to askui-ocr")
-            locator = Text(locator) if isinstance(locator, str) else locator
-            if not isinstance(locator, Text):
-                raise AutomationError(
-                    f'Invalid locator type `{type(locator)}` for model "askui-ocr". Please provide a `Text` or a `str`.'
-                )
-            x, y = self._inference_api.predict(screenshot, locator)
-            return handle_response((x, y), locator)
+            return self._locate_with_askui_ocr(screenshot, locator)
         if model_name == "askui-combo" or model_name is None:
             logger.debug("Routing locate prediction to askui-combo")
-            if not isinstance(locator, str):
-                raise AutomationError(
-                    f'Invalid locator type `{type(locator)}` for model "askui-combo". Please provide a `str`.'
-                )
-            x, y = self._inference_api.predict(screenshot, Description(locator))
+            description_locator = Description(locator)
+            x, y = self._inference_api.predict(screenshot, description_locator)
             if x is None or y is None:
-                x, y = self._inference_api.predict(screenshot, Text(locator))
-            return handle_response((x, y), locator)
+                return self._locate_with_askui_ocr(screenshot, locator)
+            return handle_response((x, y), description_locator)
         if model_name == "askui-ai-element":
             logger.debug("Routing click prediction to askui-ai-element")
-            locator = AiElement(locator) if isinstance(locator, str) else locator
-            if not isinstance(locator, AiElement):
-                raise AutomationError(
-                    f'Invalid locator type `{type(locator)}` for model "askui-ai-element". Please provide an `AiElement` or a `str`.'
-                )
-            x, y = self._inference_api.predict(screenshot, locator)
-            return handle_response((x, y), locator)
+            _locator = AiElement(locator)
+            x, y = self._inference_api.predict(screenshot, _locator)
+            return handle_response((x, y), _locator)
         raise AutomationError(f'Invalid model name: "{model_name}"')
 
     def is_responsible(self, model_name: Optional[str]):
