@@ -11,11 +11,12 @@ from askui.locators.relatable import Relatable
 
 
 class Locator(Relatable, BaseModel, ABC):
+    """Base class for all locators."""
     pass
 
 
 class Description(Locator):
-    """Locator for finding elements by textual description."""
+    """Locator for finding ui elements by a textual description of the ui element."""
 
     description: str
 
@@ -28,6 +29,7 @@ class Description(Locator):
 
 
 class Class(Locator):
+    """Locator for finding ui elements by a class name assigned to the ui element, e.g., by a computer vision model."""
     class_name: Literal["text", "textfield"] | None = None
 
     def __init__(
@@ -50,6 +52,7 @@ TextMatchType = Literal["similar", "exact", "contains", "regex"]
 
 
 class Text(Class):
+    """Locator for finding text elements by their content."""
     text: str | None = None
     match_type: TextMatchType = "similar"
     similarity_threshold: int = Field(default=70, ge=0, le=100)
@@ -99,6 +102,7 @@ def _generate_name() -> str:
 
 
 class Image(ImageMetadata):
+    """Locator for finding ui elements by an image."""
     image: ImageSource
 
     def __init__(
@@ -129,6 +133,7 @@ class Image(ImageMetadata):
 
 
 class AiElement(ImageMetadata):
+    """Locator for finding ui elements by an image and other kinds data saved on the disk."""
     def __init__(
         self,
         name: str,

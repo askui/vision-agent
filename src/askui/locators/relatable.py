@@ -64,13 +64,18 @@ Relation = NeighborRelation | LogicalRelation | BoundingRelation | NearestToRela
 
 
 class Relatable(BaseModel, ABC):
+    """Base class for locators that can be related to other locators, e.g., spatially, logically, distance based etc.
+    
+    Attributes:
+        relations: List of relations to other locators
+    """
     relations: list[Relation] = Field(default_factory=list)
 
     def above_of(
         self,
         other_locator: "Relatable",
         index: int = 0,
-        reference_point: Literal["center", "boundary", "any"] = "boundary",
+        reference_point: ReferencePoint = "boundary",
     ) -> Self:
         self.relations.append(
             NeighborRelation(
@@ -86,7 +91,7 @@ class Relatable(BaseModel, ABC):
         self,
         other_locator: "Relatable",
         index: int = 0,
-        reference_point: Literal["center", "boundary", "any"] = "boundary",
+        reference_point: ReferencePoint = "boundary",
     ) -> Self:
         self.relations.append(
             NeighborRelation(
@@ -102,7 +107,7 @@ class Relatable(BaseModel, ABC):
         self,
         other_locator: "Relatable",
         index: int = 0,
-        reference_point: Literal["center", "boundary", "any"] = "boundary",
+        reference_point: ReferencePoint = "boundary",
     ) -> Self:
         self.relations.append(
             NeighborRelation(
@@ -118,7 +123,7 @@ class Relatable(BaseModel, ABC):
         self,
         other_locator: "Relatable",
         index: int = 0,
-        reference_point: Literal["center", "boundary", "any"] = "boundary",
+        reference_point: ReferencePoint = "boundary",
     ) -> Self:
         self.relations.append(
             NeighborRelation(
