@@ -3,17 +3,20 @@ import base64
 import pathlib
 
 from PIL import Image, ImageDraw
-from typing import Literal, Union
+from typing import Literal, Tuple, Union
 
 
 class AutomationError(Exception):
     """Exception raised when the automation step cannot complete."""
+
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
 
 
-def truncate_long_strings(json_data, max_length=100, truncate_length=20, tag="[shortened]"):
+def truncate_long_strings(
+    json_data, max_length=100, truncate_length=20, tag="[shortened]"
+):
     """
     Traverse and truncate long strings in JSON data.
 
@@ -24,9 +27,15 @@ def truncate_long_strings(json_data, max_length=100, truncate_length=20, tag="[s
     :return: JSON data with truncated long strings.
     """
     if isinstance(json_data, dict):
-        return {k: truncate_long_strings(v, max_length, truncate_length, tag) for k, v in json_data.items()}
+        return {
+            k: truncate_long_strings(v, max_length, truncate_length, tag)
+            for k, v in json_data.items()
+        }
     elif isinstance(json_data, list):
-        return [truncate_long_strings(item, max_length, truncate_length, tag) for item in json_data]
+        return [
+            truncate_long_strings(item, max_length, truncate_length, tag)
+            for item in json_data
+        ]
     elif isinstance(json_data, str) and len(json_data) > max_length:
         return f"{json_data[:truncate_length]}... {tag}"
     return json_data
@@ -48,7 +57,7 @@ def image_to_base64(image: Union[pathlib.Path, Image.Image]) -> str:
 def base64_to_image(base64_string: str) -> Image.Image:
     """
     Convert a base64 string to a PIL Image.
-    
+
     :param base64_string: The base64 encoded image string
     :return: PIL Image object
     """
@@ -57,19 +66,46 @@ def base64_to_image(base64_string: str) -> Image.Image:
     return image
 
 
-def draw_point_on_image(image: Image.Image, x: int, y: int, size: int = 3) -> Image.Image:
+def draw_point_on_image(
+    image: Image.Image, x: int, y: int, size: int = 3
+) -> Image.Image:
     """
     Draw a red point at the specified x,y coordinates on a copy of the input image.
-    
+
     :param image: PIL Image to draw on
     :param x: X coordinate for the point
     :param y: Y coordinate for the point
     :return: New PIL Image with the point drawn
-    """    
+    """
     img_copy = image.copy()
     draw = ImageDraw.Draw(img_copy)
-    draw.ellipse([x-size, y-size, x+size, y+size], fill='red')
+    draw.ellipse([x - size, y - size, x + size, y + size], fill="red")
     return img_copy
+
+
+def resize_to_max_edge(resolution: Tuple[int, int], max_edge: int) -> Tuple[int, int]:
+    """
+    Resize the resolution to make sure the longer edge does not exceed max_edge,
+    while preserving the aspect ratio.
+
+    Args:
+        resolution (Tuple[int, int]): Original resolution as (width, height).
+        max_edge (int): Maximum allowed size for the longer edge.
+
+    Returns:
+        Tuple[int, int]: New resolution as (new_width, new_height).
+    """
+    width, height = resolution
+    max_original = max(width, height)
+
+    if max_original <= max_edge:
+        return (width, height)
+
+    scale: float = max_edge / max_original
+    new_width: int = int(round(width * scale))
+    new_height: int = int(round(height * scale))
+    return (new_width, new_height)
+
 
 ANDROID_KEY = Literal[  # pylint: disable=C0103
     "home",

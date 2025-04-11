@@ -18,7 +18,8 @@ from askui.tools.anthropic.android import (
     AndroidGetCursorPositionTool,
     DebugDrawTool,
 )
-from askui.utils import ANDROID_KEY
+from askui.tools.askui.askui_android_controller import AskUiAndroidControllerClient
+from askui.utils import ANDROID_KEY, resize_to_max_edge
 
 
 ANDROID_SYSTEM_PROMPT: Callable[[tuple[int, int]], str] = (
@@ -52,11 +53,12 @@ ANDROID_SYSTEM_PROMPT: Callable[[tuple[int, int]], str] = (
 class ClaudeAndroidAgent(ClaudeAgent):
     def __init__(
         self,
-        controller_client,
+        controller_client: AskUiAndroidControllerClient,
         report: SimpleReportGenerator | None = None,
-        rescaled_resolution: tuple[int, int] = (553, 1200),
+        max_edge_size: int = 1200,
     ) -> None:
         original_resolution = controller_client.get_screen_resolution()
+        rescaled_resolution = resize_to_max_edge(original_resolution, max_edge_size)
         rescale_function: Callable[[int, int], tuple[int, int]] = (
             lambda x, y: scale_coordinates_back(
                 x,

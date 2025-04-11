@@ -11,9 +11,7 @@ from askui.utils import ANDROID_KEY, draw_point_on_image
 
 
 class AskUiAndroidControllerClient:
-    def __init__(
-        self, report: SimpleReportGenerator | None = None
-    ) -> None:
+    def __init__(self, report: SimpleReportGenerator | None = None) -> None:
         self._client = None
         self._device = None
         self._mouse_position = (0, 0)
@@ -65,10 +63,16 @@ class AskUiAndroidControllerClient:
 
     def screenshot(self, report: bool = True) -> Image.Image:
         self._check_if_device_is_connected()
-        screencap = self._device.screencap()
-        image = Image.open(io.BytesIO(screencap))
+        connection_to_device = self._device.create_connection()
+        connection_to_device.send("shell:/system/bin/screencap -p -a")
+        response = connection_to_device.read_all()
+        if response and len(response) > 5 and response[5] == 0x0D:
+            response = response.replace(b"\r\n", b"\n")
+        image = Image.open(io.BytesIO(response))
         if report:
-            self._add_report_message("AgentOS", "screenshot()", image)
+            self._add_report_message(
+                "AgentOS", f"screenshot() with size {image.size}", image
+            )
         return image
 
     def get_cursor_position(self) -> tuple[int, int]:
