@@ -5,7 +5,8 @@ from typing import Literal
 import pytest
 from PIL import Image as PILImage
 
-from askui.locators import Class, Description, Locator, Text, Image
+from askui.locators.locators import Locator
+from askui.locators import Class, Description, Text, Image
 from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection

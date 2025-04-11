@@ -1,15 +1,9 @@
-from .relatable import ReferencePoint
-from .locators import AiElement, Class, Description, Locator, Text, TextMatchType, Image
-from . import serializers
+from askui.locators.locators import AiElement, Class, Description, Image, Text
 
 __all__ = [
     "AiElement",
     "Class",
     "Description",
-    "Locator",
-    "ReferencePoint",
-    "Text",
-    "TextMatchType",
     "Image",
-    "serializers",
+    "Text",
 ]

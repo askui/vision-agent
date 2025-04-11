@@ -5,7 +5,7 @@ from PIL import Image
 from askui.container import telemetry
 from askui.locators.locators import AiElement, Description, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.locators import Locator
+from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.reporting.report import SimpleReportGenerator
 from .askui.api import AskUiInferenceApi

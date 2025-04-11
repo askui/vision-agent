@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal, Optional, Callable
 from pydantic import Field, validate_call
 
 from askui.container import telemetry
-from askui.locators import Locator
+from askui.locators.locators import Locator
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,

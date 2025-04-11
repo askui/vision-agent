@@ -6,7 +6,7 @@ import requests
 from PIL import Image
 from typing import Any, Union
 from askui.locators.serializers import AskUiLocatorSerializer
-from askui.locators import Locator
+from askui.locators.locators import Locator
 from askui.utils import image_to_base64
 from askui.logger import logger
 

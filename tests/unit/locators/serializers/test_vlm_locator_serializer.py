@@ -1,5 +1,6 @@
 import pytest
-from askui.locators import Class, Description, Locator, Text
+from askui.locators.locators import Locator
+from askui.locators import Class, Description, Text
 from askui.locators.locators import Image
 from askui.locators.serializers import VlmLocatorSerializer
 
