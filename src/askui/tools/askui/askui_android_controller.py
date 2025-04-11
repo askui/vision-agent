@@ -1,5 +1,6 @@
+import re
 from PIL import Image
-from askui.models.utils import scale_image_with_padding
+from askui.models.utils import scale_coordinates_back, scale_image_with_padding
 from ppadb.client import Client as AdbClient
 import io
 from typing import Optional, Union
@@ -7,7 +8,22 @@ from typing import Optional, Union
 from PIL import Image, ImageDraw
 
 from askui.reporting.report import SimpleReportGenerator
-from askui.utils import ANDROID_KEY, draw_point_on_image
+from askui.utils import ANDROID_KEY, draw_point_on_image, resize_to_max_edge
+
+
+class AndroidDisplay:
+    def __init__(
+        self, unique_display_id: int, display_name: str, display_index: int
+    ) -> None:
+        self.unique_display_id = unique_display_id
+        self.display_name = display_name
+        self.display_index = display_index
+
+    def __repr__(self) -> str:
+        return (
+            f"AndroidDisplay(unique_display_id={self.unique_display_id}, "
+            f"display_name={self.display_name}, display_index={self.display_index})"
+        )
 
 
 class AskUiAndroidControllerClient:
@@ -15,7 +31,47 @@ class AskUiAndroidControllerClient:
         self._client = None
         self._device = None
         self._mouse_position = (0, 0)
+        self._displays: list[AndroidDisplay] = []
+        self._selected_display: Optional[AndroidDisplay] = None
         self.report = report
+        self.original_resolution = (0, 0)
+        self.scaled_resolution = (0, 0)
+
+    def _reset_screen_resolution(self) -> None:
+        self.original_resolution = self.get_screen_resolution()
+        self.scaled_resolution = resize_to_max_edge(self.original_resolution, 1200)
+
+    def rescale_back_coordinates(self, x: int, y: int):
+        if self.original_resolution == (0, 0):
+            raise RuntimeError("Screen resolution not set")
+        if self.scaled_resolution == (0, 0):
+            raise RuntimeError("Scaled resolution not set")
+        return scale_coordinates_back(
+            x,
+            y,
+            self.original_resolution[0],
+            self.original_resolution[1],
+            self.scaled_resolution[0],
+            self.scaled_resolution[1],
+        )
+
+    def get_connected_displays(self) -> list[AndroidDisplay]:
+        self._check_if_device_is_connected()
+        displays = []
+        output = self._device.shell("dumpsys SurfaceFlinger --display-id")
+
+        index = 0
+        for line in output.splitlines():
+            if line.startswith("Display"):
+                match = re.match(r"Display (\d+) .* displayName=\"([^\"]+)\"", line)
+                if match:
+                    unique_display_id = int(match.group(1))
+                    display_name = match.group(2)
+                    displays.append(
+                        AndroidDisplay(unique_display_id, display_name, index)
+                    )
+                    index += 1
+        return displays
 
     def _check_if_device_is_connected(self) -> None:
         if not self._client or not self._device:
@@ -27,7 +83,6 @@ class AskUiAndroidControllerClient:
         for device in devices:
             if device.serial == self._device.serial:
                 return
-
         raise Exception(f"Device {self._device.serial} not found in connected devices")
 
     def connect(self) -> None:
@@ -36,10 +91,46 @@ class AskUiAndroidControllerClient:
         if not devices:
             raise RuntimeError("No devices connected")
         self._device = devices[0]
+        self._displays = self.get_connected_displays()
+        if not self._displays:
+            raise RuntimeError("No displays found")
+        self.set_display_by_index(1)
+        self._add_report_message("AgentOS", f"connect() to {self._device.serial}")
 
     def disconnect(self) -> None:
         self._client = None
         self._device = None
+
+    def _set_display(self, display: AndroidDisplay) -> None:
+        self._selected_display = display
+        self._mouse_position = (0, 0)
+        self._reset_screen_resolution()
+        self._add_report_message("AgentOS", f"select display {str(display)}")
+
+    def set_display_by_index(self, displayNumber: int = 0) -> None:
+        if not self._displays:
+            raise RuntimeError("No displays connected")
+        if displayNumber >= len(self._displays):
+            raise RuntimeError(f"Display number {displayNumber} out of range it must be less than {len(self._displays)}")
+        self._set_display(self._displays[displayNumber])
+
+    def set_display_by_id(self, display_id: int) -> None:
+        if not self._displays:
+            raise RuntimeError("No displays connected")
+        for display in self._displays:
+            if display.display_id == display_id:
+                self._set_display(display)
+                return
+        raise RuntimeError(f"Display ID {display_id} not found")
+
+    def set_display_by_name(self, display_name: str) -> None:
+        if not self._displays:
+            raise RuntimeError("No displays connected")
+        for display in self._displays:
+            if display.display_name == display_name:
+                self._set_display(display)
+                return
+        raise RuntimeError(f"Display name {display_name} not found")
 
     def set_device_by_id(self, displayNumber: int = 1) -> None:
         devices = self._client.devices()
@@ -64,7 +155,9 @@ class AskUiAndroidControllerClient:
     def screenshot(self, report: bool = True) -> Image.Image:
         self._check_if_device_is_connected()
         connection_to_device = self._device.create_connection()
-        connection_to_device.send("shell:/system/bin/screencap -p -a")
+        connection_to_device.send(
+            f"shell:/system/bin/screencap -p -d {self._selected_display.unique_display_id}"
+        )
         response = connection_to_device.read_all()
         if response and len(response) > 5 and response[5] == 0x0D:
             response = response.replace(b"\r\n", b"\n")
@@ -83,7 +176,9 @@ class AskUiAndroidControllerClient:
 
     def tap(self, x: int, y: int) -> None:
         self._check_if_device_is_connected()
-        self._device.shell(f"input tap {x} {y}")
+        self._device.shell(
+            f"input -d {self._selected_display.display_index} tap {x} {y}"
+        )
         self._mouse_position = (x, y)
         self._add_report_message(
             "AgentOS",
@@ -95,7 +190,9 @@ class AskUiAndroidControllerClient:
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
         self._check_if_device_is_connected()
-        self._device.shell(f"input swipe {x1} {y1} {x2} {y2} {duration_in_ms}")
+        self._device.shell(
+            f"input -d {self._selected_display.display_index} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
+        )
         self._mouse_position = (x2, y2)
         self._add_report_message(
             "AgentOS", f"swipe({x1}, {y1}, {x2}, {y2}, {duration_in_ms})"
@@ -105,7 +202,9 @@ class AskUiAndroidControllerClient:
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
         self._check_if_device_is_connected()
-        self._device.shell(f"input draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}")
+        self._device.shell(
+            f"input -d {self._selected_display.display_index} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
+        )
         self._mouse_position = (x2, y2)
         self._add_report_message(
             "AgentOS", f"drag_and_drop({x1}, {y1}, {x2}, {y2}, {duration_in_ms})"
@@ -121,7 +220,9 @@ class AskUiAndroidControllerClient:
 
     def roll(self, dx: int, dy: int) -> None:
         self._check_if_device_is_connected()
-        self._device.shell(f"input roll {dx} {dy}")
+        self._device.shell(
+            f"input -d {self._selected_display.display_index} roll {dx} {dy}"
+        )
         self._mouse_position = (
             self._mouse_position[0] + dx,
             self._mouse_position[1] + dy,
@@ -130,8 +231,10 @@ class AskUiAndroidControllerClient:
 
     def key_event(self, key: ANDROID_KEY) -> None:
         self._check_if_device_is_connected()
-        self._device.shell(f"input keyevent {key}")
-        self._add_report_message("AgentOS", f"key_event({key})")
+        self._device.shell(
+            f"input -d {self._selected_display.display_index} keyevent {key.capitalize()}"
+        )
+        self._add_report_message("AgentOS", f"key_event({key.capitalize()})")
 
     def shell(self, command: str) -> str:
         self._check_if_device_is_connected()

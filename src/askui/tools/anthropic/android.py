@@ -1,34 +1,76 @@
 from typing import Callable
 from askui.models.utils import scale_image_with_padding
+from askui.tools.askui.askui_android_controller import AskUiAndroidControllerClient
 from askui.utils import ANDROID_KEY, image_to_base64
 from .base import Tool, ToolResult, ToolError
 
 
 class AndroidScreenshotTool(Tool):
-    def __init__(self, controller_client, rescaled_resolution: tuple[int, int]):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_screenshot_tool",
             description="Takes a screenshot from the currently connected Android device.",
             input_schema={"type": "object", "properties": {}, "required": []},
         )
         self.controller_client = controller_client
-        self.rescaled_resolution = rescaled_resolution
 
     def __call__(self) -> ToolResult:
         screenshot = self.controller_client.screenshot()
         self.real_screen_width = screenshot.width
         self.real_screen_height = screenshot.height
         scale_image = scale_image_with_padding(
-            screenshot, self.rescaled_resolution[0], self.rescaled_resolution[1]
+            screenshot,
+            self.controller_client.scaled_resolution[0],
+            self.controller_client.scaled_resolution[1],
         )
         base64_image = image_to_base64(scale_image)
         return ToolResult(output=f"Screenshot was taken.", base64_image=base64_image)
 
 
+class AndroidGetConnectedDisplaysTool(Tool):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
+        super().__init__(
+            name="android_get_connected_displays_tool",
+            description="Returns a list of connected displays on the Android device.",
+            input_schema={"type": "object", "properties": {}, "required": []},
+        )
+        self.controller_client = controller_client
+
+    def __call__(self) -> ToolResult:
+        connected_displays = self.controller_client.get_connected_displays()
+        return ToolResult(output=f"Connected displays: {connected_displays}")
+
+
+class AndroidSelectDisplayTool(Tool):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
+        super().__init__(
+            name="android_select_display_tool",
+            description="Selects a specific display on the Android device for further actions.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "display_index": {
+                        "type": "integer",
+                        "description": "The index of the display to select. Starts from 0.",
+                    },
+                },
+                "required": ["display_index"],
+            },
+        )
+        self.controller_client = controller_client
+
+    def __call__(self, display_index: int) -> ToolResult:
+        if not isinstance(display_index, int):
+            raise ToolError(f"{display_index} must be an integer")
+        if display_index < 0:
+            raise ToolError(f"{display_index} must be a non-negative integer")
+        self.controller_client.set_display_by_index(display_index)
+        return ToolResult(output=f"Display {display_index} selected.")
+
+
+
 class AndroidTapTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_tap_tool",
             description="Simulates a tap (touch) gesture at the given (x, y) coordinates on the Android device screen.",
@@ -48,20 +90,17 @@ class AndroidTapTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(self, x: int, y: int) -> ToolResult:
         if not isinstance(x, int) or not isinstance(y, int):
             raise ToolError(f"{x} and {y} must be integers")
-        x, y = self.rescale_function(x, y)
+        x, y = self.controller_client.rescale_back_coordinates(x, y)
         self.controller_client.tap(x, y)
         return ToolResult(output=f"Tapped at ({x}, {y})")
 
 
 class AndroidSwipeTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_swipe_tool",
             description="Simulates a swipe gesture on the Android screen from point (x1, y1) to (x2, y2). "
@@ -95,7 +134,6 @@ class AndroidSwipeTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
@@ -110,8 +148,8 @@ class AndroidSwipeTool(Tool):
             raise ToolError(
                 f"{x1}, {y1}, {x2}, {y2}, and {duration_in_ms} must be integers"
             )
-        x1, y1 = self.rescale_function(x1, y1)
-        x2, y2 = self.rescale_function(x2, y2)
+        x1, y1 = self.controller_client.rescale_back_coordinates(x1, y1)
+        x2, y2 = self.controller_client.rescale_back_coordinates(x2, y2)
         self.controller_client.swipe(
             x1,
             y1,
@@ -123,9 +161,7 @@ class AndroidSwipeTool(Tool):
 
 
 class AndroidDragAndDropTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_drag_and_drop_tool",
             description="Simulates a drag-and-drop gesture on the Android device from (x1, y1) to (x2, y2).",
@@ -146,7 +182,6 @@ class AndroidDragAndDropTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
@@ -162,8 +197,8 @@ class AndroidDragAndDropTool(Tool):
                 f"{x1}, {y1}, {x2}, {y2}, and {duration_in_ms} must be integers"
             )
 
-        x1, y1 = self.rescale_function(x1, y1)
-        x2, y2 = self.rescale_function(x2, y2)
+        x1, y1 = self.controller_client.rescale_back_coordinates(x1, y1)
+        x2, y2 = self.controller_client.rescale_back_coordinates(x2, y2)
         self.controller_client.drag_and_drop(
             x1,
             y1,
@@ -175,9 +210,7 @@ class AndroidDragAndDropTool(Tool):
 
 
 class AndroidRollTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_roll_tool",
             description="Simulates a mouse scroll (roll) action by the given dx, dy deltas.",
@@ -197,20 +230,17 @@ class AndroidRollTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(self, dx: int, dy: int) -> ToolResult:
         if not isinstance(dx, int) or not isinstance(dy, int):
             raise ToolError(f"{dx} and {dy} must be integers")
-        dx, dy = self.rescale_function(dx, dy)
+        dx, dy = self.controller_client.rescale_back_coordinates(dx, dy)
         self.controller_client.roll(dx, dy)
         return ToolResult(output=f"Rolled by dx {dx} and dy {dy}")
 
 
 class AndroidMoveMouseTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_move_mouse_tool",
             description="Moves the virtual mouse (internal tracking) to the given coordinates on the Android screen. "
@@ -225,18 +255,17 @@ class AndroidMoveMouseTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(self, x: int, y: int) -> ToolResult:
         if not isinstance(x, int) or not isinstance(y, int):
             raise ToolError(f"{x} and {y} must be integers")
-        x, y = self.rescale_function(x, y)
+        x, y = self.controller_client.rescale_back_coordinates(x, y)
         self.controller_client.move_mouse(x, y)
         return ToolResult(output=f"Moved mouse to x {x} y {y}")
 
 
 class AndroidKeyEventTool(Tool):
-    def __init__(self, controller_client):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_key_event_tool",
             description="Simulates a physical key press on the Android device using a predefined key string (e.g., 'home', 'volume_up', 'a', 'f5').",
@@ -264,7 +293,7 @@ class AndroidKeyEventTool(Tool):
 
 
 class AndroidShellTool(Tool):
-    def __init__(self, controller_client):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_shell_tool",
             description="Executes a raw shell command on the Android device using ADB and returns the output.",
@@ -289,7 +318,7 @@ class AndroidShellTool(Tool):
 
 
 class AndroidGetCursorPositionTool(Tool):
-    def __init__(self, controller_client):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="android_get_cursor_position_tool",
             description="Returns the current internal mouse position (as tracked by the controller) on the Android device.",
@@ -303,9 +332,7 @@ class AndroidGetCursorPositionTool(Tool):
 
 
 class DebugDrawTool(Tool):
-    def __init__(
-        self, controller_client, rescale_function: Callable[[int, int], tuple[int, int]]
-    ):
+    def __init__(self, controller_client: AskUiAndroidControllerClient):
         super().__init__(
             name="debug_draw_tool",
             description="Draws a box on the screen at the given coordinates. To visualize the box, and to see the result",
@@ -327,7 +354,6 @@ class DebugDrawTool(Tool):
             },
         )
         self.controller_client = controller_client
-        self.rescale_function = rescale_function
 
     def __call__(self, x1: int, y1: int, x2: int, y2: int) -> ToolResult:
         if (
@@ -337,8 +363,8 @@ class DebugDrawTool(Tool):
             or not isinstance(y2, int)
         ):
             raise ToolError(f"{x1}, {y1}, {x2}, {y2} must be integers")
-        x1, y1 = self.rescale_function(x1, y1)
-        x2, y2 = self.rescale_function(x2, y2)
+        x1, y1 = self.controller_client.rescale_back_coordinates(x1, y1)
+        x2, y2 = self.controller_client.rescale_back_coordinates(x2, y2)
         image = self.controller_client.debug_draw(x1, y1, x2, y2)
         base64_image = image_to_base64(image)
         return ToolResult(output="Box drawn on the image.", base64_image=base64_image)

@@ -21,7 +21,6 @@ class AndroidVisionAgent:
         log_level=logging.INFO,
         enable_report: bool = False,
         report_callback: Callable[[str | dict[str, Any]], None] | None = None,
-        max_edge_size: int = 1200,
     ):
         load_dotenv()
         configure_logging(level=log_level)
@@ -31,7 +30,6 @@ class AndroidVisionAgent:
         self.client = AskUiAndroidControllerClient(self.report)
         self.client.connect()
         self.tools = AgentToolbox(os_controller=self.client)
-        self.max_edge_size = max_edge_size
 
     def act(self, goal: str, model_name=None) -> None:
         """
@@ -63,7 +61,7 @@ class AndroidVisionAgent:
             raise Exception(
                 '"ANTHROPIC_API_KEY" not set. Please set it in your environment variables.'
             )
-        agent = ClaudeAndroidAgent(self.client, self.report, self.max_edge_size)
+        agent = ClaudeAndroidAgent(self.client, self.report)
         return agent.run(goal)
 
     def close(self):

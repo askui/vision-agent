@@ -7,7 +7,9 @@ from askui.models.anthropic.claude_agent import ClaudeAgent
 from askui.models.utils import scale_coordinates_back
 from askui.reporting.report import SimpleReportGenerator
 from askui.tools.anthropic.android import (
+    AndroidGetConnectedDisplaysTool,
     AndroidScreenshotTool,
+    AndroidSelectDisplayTool,
     AndroidTapTool,
     AndroidSwipeTool,
     AndroidDragAndDropTool,
@@ -22,8 +24,7 @@ from askui.tools.askui.askui_android_controller import AskUiAndroidControllerCli
 from askui.utils import ANDROID_KEY, resize_to_max_edge
 
 
-ANDROID_SYSTEM_PROMPT: Callable[[tuple[int, int]], str] = (
-    lambda screen_resolution: f"""<SYSTEM_CAPABILITY>
+ANDROID_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * You are operating on an Android device via ADB.
 * Your available architecture is {platform.machine()} connected from a {sys.platform} host.
 * You can simulate touch gestures (tap, swipe), key events (like {', '.join(ANDROID_KEY.__args__)}), interact with the UI, capture screenshots, and retrieve logs or dump UI hierarchy.
@@ -35,7 +36,6 @@ ANDROID_SYSTEM_PROMPT: Callable[[tuple[int, int]], str] = (
 
 <IMPORTANT>
 * Always check whether a tool is available before using it.
-* Screenshot resolution is {screen_resolution[0]}x{screen_resolution[1]}.
 * Use the screenshot tool to capture the screen and analyze the UI state before taking any action that requires UI interaction.
 * Be independent and creative in your approach. Reduce dependencies on the user Don't ask for help unless absolutely necessary.
 * If you encounter an error, analyze the situation and determine the best course of action.
@@ -47,7 +47,6 @@ ANDROID_SYSTEM_PROMPT: Callable[[tuple[int, int]], str] = (
 * If you are unable to complete an action after analysis, encounter an unexpected situation, or get stuck for any reason—briefly apologize, then use the exception tool to throw an appropriate exception.
 </IMPORTANT>
 """
-)
 
 
 class ClaudeAndroidAgent(ClaudeAgent):
@@ -55,37 +54,26 @@ class ClaudeAndroidAgent(ClaudeAgent):
         self,
         controller_client: AskUiAndroidControllerClient,
         report: SimpleReportGenerator | None = None,
-        max_edge_size: int = 1200,
     ) -> None:
-        original_resolution = controller_client.get_screen_resolution()
-        rescaled_resolution = resize_to_max_edge(original_resolution, max_edge_size)
-        rescale_function: Callable[[int, int], tuple[int, int]] = (
-            lambda x, y: scale_coordinates_back(
-                x,
-                y,
-                original_resolution[0],
-                original_resolution[1],
-                rescaled_resolution[0],
-                rescaled_resolution[1],
-            )
-        )
-
         tools = [
-            AndroidScreenshotTool(controller_client, rescaled_resolution),
-            AndroidTapTool(controller_client, rescale_function=rescale_function),
-            AndroidSwipeTool(controller_client, rescale_function=rescale_function),
+            AndroidScreenshotTool(controller_client),
+            AndroidTapTool(controller_client),
+            AndroidSwipeTool(controller_client),
             AndroidDragAndDropTool(
-                controller_client, rescale_function=rescale_function
+                controller_client
             ),
-            AndroidRollTool(controller_client, rescale_function=rescale_function),
-            AndroidMoveMouseTool(controller_client, rescale_function=rescale_function),
-            DebugDrawTool(controller_client, rescale_function=rescale_function),
+            AndroidRollTool(controller_client),
+            AndroidMoveMouseTool(controller_client),
+            DebugDrawTool(controller_client),
             AndroidKeyEventTool(controller_client),
             AndroidShellTool(controller_client),
             AndroidGetCursorPositionTool(controller_client),
+            AndroidGetConnectedDisplaysTool(controller_client),
+            AndroidSelectDisplayTool(controller_client),
+
         ]
         super().__init__(
             tools=tools,
-            system_prompt=ANDROID_SYSTEM_PROMPT(rescaled_resolution),
+            system_prompt=ANDROID_SYSTEM_PROMPT,
             report=report,
         )
