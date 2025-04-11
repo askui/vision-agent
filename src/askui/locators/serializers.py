@@ -23,6 +23,7 @@ from .relatable import (
 
 class VlmLocatorSerializer:
     def serialize(self, locator: Relatable) -> str:
+        locator.raise_if_cycle()
         if len(locator.relations) > 0:
             raise NotImplementedError(
                 "Serializing locators with relations is not yet supported for VLMs"
@@ -95,6 +96,7 @@ class AskUiLocatorSerializer:
         self._ai_element_collection = ai_element_collection
 
     def serialize(self, locator: Relatable) -> AskUiSerializedLocator:
+        locator.raise_if_cycle()
         if len(locator.relations) > 1:
             # If we lift this constraint, we also have to make sure that custom element references are still working + we need, e.g., some symbol or a structured format to indicate precedence
             raise NotImplementedError(

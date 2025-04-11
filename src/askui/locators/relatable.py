@@ -27,7 +27,7 @@ class RelationBase(ABC):
     type: Literal["above_of", "below_of", "right_of", "left_of", "and", "or", "containing", "inside_of", "nearest_to"]
 
     def __str__(self):
-        return f"{RelationTypeMapping[self.type]} {self.other_locator}"
+        return f"{RelationTypeMapping[self.type]} {self.other_locator._str_with_relation()}"
 
 
 @dataclass(kw_only=True)
@@ -43,7 +43,7 @@ class NeighborRelation(RelationBase):
         else:
             index_str = f"{i}st" if i % 10 == 1 else f"{i}nd" if i % 10 == 2 else f"{i}rd" if i % 10 == 3 else f"{i}th"
         reference_point_str = " center of" if self.reference_point == "center" else " boundary of" if self.reference_point == "boundary" else ""
-        return f"{RelationTypeMapping[self.type]}{reference_point_str} the {index_str} {self.other_locator}"
+        return f"{RelationTypeMapping[self.type]}{reference_point_str} the {index_str} {self.other_locator._str_with_relation()}"
 
 
 @dataclass(kw_only=True)
@@ -61,6 +61,19 @@ class NearestToRelation(RelationBase):
 
 
 Relation = NeighborRelation | LogicalRelation | BoundingRelation | NearestToRelation
+
+
+class CircularDependencyError(ValueError):
+    """Exception raised for circular dependencies in locator relations."""
+    def __init__(
+        self,
+        message: str = (
+            "Detected circular dependency in locator relations. "
+            "This occurs when locators reference each other in a way that creates an infinite loop "
+            "(e.g., A is above B and B is above A)."
+        ),
+    ) -> None:
+        super().__init__(message)
 
 
 class Relatable(BaseModel, ABC):
@@ -191,3 +204,31 @@ class Relatable(BaseModel, ABC):
             for nested_relation_str in nested_relation_strs:
                 result.append(f"  {nested_relation_str}")
         return "\n" + "\n".join(result)
+    
+    def raise_if_cycle(self) -> None:
+        if self._has_cycle():
+            raise CircularDependencyError()
+    
+    def _has_cycle(self) -> bool:
+        """Check if the relations form a cycle."""
+        visited_ids: set[int] = set()
+        recursion_stack_ids: set[int] = set()
+
+        def _dfs(node: Relatable) -> bool:
+            node_id = id(node)
+            if node_id in recursion_stack_ids:
+                return True
+            if node_id in visited_ids:
+                return False
+
+            visited_ids.add(node_id)
+            recursion_stack_ids.add(node_id)
+
+            for relation in node.relations:
+                if _dfs(relation.other_locator):
+                    return True
+
+            recursion_stack_ids.remove(node_id)
+            return False
+
+        return _dfs(self)

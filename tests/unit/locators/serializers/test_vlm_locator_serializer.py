@@ -2,6 +2,7 @@ import pytest
 from askui.locators.locators import Locator
 from askui.locators import Class, Description, Text
 from askui.locators.locators import Image
+from askui.locators.relatable import CircularDependencyError
 from askui.locators.serializers import VlmLocatorSerializer
 
 from PIL import Image as PILImage
@@ -78,3 +79,30 @@ def test_serialize_unsupported_locator_type(
 
     with pytest.raises(ValueError, match="Unsupported locator type:.*"):
         vlm_serializer.serialize(UnsupportedLocator())
+
+
+def test_serialize_simple_cycle_raises(vlm_serializer: VlmLocatorSerializer) -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text1.above_of(text2)
+    text2.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        vlm_serializer.serialize(text1)
+
+
+def test_serialize_self_reference_cycle_raises(vlm_serializer: VlmLocatorSerializer) -> None:
+    text = Text("hello")
+    text.above_of(text)
+    with pytest.raises(CircularDependencyError):
+        vlm_serializer.serialize(text)
+
+
+def test_serialize_deep_cycle_raises(vlm_serializer: VlmLocatorSerializer) -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text3 = Text("earth")
+    text1.above_of(text2)
+    text2.above_of(text3)
+    text3.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        vlm_serializer.serialize(text1)

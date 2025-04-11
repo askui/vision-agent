@@ -23,9 +23,13 @@ class Description(Locator):
     def __init__(self, description: str, **kwargs) -> None:
         super().__init__(description=description, **kwargs)  # type: ignore
 
-    def __str__(self):
+    def _str_with_relation(self) -> str:
         result = f'element with description "{self.description}"'
         return result + super()._relations_str()
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()
 
 
 class Class(Locator):
@@ -39,13 +43,17 @@ class Class(Locator):
     ) -> None:
         super().__init__(class_name=class_name, **kwargs)  # type: ignore
 
-    def __str__(self):
+    def _str_with_relation(self) -> str:
         result = (
             f'element with class "{self.class_name}"'
             if self.class_name
             else "element that has a class"
         )
         return result + super()._relations_str()
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()
 
 
 TextMatchType = Literal["similar", "exact", "contains", "regex"]
@@ -71,7 +79,7 @@ class Text(Class):
             **kwargs,
         )  # type: ignore
 
-    def __str__(self):
+    def _str_with_relation(self) -> str:
         if self.text is None:
             result = "text"
         else:
@@ -86,6 +94,10 @@ class Text(Class):
                 case "regex":
                     result += f'matching regex "{self.text}"'
         return result + super()._relations_str()
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()
 
 
 class ImageMetadata(Locator):
@@ -127,9 +139,13 @@ class Image(ImageMetadata):
             **kwargs,
         )  # type: ignore
 
-    def __str__(self):
+    def _str_with_relation(self) -> str:
         result = f'element "{self.name}" located by image'
         return result + super()._relations_str()
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()
 
 
 class AiElement(ImageMetadata):
@@ -154,6 +170,10 @@ class AiElement(ImageMetadata):
             **kwargs,
         )  # type: ignore
 
-    def __str__(self):
+    def _str_with_relation(self) -> str:
         result = f'ai element named "{self.name}"'
         return result + super()._relations_str()
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()

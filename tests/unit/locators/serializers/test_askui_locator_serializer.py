@@ -4,6 +4,7 @@ import re
 from typing import Literal
 import pytest
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture
 
 from askui.locators.locators import Locator
 from askui.locators import Class, Description, Text, Image
@@ -11,6 +12,7 @@ from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils import image_to_base64
+from askui.locators.relatable import CircularDependencyError
 
 
 TEST_IMAGE = PILImage.new("RGB", (100, 100), color="red")
@@ -264,6 +266,64 @@ def test_serialize_unsupported_relation_type(
     text.relations.append(UnsupportedRelation(type="unsupported", other_locator=Text("world")))  # type: ignore
 
     with pytest.raises(ValueError, match='Unsupported relation type: "unsupported"'):
+        askui_serializer.serialize(text)
+
+
+def test_serialize_simple_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text1.above_of(text2)
+    text2.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        askui_serializer.serialize(text1)
+
+
+def test_serialize_self_reference_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+    text = Text("hello")
+    text.above_of(text)
+    with pytest.raises(CircularDependencyError):
+        askui_serializer.serialize(text)
+
+
+def test_serialize_deep_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text3 = Text("earth")
+    text1.above_of(text2)
+    text2.above_of(text3)
+    text3.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        askui_serializer.serialize(text1)
+
+
+def test_serialize_cycle_detection_called_once(askui_serializer: AskUiLocatorSerializer, mocker: MockerFixture) -> None:
+    text1 = Text("hello")
+    mocked_text1 = mocker.patch.object(text1, '_has_cycle')
+    text2 = Text("world")
+    mocked_text2 = mocker.patch.object(text2, '_has_cycle')
+    text1.above_of(text2)
+    text2.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        askui_serializer.serialize(text1)
+    mocked_text1.assert_called_once()
+    mocked_text2.assert_not_called()
+
+
+def test_serialize_image_with_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+    image1 = Image(TEST_IMAGE, name="image1")
+    image2 = Image(TEST_IMAGE, name="image2")
+    image1.above_of(image2)
+    image2.above_of(image1)
+    with pytest.raises(CircularDependencyError):
+        askui_serializer.serialize(image1)
+
+
+def test_serialize_mixed_locator_types_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+    text = Text("hello")
+    image = Image(TEST_IMAGE, name="image")
+    text.above_of(image)
+    image.above_of(text)
+    with pytest.raises(CircularDependencyError):
         askui_serializer.serialize(text)
 
 

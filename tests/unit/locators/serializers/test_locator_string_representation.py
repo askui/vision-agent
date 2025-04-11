@@ -1,5 +1,7 @@
 import re
+import pytest
 from askui.locators import Class, Description, Text, Image
+from askui.locators.relatable import CircularDependencyError
 from PIL import Image as PILImage
 
 
@@ -195,3 +197,56 @@ def test_image_with_relation_str() -> None:
     lines = str(image).split("\n")
     assert lines[0] == 'element "image" located by image'
     assert lines[1] == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
+
+
+def test_simple_cycle_str() -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text1.above_of(text2)
+    text2.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        str(text1)
+
+
+def test_self_reference_cycle_str() -> None:
+    text = Text("hello")
+    text.above_of(text)
+    with pytest.raises(CircularDependencyError):
+        str(text)
+
+
+def test_deep_cycle_str() -> None:
+    text1 = Text("hello")
+    text2 = Text("world")
+    text3 = Text("earth")
+    text1.above_of(text2)
+    text2.above_of(text3)
+    text3.above_of(text1)
+    with pytest.raises(CircularDependencyError):
+        str(text1)
+
+
+def test_multiple_references_no_cycle_str() -> None:
+    heading = Text("heading")
+    textfield = Class("textfield")
+    textfield.right_of(heading)
+    textfield.below_of(heading)
+    assert str(textfield) == 'element with class "textfield"\n  1. right of boundary of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
+
+
+def test_image_cycle_str() -> None:
+    image1 = Image(TEST_IMAGE, name="image1")
+    image2 = Image(TEST_IMAGE, name="image2")
+    image1.above_of(image2)
+    image2.above_of(image1)
+    with pytest.raises(CircularDependencyError):
+        str(image1)
+
+
+def test_mixed_locator_types_cycle_str() -> None:
+    text = Text("hello")
+    image = Image(TEST_IMAGE, name="image")
+    text.above_of(image)
+    image.above_of(text)
+    with pytest.raises(CircularDependencyError):
+        str(text)
