@@ -20,6 +20,7 @@ dependencies = [
     "tenacity>=9.0.0",
     "python-dateutil>=2.9.0.post0",
     "openai>=1.61.1",
+    "pure-python-adb>=0.3.0.dev0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

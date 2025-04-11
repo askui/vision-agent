@@ -43,7 +43,7 @@ def scale_coordinates_back(x, y, original_width, original_height, max_width, max
         raise ValueError("Coordinates are outside the padded image area")
     original_x = adjusted_x / scale_factor
     original_y = adjusted_y / scale_factor
-    return original_x, original_y
+    return int(original_x), int(original_y)
 
 
 def extract_click_coordinates(text: str):

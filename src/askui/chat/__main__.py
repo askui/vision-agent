@@ -1,6 +1,7 @@
 from random import randint
 from PIL import Image, ImageDraw
 from typing import Any, Callable, Literal
+from askui import AndroidVisionAgent
 import streamlit as st
 from askui import VisionAgent
 import logging
@@ -321,7 +322,7 @@ if st.button(
     st.rerun()
 
 if act_prompt := st.chat_input("Ask AI"):
-    with VisionAgent(
+    with AndroidVisionAgent(
         log_level=logging.DEBUG,
         enable_report=True,
         report_callback=report_callback,

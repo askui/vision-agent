@@ -6,7 +6,7 @@ from .huggingface.spaces_api import HFSpacesHandler
 from ..logging import logger
 from ..utils import AutomationError
 from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
-from .anthropic.claude_agent import ClaudeComputerAgent
+from .anthropic.claude_computer_agent import ClaudeComputerAgent
 from abc import ABC, abstractmethod
 
 

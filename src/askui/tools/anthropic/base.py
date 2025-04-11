@@ -4,6 +4,9 @@ from typing import Any
 
 from anthropic.types.beta import BetaToolUnionParam
 
+from dataclasses import dataclass
+from typing import Any
+
 
 class BaseAnthropicTool(metaclass=ABCMeta):
     """Abstract base class for Anthropic-defined tools."""
@@ -67,3 +70,31 @@ class ToolError(Exception):
 
     def __init__(self, message):
         self.message = message
+
+
+@dataclass
+class Tool:
+    """Base class for all agent tools."""
+
+    def __init__(self, name: str, description: str, input_schema: dict[str, Any]):
+        if not name:
+            raise ValueError("Tool name is required")
+        if not description:
+            raise ValueError("Tool description is required")
+        if not input_schema:
+            raise ValueError("Tool input schema is required")
+        self.name = name
+        self.description = description
+        self.input_schema = input_schema
+
+    def to_params(self) -> dict[str, Any]:
+        """Convert tool to Claude API format."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "input_schema": self.input_schema,
+        }
+
+    def __call__(self, **kwargs) -> ToolResult:
+        """Execute the tool with provided parameters."""
+        raise NotImplementedError("Tool subclasses must implement execute method")
