@@ -22,6 +22,7 @@ import time
 from dotenv import load_dotenv
 from PIL import Image
 
+
 class InvalidParameterError(Exception):
     pass
 
@@ -46,7 +47,6 @@ class VisionAgent:
         )
         self.claude = ClaudeHandler(log_level=log_level)
         self.tools = tools or AgentToolbox(os=AskUiControllerClient(display=display, reporter=self._reporter))
-        self._display = display
         self._controller = AskUiControllerServer()
 
     @telemetry.record_call(exclude={"locator"})
