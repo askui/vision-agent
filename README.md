@@ -88,7 +88,7 @@ pip install askui
 |  | AskUI [INFO](https://hub.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
 | ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
-| Supported Commands    | `click()`   | `click()`, `get()`, `act()`   |
+| Supported Commands    | `click()`, `locate()`, `mouse_move()`   | `act()`, `get()`, `click()`, `locate()`, `mouse_move()`  |
 | Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 
 To get started, set the environment variables required to authenticate with your chosen model provider.
@@ -143,7 +143,7 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
 
-3. Step: Use the `model_name="tars"` parameter in your `click()`, `get()` and `act()` commands.
+3. Step: Use the `model_name="tars"` parameter in your `click()`, `get()` and `act()` etc. commands.
 
 
 ## ▶️ Start Building
@@ -171,32 +171,26 @@ with VisionAgent() as agent:
 
 ### 🎛️ Model Selection
 
-Instead of relying on the default model for the entire automation script, you can specify a model for each `click` command using the `model_name` parameter.
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model_name` parameter.
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
-| `click()`    | `askui-combo`, `askui-pta`, `askui-ocr`   | `anthropic-claude-3-5-sonnet-20241022`   |
+| `act()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
+| `click()`    | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element` | `anthropic-claude-3-5-sonnet-20241022`   |
+| `get()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
+| `locate()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
+| `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
+
 
 **Example:** `agent.click("Preview", model_name="askui-combo")`
 
 <details>
-  <summary>Antrophic AI Models</summary>
-
-Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
-| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
-|-------------|--------------------|--------------|--------------|--------------|--------------|
-| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
-> **Note:** Configure your Antrophic Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
-
-
-</details>
-
-<details>
   <summary>AskUI AI Models</summary>
 
-Supported commands are: `click()`, `type()`, `mouse_move()`
+Supported commands are: `click()`, `locate()`, `mouse_move()`
 | Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
 |-------------|--------------------|--------------|--------------|--------------|--------------|
+| `askui` | `AskUI` is a combination of all the following models: `askui-pta`, `askui-ocr`, `askui-combo`, `askui-ai-element` where AskUI chooses the best model for the task depending on the input. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, can be (at least partially) retrained |
 | `askui-pta` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI](https://www.askui.com/) which to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, can be retrained |
 | `askui-ocr` | `AskUI OCR` is an OCR model trained to address texts on UI Screens e.g. "`Login`", "`Search`" | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
 | `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
@@ -206,11 +200,23 @@ Supported commands are: `click()`, `type()`, `mouse_move()`
 
 </details>
 
+<details>
+  <summary>Antrophic AI Models</summary>
+
+Supported commands are: `act()`, `get()`, `click()`, `locate()`, `mouse_move()`
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+|-------------|--------------------|--------------|--------------|--------------|--------------|
+| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
+> **Note:** Configure your Antrophic Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
+
+
+</details>
+
 
 <details>
   <summary>Huggingface AI Models (Spaces API)</summary>
 
-Supported commands are: `click()`, `type()`, `mouse_move()`
+Supported commands are: `click()`, `locate()`, `mouse_move()`
 | Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `AskUI/PTA-1` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI](https://www.askui.com/) which to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production applications |
@@ -226,7 +232,7 @@ Supported commands are: `click()`, `type()`, `mouse_move()`
 <details>
   <summary>Self Hosted UI Models</summary>
 
-Supported commands are: `click()`, `type()`, `mouse_move()`, `get()`, `act()`
+Supported commands are: `click()`, `locate()`, `mouse_move()`, `get()`, `act()`
 | Model Name  | Info | Execution Speed |  Security | Cost | Reliability | 
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `tars` | [`UI-Tars`](https://github.com/bytedance/UI-TARS) is a Large Action Model (LAM) based on Qwen2 and fine-tuned by [ByteDance](https://www.bytedance.com/) on UI data e.g. "`Book me a flight to rom`" | slow, >1s per step | Self-hosted | Depening on infrastructure | Out-of-the-box not recommended for production usage |
@@ -269,7 +275,7 @@ agent.tools.clipboard.copy("...")
 result = agent.tools.clipboard.paste()
 ```
 
-### 📜 Logging & Reporting
+### 📜 Logging
 
 You want a better understanding of what you agent is doing? Set the `log_level` to DEBUG.
 
@@ -280,13 +286,85 @@ with VisionAgent(log_level=logging.DEBUG) as agent:
     agent...
 ```
 
+### 📜 Reporting
+
+You want to see a report of the actions your agent took? Register a reporter using the `reporters` parameter.
+
+```python
+from typing import Optional, Union
+from typing_extensions import override
+from askui.reporting import SimpleHtmlReporter
+from PIL import Image
+
+with VisionAgent(reporters=[SimpleHtmlReporter()]) as agent:
+    agent...
+```
+
+You can also create your own reporter by implementing the `Reporter` interface.
+
+```python
+from askui.reporting import Reporter
+
+class CustomReporter(Reporter):
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict, list],
+        image: Optional[Image.Image] = None,
+    ) -> None:
+        # adding message to the report (see implementation of `SimpleHtmlReporter` as an example)
+        pass
+
+    @override
+    def generate(self) -> None:
+        # generate the report if not generated live (see implementation of `SimpleHtmlReporter` as an example)
+        pass
+
+
+with VisionAgent(reporters=[CustomReporter()]) as agent:
+    agent...
+```
+
+You can also use multiple reporters at once. Their `generate()` and `add_message()` methods will be called in the order of the reporters in the list.
+
+```python
+with VisionAgent(reporters=[SimpleHtmlReporter(), CustomReporter()]) as agent:
+    agent...
+```
+
 ### 🖥️ Multi-Monitor Support
 
-You have multiple monitors? Choose which one to automate by setting `display` to 1 or 2.
+You have multiple monitors? Choose which one to automate by setting `display` to `1`, `2` etc. To find the correct display or monitor, you have to play play around a bit setting it to different values. We are going to improve this soon. By default, the agent will use display 1.
 
 ```python
 with VisionAgent(display=1) as agent:
     agent...
+```
+
+### 🎯 Locating elements
+
+If you have a hard time locating (clicking, moving mouse to etc.) elements by simply using text, e.g.,
+
+```python
+agent.click("Password textfield")
+agent.type("********")
+```
+
+you can build more sophisticated locators.
+
+**⚠️ Warning:** Support can vary depending on the model you are using. Currently, only, the `askui` model provides best support for locators. This model is chosen by default if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` environment variables are set and it is not overridden using the  `model_name` parameter.
+
+Example:
+
+```python
+from askui import locators as loc
+
+password_textfield_label = loc.Text("Password")
+password_textfield = loc.Class("textfield").right_of(password_textfield_label)
+
+agent.click(password_textfield)
+agent.type("********")
 ```
 
 
