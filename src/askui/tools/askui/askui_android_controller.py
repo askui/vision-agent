@@ -94,7 +94,7 @@ class AskUiAndroidControllerClient:
         self._displays = self.get_connected_displays()
         if not self._displays:
             raise RuntimeError("No displays found")
-        self.set_display_by_index(1)
+        self.set_display_by_index(0)
         self._add_report_message("AgentOS", f"connect() to {self._device.serial}")
 
     def disconnect(self) -> None:
