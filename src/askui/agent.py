@@ -17,7 +17,7 @@ from .models.anthropic.claude import ClaudeHandler
 from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models.router import ModelRouter, Point
-from .reporting import CompositeReporter, Reporter, SimpleHtmlReporter
+from .reporting import CompositeReporter, Reporter
 import time
 from dotenv import load_dotenv
 from PIL import Image
@@ -38,7 +38,7 @@ class VisionAgent:
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
-        self._reporter = CompositeReporter(reports=[SimpleHtmlReporter()] if reporters is None else reporters)
+        self._reporter = CompositeReporter(reports=reporters or [])
         self.model_router = (
             ModelRouter(log_level=log_level, reporter=self._reporter)
             if model_router is None
