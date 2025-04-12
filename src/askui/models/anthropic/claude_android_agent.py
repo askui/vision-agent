@@ -20,6 +20,7 @@ from askui.tools.anthropic.android import (
     AndroidGetCursorPositionTool,
     DebugDrawTool,
 )
+from askui.tools.anthropic.file_tools import FileWriteTool, FileReadTool
 from askui.tools.askui.askui_android_controller import AskUiAndroidControllerClient
 from askui.utils import ANDROID_KEY, resize_to_max_edge
 
@@ -54,14 +55,14 @@ class ClaudeAndroidAgent(ClaudeAgent):
         self,
         controller_client: AskUiAndroidControllerClient,
         report: SimpleReportGenerator | None = None,
+        file_tool_base_dir_path: str | None = None,
     ) -> None:
+        self.file_writer_base_dir_path = None
         tools = [
             AndroidScreenshotTool(controller_client),
             AndroidTapTool(controller_client),
             AndroidSwipeTool(controller_client),
-            AndroidDragAndDropTool(
-                controller_client
-            ),
+            AndroidDragAndDropTool(controller_client),
             AndroidRollTool(controller_client),
             AndroidMoveMouseTool(controller_client),
             DebugDrawTool(controller_client),
@@ -70,8 +71,15 @@ class ClaudeAndroidAgent(ClaudeAgent):
             AndroidGetCursorPositionTool(controller_client),
             AndroidGetConnectedDisplaysTool(controller_client),
             AndroidSelectDisplayTool(controller_client),
-
         ]
+
+        if file_tool_base_dir_path:
+            tools.extend(
+                [
+                    FileWriteTool(file_tool_base_dir_path),
+                    FileReadTool(file_tool_base_dir_path),
+                ]
+            )
         super().__init__(
             tools=tools,
             system_prompt=ANDROID_SYSTEM_PROMPT,

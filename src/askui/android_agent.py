@@ -30,6 +30,7 @@ class AndroidVisionAgent:
         self.client = AskUiAndroidControllerClient(self.report)
         self.client.connect()
         self.tools = AgentToolbox(os_controller=self.client)
+        self.claudeAgent =  ClaudeAndroidAgent(self.client, self.report)
 
     def act(self, goal: str, model_name=None) -> None:
         """
@@ -61,8 +62,7 @@ class AndroidVisionAgent:
             raise Exception(
                 '"ANTHROPIC_API_KEY" not set. Please set it in your environment variables.'
             )
-        agent = ClaudeAndroidAgent(self.client, self.report)
-        return agent.run(goal)
+        return self.claudeAgent.run(goal)
 
     def close(self):
         if self.client:
