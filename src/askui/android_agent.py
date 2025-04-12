@@ -21,6 +21,7 @@ class AndroidVisionAgent:
         log_level=logging.INFO,
         enable_report: bool = False,
         report_callback: Callable[[str | dict[str, Any]], None] | None = None,
+        file_tool_base_dir_path: str | None = None,
     ):
         load_dotenv()
         configure_logging(level=log_level)
@@ -30,7 +31,7 @@ class AndroidVisionAgent:
         self.client = AskUiAndroidControllerClient(self.report)
         self.client.connect()
         self.tools = AgentToolbox(os_controller=self.client)
-        self.claudeAgent =  ClaudeAndroidAgent(self.client, self.report)
+        self.claudeAgent =  ClaudeAndroidAgent(self.client, self.report, file_tool_base_dir_path)
 
     def act(self, goal: str, model_name=None) -> None:
         """
