@@ -17,7 +17,7 @@ from ..utils import process_exists, wait_for_port
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.utils import draw_point_on_image
+from askui.utils.image_utils import draw_point_on_image
 
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs

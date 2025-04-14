@@ -2,9 +2,9 @@ from typing import Literal, TypedDict
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
 
-from .base import BaseAnthropicTool, ToolError, ToolResult
+from ...utils.image_utils import image_to_base64, scale_coordinates_back, scale_image_with_padding
 
-from ..utils import image_to_base64, scale_image_with_padding, scale_coordinates_back
+from .base import BaseAnthropicTool, ToolError, ToolResult
 
 
 Action = Literal[

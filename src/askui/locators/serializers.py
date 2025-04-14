@@ -1,6 +1,6 @@
 from typing_extensions import NotRequired, TypedDict
 
-from askui.locators.image_utils import ImageSource
+from askui.utils.image_utils import ImageSource
 from askui.models.askui.ai_element_utils import AiElementCollection, AiElementNotFound
 from .locators import (
     ImageMetadata,

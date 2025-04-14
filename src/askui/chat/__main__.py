@@ -7,12 +7,14 @@ from askui import VisionAgent
 import logging
 from askui.chat.click_recorder import ClickRecorder
 from askui.reporting import Reporter
-from askui.utils import base64_to_image, draw_point_on_image
+from askui.utils.image_utils import base64_to_image
 import json
 from datetime import datetime
 import os
 import glob
 import re
+
+from askui.utils.image_utils import draw_point_on_image
 
 
 st.set_page_config(
@@ -199,8 +201,8 @@ def rerun():
                                 screenshot, (x, y)
                             )
                             element_description = agent.get(
-                                prompt,
-                                screenshot=screenshot_with_crosshair,
+                                query=prompt,
+                                image=screenshot_with_crosshair,
                                 model_name="anthropic-claude-3-5-sonnet-20241022",
                             )
                             write_message(

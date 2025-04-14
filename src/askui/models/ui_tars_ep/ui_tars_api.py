@@ -1,11 +1,13 @@
 import re
 import os
 import pathlib
-from typing import Union
+from typing import Any, Union
 from openai import OpenAI
 from askui.reporting import Reporter
-from askui.utils import image_to_base64
+from askui.utils.image_utils import image_to_base64
 from PIL import Image
+
+from askui.utils.image_utils import ImageSource
 from .prompts import PROMPT, PROMPT_QA
 from .parser import UITarsEPMessage
 import time
@@ -23,7 +25,7 @@ class UITarsAPIHandler:
                 api_key=os.getenv("TARS_API_KEY")
             )
 
-    def predict(self, screenshot, instruction: str, prompt: str):
+    def _predict(self, image_url: str, instruction: str, prompt: str) -> Any:
         chat_completion = self.client.chat.completions.create(
         model="tgi",
         messages=[
@@ -33,7 +35,7 @@ class UITarsAPIHandler:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/png;base64,{image_to_base64(screenshot)}"
+                            "url": image_url,
                         }
                     },
                     {
@@ -56,7 +58,11 @@ class UITarsAPIHandler:
 
     def locate_prediction(self, image: Union[pathlib.Path, Image.Image], locator: str) -> tuple[int | None, int | None]:
         askui_locator = f'Click on "{locator}"'
-        prediction = self.predict(image, askui_locator, PROMPT)
+        prediction = self._predict(
+            image_url=f"data:image/png;base64,{image_to_base64(image)}",
+            instruction=askui_locator,
+            prompt=PROMPT,
+        )
         pattern = r"click\(start_box='(\(\d+,\d+\))'\)"
         match = re.search(pattern, prediction)
         if match:
@@ -70,10 +76,14 @@ class UITarsAPIHandler:
             return x, y
         return None, None
 
-    def get_prediction(self, image: Image.Image, instruction: str) -> str:
-        return self.predict(image, instruction, PROMPT_QA)
+    def get_inference(self, image: ImageSource, query: str) -> str:
+        return self._predict(
+            image_url=image.to_data_url(),
+            instruction=query,
+            prompt=PROMPT_QA,
+        )
 
-    def act(self, controller_client, goal: str) -> str:
+    def act(self, controller_client, goal: str) -> None:
         screenshot = controller_client.screenshot()
         self.act_history = [
             {

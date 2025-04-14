@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from typing_extensions import override
 from PIL import Image
 
@@ -8,6 +9,7 @@ from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSeriali
 from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.reporting import Reporter
+from askui.utils.image_utils import ImageSource
 from .askui.api import AskUiInferenceApi
 from .anthropic.claude import ClaudeHandler
 from .huggingface.spaces_api import HFSpacesHandler
@@ -113,15 +115,12 @@ class ModelRouter:
         grounding_model_routers: list[GroundingModelRouter] | None = None,
     ):
         self._reporter = reporter
-        self.grounding_model_routers = grounding_model_routers or [
-            AskUiModelRouter(
-                inference_api=AskUiInferenceApi(
-                    locator_serializer=AskUiLocatorSerializer(
-                        ai_element_collection=AiElementCollection(),
-                    )
-                )
-            )
-        ]
+        self.askui = AskUiInferenceApi(
+            locator_serializer=AskUiLocatorSerializer(
+                ai_element_collection=AiElementCollection(),
+            ),
+        )
+        self.grounding_model_routers = grounding_model_routers or [AskUiModelRouter(inference_api=self.askui)]
         self.claude = ClaudeHandler(log_level)
         self.huggingface_spaces = HFSpacesHandler()
         self.tars = UITarsAPIHandler(self._reporter)
@@ -136,14 +135,24 @@ class ModelRouter:
         raise AutomationError(f"Invalid model name for act: {model_name}")
 
     def get_inference(
-        self, screenshot: Image.Image, locator: str, model_name: str | None = None
-    ):
+        self,
+        query: str,
+        image: ImageSource,
+        response_schema: dict[str, Any] | None = None,
+        model_name: str | None = None,
+    ) -> Any:
         if self.tars.authenticated and model_name == "tars":
-            return self.tars.get_prediction(screenshot, locator)
+            return self.tars.get_inference(image=image, query=query)
         if self.claude.authenticated and (
             model_name == "anthropic-claude-3-5-sonnet-20241022" or model_name is None
         ):
-            return self.claude.get_inference(screenshot, locator)
+            return self.claude.get_inference(image=image, query=query)
+        if self.askui.authenticated and (model_name is None or model_name == "askui"):
+            return self.askui.get_inference(
+                image=image,
+                query=query,
+                response_schema=response_schema,
+            )
         raise AutomationError(
             f"Executing get commands requires to authenticate with an Automation Model Provider supporting it: {model_name}"
         )

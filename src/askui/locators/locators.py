@@ -6,7 +6,7 @@ import uuid
 from PIL import Image as PILImage
 from pydantic import BaseModel, Field
 
-from askui.locators.image_utils import ImageSource
+from askui.utils.image_utils import ImageSource
 from askui.locators.relatable import Relatable
 
 

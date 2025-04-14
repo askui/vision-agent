@@ -1,11 +1,12 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
+from askui.utils.image_utils import ImageSource
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -172,17 +173,25 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.tools.os.type(text) # type: ignore
 
-    @telemetry.record_call(exclude={"instruction", "screenshot"})
-    def get(self, instruction: str, model_name: Optional[str] = None, screenshot: Optional[Image.Image] = None) -> str:
+    @telemetry.record_call(exclude={"query", "image"})
+    def get(
+        self,
+        query: str,
+        image: Optional[ImageSource] = None,
+        response_schema: Optional[dict[str, Any]] = None,
+        model_name: Optional[str] = None,
+    ) -> Any:
         """
-        Retrieves text or information from the screen based on the provided instruction.
+        Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
 
         Parameters:
-            instruction (str): The instruction describing what information to retrieve.
+            query (str): The query describing what information to retrieve.
+            image (ImageSource | None): The image to extract information from. Optional. Defaults to a screenshot of the current screen.
+            response_schema (dict[str, Any] | None): A JSON object schema of the response to be returned. Optional. Defaults to `{"type": "string"}`, i.e., a string is returned by default.
             model_name (str | None): The model name to be used for information extraction. Optional.
 
         Returns:
-            str: The extracted text or information.
+            Any: The extracted information.
 
         Example:
         ```python
@@ -192,11 +201,16 @@ class VisionAgent:
             error_message = agent.get("What does the error message say?")
         ```
         """
-        self._reporter.add_message("User", f'get: "{instruction}"')
-        logger.debug("VisionAgent received instruction to get '%s'", instruction)
-        if screenshot is None:
-            screenshot = self.tools.os.screenshot() # type: ignore
-        response = self.model_router.get_inference(screenshot, instruction, model_name)
+        self._reporter.add_message("User", f'get: "{query}"')
+        logger.debug("VisionAgent received instruction to get '%s'", query)
+        if image is None:
+            image = ImageSource(self.tools.os.screenshot()) # type: ignore
+        response = self.model_router.get_inference(
+            image=image,
+            query=query,
+            model_name=model_name,
+            response_schema=response_schema,
+        )
         if self._reporter is not None:
             self._reporter.add_message("Agent", response)
         return response

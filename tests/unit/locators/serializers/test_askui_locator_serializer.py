@@ -11,7 +11,7 @@ from askui.locators import Class, Description, Text, Image
 from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.utils import image_to_base64
+from askui.utils.image_utils import image_to_base64
 from askui.locators.relatable import CircularDependencyError
 
 
