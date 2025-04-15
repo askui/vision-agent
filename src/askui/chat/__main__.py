@@ -203,7 +203,7 @@ def rerun():
                             element_description = agent.get(
                                 query=prompt,
                                 image=screenshot_with_crosshair,
-                                model_name="anthropic-claude-3-5-sonnet-20241022",
+                                model="anthropic-claude-3-5-sonnet-20241022",
                             )
                             write_message(
                                 message["role"],
@@ -213,7 +213,7 @@ def rerun():
                             )
                             agent.mouse_move(
                                 locator=element_description.replace('"', ""),
-                                model_name="anthropic-claude-3-5-sonnet-20241022",
+                                model="anthropic-claude-3-5-sonnet-20241022",
                             )
                         else:
                             write_message(
@@ -306,7 +306,7 @@ if act_prompt := st.chat_input("Ask AI"):
         log_level=logging.DEBUG,
         reporters=[reporter],
     ) as agent:
-        agent.act(act_prompt, model_name="claude")
+        agent.act(act_prompt, model="claude")
         st.rerun()
 
 if st.button("Rerun"):

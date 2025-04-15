@@ -20,16 +20,16 @@ class BrowserContextResponse(JsonSchemaBase):
     browser_type: Literal["chrome", "firefox", "edge", "safari"]
 
 
-@pytest.mark.parametrize("model_name", [None, models.ASKUI, models.ANTHROPIC])
+@pytest.mark.parametrize("model", [None, models.ASKUI, models.ANTHROPIC])
 def test_get(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
-    model_name: str,
+    model: str,
 ) -> None:
     url = vision_agent.get(
         "What is the current url shown in the url bar?",
         ImageSource(github_login_screenshot),
-        model_name=model_name,
+        model=model,
     )
     assert url == "github.com/login"
 
@@ -44,7 +44,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model_name=models.ASKUI,
+            model=models.ASKUI,
         )
 
 
@@ -58,21 +58,21 @@ def test_get_with_response_schema_without_required_with_askui_model_raises(
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model_name=models.ASKUI,
+            model=models.ASKUI,
         )
 
 
-@pytest.mark.parametrize("model_name", [None, models.ASKUI])
+@pytest.mark.parametrize("model", [None, models.ASKUI])
 def test_get_with_response_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
-    model_name: str,
+    model: str,
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
         ImageSource(github_login_screenshot),
         response_schema=UrlResponse,
-        model_name=model_name,
+        model=model,
     )
     assert isinstance(response, UrlResponse)
     assert response.url in ["https://github.com/login", "github.com/login"]
@@ -87,22 +87,22 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model_name=models.ANTHROPIC,
+            model=models.ANTHROPIC,
         )
 
 
-@pytest.mark.parametrize("model_name", [None, models.ASKUI])
+@pytest.mark.parametrize("model", [None, models.ASKUI])
 @pytest.mark.skip("Skip as there is currently a bug on the api side not supporting definitions used for nested schemas")
 def test_get_with_nested_and_inherited_response_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
-    model_name: str,
+    model: str,
 ) -> None:
     response = vision_agent.get(
         "What is the current browser context?",
         ImageSource(github_login_screenshot),
         response_schema=BrowserContextResponse,
-        model_name=model_name,
+        model=model,
     )
     assert isinstance(response, BrowserContextResponse)
     assert response.page_context.url in ["https://github.com/login", "github.com/login"]

@@ -11,7 +11,7 @@ from .utils import extract_click_coordinates
 
 class ClaudeHandler:
     def __init__(self, log_level):
-        self.model_name = "claude-3-5-sonnet-20241022"
+        self.model = "claude-3-5-sonnet-20241022"
         self.client = anthropic.Anthropic()
         self.resolution = (1280, 800)
         self.log_level = log_level
@@ -21,7 +21,7 @@ class ClaudeHandler:
 
     def _inference(self, base64_image: str, prompt: str, system_prompt: str) -> list[anthropic.types.ContentBlock]:
         message = self.client.messages.create(
-            model=self.model_name,
+            model=self.model,
             max_tokens=1000,
             temperature=0,
             system=system_prompt,

@@ -130,7 +130,7 @@ You can test the Vision Agent with Huggingface models via their Spaces API. Plea
 
 **Example Code:**
 ```python
-agent.click("search field", model_name="OS-Copilot/OS-Atlas-Base-7B")
+agent.click("search field", model="OS-Copilot/OS-Atlas-Base-7B")
 ```
 
 ### 3c. Host your own **AI Models**
@@ -143,7 +143,7 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
 
-3. Step: Use the `model_name="tars"` parameter in your `click()`, `get()` and `act()` etc. commands.
+3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands.
 
 
 ## ▶️ Start Building
@@ -171,7 +171,7 @@ with VisionAgent() as agent:
 
 ### 🎛️ Model Selection
 
-Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model_name` parameter.
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model` parameter.
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
@@ -182,7 +182,7 @@ Instead of relying on the default model for the entire automation script, you ca
 | `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 
 
-**Example:** `agent.click("Preview", model_name="askui-combo")`
+**Example:** `agent.click("Preview", model="askui-combo")`
 
 <details>
   <summary>AskUI AI Models</summary>
@@ -353,7 +353,7 @@ agent.type("********")
 
 you can build more sophisticated locators.
 
-**⚠️ Warning:** Support can vary depending on the model you are using. Currently, only, the `askui` model provides best support for locators. This model is chosen by default if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` environment variables are set and it is not overridden using the  `model_name` parameter.
+**⚠️ Warning:** Support can vary depending on the model you are using. Currently, only, the `askui` model provides best support for locators. This model is chosen by default if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` environment variables are set and it is not overridden using the  `model` parameter.
 
 Example:
 
