@@ -13,8 +13,8 @@ from askui.utils.image_utils import ImageSource
 from .askui.api import AskUiInferenceApi
 from .anthropic.claude import ClaudeHandler
 from .huggingface.spaces_api import HFSpacesHandler
+from ..exceptions import AutomationError, ElementNotFoundError
 from ..logger import logger
-from ..utils import AutomationError, ElementNotFoundError
 from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
 from abc import ABC, abstractmethod

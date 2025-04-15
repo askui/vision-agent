@@ -12,7 +12,7 @@ from askui.locators import (
     AiElement,
 )
 from askui.locators.locators import Image
-from askui.utils import ElementNotFoundError
+from askui.exceptions import ElementNotFoundError
 
 
 @pytest.mark.skip("Skipping tests for now")

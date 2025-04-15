@@ -5,7 +5,7 @@ from PIL import Image
 from askui.utils.image_utils import ImageSource, scale_coordinates_back, scale_image_with_padding
 
 from ...logger import logger
-from ...utils import ElementNotFoundError
+from ...exceptions import ElementNotFoundError
 from ..utils import extract_click_coordinates, image_to_base64
 
 

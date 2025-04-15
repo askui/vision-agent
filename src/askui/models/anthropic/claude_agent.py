@@ -22,7 +22,7 @@ from anthropic.types.beta import (
 
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logger import logger
-from ...utils import truncate_long_strings
+from ...utils.str_utils import truncate_long_strings
 from askui.reporting import Reporter
 
 

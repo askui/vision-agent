@@ -4,7 +4,7 @@ import pathlib
 import pytest
 from PIL import Image as PILImage
 from askui.locators.locators import AiElement
-from askui.utils import ElementNotFoundError
+from askui.exceptions import ElementNotFoundError
 from askui.agent import VisionAgent
 from askui.locators import (
     Description,

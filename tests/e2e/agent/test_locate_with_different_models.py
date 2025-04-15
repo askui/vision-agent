@@ -9,7 +9,7 @@ from askui.locators import (
     Text,
     AiElement,
 )
-from askui.utils import AutomationError
+from askui.exceptions import AutomationError
 
 
 class TestVisionAgentLocateWithDifferentModels:
