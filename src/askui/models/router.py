@@ -142,12 +142,16 @@ class ModelRouter:
         model_name: str | None = None,
     ) -> Any:
         if self.tars.authenticated and model_name == "tars":
+            if response_schema is not None:
+                raise NotImplementedError("Response schema is not yet supported for UI-TARS models.")
             return self.tars.get_inference(image=image, query=query)
         if self.claude.authenticated and (
-            model_name == "anthropic-claude-3-5-sonnet-20241022" or model_name is None
+            model_name == "anthropic-claude-3-5-sonnet-20241022"
         ):
+            if response_schema is not None:
+                raise NotImplementedError("Response schema is not yet supported for Anthropic models.")
             return self.claude.get_inference(image=image, query=query)
-        if self.askui.authenticated and (model_name is None or model_name == "askui"):
+        if self.askui.authenticated and (model_name == "askui" or model_name is None):
             return self.askui.get_inference(
                 image=image,
                 query=query,
