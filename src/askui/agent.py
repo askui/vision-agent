@@ -1,7 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Any, Literal, Optional
-
+from typing import Annotated, Literal, Optional, Type
 from pydantic import Field, validate_call
 
 from askui.container import telemetry
@@ -22,6 +21,7 @@ from .reporting import CompositeReporter, Reporter
 import time
 from dotenv import load_dotenv
 from PIL import Image
+from .models.types import JsonSchema
 
 
 class InvalidParameterError(Exception):
@@ -173,32 +173,60 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.tools.os.type(text) # type: ignore
 
-    @telemetry.record_call(exclude={"query", "image"})
+    @telemetry.record_call(exclude={"query", "image", "response_schema"})
     def get(
         self,
         query: str,
         image: Optional[ImageSource] = None,
-        response_schema: Optional[dict[str, Any]] = None,
+        response_schema: Type[JsonSchema] | None = None,
         model_name: Optional[str] = None,
-    ) -> Any:
+    ) -> JsonSchema | str:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
 
         Parameters:
             query (str): The query describing what information to retrieve.
             image (ImageSource | None): The image to extract information from. Optional. Defaults to a screenshot of the current screen.
-            response_schema (dict[str, Any] | None): A JSON object schema of the response to be returned. Optional. Defaults to `{"type": "string"}`, i.e., a string is returned by default.
+            response_schema (type[ResponseSchema] | None): A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
             model_name (str | None): The model name to be used for information extraction. Optional.
 
         Returns:
-            Any: The extracted information.
+            ResponseSchema | str: The extracted information, either as a Pydantic model instance or a string.
 
         Example:
         ```python
+        from askui import JsonSchemaBase
+
+        class UrlResponse(JsonSchemaBase):
+            url: str
+
         with VisionAgent() as agent:
-            price = agent.get("What is the price displayed?")
-            username = agent.get("What is the username shown in the profile?")
-            error_message = agent.get("What does the error message say?")
+            # Get URL as string
+            url = agent.get("What is the current url shown in the url bar?")
+            
+            # Get URL as Pydantic model
+            response = agent.get(
+                "What is the current url shown in the url bar?",
+                response_schema=UrlResponse
+            )
+            print(response.url)
+        
+        # Indirectly inheriting from JsonSchemaBase
+        class PageContextResponse(UrlResponse):
+            title: str
+        
+        # Nested JsonSchemaBase
+        class BrowserContextResponse(JsonSchemaBase):
+            page_context: PageContextResponse
+            browser_type: str
+        
+        with VisionAgent() as agent:
+            response = agent.get(
+                "What is the current browser context?",
+                response_schema=BrowserContextResponse
+            )
+            print(response.page_context.url)
+            print(response.browser_type)
         ```
         """
         self._reporter.add_message("User", f'get: "{query}"')
@@ -212,7 +240,8 @@ class VisionAgent:
             response_schema=response_schema,
         )
         if self._reporter is not None:
-            self._reporter.add_message("Agent", response)
+            message_content = response if isinstance(response, str) else response.model_dump()
+            self._reporter.add_message("Agent", message_content)
         return response
     
     @telemetry.record_call()

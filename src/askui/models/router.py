@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Type
 from typing_extensions import override
 from PIL import Image
 
@@ -8,6 +8,7 @@ from askui.locators.locators import AiElement, Description, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
 from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.types import JsonSchema
 from askui.reporting import Reporter
 from askui.utils.image_utils import ImageSource
 from .askui.api import AskUiInferenceApi
@@ -138,9 +139,9 @@ class ModelRouter:
         self,
         query: str,
         image: ImageSource,
-        response_schema: dict[str, Any] | None = None,
+        response_schema: Type[JsonSchema] | None = None,
         model_name: str | None = None,
-    ) -> Any:
+    ) -> JsonSchema | str:
         if self.tars.authenticated and model_name == "tars":
             if response_schema is not None:
                 raise NotImplementedError("Response schema is not yet supported for UI-TARS models.")

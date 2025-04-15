@@ -2,14 +2,15 @@ import os
 import base64
 import pathlib
 import requests
-
+import json as json_lib
 from PIL import Image
-from typing import Any, Union
+from typing import Any, Type, Union
 from askui.utils.image_utils import ImageSource
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.locators.locators import Locator
 from askui.utils.image_utils import image_to_base64
 from askui.logger import logger
+from ..types import JsonSchema
 
 
 
@@ -65,14 +66,23 @@ class AskUiInferenceApi:
         position = actions[0]["position"]
         return int(position["x"]), int(position["y"])
 
-    def get_inference(self, image: ImageSource, query: str, response_schema: dict[str, Any] | None = None) -> Any:
+    def get_inference(
+        self, 
+        image: ImageSource, 
+        query: str, 
+        response_schema: Type[JsonSchema] | None = None
+    ) -> JsonSchema | str:
         json: dict[str, Any] = {
             "image": image.to_data_url(),
             "prompt": query,
         }
         if response_schema is not None:
             json["config"] = {
-                "json_schema": response_schema
+                "json_schema": response_schema.model_json_schema()
             }
+            logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
         content = self._request(endpoint="vqa/inference", json=json)
-        return content["data"]["response"]
+        response = content["data"]["response"]
+        if response_schema is not None:
+            return response_schema.model_validate(response)
+        return response
