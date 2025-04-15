@@ -2,11 +2,11 @@ import os
 import anthropic
 from PIL import Image
 
-from askui.utils.image_utils import ImageSource, scale_coordinates_back, scale_image_with_padding
+from askui.utils.image_utils import ImageSource, image_to_base64, scale_coordinates_back, scale_image_with_padding
 
 from ...logger import logger
 from ...exceptions import ElementNotFoundError
-from ..utils import extract_click_coordinates, image_to_base64
+from .utils import extract_click_coordinates
 
 
 class ClaudeHandler:

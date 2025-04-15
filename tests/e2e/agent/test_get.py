@@ -19,6 +19,7 @@ def test_get(
     assert url == "github.com/login"
 
 
+@pytest.mark.skip("Skip for now as this pops up in our observability systems as a false positive")
 def test_get_with_response_schema_without_additional_properties_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -36,6 +37,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
         )
 
 
+@pytest.mark.skip("Skip for now as this pops up in our observability systems as a false positive")
 def test_get_with_response_schema_without_required_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
