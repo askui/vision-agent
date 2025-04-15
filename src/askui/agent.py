@@ -185,13 +185,22 @@ class VisionAgent:
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
 
         Parameters:
-            query (str): The query describing what information to retrieve.
-            image (ImageSource | None): The image to extract information from. Optional. Defaults to a screenshot of the current screen.
-            response_schema (type[ResponseSchema] | None): A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
-            model_name (str | None): The model name to be used for information extraction. Optional.
+            query (str): 
+                The query describing what information to retrieve.
+            image (ImageSource | None): 
+                The image to extract information from. Optional. Defaults to a screenshot of the current screen.
+            response_schema (type[ResponseSchema] | None): 
+                A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
+            model_name (str | None):
+                The model name to be used for information extraction. Optional.
+                Note: response_schema is only supported with models that support JSON output (like the default askui model).
 
         Returns:
             ResponseSchema | str: The extracted information, either as a Pydantic model instance or a string.
+
+        Limitations:
+            - Nested Pydantic schemas are not currently supported
+            - Schema support is only available with "askui" model (default model if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` are set) at the moment
 
         Example:
         ```python
@@ -210,23 +219,6 @@ class VisionAgent:
                 response_schema=UrlResponse
             )
             print(response.url)
-        
-        # Indirectly inheriting from JsonSchemaBase
-        class PageContextResponse(UrlResponse):
-            title: str
-        
-        # Nested JsonSchemaBase
-        class BrowserContextResponse(JsonSchemaBase):
-            page_context: PageContextResponse
-            browser_type: str
-        
-        with VisionAgent() as agent:
-            response = agent.get(
-                "What is the current browser context?",
-                response_schema=BrowserContextResponse
-            )
-            print(response.page_context.url)
-            print(response.browser_type)
         ```
         """
         self._reporter.add_message("User", f'get: "{query}"')
