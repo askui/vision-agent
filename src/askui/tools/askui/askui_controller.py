@@ -24,6 +24,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AgentOSBinaryNotFoundException(Exception):
     pass
+
+class UnsupportedAskUISuiteError(Exception):
+    pass
+
 class AskUISuiteNotInstalledError(Exception):
     pass
 
@@ -68,43 +72,35 @@ class AskUiControllerServer:
 
     def _find_remote_device_controller(self) -> pathlib.Path:
         if self._settings.installation_directory is not None and self._settings.component_registry_file is None:
-            logger.warning("Outdated AskUI Suite detected. Please update to the latest version.")
-            askui_remote_device_controller_path = self._find_remote_device_controller_by_legacy_path()
-            if not os.path.isfile(askui_remote_device_controller_path):
-                raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
-            return askui_remote_device_controller_path
+            raise UnsupportedAskUISuiteError('Outdated AskUI Suite detected. Please update to the latest version.')
         return self._find_remote_device_controller_by_component_registry()
     
     def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
-        assert self._settings.component_registry_file is not None, "Component registry file is not set"
+        if self._settings.component_registry_file is None:
+            raise AskUISuiteNotInstalledError('AskUI Suite not installed. Please install AskUI Suite to use AskUI Vision Agent.')
         component_registry = AskUiComponentRegistry.model_validate_json(self._settings.component_registry_file.read_text())
         askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
         if not os.path.isfile(askui_remote_device_controller_path):
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
         return askui_remote_device_controller_path
-        
-    def _find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
-        assert self._settings.installation_directory is not None, "Installation directory is not set"
-        match sys.platform:
-            case 'win32':
-                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "resources", "assets", "binaries", "AskuiRemoteDeviceController.exe"))
-            case 'darwin':
-                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "askui-ui-controller.app", "Contents", "Resources", "assets", "binaries", "AskuiRemoteDeviceController"))
-            case 'linux':
-                return pathlib.Path(os.path.join(self._settings.installation_directory, "Binaries", "resources", "assets", "binaries", "AskuiRemoteDeviceController"))
-            case _:
-                raise NotImplementedError(f"Platform {sys.platform} not supported by AskUI Remote Device Controller")
-            
-    def __start_process(self, path):
-        self.process = subprocess.Popen(path)
+                    
+    def __start_process(self, path, verbose: bool = False) -> None:
+        if verbose:
+            self.process = subprocess.Popen(path)
+        else:
+            self.process = subprocess.Popen(
+                path,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
         wait_for_port(23000)
         
-    def start(self, clean_up=False):
+    def start(self, clean_up=False, verbose: bool = False) -> None:
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
         logger.debug("Starting AskUI Remote Device Controller: %s", remote_device_controller_path)
-        self.__start_process(remote_device_controller_path)
+        self.__start_process(remote_device_controller_path, verbose=verbose)
         
     def clean_up(self):
         if sys.platform == 'win32':
@@ -131,6 +127,9 @@ class AskUiControllerClient:
         self.display = display
         self.report = report
 
+    def _assert_stub_initialized(self):
+        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+
     @telemetry.record_call()
     def connect(self) -> None:
         self.channel = grpc.insecure_channel('localhost:23000', options=[
@@ -143,12 +142,12 @@ class AskUiControllerClient:
 
     def _run_recorder_action(self, acion_class_id: controller_v1_pbs.ActionClassID, action_parameters: controller_v1_pbs.ActionParameters):
         time.sleep(self.pre_action_wait)
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._assert_stub_initialized()
         response: controller_v1_pbs.Response_RunRecordedAction = self.stub.RunRecordedAction(controller_v1_pbs.Request_RunRecordedAction(sessionInfo=self.session_info, actionClassID=acion_class_id, actionParameters=action_parameters))
         
         time.sleep((response.requiredMilliseconds / 1000))    
         for num_retries in range(self.max_retries):
-            assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+            self._assert_stub_initialized()
             poll_response: controller_v1_pbs.Response_Poll = self.stub.Poll(controller_v1_pbs.Request_Poll(sessionInfo=self.session_info, pollEventID=controller_v1_pbs.PollEventID.PollEventID_ActionFinished))
             if poll_response.pollEventParameters.actionFinished.actionID == response.actionID:
                 break
@@ -178,7 +177,7 @@ class AskUiControllerClient:
 
     @telemetry.record_call()
     def screenshot(self, report: bool = True) -> Image.Image:
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._assert_stub_initialized()
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
@@ -287,8 +286,126 @@ class AskUiControllerClient:
 
     @telemetry.record_call()
     def set_display(self, displayNumber: int = 1) -> None:
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._assert_stub_initialized()
         if self.report is not None: 
             self.report.add_message("AgentOS", f"set_display({displayNumber})")
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
         self.display = displayNumber
+
+    @telemetry.record_call()
+    def get_cursor_position(self) -> tuple[int, int]:
+        """Get the current cursor position from the controller.
+        Returns:
+            tuple[int, int]: Tuple containing the x and y coordinates of the cursor.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_cursor_position()")
+        response = self.stub.GetMousePosition(controller_v1_pbs.Request_Void())
+        return (response.x, response.y)
+    
+    @telemetry.record_call(exclude_response = True)
+    def get_display_information(self) -> List[controller_v1_pbs.DisplayInformation]:
+        """Get display information from the controller.
+        Returns:
+            List[controller_v1_pbs.DisplayInformation]: List of display information objects.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_display_information()")
+        response = self.stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        return response.displays
+    
+    @telemetry.record_call(exclude_response = True)
+    def get_process_list(self, has_window:bool = False) -> List[controller_v1_pbs.ProcessInfo]:
+        """Get process list from the controller.
+        Args:
+            has_window (bool, optional): If True, only processes with windows are returned. Defaults to False.
+        Returns:
+            List[controller_v1_pbs.ProcessInfo]: List of process information objects.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_process_list()")
+        response = self.stub.GetProcessList(controller_v1_pbs.Request_GetProcessList(getExtendedInfo=True))
+        if has_window:
+           return [process for process in response.processes if process.extendedInfo.hasWindow is True]
+        return response.processes
+    
+    @telemetry.record_call(exclude_response = True)
+    def get_windows_list(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
+        """"Get window list from the controller.
+        Args:
+            process_id (int): Process ID to get windows for.
+        Returns:
+            List[controller_v1_pbs.WindowInfo]: List of window information objects.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_windows_list()")
+        response = self.stub.GetWindowList(controller_v1_pbs.Request_GetWindowList(processID=process_id))
+        return response.windows
+    
+    @telemetry.record_call(exclude_response = True)
+    def get_all_window_names(self) -> List[str]:
+        """Get all window names from the controller.
+        Returns:
+            List[str]: List of window names.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", "get_all_window_names()")
+        process_list = self.get_process_list(has_window=True)
+        window_names = []
+        for process in process_list:
+            window_list = self.get_windows_list(process.ID)
+            for window in window_list:
+                window_names.append(window.name)
+        return window_names
+    
+    @telemetry.record_call(exclude_response = True)
+    def set_active_window(self, window_id: int, process_id: int) -> None:
+        """Set the active window by window ID and process ID.
+        Args:
+            window_id (int): Window ID to set as active.
+            process_id (int): Process ID of the window.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_active_window({window_id})")
+        self.stub.SetActiveWindow(controller_v1_pbs.Request_SetActiveWindow(windowID=window_id, processID=process_id))
+
+    @telemetry.record_call(exclude_response = True)
+    def set_active_window_by_name(self, window_name: str) -> None:
+        """Set the active window by window name.
+        Args:
+            window_name (str): Window name to set as active.
+        Raises:
+            Exception: If no window is found with the specified name.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_active_window_by_name({window_name})")
+        process_list = self.get_process_list(has_window=True)
+        for process in process_list:
+            window_list = self.get_windows_list(process.ID)
+            for window in window_list:
+                if window.name == window_name:
+                    self.set_active_window(window.ID, process.ID)
+                    return
+        available_window_names = self.get_all_window_names()
+        raise Exception(f"No window found with name '{window_name}'. Available window names: {available_window_names}")
+    
+    @telemetry.record_call(exclude_response = True)
+    def set_window_as_display_by_name(self, window_name: str) -> None:
+        """Set the active window by window name and set it as the display.
+        Args:
+            window_name (str): Window name to set as active and display.
+        Raises:
+            Exception: If no window is found with the specified name.
+        """
+        self._assert_stub_initialized()
+        if self.report is not None: 
+            self.report.add_message("AgentOS", f"set_window_as_display_by_name({window_name})")
+        self.set_active_window_by_name(window_name)
+        self.set_display(len(self.get_display_information()))
