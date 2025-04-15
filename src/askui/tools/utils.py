@@ -93,3 +93,33 @@ def scale_coordinates_back(x, y, original_width, original_height, max_width, max
     original_x = adjusted_x / scale_factor
     original_y = adjusted_y / scale_factor
     return original_x, original_y
+
+def scale_coordinates_forward(x, y, original_width, original_height, max_width, max_height) -> tuple[int, int]:
+    """Scale coordinates from original image size to scaled image size with padding.
+    Args:
+        x (int): X coordinate in original image.
+        y (int): Y coordinate in original image.
+        original_width (int): Width of the original image.
+        original_height (int): Height of the original image.
+        max_width (int): Maximum width of the scaled image.
+        max_height (int): Maximum height of the scaled image.
+    Returns:    
+        tuple: Scaled X and Y coordinates.
+    """
+    aspect_ratio = original_width / original_height
+    if (max_width / max_height) > aspect_ratio:
+        scale_factor = max_height / original_height
+        scaled_width = int(original_width * scale_factor)
+        scaled_height = max_height
+    else:
+        scale_factor = max_width / original_width
+        scaled_width = max_width
+        scaled_height = int(original_height * scale_factor)
+
+    pad_left = (max_width - scaled_width) // 2
+    pad_top = (max_height - scaled_height) // 2
+
+    scaled_x = int(x * scale_factor) + pad_left
+    scaled_y = int(y * scale_factor) + pad_top
+
+    return int(scaled_x), int(scaled_y)
