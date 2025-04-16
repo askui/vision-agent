@@ -6,6 +6,7 @@ import streamlit as st
 from askui import VisionAgent
 import logging
 from askui.chat.click_recorder import ClickRecorder
+from askui.models import ModelName
 from askui.reporting import Reporter
 from askui.utils.image_utils import base64_to_image
 import json
@@ -203,7 +204,7 @@ def rerun():
                             element_description = agent.get(
                                 query=prompt,
                                 image=screenshot_with_crosshair,
-                                model="anthropic-claude-3-5-sonnet-20241022",
+                                model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
                             write_message(
                                 message["role"],
@@ -213,7 +214,7 @@ def rerun():
                             )
                             agent.mouse_move(
                                 locator=element_description.replace('"', ""),
-                                model="anthropic-claude-3-5-sonnet-20241022",
+                                model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
                         else:
                             write_message(

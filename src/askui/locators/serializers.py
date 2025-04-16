@@ -3,6 +3,8 @@ from typing_extensions import NotRequired, TypedDict
 from askui.utils.image_utils import ImageSource
 from askui.models.askui.ai_element_utils import AiElementCollection, AiElementNotFound
 from .locators import (
+    DEFAULT_SIMILARITY_THRESHOLD,
+    DEFAULT_TEXT_MATCH_TYPE,
     ImageMetadata,
     AiElement as AiElementLocator,
     Class,
@@ -139,6 +141,9 @@ class AskUiLocatorSerializer:
     def _serialize_text(self, text: Text) -> str:
         match text.match_type:
             case "similar":
+                if text.similarity_threshold == DEFAULT_SIMILARITY_THRESHOLD and text.match_type == DEFAULT_TEXT_MATCH_TYPE:
+                    # Necessary so that we can use wordlevel ocr for these texts
+                    return f"text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER}"
                 return f"text with text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER} that matches to {text.similarity_threshold} %"
             case "exact":
                 return f"text equals text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER}"

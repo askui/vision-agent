@@ -57,19 +57,21 @@ class Class(Locator):
 
 
 TextMatchType = Literal["similar", "exact", "contains", "regex"]
+DEFAULT_TEXT_MATCH_TYPE = "similar"
+DEFAULT_SIMILARITY_THRESHOLD = 70
 
 
 class Text(Class):
     """Locator for finding text elements by their content."""
     text: str | None = None
-    match_type: TextMatchType = "similar"
-    similarity_threshold: int = Field(default=70, ge=0, le=100)
+    match_type: TextMatchType = DEFAULT_TEXT_MATCH_TYPE
+    similarity_threshold: int = Field(default=DEFAULT_SIMILARITY_THRESHOLD, ge=0, le=100)
 
     def __init__(
         self,
         text: str | None = None,
-        match_type: TextMatchType = "similar",
-        similarity_threshold: int = 70,
+        match_type: TextMatchType = DEFAULT_TEXT_MATCH_TYPE,
+        similarity_threshold: int = DEFAULT_SIMILARITY_THRESHOLD,
         **kwargs,
     ) -> None:
         super().__init__(

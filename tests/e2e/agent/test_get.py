@@ -1,7 +1,7 @@
 from typing import Literal
 import pytest
 from PIL import Image as PILImage
-from askui import models
+from askui.models import ModelName
 from askui import VisionAgent
 from askui.utils.image_utils import ImageSource
 from askui import JsonSchemaBase
@@ -20,7 +20,7 @@ class BrowserContextResponse(JsonSchemaBase):
     browser_type: Literal["chrome", "firefox", "edge", "safari"]
 
 
-@pytest.mark.parametrize("model", [None, models.ASKUI, models.ANTHROPIC])
+@pytest.mark.parametrize("model", [None, ModelName.ASKUI, ModelName.ANTHROPIC])
 def test_get(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -44,7 +44,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model=models.ASKUI,
+            model=ModelName.ASKUI,
         )
 
 
@@ -58,11 +58,11 @@ def test_get_with_response_schema_without_required_with_askui_model_raises(
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model=models.ASKUI,
+            model=ModelName.ASKUI,
         )
 
 
-@pytest.mark.parametrize("model", [None, models.ASKUI])
+@pytest.mark.parametrize("model", [None, ModelName.ASKUI])
 def test_get_with_response_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -87,11 +87,11 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
             "What is the current url shown in the url bar?",
             ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
-            model=models.ANTHROPIC,
+            model=ModelName.ANTHROPIC,
         )
 
 
-@pytest.mark.parametrize("model", [None, models.ASKUI])
+@pytest.mark.parametrize("model", [None, ModelName.ASKUI])
 @pytest.mark.skip("Skip as there is currently a bug on the api side not supporting definitions used for nested schemas")
 def test_get_with_nested_and_inherited_response_schema(
     vision_agent: VisionAgent,

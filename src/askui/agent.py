@@ -16,6 +16,7 @@ from .tools.askui.askui_controller import (
 from .models.anthropic.claude import ClaudeHandler
 from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
+from .models import ModelComposition
 from .models.router import ModelRouter, Point
 from .reporting import CompositeReporter, Reporter
 import time
@@ -29,6 +30,35 @@ class InvalidParameterError(Exception):
 
 
 class VisionAgent:
+    """
+    A vision-based agent that can interact with user interfaces through computer vision and AI.
+
+    This agent can perform various UI interactions like clicking, typing, scrolling, and more.
+    It uses computer vision models to locate UI elements and execute actions on them.
+
+    Parameters:
+        log_level (int, optional): 
+            The logging level to use. Defaults to logging.INFO.
+        display (int, optional): 
+            The display number to use for screen interactions. Defaults to 1.
+        model_router (ModelRouter | None, optional): 
+            Custom model router instance. If None, a default one will be created.
+        reporters (list[Reporter] | None, optional): 
+            List of reporter instances for logging and reporting. If None, an empty list is used.
+        tools (AgentToolbox | None, optional): 
+            Custom toolbox instance. If None, a default one will be created with AskUiControllerClient.
+        model (ModelComposition | str | None, optional): 
+            The default composition or name of the model(s) to be used for vision tasks. 
+            Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
+
+    Example:
+        ```python
+        with VisionAgent() as agent:
+            agent.click("Submit button")
+            agent.type("Hello World")
+            agent.act("Open settings menu")
+        ```
+    """
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     def __init__(
         self,
@@ -37,6 +67,7 @@ class VisionAgent:
         model_router: ModelRouter | None = None,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
+        model: ModelComposition | str | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
@@ -49,9 +80,10 @@ class VisionAgent:
         self.claude = ClaudeHandler(log_level=log_level)
         self.tools = tools or AgentToolbox(os=AskUiControllerClient(display=display, reporter=self._reporter))
         self._controller = AskUiControllerServer()
+        self._model = model
 
     @telemetry.record_call(exclude={"locator"})
-    def click(self, locator: Optional[str | Locator] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model: Optional[str] = None) -> None:
+    def click(self, locator: Optional[str | Locator] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model: ModelComposition | str | None = None) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
 
@@ -59,7 +91,7 @@ class VisionAgent:
             locator (str | Locator | None): The identifier or description of the element to click.
             button ('left' | 'middle' | 'right'): Specifies which mouse button to click. Defaults to 'left'.
             repeat (int): The number of times to click. Must be greater than 0. Defaults to 1.
-            model (str | None): The model name to be used for element detection. Optional.
+            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
 
         Raises:
             InvalidParameterError: If the 'repeat' parameter is less than 1.
@@ -86,44 +118,44 @@ class VisionAgent:
         self._reporter.add_message("User", msg)
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
-            self._mouse_move(locator, model)
+            self._mouse_move(locator, model or self._model)
         self.tools.os.click(button, repeat) # type: ignore
     
-    def _locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: Optional[str] = None) -> Point:
+    def _locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: ModelComposition | str | None = None) -> Point:
         if screenshot is None:
             screenshot = self.tools.os.screenshot() # type: ignore
-        point = self.model_router.locate(screenshot, locator, model)
+        point = self.model_router.locate(screenshot, locator, model or self._model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
     
-    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: Optional[str] = None) -> Point:
+    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: ModelComposition | str | None = None) -> Point:
         """
         Locates the UI element identified by the provided locator.
 
         Args:
             locator (str | Locator): The identifier or description of the element to locate.
             screenshot (Optional[Image.Image], optional): The screenshot to use for locating the element. Defaults to None.
-            model (Optional[str], optional): The model to use for locating the element. Defaults to None.
+            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element using the `locator`.
 
         Returns:
             Point: The coordinates of the element.
         """
         self._reporter.add_message("User", f"locate {locator}")
         logger.debug("VisionAgent received instruction to locate %s", locator)
-        return self._locate(locator, screenshot, model)
+        return self._locate(locator, screenshot, model or self._model)
 
-    def _mouse_move(self, locator: str | Locator, model: Optional[str] = None) -> None:
-        point = self._locate(locator=locator, model=model)
+    def _mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
+        point = self._locate(locator=locator, model=model or self._model)
         self.tools.os.mouse(point[0], point[1]) # type: ignore
 
     @telemetry.record_call(exclude={"locator"})
-    def mouse_move(self, locator: str | Locator, model: Optional[str] = None) -> None:
+    def mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
 
         Parameters:
             locator (str | Locator): The identifier or description of the element to move to.
-            model (str | None): The model name to be used for element detection. Optional.
+            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
 
         Example:
         ```python
@@ -135,7 +167,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'mouse_move: {locator}')
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, model)
+        self._mouse_move(locator, model or self._model)
 
     @telemetry.record_call()
     def mouse_scroll(self, x: int, y: int) -> None:
@@ -190,7 +222,7 @@ class VisionAgent:
         query: str,
         image: Optional[ImageSource] = None,
         response_schema: Type[JsonSchema] | None = None,
-        model: Optional[str] = None,
+        model: ModelComposition | str | None = None,
     ) -> JsonSchema | str:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
@@ -202,9 +234,9 @@ class VisionAgent:
                 The image to extract information from. Optional. Defaults to a screenshot of the current screen.
             response_schema (type[ResponseSchema] | None): 
                 A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
-            model (str | None):
-                The model to be used for information extraction. Optional.
-                Note: response_schema is only supported with models that support JSON output (like the default askui model).
+            model (ModelComposition | str | None):
+                The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`.
+                Note: `response_schema` is only supported with not supported by all models.
 
         Returns:
             ResponseSchema | str: The extracted information, either as a Pydantic model instance or a string.
@@ -239,7 +271,7 @@ class VisionAgent:
         response = self.model_router.get_inference(
             image=image,
             query=query,
-            model=model,
+            model=model or self._model,
             response_schema=response_schema,
         )
         if self._reporter is not None:
@@ -307,7 +339,7 @@ class VisionAgent:
         self.tools.os.keyboard_pressed(key)
 
     @telemetry.record_call(exclude={"goal"})
-    def act(self, goal: str, model: Optional[str] = None) -> None:
+    def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
 
@@ -317,8 +349,7 @@ class VisionAgent:
 
         Parameters:
             goal (str): A description of what the agent should achieve.
-            model (str | None): The specific model to use for vision analysis.
-                If None, uses the default model.
+            model (ModelComposition | str | None): The composition or name of the model(s) to be used for achieving the `goal`.
 
         Example:
         ```python
@@ -332,7 +363,7 @@ class VisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        self.model_router.act(self.tools.os, goal, model)
+        self.model_router.act(self.tools.os, goal, model or self._model)
 
     @telemetry.record_call()
     def keyboard(

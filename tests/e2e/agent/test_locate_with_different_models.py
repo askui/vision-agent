@@ -10,12 +10,13 @@ from askui.locators import (
     AiElement,
 )
 from askui.exceptions import AutomationError
+from askui.models.models import ModelName
 
 
 class TestVisionAgentLocateWithDifferentModels:
     """Test class for VisionAgent.locate() method with different AskUI models."""
 
-    @pytest.mark.parametrize("model", ["askui-pta"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__PTA])
     def test_locate_with_pta_model(
         self,
         vision_agent: VisionAgent,
@@ -30,7 +31,7 @@ class TestVisionAgentLocateWithDifferentModels:
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
-    @pytest.mark.parametrize("model", ["askui-pta"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__PTA])
     def test_locate_with_pta_model_fails_with_wrong_locator(
         self,
         vision_agent: VisionAgent,
@@ -42,7 +43,7 @@ class TestVisionAgentLocateWithDifferentModels:
         with pytest.raises(AutomationError):
             vision_agent.locate(locator, github_login_screenshot, model=model)
 
-    @pytest.mark.parametrize("model", ["askui-ocr"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__OCR])
     def test_locate_with_ocr_model(
         self,
         vision_agent: VisionAgent,
@@ -57,7 +58,7 @@ class TestVisionAgentLocateWithDifferentModels:
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
-    @pytest.mark.parametrize("model", ["askui-ocr"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__OCR])
     def test_locate_with_ocr_model_fails_with_wrong_locator(
         self,
         vision_agent: VisionAgent,
@@ -69,7 +70,7 @@ class TestVisionAgentLocateWithDifferentModels:
         with pytest.raises(AutomationError):
             vision_agent.locate(locator, github_login_screenshot, model=model)
 
-    @pytest.mark.parametrize("model", ["askui-ai-element"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__AI_ELEMENT])
     def test_locate_with_ai_element_model(
         self,
         vision_agent: VisionAgent,
@@ -84,7 +85,7 @@ class TestVisionAgentLocateWithDifferentModels:
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
-    @pytest.mark.parametrize("model", ["askui-ai-element"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__AI_ELEMENT])
     def test_locate_with_ai_element_model_fails_with_wrong_locator(
         self,
         vision_agent: VisionAgent,
@@ -96,7 +97,7 @@ class TestVisionAgentLocateWithDifferentModels:
         with pytest.raises(AutomationError):
             vision_agent.locate(locator, github_login_screenshot, model=model)
 
-    @pytest.mark.parametrize("model", ["askui-combo"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__COMBO])
     def test_locate_with_combo_model_description_first(
         self,
         vision_agent: VisionAgent,
@@ -111,7 +112,7 @@ class TestVisionAgentLocateWithDifferentModels:
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
-    @pytest.mark.parametrize("model", ["askui-combo"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__COMBO])
     def test_locate_with_combo_model_text_fallback(
         self,
         vision_agent: VisionAgent,
@@ -126,7 +127,7 @@ class TestVisionAgentLocateWithDifferentModels:
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
-    @pytest.mark.parametrize("model", ["askui-combo"])
+    @pytest.mark.parametrize("model", [ModelName.ASKUI__COMBO])
     def test_locate_with_combo_model_fails_with_wrong_locator(
         self,
         vision_agent: VisionAgent,

@@ -124,7 +124,7 @@ def test_serialize_above_relation(askui_serializer: AskUiLocatorSerializer) -> N
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 1 above intersection_area element_center_line text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> index 1 above intersection_area element_center_line text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -135,7 +135,7 @@ def test_serialize_below_relation(askui_serializer: AskUiLocatorSerializer) -> N
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 below intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> index 0 below intersection_area element_edge_area text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -146,7 +146,7 @@ def test_serialize_right_relation(askui_serializer: AskUiLocatorSerializer) -> N
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 right of intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> index 0 right of intersection_area element_edge_area text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -157,7 +157,7 @@ def test_serialize_left_relation(askui_serializer: AskUiLocatorSerializer) -> No
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 left of intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> index 0 left of intersection_area element_edge_area text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -170,7 +170,7 @@ def test_serialize_containing_relation(
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % contains text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> contains text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -181,7 +181,7 @@ def test_serialize_inside_relation(askui_serializer: AskUiLocatorSerializer) -> 
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % in text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> in text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -194,7 +194,7 @@ def test_serialize_nearest_to_relation(
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % nearest to text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> nearest to text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -205,7 +205,7 @@ def test_serialize_and_relation(askui_serializer: AskUiLocatorSerializer) -> Non
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % and text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> and text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -216,7 +216,7 @@ def test_serialize_or_relation(askui_serializer: AskUiLocatorSerializer) -> None
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % or text with text <|string|>world<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> or text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -240,7 +240,7 @@ def test_serialize_relations_chain(askui_serializer: AskUiLocatorSerializer) -> 
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 above intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 % index 0 below intersection_area element_edge_area text with text <|string|>earth<|string|> that matches to 70 %"
+        == "text <|string|>hello<|string|> index 0 above intersection_area element_edge_area text <|string|>world<|string|> index 0 below intersection_area element_edge_area text <|string|>earth<|string|>"
     )
     assert result["customElements"] == []
 
@@ -335,7 +335,7 @@ def test_serialize_image_with_relation(
     result = askui_serializer.serialize(image)
     assert (
         result["instruction"]
-        == "custom element with text <|string|>image<|string|> index 0 above intersection_area element_edge_area text with text <|string|>world<|string|> that matches to 70 %"
+        == "custom element with text <|string|>image<|string|> index 0 above intersection_area element_edge_area text <|string|>world<|string|>"
     )
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
@@ -350,7 +350,7 @@ def test_serialize_text_with_image_relation(
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text with text <|string|>hello<|string|> that matches to 70 % index 0 above intersection_area element_edge_area custom element with text <|string|>image<|string|>"
+        == "text <|string|>hello<|string|> index 0 above intersection_area element_edge_area custom element with text <|string|>image<|string|>"
     )
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]

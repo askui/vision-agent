@@ -5,6 +5,7 @@ import requests
 import json as json_lib
 from PIL import Image
 from typing import Any, Type, Union
+from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.locators.locators import Locator
@@ -49,7 +50,7 @@ class AskUiInferenceApi:
 
         return response.json()
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], locator: Locator) -> tuple[int | None, int | None]:
+    def predict(self, image: Union[pathlib.Path, Image.Image], locator: Locator, model: ModelComposition | None = None) -> tuple[int | None, int | None]:
         serialized_locator = self._locator_serializer.serialize(locator=locator)
         json: dict[str, Any] = {
             "image": f",{image_to_base64(image)}",
@@ -57,6 +58,9 @@ class AskUiInferenceApi:
         }
         if "customElements" in serialized_locator:
             json["customElements"] = serialized_locator["customElements"]
+        if model is not None:
+            json["modelComposition"] = model.model_dump(by_alias=True)
+            logger.debug(f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}")
         content = self._request(endpoint="inference", json=json)
         assert content["type"] == "COMMANDS", f"Received unknown content type {content['type']}"
         actions = [el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"]

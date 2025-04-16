@@ -13,14 +13,15 @@ from askui.locators import (
 )
 from askui.locators.locators import Image
 from askui.exceptions import ElementNotFoundError
+from askui.models import ModelName
 
 
 @pytest.mark.skip("Skipping tests for now")
 @pytest.mark.parametrize(
     "model",
     [
-        "askui",
-        "anthropic-claude-3-5-sonnet-20241022",
+        ModelName.ASKUI,
+        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
     ],
 )
 class TestVisionAgentLocate:

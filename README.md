@@ -88,7 +88,7 @@ pip install askui
 |  | AskUI [INFO](https://hub.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
 | ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
-| Supported Commands    | `click()`, `locate()`, `mouse_move()`   | `act()`, `get()`, `click()`, `locate()`, `mouse_move()`  |
+| Supported Commands    | `click()`, `get()`, `locate()`, `mouse_move()`   | `act()`, `click()`, `get()`, `locate()`, `mouse_move()`  |
 | Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 
 To get started, set the environment variables required to authenticate with your chosen model provider.
@@ -143,7 +143,7 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
 
-3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands.
+3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands or when initializing the `VisionAgent`.
 
 
 ## ▶️ Start Building
@@ -171,18 +171,34 @@ with VisionAgent() as agent:
 
 ### 🎛️ Model Selection
 
-Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model` parameter.
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model` parameter or when initializing the `VisionAgent` (overridden by the `model` parameter of individual commands).
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
 | `act()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
 | `click()`    | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element` | `anthropic-claude-3-5-sonnet-20241022`   |
-| `get()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
+| `get()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
 | `locate()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 | `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 
 
-**Example:** `agent.click("Preview", model="askui-combo")`
+**Example:** 
+
+```python
+from askui import VisionAgent
+
+with VisionAgent() as agent:
+    # Uses the default model (depending on the environment variables set, see above)
+    agent.click("Next")
+
+with VisionAgent(model="askui-combo") as agent:
+    # Uses the "askui-combo" model because it was specified when initializing the agent
+    agent.click("Next")
+    # Uses the "anthropic-claude-3-5-sonnet-20241022" model
+    agent.click("Previous", model="anthropic-claude-3-5-sonnet-20241022")
+    # Uses the "askui-combo" model again as no model was specified
+    agent.click("Next")
+```
 
 <details>
   <summary>AskUI AI Models</summary>
