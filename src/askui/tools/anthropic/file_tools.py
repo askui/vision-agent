@@ -31,8 +31,9 @@ class FileWriteTool(Tool):
             },
         )
 
-    def __call__(self, file_name: str, content: str, file_write_mode:str = 'w') -> None:
+    def __call__(self, file_name: str, content: str, file_write_mode: str = 'w') -> None:
         file_path = os.path.join(self.base_dir, file_name)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, file_write_mode, encoding="utf-8") as f:
             f.write(content)
         return ToolResult(output=f"File '{file_name}' written successfully.")
