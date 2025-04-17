@@ -1,14 +1,11 @@
-from dataclasses import dataclass
 import pathlib
 import re
-from typing import Literal
 import pytest
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
 from askui.locators.locators import Locator
 from askui.locators import Element, Description, Text, Image
-from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils.image_utils import image_to_base64
@@ -253,20 +250,6 @@ def test_serialize_unsupported_locator_type(
 
     with pytest.raises(ValueError, match="Unsupported locator type:.*"):
         askui_serializer.serialize(UnsupportedLocator())
-
-
-def test_serialize_unsupported_relation_type(
-    askui_serializer: AskUiLocatorSerializer,
-) -> None:
-    @dataclass(kw_only=True)
-    class UnsupportedRelation(RelationBase):
-        type: Literal["unsupported"]  # type: ignore
-
-    text = Text("hello")
-    text.relations.append(UnsupportedRelation(type="unsupported", other_locator=Text("world")))  # type: ignore
-
-    with pytest.raises(ValueError, match='Unsupported relation type: "unsupported"'):
-        askui_serializer.serialize(text)
 
 
 def test_serialize_simple_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:

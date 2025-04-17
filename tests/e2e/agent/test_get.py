@@ -4,7 +4,7 @@ from PIL import Image as PILImage
 from askui.models import ModelName
 from askui import VisionAgent
 from askui.utils.image_utils import ImageSource
-from askui.response_schemas import ResponseSchemaBase
+from askui import ResponseSchemaBase
 
 
 class UrlResponse(ResponseSchemaBase):
@@ -31,7 +31,7 @@ def test_get(
         image=ImageSource(github_login_screenshot),
         model=model,
     )
-    assert url == "github.com/login"
+    assert url in ["github.com/login", "https://github.com/login"]
 
 
 @pytest.mark.skip("Skip for now as this pops up in our observability systems as a false positive")

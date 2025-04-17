@@ -1,7 +1,6 @@
 from abc import ABC
-from dataclasses import dataclass
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Annotated, Literal
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Self
 
 
@@ -21,19 +20,32 @@ RelationTypeMapping = {
 }
 
 
-@dataclass(kw_only=True)
-class RelationBase(ABC):
+RelationIndex = Annotated[int, Field(ge=0)]
+
+
+class RelationBase(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     other_locator: "Relatable"
-    type: Literal["above_of", "below_of", "right_of", "left_of", "and", "or", "containing", "inside_of", "nearest_to"]
+    type: Literal[
+        "above_of",
+        "below_of",
+        "right_of",
+        "left_of",
+        "and",
+        "or",
+        "containing",
+        "inside_of",
+        "nearest_to",
+    ]
 
     def __str__(self):
         return f"{RelationTypeMapping[self.type]} {self.other_locator._str_with_relation()}"
 
 
-@dataclass(kw_only=True)
+
 class NeighborRelation(RelationBase):
     type: Literal["above_of", "below_of", "right_of", "left_of"]
-    index: int
+    index: RelationIndex
     reference_point: ReferencePoint
 
     def __str__(self):
@@ -41,21 +53,28 @@ class NeighborRelation(RelationBase):
         if i == 11 or i == 12 or i == 13:
             index_str = f"{i}th"
         else:
-            index_str = f"{i}st" if i % 10 == 1 else f"{i}nd" if i % 10 == 2 else f"{i}rd" if i % 10 == 3 else f"{i}th"
-        reference_point_str = " center of" if self.reference_point == "center" else " boundary of" if self.reference_point == "boundary" else ""
+            index_str = (
+                f"{i}st"
+                if i % 10 == 1
+                else f"{i}nd" if i % 10 == 2 else f"{i}rd" if i % 10 == 3 else f"{i}th"
+            )
+        reference_point_str = (
+            " center of"
+            if self.reference_point == "center"
+            else " boundary of" if self.reference_point == "boundary" else ""
+        )
         return f"{RelationTypeMapping[self.type]}{reference_point_str} the {index_str} {self.other_locator._str_with_relation()}"
 
 
-@dataclass(kw_only=True)
+
 class LogicalRelation(RelationBase):
     type: Literal["and", "or"]
 
-@dataclass(kw_only=True)
+
 class BoundingRelation(RelationBase):
     type: Literal["containing", "inside_of"]
 
 
-@dataclass(kw_only=True)
 class NearestToRelation(RelationBase):
     type: Literal["nearest_to"]
 
@@ -65,6 +84,7 @@ Relation = NeighborRelation | LogicalRelation | BoundingRelation | NearestToRela
 
 class CircularDependencyError(ValueError):
     """Exception raised for circular dependencies in locator relations."""
+
     def __init__(
         self,
         message: str = (
@@ -76,21 +96,28 @@ class CircularDependencyError(ValueError):
         super().__init__(message)
 
 
-class Relatable(BaseModel, ABC):
+class Relatable(ABC):
     """Base class for locators that can be related to other locators, e.g., spatially, logically, distance based etc.
-    
+
     Attributes:
         relations: List of relations to other locators
     """
-    relations: list[Relation] = Field(default_factory=list)
+    def __init__(self) -> None:
+        self._relations: list[Relation] = []
 
+    @property
+    def relations(self) -> list[Relation]:
+        return self._relations
+
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def above_of(
         self,
         other_locator: "Relatable",
-        index: int = 0,
+        index: RelationIndex = 0,
         reference_point: ReferencePoint = "boundary",
     ) -> Self:
-        self.relations.append(
+        
+        self._relations.append(
             NeighborRelation(
                 type="above_of",
                 other_locator=other_locator,
@@ -100,13 +127,14 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def below_of(
         self,
         other_locator: "Relatable",
-        index: int = 0,
+        index: RelationIndex = 0,
         reference_point: ReferencePoint = "boundary",
     ) -> Self:
-        self.relations.append(
+        self._relations.append(
             NeighborRelation(
                 type="below_of",
                 other_locator=other_locator,
@@ -116,13 +144,14 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def right_of(
         self,
         other_locator: "Relatable",
-        index: int = 0,
+        index: RelationIndex = 0,
         reference_point: ReferencePoint = "boundary",
     ) -> Self:
-        self.relations.append(
+        self._relations.append(
             NeighborRelation(
                 type="right_of",
                 other_locator=other_locator,
@@ -132,13 +161,14 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def left_of(
         self,
         other_locator: "Relatable",
-        index: int = 0,
+        index: RelationIndex = 0,
         reference_point: ReferencePoint = "boundary",
     ) -> Self:
-        self.relations.append(
+        self._relations.append(
             NeighborRelation(
                 type="left_of",
                 other_locator=other_locator,
@@ -148,8 +178,9 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using BoundingRelation
     def containing(self, other_locator: "Relatable") -> Self:
-        self.relations.append(
+        self._relations.append(
             BoundingRelation(
                 type="containing",
                 other_locator=other_locator,
@@ -157,8 +188,9 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using BoundingRelation
     def inside_of(self, other_locator: "Relatable") -> Self:
-        self.relations.append(
+        self._relations.append(
             BoundingRelation(
                 type="inside_of",
                 other_locator=other_locator,
@@ -166,8 +198,9 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NearestToRelation
     def nearest_to(self, other_locator: "Relatable") -> Self:
-        self.relations.append(
+        self._relations.append(
             NearestToRelation(
                 type="nearest_to",
                 other_locator=other_locator,
@@ -175,8 +208,9 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using LogicalRelation
     def and_(self, other_locator: "Relatable") -> Self:
-        self.relations.append(
+        self._relations.append(
             LogicalRelation(
                 type="and",
                 other_locator=other_locator,
@@ -184,8 +218,9 @@ class Relatable(BaseModel, ABC):
         )
         return self
 
+    # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using LogicalRelation
     def or_(self, other_locator: "Relatable") -> Self:
-        self.relations.append(
+        self._relations.append(
             LogicalRelation(
                 type="or",
                 other_locator=other_locator,
@@ -194,21 +229,21 @@ class Relatable(BaseModel, ABC):
         return self
 
     def _relations_str(self) -> str:
-        if not self.relations:
+        if not self._relations:
             return ""
-        
+
         result = []
-        for i, relation in enumerate(self.relations):
+        for i, relation in enumerate(self._relations):
             [other_locator_str, *nested_relation_strs] = str(relation).split("\n")
             result.append(f"  {i + 1}. {other_locator_str}")
             for nested_relation_str in nested_relation_strs:
                 result.append(f"  {nested_relation_str}")
         return "\n" + "\n".join(result)
-    
+
     def raise_if_cycle(self) -> None:
         if self._has_cycle():
             raise CircularDependencyError()
-    
+
     def _has_cycle(self) -> bool:
         """Check if the relations form a cycle."""
         visited_ids: set[int] = set()

@@ -29,8 +29,8 @@ class Reporter(ABC):
 
 
 class CompositeReporter(Reporter):
-    def __init__(self, reports: list[Reporter]) -> None:
-        self._reports = reports
+    def __init__(self, reports: list[Reporter] | None = None) -> None:
+        self._reports = reports or []
 
     @override
     def add_message(

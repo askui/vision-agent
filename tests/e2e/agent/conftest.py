@@ -37,6 +37,7 @@ def vision_agent(
     inference_api = AskUiInferenceApi(locator_serializer=serializer)
     reporter = SimpleHtmlReporter()
     model_router = ModelRouter(
+        tools=agent_toolbox_mock,
         reporter=reporter,
         grounding_model_routers=[AskUiModelRouter(inference_api=inference_api)]
     )

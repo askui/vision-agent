@@ -1,7 +1,7 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional, Type, overload
-from pydantic import Field, validate_call
+from typing import Annotated, Any, Literal, Optional, Type, overload
+from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
@@ -13,7 +13,6 @@ from .tools.askui.askui_controller import (
     ModifierKey,
     PcKey,
 )
-from .models.anthropic.claude import ClaudeHandler
 from .logger import logger, configure_logging
 from .tools.toolbox import AgentToolbox
 from .models import ModelComposition
@@ -60,10 +59,11 @@ class VisionAgent:
         ```
     """
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level=logging.INFO,
-        display: int = 1,
+        log_level: int | str = logging.INFO,
+        display: Annotated[int, Field(ge=1)] = 1,
         model_router: ModelRouter | None = None,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
@@ -71,19 +71,23 @@ class VisionAgent:
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
-        self._reporter = CompositeReporter(reports=reporters or [])
+        self._reporter = CompositeReporter(reports=reporters)
+        self.tools = tools or AgentToolbox(agent_os=AskUiControllerClient(display=display, reporter=self._reporter))
         self.model_router = (
-            ModelRouter(log_level=log_level, reporter=self._reporter)
-            if model_router is None
-            else model_router
+            ModelRouter(tools=self.tools, reporter=self._reporter) if model_router is None else model_router
         )
-        self.claude = ClaudeHandler(log_level=log_level)
-        self.tools = tools or AgentToolbox(os=AskUiControllerClient(display=display, reporter=self._reporter))
         self._controller = AskUiControllerServer()
         self._model = model
 
     @telemetry.record_call(exclude={"locator"})
-    def click(self, locator: Optional[str | Locator] = None, button: Literal['left', 'middle', 'right'] = 'left', repeat: int = 1, model: ModelComposition | str | None = None) -> None:
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def click(
+        self,
+        locator: Optional[str | Locator] = None,
+        button: Literal['left', 'middle', 'right'] = 'left',
+        repeat: Annotated[int, Field(gt=0)] = 1,
+        model: ModelComposition | str | None = None,
+    ) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
 
@@ -119,16 +123,22 @@ class VisionAgent:
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model or self._model)
-        self.tools.os.click(button, repeat) # type: ignore
+        self.tools.agent_os.click(button, repeat) # type: ignore
     
     def _locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: ModelComposition | str | None = None) -> Point:
         if screenshot is None:
-            screenshot = self.tools.os.screenshot() # type: ignore
+            screenshot = self.tools.agent_os.screenshot() # type: ignore
         point = self.model_router.locate(screenshot, locator, model or self._model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
     
-    def locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: ModelComposition | str | None = None) -> Point:
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def locate(
+        self,
+        locator: str | Locator,
+        screenshot: Optional[Image.Image] = None,
+        model: ModelComposition | str | None = None,
+    ) -> Point:
         """
         Locates the UI element identified by the provided locator.
 
@@ -146,10 +156,15 @@ class VisionAgent:
 
     def _mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
         point = self._locate(locator=locator, model=model or self._model)
-        self.tools.os.mouse(point[0], point[1]) # type: ignore
+        self.tools.agent_os.mouse(point[0], point[1]) # type: ignore
 
     @telemetry.record_call(exclude={"locator"})
-    def mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def mouse_move(
+        self,
+        locator: str | Locator,
+        model: ModelComposition | str | None = None,
+    ) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
 
@@ -170,7 +185,12 @@ class VisionAgent:
         self._mouse_move(locator, model or self._model)
 
     @telemetry.record_call()
-    def mouse_scroll(self, x: int, y: int) -> None:
+    @validate_call
+    def mouse_scroll(
+        self,
+        x: int,
+        y: int,
+    ) -> None:
         """
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
 
@@ -194,10 +214,14 @@ class VisionAgent:
         ```
         """
         self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.tools.os.mouse_scroll(x, y)
+        self.tools.agent_os.mouse_scroll(x, y)
 
     @telemetry.record_call(exclude={"text"})
-    def type(self, text: str) -> None:
+    @validate_call
+    def type(
+        self,
+        text: Annotated[str, Field(min_length=1)],
+    ) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
 
@@ -214,13 +238,13 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.tools.os.type(text) # type: ignore
+        self.tools.agent_os.type(text) # type: ignore
 
 
     @overload
     def get(
         self,
-        query: str,
+        query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
         image: Optional[ImageSource] = None,
         model: ModelComposition | str | None = None,
@@ -228,16 +252,17 @@ class VisionAgent:
     @overload
     def get(
         self,
-        query: str,
+        query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
         image: Optional[ImageSource] = None,
         model: ModelComposition | str | None = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "image", "response_schema"})
+    @validate_call
     def get(
         self,
-        query: str,
+        query: Annotated[str, Field(min_length=1)],
         image: Optional[ImageSource] = None,
         response_schema: Type[ResponseSchema] | None = None,
         model: ModelComposition | str | None = None,
@@ -285,7 +310,7 @@ class VisionAgent:
         self._reporter.add_message("User", f'get: "{query}"')
         logger.debug("VisionAgent received instruction to get '%s'", query)
         if image is None:
-            image = ImageSource(self.tools.os.screenshot()) # type: ignore
+            image = ImageSource(self.tools.agent_os.screenshot()) # type: ignore
         response = self.model_router.get_inference(
             image=image,
             query=query,
@@ -299,12 +324,15 @@ class VisionAgent:
     
     @telemetry.record_call()
     @validate_call
-    def wait(self, sec: Annotated[float, Field(gt=0)]) -> None:
+    def wait(
+        self,
+        sec: Annotated[float, Field(gt=0.0)],
+    ) -> None:
         """
         Pauses the execution of the program for the specified number of seconds.
 
         Parameters:
-            sec (float): The number of seconds to wait. Must be greater than 0.
+            sec (float): The number of seconds to wait. Must be greater than 0.0.
 
         Raises:
             ValueError: If the provided `sec` is negative.
@@ -319,7 +347,11 @@ class VisionAgent:
         time.sleep(sec)
 
     @telemetry.record_call()
-    def key_up(self, key: PcKey | ModifierKey) -> None:
+    @validate_call
+    def key_up(
+        self,
+        key: PcKey | ModifierKey,
+    ) -> None:
         """
         Simulates the release of a key.
 
@@ -335,10 +367,14 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_up "{key}"')
         logger.debug("VisionAgent received in key_up '%s'", key)
-        self.tools.os.keyboard_release(key)
+        self.tools.agent_os.keyboard_release(key)
 
     @telemetry.record_call()
-    def key_down(self, key: PcKey | ModifierKey) -> None:
+    @validate_call
+    def key_down(
+        self,
+        key: PcKey | ModifierKey,
+    ) -> None:
         """
         Simulates the pressing of a key.
 
@@ -354,10 +390,15 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_down "{key}"')
         logger.debug("VisionAgent received in key_down '%s'", key)
-        self.tools.os.keyboard_pressed(key)
+        self.tools.agent_os.keyboard_pressed(key)
 
     @telemetry.record_call(exclude={"goal"})
-    def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
+    @validate_call
+    def act(
+        self,
+        goal: Annotated[str, Field(min_length=1)],
+        model: ModelComposition | str | None = None,
+    ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
 
@@ -381,11 +422,14 @@ class VisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        self.model_router.act(self.tools.os, goal, model or self._model)
+        self.model_router.act(goal, model or self._model)
 
     @telemetry.record_call()
+    @validate_call
     def keyboard(
-        self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
+        self,
+        key: PcKey | ModifierKey,
+        modifier_keys: Optional[list[ModifierKey]] = None,
     ) -> None:
         """
         Simulates pressing a key or key combination on the keyboard.
@@ -406,10 +450,14 @@ class VisionAgent:
         ```
         """
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.os.keyboard_tap(key, modifier_keys)  # type: ignore
+        self.tools.agent_os.keyboard_tap(key, modifier_keys)  # type: ignore
 
     @telemetry.record_call(exclude={"command"})
-    def cli(self, command: str) -> None:
+    @validate_call
+    def cli(
+        self,
+        command: Annotated[str, Field(min_length=1)],
+    ) -> None:
         """
         Executes a command on the command line interface.
 
@@ -432,7 +480,7 @@ class VisionAgent:
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
-        self.tools.os.disconnect()
+        self.tools.agent_os.disconnect()
         if self._controller:
             self._controller.stop(True)
         self._reporter.generate()
@@ -440,7 +488,7 @@ class VisionAgent:
     @telemetry.record_call()
     def open(self) -> None:
         self._controller.start(True)
-        self.tools.os.connect()
+        self.tools.agent_os.connect()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":
@@ -448,5 +496,10 @@ class VisionAgent:
         return self
 
     @telemetry.record_call(exclude={"exc_value", "traceback"})
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[Any],
+    ) -> None:
         self.close()

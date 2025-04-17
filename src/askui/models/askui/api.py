@@ -53,6 +53,7 @@ class AskUiInferenceApi:
 
     def predict(self, image: Union[pathlib.Path, Image.Image], locator: Locator, model: ModelComposition | None = None) -> tuple[int | None, int | None]:
         serialized_locator = self._locator_serializer.serialize(locator=locator)
+        logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
         json: dict[str, Any] = {
             "image": f",{image_to_base64(image)}",
             "instruction": f"Click on {serialized_locator['instruction']}",

@@ -5,7 +5,7 @@ from askui.models.askui.ai_element_utils import AiElementCollection, AiElementNo
 from .locators import (
     DEFAULT_SIMILARITY_THRESHOLD,
     DEFAULT_TEXT_MATCH_TYPE,
-    ImageMetadata,
+    ImageBase,
     AiElement as AiElementLocator,
     Element,
     Description,
@@ -114,7 +114,7 @@ class AskUiLocatorSerializer:
             result["instruction"] = self._serialize_description(locator)
         elif isinstance(locator, Image):
             result = self._serialize_image(
-                image_metadata=locator,
+                image_locator=locator,
                 image_sources=[locator.image],
             )
         elif isinstance(locator, AiElementLocator):
@@ -187,35 +187,35 @@ class AskUiLocatorSerializer:
 
     def _serialize_image_to_custom_element(
         self,
-        image_metadata: ImageMetadata,
+        image_locator: ImageBase,
         image_source: ImageSource,
     ) -> CustomElement:
         custom_element: CustomElement = CustomElement(
             customImage=image_source.to_data_url(),
-            threshold=image_metadata.threshold,
-            stopThreshold=image_metadata.stop_threshold,
-            rotationDegreePerStep=image_metadata.rotation_degree_per_step,
-            imageCompareFormat=image_metadata.image_compare_format,
-            name=image_metadata.name,
+            threshold=image_locator.threshold,
+            stopThreshold=image_locator.stop_threshold,
+            rotationDegreePerStep=image_locator.rotation_degree_per_step,
+            imageCompareFormat=image_locator.image_compare_format,
+            name=image_locator.name,
         )
-        if image_metadata.mask:
-            custom_element["mask"] = image_metadata.mask
+        if image_locator.mask:
+            custom_element["mask"] = image_locator.mask
         return custom_element
 
     def _serialize_image(
         self,
-        image_metadata: ImageMetadata,
+        image_locator: ImageBase,
         image_sources: list[ImageSource],
     ) -> AskUiSerializedLocator:
         custom_elements: list[CustomElement] = [
             self._serialize_image_to_custom_element(
-                image_metadata=image_metadata,
+                image_locator=image_locator,
                 image_source=image_source,
             )
             for image_source in image_sources
         ]
         return AskUiSerializedLocator(
-            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_metadata.name}{self._TEXT_DELIMITER}",
+            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_locator.name}{self._TEXT_DELIMITER}",
             customElements=custom_elements,
         )
 
@@ -228,6 +228,6 @@ class AskUiLocatorSerializer:
                 f"Could not find AI element with name \"{ai_element_locator.name}\""
             )
         return self._serialize_image(
-            image_metadata=ai_element_locator,
+            image_locator=ai_element_locator,
             image_sources=[ImageSource.model_construct(root=ai_element.image) for ai_element in ai_elements],
         )

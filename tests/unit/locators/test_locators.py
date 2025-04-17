@@ -16,7 +16,7 @@ class TestDescriptionLocator:
         assert str(desc) == 'element with description "test"'
 
     def test_initialization_without_description_raises(self) -> None:
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             Description()  # type: ignore
 
     def test_initialization_with_positional_arg(self) -> None:
@@ -179,7 +179,7 @@ class TestAiElementLocator:
         assert str(locator) == 'ai element named "github_com__icon"'
 
     def test_initialization_without_name_raises(self) -> None:
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             AiElement()  # type: ignore
 
     def test_initialization_with_invalid_args_raises(self) -> None:
