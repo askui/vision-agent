@@ -61,7 +61,6 @@ class FileReadTool(Tool):
 
     def __call__(self, file_name: str) -> str:
         file_path = os.path.join(self.base_dir, file_name)
-        print('3asba')
         if not os.path.isfile(file_path):
             raise FileNotFoundError(f"File not found: {file_name}")
         with open(file_path, "r", encoding="utf-8") as f:
