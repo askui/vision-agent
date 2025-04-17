@@ -81,15 +81,15 @@ class AskUiControllerServer():
     
     def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
         if self._settings.component_registry_file is None:
-            raise AskUISuiteNotInstalledError(f"AskUI Suite not installed. Please install AskUI Suite to use AskUI Vision Agent. For more information, please visit 'https://docs.askui.com/introduction/01-introduction/02-quickstart'")
+            raise AskUISuiteNotInstalledError('AskUI Suite not installed. Please install AskUI Suite to use AskUI Vision Agent.')
         component_registry = AskUiComponentRegistry.model_validate_json(self._settings.component_registry_file.read_text())
         askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
         if not os.path.isfile(askui_remote_device_controller_path):
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
         return askui_remote_device_controller_path
         
-    def __start_process(self, path, quite: bool = True) -> None:
-        if not quite:
+    def __start_process(self, path, verbose: bool = False) -> None:
+        if verbose:
             self.process = subprocess.Popen(path)
         else:
             self.process = subprocess.Popen(
@@ -99,12 +99,12 @@ class AskUiControllerServer():
             )
         wait_for_port(23000)
         
-    def start(self, clean_up=False, start_process_quite: bool = True) -> None:
+    def start(self, clean_up=False, verbose: bool = False) -> None:
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
         logger.debug("Starting AskUI Remote Device Controller: %s", remote_device_controller_path)
-        self.__start_process(remote_device_controller_path, quite=start_process_quite)
+        self.__start_process(remote_device_controller_path, verbose=verbose)
         
     def clean_up(self):
         if sys.platform == 'win32':
@@ -278,10 +278,10 @@ class AskUiControllerClient():
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
         self.display = displayNumber
 
-    def get_window_list_for_process_id(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
+    def get_windows_list(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
         assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         if self.report is not None: 
-            self.report.add_message("AgentOS", f"get_window_list_for_process_id({process_id})")
+            self.report.add_message("AgentOS", "get_windows_list()")
         response = self.stub.GetWindowList(controller_v1_pbs.Request_GetWindowList(processID=process_id))
         return response.windows
     
@@ -306,7 +306,7 @@ class AskUiControllerClient():
             self.report.add_message("AgentOS", f"set_active_window_by_name({window_name})")
         process_list = self.get_process_list(has_window=True)
         for process in process_list:
-            window_list = self.get_window_list_for_process_id(process.ID)
+            window_list = self.get_windows_list(process.ID)
             for window in window_list:
                 if window.name == window_name:
                     self.set_active_window(window.ID, process.ID)
