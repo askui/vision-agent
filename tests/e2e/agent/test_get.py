@@ -3,7 +3,6 @@ import pytest
 from PIL import Image as PILImage
 from askui.models import ModelName
 from askui import VisionAgent
-from askui.utils.image_utils import ImageSource
 from askui import ResponseSchemaBase
 
 
@@ -28,7 +27,7 @@ def test_get(
 ) -> None:
     url = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         model=model,
     )
     assert url in ["github.com/login", "https://github.com/login"]
@@ -42,7 +41,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
     with pytest.raises(Exception):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=ImageSource(github_login_screenshot),
+            image=github_login_screenshot,
             response_schema=UrlResponse,
             model=ModelName.ASKUI,
         )
@@ -56,7 +55,7 @@ def test_get_with_response_schema_without_required_with_askui_model_raises(
     with pytest.raises(Exception):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=ImageSource(github_login_screenshot),
+            image=github_login_screenshot,
             response_schema=UrlResponse,
             model=ModelName.ASKUI,
         )
@@ -70,7 +69,7 @@ def test_get_with_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=UrlResponse,
         model=model,
     )
@@ -85,7 +84,7 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
     with pytest.raises(NotImplementedError):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=ImageSource(github_login_screenshot),
+            image=github_login_screenshot,
             response_schema=UrlResponse,
             model=ModelName.ANTHROPIC,
         )
@@ -100,7 +99,7 @@ def test_get_with_nested_and_inherited_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current browser context?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=BrowserContextResponse,
         model=model,
     )
@@ -118,7 +117,7 @@ def test_get_with_string_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=str,
         model=model,
     )
@@ -133,7 +132,7 @@ def test_get_with_boolean_schema(
 ) -> None:
     response = vision_agent.get(
         "Is this a login page?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=bool,
         model=model,
     )
@@ -149,7 +148,7 @@ def test_get_with_integer_schema(
 ) -> None:
     response = vision_agent.get(
         "How many input fields are visible on this page?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=int,
         model=model,
     )
@@ -165,7 +164,7 @@ def test_get_with_float_schema(
 ) -> None:
     response = vision_agent.get(
         "Return a floating point number between 0 and 1 as a rating for how you well this page is designed (0 is the worst, 1 is the best)",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=float,
         model=model,
     )
@@ -181,7 +180,7 @@ def test_get_returns_str_when_no_schema_specified(
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         model=model,
     )
     assert isinstance(response, str)
@@ -199,7 +198,7 @@ def test_get_with_basis_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
-        image=ImageSource(github_login_screenshot),
+        image=github_login_screenshot,
         response_schema=Basis,
         model=model,
     )

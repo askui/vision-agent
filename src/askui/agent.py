@@ -5,7 +5,7 @@ from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.utils.image_utils import ImageSource
+from askui.utils.image_utils import ImageSource, Img
 
 from .tools.askui.askui_controller import (
     AskUiControllerClient,
@@ -20,7 +20,6 @@ from .models.router import ModelRouter, Point
 from .reporting import CompositeReporter, Reporter
 import time
 from dotenv import load_dotenv
-from PIL import Image
 from .models.types.response_schemas import ResponseSchema
 
 
@@ -97,23 +96,27 @@ class VisionAgent:
         Simulates a mouse click on the user interface element identified by the provided locator.
 
         Parameters:
-            locator (str | Locator | None): The identifier or description of the element to click.
-            button ('left' | 'middle' | 'right'): Specifies which mouse button to click. Defaults to 'left'.
-            repeat (int): The number of times to click. Must be greater than 0. Defaults to 1.
-            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
+            locator (str | Locator | None): 
+                The identifier or description of the element to click. If None, clicks at current position.
+            button ('left' | 'middle' | 'right'): 
+                Specifies which mouse button to click. Defaults to 'left'.
+            repeat (int): 
+                The number of times to click. Must be greater than 0. Defaults to 1.
+            model (ModelComposition | str | None): 
+                The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
 
         Raises:
             InvalidParameterError: If the 'repeat' parameter is less than 1.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.click()              # Left click on current position
-            agent.click("Edit")        # Left click on text "Edit"
-            agent.click("Edit", button="right")  # Right click on text "Edit"
-            agent.click(repeat=2)      # Double left click on current position
-            agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.click()              # Left click on current position
+                agent.click("Edit")        # Left click on text "Edit"
+                agent.click("Edit", button="right")  # Right click on text "Edit"
+                agent.click(repeat=2)      # Double left click on current position
+                agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
+            ```
         """
         if repeat < 1:
             raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
@@ -130,10 +133,9 @@ class VisionAgent:
             self._mouse_move(locator, model or self._model)
         self.tools.agent_os.click(button, repeat) # type: ignore
     
-    def _locate(self, locator: str | Locator, screenshot: Optional[Image.Image] = None, model: ModelComposition | str | None = None) -> Point:
-        if screenshot is None:
-            screenshot = self.tools.agent_os.screenshot() # type: ignore
-        point = self.model_router.locate(screenshot, locator, model or self._model)
+    def _locate(self, locator: str | Locator, screenshot: Optional[Img] = None, model: ModelComposition | str | None = None) -> Point:
+        _screenshot = ImageSource(self.tools.agent_os.screenshot() if screenshot is None else screenshot)
+        point = self.model_router.locate(_screenshot.root, locator, model or self._model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
     
@@ -141,19 +143,30 @@ class VisionAgent:
     def locate(
         self,
         locator: str | Locator,
-        screenshot: Optional[Image.Image] = None,
+        screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> Point:
         """
         Locates the UI element identified by the provided locator.
 
-        Args:
-            locator (str | Locator): The identifier or description of the element to locate.
-            screenshot (Optional[Image.Image], optional): The screenshot to use for locating the element. Defaults to None.
-            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element using the `locator`.
+        Parameters:
+            locator (str | Locator): 
+                The identifier or description of the element to locate.
+            screenshot (Img | None, optional): 
+                The screenshot to use for locating the element. Can be a path to an image file, a PIL Image object or a data URL. 
+                If None, takes a screenshot of the currently selected display.
+            model (ModelComposition | str | None): 
+                The composition or name of the model(s) to be used for locating the element using the `locator`.
 
         Returns:
-            Point: The coordinates of the element.
+            Point: The coordinates of the element as a tuple (x, y).
+
+        Example:
+            ```python
+            with VisionAgent() as agent:
+                point = agent.locate("Submit button")
+                print(f"Element found at coordinates: {point}")
+            ```
         """
         self._reporter.add_message("User", f"locate {locator}")
         logger.debug("VisionAgent received instruction to locate %s", locator)
@@ -174,16 +187,18 @@ class VisionAgent:
         Moves the mouse cursor to the UI element identified by the provided locator.
 
         Parameters:
-            locator (str | Locator): The identifier or description of the element to move to.
-            model (ModelComposition | str | None): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
+            locator (str | Locator): 
+                The identifier or description of the element to move to.
+            model (ModelComposition | str | None): 
+                The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.mouse_move("Submit button")  # Moves cursor to submit button
-            agent.mouse_move("Close")  # Moves cursor to close element
-            agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.mouse_move("Submit button")  # Moves cursor to submit button
+                agent.mouse_move("Close")  # Moves cursor to close element
+                agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
+            ```
         """
         self._reporter.add_message("User", f'mouse_move: {locator}')
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
@@ -200,23 +215,25 @@ class VisionAgent:
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
 
         Parameters:
-            x (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
-            y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
+            x (int): 
+                The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
+            y (int): 
+                The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
 
         Note:
-            The actual `scroll direction` depends on the operating system's configuration.
+            The actual scroll direction depends on the operating system's configuration.
             Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
             
-            The meaning of scroll `units` varies` acro`ss oper`ating` systems and applications.
+            The meaning of scroll units varies across operating systems and applications.
             A scroll value of 10 might result in different distances depending on the application and system settings.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
-            agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
-            agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
+                agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
+                agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
+            ```
         """
         self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
         self.tools.agent_os.mouse_scroll(x, y)
@@ -231,15 +248,16 @@ class VisionAgent:
         Types the specified text as if it were entered on a keyboard.
 
         Parameters:
-            text (str): The text to be typed.
+            text (str): 
+                The text to be typed. Must be at least 1 character long.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.type("Hello, world!")  # Types "Hello, world!"
-            agent.type("user@example.com")  # Types an email address
-            agent.type("password123")  # Types a password
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.type("Hello, world!")  # Types "Hello, world!"
+                agent.type("user@example.com")  # Types an email address
+                agent.type("password123")  # Types a password
+            ```
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
@@ -251,7 +269,7 @@ class VisionAgent:
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
-        image: Optional[ImageSource] = None,
+        image: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> str: ...
     @overload
@@ -259,16 +277,16 @@ class VisionAgent:
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
-        image: Optional[ImageSource] = None,
+        image: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "image", "response_schema"})
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
-        image: Optional[ImageSource] = None,
+        image: Optional[Img] = None,
         response_schema: Type[ResponseSchema] | None = None,
         model: ModelComposition | str | None = None,
     ) -> ResponseSchema | str:
@@ -278,46 +296,68 @@ class VisionAgent:
         Parameters:
             query (str): 
                 The query describing what information to retrieve.
-            image (ImageSource | None): 
-                The image to extract information from. Optional. Defaults to a screenshot of the current screen.
-            response_schema (Type[ResponseSchema] | None): 
-                A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
-            model (ModelComposition | str | None):
+            image (Img | None, optional): 
+                The image to extract information from. Defaults to a screenshot of the current screen. 
+                Can be a path to an image file, a PIL Image object or a data URL.
+            response_schema (Type[ResponseSchema] | None, optional): 
+                A Pydantic model class that defines the response schema. If not provided, returns a string.
+            model (ModelComposition | str | None, optional):
                 The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`.
-                Note: `response_schema` is only supported with not supported by all models.
+                Note: `response_schema` is not supported by all models.
 
         Returns:
-            ResponseSchema: The extracted information, either as an instance of ResponseSchemaBase or the primite type passed or string if no response_schema is provided.
+            ResponseSchema | str: 
+                The extracted information, either as an instance of ResponseSchema or string if no response_schema is provided.
 
         Limitations:
             - Nested Pydantic schemas are not currently supported
             - Schema support is only available with "askui" model (default model if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` are set) at the moment
 
         Example:
-        ```python
-        from askui import JsonSchemaBase
+            ```python
+            from askui import JsonSchemaBase
+            from PIL import Image
 
-        class UrlResponse(JsonSchemaBase):
-            url: str
+            class UrlResponse(JsonSchemaBase):
+                url: str
 
-        with VisionAgent() as agent:
-            # Get URL as string
-            url = agent.get("What is the current url shown in the url bar?")
-            
-            # Get URL as Pydantic model
-            response = agent.get(
-                "What is the current url shown in the url bar?",
-                response_schema=UrlResponse
-            )
-            print(response.url)
-        ```
+            with VisionAgent() as agent:
+                # Get URL as string
+                url = agent.get("What is the current url shown in the url bar?")
+                
+                # Get URL as Pydantic model from image at (relative) path
+                response = agent.get(
+                    "What is the current url shown in the url bar?",
+                    response_schema=UrlResponse,
+                    image="screenshot.png",
+                )
+                print(response.url)
+
+                # Get boolean response from PIL Image
+                is_login_page = agent.get(
+                    "Is this a login page?",
+                    response_schema=bool,
+                    image=Image.open("screenshot.png"),
+                )
+
+                # Get integer response
+                input_count = agent.get(
+                    "How many input fields are visible on this page?",
+                    response_schema=int,
+                )
+
+                # Get float response
+                design_rating = agent.get(
+                    "Rate the page design quality from 0 to 1",
+                    response_schema=float,
+                )
+            ```
         """
         self._reporter.add_message("User", f'get: "{query}"')
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        if image is None:
-            image = ImageSource(self.tools.agent_os.screenshot()) # type: ignore
+        _image = ImageSource(self.tools.agent_os.screenshot() if image is None else image) # type: ignore
         response = self.model_router.get_inference(
-            image=image,
+            image=_image,
             query=query,
             model=model or self._model,
             response_schema=response_schema,
@@ -337,17 +377,18 @@ class VisionAgent:
         Pauses the execution of the program for the specified number of seconds.
 
         Parameters:
-            sec (float): The number of seconds to wait. Must be greater than 0.0.
+            sec (float): 
+                The number of seconds to wait. Must be greater than 0.0.
 
         Raises:
             ValueError: If the provided `sec` is negative.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.wait(5)  # Pauses execution for 5 seconds
-            agent.wait(0.5)  # Pauses execution for 500 milliseconds
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.wait(5)  # Pauses execution for 5 seconds
+                agent.wait(0.5)  # Pauses execution for 500 milliseconds
+            ```
         """
         time.sleep(sec)
 
@@ -361,14 +402,15 @@ class VisionAgent:
         Simulates the release of a key.
 
         Parameters:
-            key (PcKey | ModifierKey): The key to be released.
+            key (PcKey | ModifierKey): 
+                The key to be released.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.key_up('a')  # Release the 'a' key
-            agent.key_up('shift')  # Release the 'Shift' key
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.key_up('a')  # Release the 'a' key
+                agent.key_up('shift')  # Release the 'Shift' key
+            ```
         """
         self._reporter.add_message("User", f'key_up "{key}"')
         logger.debug("VisionAgent received in key_up '%s'", key)
@@ -384,14 +426,15 @@ class VisionAgent:
         Simulates the pressing of a key.
 
         Parameters:
-            key (PcKey | ModifierKey): The key to be pressed.
+            key (PcKey | ModifierKey): 
+                The key to be pressed.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.key_down('a')  # Press the 'a' key
-            agent.key_down('shift')  # Press the 'Shift' key
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.key_down('a')  # Press the 'a' key
+                agent.key_down('shift')  # Press the 'Shift' key
+            ```
         """
         self._reporter.add_message("User", f'key_down "{key}"')
         logger.debug("VisionAgent received in key_down '%s'", key)
@@ -412,16 +455,18 @@ class VisionAgent:
         interface interactions.
 
         Parameters:
-            goal (str): A description of what the agent should achieve.
-            model (ModelComposition | str | None): The composition or name of the model(s) to be used for achieving the `goal`.
+            goal (str): 
+                A description of what the agent should achieve.
+            model (ModelComposition | str | None, optional): 
+                The composition or name of the model(s) to be used for achieving the `goal`.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.act("Open the settings menu")
-            agent.act("Search for 'printer' in the search box")
-            agent.act("Log in with username 'admin' and password '1234'")
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.act("Open the settings menu")
+                agent.act("Search for 'printer' in the search box")
+                agent.act("Log in with username 'admin' and password '1234'")
+            ```
         """
         self._reporter.add_message("User", f'act: "{goal}"')
         logger.debug(
@@ -440,19 +485,19 @@ class VisionAgent:
         Simulates pressing a key or key combination on the keyboard.
 
         Parameters:
-            key (PcKey | ModifierKey): The main key to press. This can be a letter, number, 
-                special character, or function key.
-            modifier_keys (list[MODIFIER_KEY] | None): Optional list of modifier keys to press 
-                along with the main key. Common modifier keys include 'ctrl', 'alt', 'shift'.
+            key (PcKey | ModifierKey): 
+                The main key to press. This can be a letter, number, special character, or function key.
+            modifier_keys (list[ModifierKey] | None, optional): 
+                List of modifier keys to press along with the main key. Common modifier keys include 'ctrl', 'alt', 'shift'.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.keyboard('a')  # Press 'a' key
-            agent.keyboard('enter')  # Press 'Enter' key
-            agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
-            agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.keyboard('a')  # Press 'a' key
+                agent.keyboard('enter')  # Press 'Enter' key
+                agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
+                agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
+            ```
         """
         logger.debug("VisionAgent received instruction to press '%s'", key)
         self.tools.agent_os.keyboard_tap(key, modifier_keys)  # type: ignore
@@ -470,15 +515,16 @@ class VisionAgent:
         is split on spaces and executed as a subprocess.
 
         Parameters:
-            command (str): The command to execute on the command line.
+            command (str): 
+                The command to execute on the command line.
 
         Example:
-        ```python
-        with VisionAgent() as agent:
-            agent.cli("echo Hello World")  # Prints "Hello World"
-            agent.cli("ls -la")  # Lists files in current directory with details
-            agent.cli("python --version")  # Displays Python version
-        ```
+            ```python
+            with VisionAgent() as agent:
+                agent.cli("echo Hello World")  # Prints "Hello World"
+                agent.cli("ls -la")  # Lists files in current directory with details
+                agent.cli("python --version")  # Displays Python version
+            ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         subprocess.run(command.split(" "))
