@@ -32,7 +32,7 @@ class Description(Locator):
         return self._str_with_relation()
 
 
-class Class(Locator):
+class Element(Locator):
     """Locator for finding ui elements by a class name assigned to the ui element, e.g., by a computer vision model."""
     class_name: Literal["text", "textfield"] | None = None
 
@@ -47,7 +47,7 @@ class Class(Locator):
         result = (
             f'element with class "{self.class_name}"'
             if self.class_name
-            else "element that has a class"
+            else "element"
         )
         return result + super()._relations_str()
 
@@ -57,11 +57,11 @@ class Class(Locator):
 
 
 TextMatchType = Literal["similar", "exact", "contains", "regex"]
-DEFAULT_TEXT_MATCH_TYPE = "similar"
+DEFAULT_TEXT_MATCH_TYPE: TextMatchType = "similar"
 DEFAULT_SIMILARITY_THRESHOLD = 70
 
 
-class Text(Class):
+class Text(Element):
     """Locator for finding text elements by their content."""
     text: str | None = None
     match_type: TextMatchType = DEFAULT_TEXT_MATCH_TYPE

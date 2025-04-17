@@ -7,7 +7,7 @@ from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
 from askui.locators.locators import Locator
-from askui.locators import Class, Description, Text, Image
+from askui.locators import Element, Description, Text, Image
 from askui.locators.relatable import RelationBase
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
@@ -62,7 +62,7 @@ def test_serialize_text_regex(askui_serializer: AskUiLocatorSerializer) -> None:
 
 
 def test_serialize_class_no_name(askui_serializer: AskUiLocatorSerializer) -> None:
-    class_ = Class()
+    class_ = Element()
     result = askui_serializer.serialize(class_)
     assert result["instruction"] == "element"
     assert result["customElements"] == []

@@ -1,6 +1,6 @@
 import re
 import pytest
-from askui.locators import Class, Description, Text, Image
+from askui.locators import Element, Description, Text, Image
 from askui.locators.relatable import CircularDependencyError
 from PIL import Image as PILImage
 
@@ -29,13 +29,13 @@ def test_text_regex_str() -> None:
 
 
 def test_class_with_name_str() -> None:
-    class_ = Class("textfield")
+    class_ = Element("textfield")
     assert str(class_) == 'element with class "textfield"'
 
 
 def test_class_without_name_str() -> None:
-    class_ = Class()
-    assert str(class_) == "element that has a class"
+    class_ = Element()
+    assert str(class_) == "element"
 
 
 def test_description_str() -> None:
@@ -145,7 +145,7 @@ def test_text_with_chained_relations_str() -> None:
 
 def test_mixed_locator_types_with_relations_str() -> None:
     text = Text("hello")
-    text.above_of(Class("textfield"))
+    text.above_of(Element("textfield"))
     assert (
         str(text)
         == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"'
@@ -164,12 +164,12 @@ def test_description_with_relation_str() -> None:
 def test_complex_relation_chain_str() -> None:
     text = Text("hello")
     text.above_of(
-        Class("textfield")
+        Element("textfield")
         .right_of(Text("world", match_type="exact"))
         .and_(
             Description("input")
             .below_of(Text("earth", match_type="contains"))
-            .nearest_to(Class("textfield"))
+            .nearest_to(Element("textfield"))
         )
     )
     assert (
@@ -228,7 +228,7 @@ def test_deep_cycle_str() -> None:
 
 def test_multiple_references_no_cycle_str() -> None:
     heading = Text("heading")
-    textfield = Class("textfield")
+    textfield = Element("textfield")
     textfield.right_of(heading)
     textfield.below_of(heading)
     assert str(textfield) == 'element with class "textfield"\n  1. right of boundary of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'

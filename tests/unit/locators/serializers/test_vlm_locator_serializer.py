@@ -1,6 +1,6 @@
 import pytest
 from askui.locators.locators import Locator
-from askui.locators import Class, Description, Text
+from askui.locators import Element, Description, Text
 from askui.locators.locators import Image
 from askui.locators.relatable import CircularDependencyError
 from askui.locators.serializers import VlmLocatorSerializer
@@ -41,13 +41,13 @@ def test_serialize_text_regex(vlm_serializer: VlmLocatorSerializer) -> None:
 
 
 def test_serialize_class(vlm_serializer: VlmLocatorSerializer) -> None:
-    class_ = Class("textfield")
+    class_ = Element("textfield")
     result = vlm_serializer.serialize(class_)
     assert result == "an arbitrary textfield shown"
 
 
 def test_serialize_class_no_name(vlm_serializer: VlmLocatorSerializer) -> None:
-    class_ = Class()
+    class_ = Element()
     result = vlm_serializer.serialize(class_)
     assert result == "an arbitrary ui element (e.g., text, button, textfield, etc.)"
 

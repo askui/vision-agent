@@ -7,7 +7,7 @@ from .locators import (
     DEFAULT_TEXT_MATCH_TYPE,
     ImageMetadata,
     AiElement as AiElementLocator,
-    Class,
+    Element,
     Description,
     Image,
     Text,
@@ -33,7 +33,7 @@ class VlmLocatorSerializer:
 
         if isinstance(locator, Text):
             return self._serialize_text(locator)
-        elif isinstance(locator, Class):
+        elif isinstance(locator, Element):
             return self._serialize_class(locator)
         elif isinstance(locator, Description):
             return self._serialize_description(locator)
@@ -44,7 +44,7 @@ class VlmLocatorSerializer:
         else:
             raise ValueError(f"Unsupported locator type: {type(locator)}")
 
-    def _serialize_class(self, class_: Class) -> str:
+    def _serialize_class(self, class_: Element) -> str:
         if class_.class_name:
             return f"an arbitrary {class_.class_name} shown"
         else:
@@ -108,7 +108,7 @@ class AskUiLocatorSerializer:
         result = AskUiSerializedLocator(instruction="", customElements=[])
         if isinstance(locator, Text):
             result["instruction"] = self._serialize_text(locator)
-        elif isinstance(locator, Class):
+        elif isinstance(locator, Element):
             result["instruction"] = self._serialize_class(locator)
         elif isinstance(locator, Description):
             result["instruction"] = self._serialize_description(locator)
@@ -130,7 +130,7 @@ class AskUiLocatorSerializer:
         result["customElements"] += serialized_relation["customElements"]
         return result
 
-    def _serialize_class(self, class_: Class) -> str:
+    def _serialize_class(self, class_: Element) -> str:
         return class_.class_name or "element"
 
     def _serialize_description(self, description: Description) -> str:

@@ -3,7 +3,7 @@ import re
 import pytest
 from PIL import Image as PILImage
 
-from askui.locators import Description, Class, Text, Image, AiElement
+from askui.locators import Description, Element, Text, Image, AiElement
 
 
 TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
@@ -33,28 +33,28 @@ class TestDescriptionLocator:
 
 class TestClassLocator:
     def test_initialization_with_class_name(self) -> None:
-        cls = Class(class_name="text")
+        cls = Element(class_name="text")
         assert cls.class_name == "text"
         assert str(cls) == 'element with class "text"'
 
     def test_initialization_without_class_name(self) -> None:
-        cls = Class()
+        cls = Element()
         assert cls.class_name is None
-        assert str(cls) == "element that has a class"
+        assert str(cls) == "element"
 
     def test_initialization_with_positional_arg(self) -> None:
-        cls = Class("text")
+        cls = Element("text")
         assert cls.class_name == "text"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
-            Class(class_name="button")  # type: ignore
+            Element(class_name="button")  # type: ignore
 
         with pytest.raises(ValueError):
-            Class(class_name=123)  # type: ignore
+            Element(class_name=123)  # type: ignore
 
         with pytest.raises(ValueError):
-            Class(123)  # type: ignore
+            Element(123)  # type: ignore
 
 
 class TestTextLocator:

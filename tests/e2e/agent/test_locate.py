@@ -7,7 +7,7 @@ from PIL import Image as PILImage
 from askui.agent import VisionAgent
 from askui.locators import (
     Description,
-    Class,
+    Element,
     Text,
     AiElement,
 )
@@ -48,7 +48,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using a class locator."""
-        locator = Class("textfield")
+        locator = Element("textfield")
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -62,7 +62,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using a class locator."""
-        locator = Class()
+        locator = Element()
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
