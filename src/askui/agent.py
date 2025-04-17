@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Annotated, Literal, Optional, Type
+from typing import Annotated, Literal, Optional, Type, overload
 from pydantic import Field, validate_call
 
 from askui.container import telemetry
@@ -22,7 +22,7 @@ from .reporting import CompositeReporter, Reporter
 import time
 from dotenv import load_dotenv
 from PIL import Image
-from .models.types import JsonSchema
+from .models.types.response_schemas import ResponseSchema
 
 
 class InvalidParameterError(Exception):
@@ -216,14 +216,32 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.tools.os.type(text) # type: ignore
 
+
+    @overload
+    def get(
+        self,
+        query: str,
+        response_schema: None = None,
+        image: Optional[ImageSource] = None,
+        model: ModelComposition | str | None = None,
+    ) -> str: ...
+    @overload
+    def get(
+        self,
+        query: str,
+        response_schema: Type[ResponseSchema],
+        image: Optional[ImageSource] = None,
+        model: ModelComposition | str | None = None,
+    ) -> ResponseSchema: ...
+
     @telemetry.record_call(exclude={"query", "image", "response_schema"})
     def get(
         self,
         query: str,
         image: Optional[ImageSource] = None,
-        response_schema: Type[JsonSchema] | None = None,
+        response_schema: Type[ResponseSchema] | None = None,
         model: ModelComposition | str | None = None,
-    ) -> JsonSchema | str:
+    ) -> ResponseSchema | str:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
 
@@ -232,14 +250,14 @@ class VisionAgent:
                 The query describing what information to retrieve.
             image (ImageSource | None): 
                 The image to extract information from. Optional. Defaults to a screenshot of the current screen.
-            response_schema (type[ResponseSchema] | None): 
+            response_schema (Type[ResponseSchema] | None): 
                 A Pydantic model class that defines the response schema. Optional. If not provided, returns a string.
             model (ModelComposition | str | None):
                 The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`.
                 Note: `response_schema` is only supported with not supported by all models.
 
         Returns:
-            ResponseSchema | str: The extracted information, either as a Pydantic model instance or a string.
+            ResponseSchema: The extracted information, either as an instance of ResponseSchemaBase or the primite type passed or string if no response_schema is provided.
 
         Limitations:
             - Nested Pydantic schemas are not currently supported
@@ -275,7 +293,7 @@ class VisionAgent:
             response_schema=response_schema,
         )
         if self._reporter is not None:
-            message_content = response if isinstance(response, str) else response.model_dump()
+            message_content = str(response) if isinstance(response, (str, bool, int, float)) else response.model_dump()
             self._reporter.add_message("Agent", message_content)
         return response
     

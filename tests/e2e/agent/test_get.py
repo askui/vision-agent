@@ -4,10 +4,10 @@ from PIL import Image as PILImage
 from askui.models import ModelName
 from askui import VisionAgent
 from askui.utils.image_utils import ImageSource
-from askui import JsonSchemaBase
+from askui.response_schemas import ResponseSchemaBase
 
 
-class UrlResponse(JsonSchemaBase):
+class UrlResponse(ResponseSchemaBase):
     url: str
 
 
@@ -15,7 +15,7 @@ class PageContextResponse(UrlResponse):
     title: str
 
 
-class BrowserContextResponse(JsonSchemaBase):
+class BrowserContextResponse(ResponseSchemaBase):
     page_context: PageContextResponse
     browser_type: Literal["chrome", "firefox", "edge", "safari"]
 
@@ -28,7 +28,7 @@ def test_get(
 ) -> None:
     url = vision_agent.get(
         "What is the current url shown in the url bar?",
-        ImageSource(github_login_screenshot),
+        image=ImageSource(github_login_screenshot),
         model=model,
     )
     assert url == "github.com/login"
@@ -42,7 +42,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
     with pytest.raises(Exception):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            ImageSource(github_login_screenshot),
+            image=ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
             model=ModelName.ASKUI,
         )
@@ -56,7 +56,7 @@ def test_get_with_response_schema_without_required_with_askui_model_raises(
     with pytest.raises(Exception):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            ImageSource(github_login_screenshot),
+            image=ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
             model=ModelName.ASKUI,
         )
@@ -70,7 +70,7 @@ def test_get_with_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        ImageSource(github_login_screenshot),
+        image=ImageSource(github_login_screenshot),
         response_schema=UrlResponse,
         model=model,
     )
@@ -85,13 +85,13 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
     with pytest.raises(NotImplementedError):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            ImageSource(github_login_screenshot),
+            image=ImageSource(github_login_screenshot),
             response_schema=UrlResponse,
             model=ModelName.ANTHROPIC,
         )
 
 
-@pytest.mark.parametrize("model", [None, ModelName.ASKUI])
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
 @pytest.mark.skip("Skip as there is currently a bug on the api side not supporting definitions used for nested schemas")
 def test_get_with_nested_and_inherited_response_schema(
     vision_agent: VisionAgent,
@@ -100,7 +100,7 @@ def test_get_with_nested_and_inherited_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current browser context?",
-        ImageSource(github_login_screenshot),
+        image=ImageSource(github_login_screenshot),
         response_schema=BrowserContextResponse,
         model=model,
     )
@@ -108,3 +108,66 @@ def test_get_with_nested_and_inherited_response_schema(
     assert response.page_context.url in ["https://github.com/login", "github.com/login"]
     assert "Github" in response.page_context.title
     assert response.browser_type in ["chrome", "firefox", "edge", "safari"]
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_string_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "What is the current url shown in the url bar?",
+        image=ImageSource(github_login_screenshot),
+        response_schema=str,
+        model=model,
+    )
+    assert response in ["https://github.com/login", "github.com/login"]
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_boolean_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "Is this a login page?",
+        image=ImageSource(github_login_screenshot),
+        response_schema=bool,
+        model=model,
+    )
+    assert isinstance(response, bool)
+    assert response is True
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_integer_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "How many input fields are visible on this page?",
+        image=ImageSource(github_login_screenshot),
+        response_schema=int,
+        model=model,
+    )
+    assert isinstance(response, int)
+    assert response > 0
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_float_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "Return a floating point number between 0 and 1 as a rating for how you well this page is designed (0 is the worst, 1 is the best)",
+        image=ImageSource(github_login_screenshot),
+        response_schema=float,
+        model=model,
+    )
+    assert isinstance(response, float)
+    assert response > 0

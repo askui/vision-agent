@@ -9,7 +9,7 @@ from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSeriali
 from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.models import ModelComposition, ModelName
-from askui.models.types import JsonSchema
+from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
 from askui.utils.image_utils import ImageSource
 from .askui.api import AskUiInferenceApi
@@ -141,18 +141,18 @@ class ModelRouter:
         self,
         query: str,
         image: ImageSource,
-        response_schema: Type[JsonSchema] | None = None,
+        response_schema: Type[ResponseSchema] | None = None,
         model: ModelComposition | str | None = None,
-    ) -> JsonSchema | str:
+    ) -> ResponseSchema | str:
         if self.tars.authenticated and model == ModelName.TARS:
-            if response_schema is not None:
-                raise NotImplementedError("Response schema is not yet supported for UI-TARS models.")
+            if response_schema not in [str, None]:
+                raise NotImplementedError("(Non-String) Response schema is not yet supported for UI-TARS models.")
             return self.tars.get_inference(image=image, query=query)
         if self.claude.authenticated and (
             isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)
         ):
-            if response_schema is not None:
-                raise NotImplementedError("Response schema is not yet supported for Anthropic models.")
+            if response_schema not in [str, None]:
+                raise NotImplementedError("(Non-String) Response schema is not yet supported for Anthropic models.")
             return self.claude.get_inference(image=image, query=query)
         if self.askui.authenticated and (model == ModelName.ASKUI or model is None):
             return self.askui.get_inference(

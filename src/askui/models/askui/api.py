@@ -1,6 +1,7 @@
 import os
 import base64
 import pathlib
+from pydantic import RootModel
 import requests
 import json as json_lib
 from PIL import Image
@@ -11,7 +12,7 @@ from askui.locators.serializers import AskUiLocatorSerializer
 from askui.locators.locators import Locator
 from askui.utils.image_utils import image_to_base64
 from askui.logger import logger
-from ..types import JsonSchema
+from ..types.response_schemas import ResponseSchema, to_response_schema
 
 
 
@@ -74,19 +75,20 @@ class AskUiInferenceApi:
         self, 
         image: ImageSource, 
         query: str, 
-        response_schema: Type[JsonSchema] | None = None
-    ) -> JsonSchema | str:
+        response_schema: Type[ResponseSchema] | None = None
+    ) -> ResponseSchema | str:
         json: dict[str, Any] = {
             "image": image.to_data_url(),
             "prompt": query,
         }
-        if response_schema is not None:
-            json["config"] = {
-                "json_schema": response_schema.model_json_schema()
-            }
-            logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
+        _response_schema = to_response_schema(response_schema)
+        json["config"] = {
+            "json_schema": _response_schema.model_json_schema()
+        }
+        logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
         content = self._request(endpoint="vqa/inference", json=json)
         response = content["data"]["response"]
-        if response_schema is not None:
-            return response_schema.model_validate(response)
-        return response
+        validated_response = _response_schema.model_validate(response)
+        if isinstance(validated_response, RootModel):
+            return validated_response.root
+        return validated_response
