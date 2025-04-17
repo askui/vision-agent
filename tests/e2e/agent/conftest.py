@@ -1,7 +1,7 @@
 """Shared pytest fixtures for e2e tests."""
 
 import pathlib
-from typing import Optional, Union
+from typing import Generator, Optional, Union
 from typing_extensions import override
 import pytest
 from PIL import Image as PILImage
@@ -28,7 +28,7 @@ class ReporterMock(Reporter):
 @pytest.fixture
 def vision_agent(
     path_fixtures: pathlib.Path, agent_toolbox_mock: AgentToolbox
-) -> VisionAgent:
+) -> Generator[VisionAgent, None, None]:
     """Fixture providing a VisionAgent instance."""
     ai_element_collection = AiElementCollection(
         additional_ai_element_locations=[path_fixtures / "images"]
@@ -41,9 +41,10 @@ def vision_agent(
         reporter=reporter,
         grounding_model_routers=[AskUiModelRouter(inference_api=inference_api)]
     )
-    return VisionAgent(
+    with VisionAgent(
         reporters=[reporter], model_router=model_router, tools=agent_toolbox_mock
-    )
+    ) as agent:
+        yield agent
 
 
 @pytest.fixture

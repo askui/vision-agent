@@ -72,11 +72,16 @@ class VisionAgent:
         load_dotenv()
         configure_logging(level=log_level)
         self._reporter = CompositeReporter(reports=reporters)
-        self.tools = tools or AgentToolbox(agent_os=AskUiControllerClient(display=display, reporter=self._reporter))
+        self.tools = tools or AgentToolbox(
+                agent_os=AskUiControllerClient(
+                display=display,
+                reporter=self._reporter, 
+                controller_server=AskUiControllerServer()
+            ),
+        )
         self.model_router = (
             ModelRouter(tools=self.tools, reporter=self._reporter) if model_router is None else model_router
         )
-        self._controller = AskUiControllerServer()
         self._model = model
 
     @telemetry.record_call(exclude={"locator"})
@@ -481,13 +486,10 @@ class VisionAgent:
     @telemetry.record_call(flush=True)
     def close(self) -> None:
         self.tools.agent_os.disconnect()
-        if self._controller:
-            self._controller.stop(True)
         self._reporter.generate()
             
     @telemetry.record_call()
     def open(self) -> None:
-        self._controller.start(True)
         self.tools.agent_os.connect()
 
     @telemetry.record_call()

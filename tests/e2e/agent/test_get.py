@@ -171,3 +171,37 @@ def test_get_with_float_schema(
     )
     assert isinstance(response, float)
     assert response > 0
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_returns_str_when_no_schema_specified(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "What is the display showing?",
+        image=ImageSource(github_login_screenshot),
+        model=model,
+    )
+    assert isinstance(response, str)
+
+
+class Basis(ResponseSchemaBase):
+    answer: str
+    
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_basis_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "What is the display showing?",
+        image=ImageSource(github_login_screenshot),
+        response_schema=Basis,
+        model=model,
+    )
+    assert isinstance(response, Basis)
+    assert response.answer != "\"What is the display showing?\""
