@@ -77,15 +77,15 @@ class AskUiControllerServer:
     
     def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
         if self._settings.component_registry_file is None:
-            raise AskUISuiteNotInstalledError('AskUI Suite not installed. Please install AskUI Suite to use AskUI Vision Agent.')
+            raise AskUISuiteNotInstalledError(f"AskUI Suite is not installed. Please install AskUI Suite to use AskUI Vision Agent. For more information, please refer to 'https://docs.askui.com/introduction/01-introduction/02-quickstart'.")
         component_registry = AskUiComponentRegistry.model_validate_json(self._settings.component_registry_file.read_text())
         askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
         if not os.path.isfile(askui_remote_device_controller_path):
             raise FileNotFoundError(f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'")
         return askui_remote_device_controller_path
                     
-    def __start_process(self, path, verbose: bool = False) -> None:
-        if verbose:
+    def __start_process(self, path, quite: bool = True) -> None:
+        if not quite:
             self.process = subprocess.Popen(path)
         else:
             self.process = subprocess.Popen(
@@ -95,12 +95,12 @@ class AskUiControllerServer:
             )
         wait_for_port(23000)
         
-    def start(self, clean_up=False, verbose: bool = False) -> None:
+    def start(self, clean_up=False, start_process_quite: bool = True) -> None:
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
         logger.debug("Starting AskUI Remote Device Controller: %s", remote_device_controller_path)
-        self.__start_process(remote_device_controller_path, verbose=verbose)
+        self.__start_process(remote_device_controller_path, quite=start_process_quite)
         
     def clean_up(self):
         if sys.platform == 'win32':
@@ -333,8 +333,9 @@ class AskUiControllerClient:
         return response.processes
     
     @telemetry.record_call(exclude_response = True)
-    def get_windows_list(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
-        """"Get window list from the controller.
+    def get_window_list_for_process_id(self, process_id: int) -> List[controller_v1_pbs.WindowInfo]:
+        """"Get window list for a specific process ID from the controller.
+        This method retrieves the list of windows associated with a given process ID.
         Args:
             process_id (int): Process ID to get windows for.
         Returns:
@@ -342,7 +343,7 @@ class AskUiControllerClient:
         """
         self._assert_stub_initialized()
         if self.report is not None: 
-            self.report.add_message("AgentOS", "get_windows_list()")
+            self.report.add_message("AgentOS", f"get_window_list_for_process_id({process_id})")
         response = self.stub.GetWindowList(controller_v1_pbs.Request_GetWindowList(processID=process_id))
         return response.windows
     
@@ -358,7 +359,7 @@ class AskUiControllerClient:
         process_list = self.get_process_list(has_window=True)
         window_names = []
         for process in process_list:
-            window_list = self.get_windows_list(process.ID)
+            window_list = self.get_window_list_for_process_id(process.ID)
             for window in window_list:
                 window_names.append(window.name)
         return window_names
@@ -388,7 +389,7 @@ class AskUiControllerClient:
             self.report.add_message("AgentOS", f"set_active_window_by_name({window_name})")
         process_list = self.get_process_list(has_window=True)
         for process in process_list:
-            window_list = self.get_windows_list(process.ID)
+            window_list = self.get_window_list_for_process_id(process.ID)
             for window in window_list:
                 if window.name == window_name:
                     self.set_active_window(window.ID, process.ID)
