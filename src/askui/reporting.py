@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+import random
 from jinja2 import Template
 from datetime import datetime
 from typing import List, Dict, Optional, Union
@@ -253,5 +254,5 @@ class SimpleHtmlReporter(Reporter):
             system_info=self.system_info,
         )
 
-        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d_%H%M%S}.html"
+        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
         report_path.write_text(html)
