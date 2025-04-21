@@ -4,7 +4,7 @@ from anthropic.types.beta import BetaToolComputerUse20241022Param
 
 from .base import BaseAnthropicTool, ToolError, ToolResult
 
-from ..utils import image_to_base64, scale_image_with_padding, scale_coordinates_back
+from ..utils import image_to_base64, scale_coordinates_forward, scale_image_with_padding, scale_coordinates_back
 
 
 Action = Literal[
@@ -180,8 +180,13 @@ class ComputerTool(BaseAnthropicTool):
             if action == "screenshot":
                 return self.screenshot()
             elif action == "cursor_position":
-                # TODO: Implement in the future
-                return ToolError("cursor_position is not implemented by this agent")
+                if self.real_screen_height is None or self.real_screen_width is None:
+                    screenshot = self.controller_client.screenshot(report=False)
+                    self.real_screen_width = screenshot.width
+                    self.real_screen_height = screenshot.height
+                mouse_x, mouse_y = self.controller_client.get_cursor_position()
+                scaled_x, scaled_y = scale_coordinates_forward(mouse_x, mouse_y, self.real_screen_width, self.real_screen_height, self.width, self.height)
+                return ToolResult(output=f"Cursor position: x={scaled_x}, y={scaled_y}")
             elif action == "left_click":
                 self.controller_client.click("left")
                 return ToolResult()
@@ -202,6 +207,6 @@ class ComputerTool(BaseAnthropicTool):
         screenshot = self.controller_client.screenshot()
         self.real_screen_width = screenshot.width
         self.real_screen_height = screenshot.height
-        scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
+        scaled_screenshot = scale_image_with_padding(screenshot, self.width, self.height)
         base64_image = image_to_base64(scaled_screenshot)
         return ToolResult(base64_image=base64_image)
