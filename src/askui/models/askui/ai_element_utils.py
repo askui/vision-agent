@@ -70,18 +70,19 @@ class AiElementCollection:
     def __init__(self, additional_ai_element_locations: Optional[List[pathlib.Path]] = None):
         workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         if workspace_id is None:
-            raise ValueError("ASKUI_WORKSPACE_ID is not set")
+            self.ai_element_locations = []
+            return
         
         if additional_ai_element_locations is None:
             additional_ai_element_locations = []
         
-        addional_ai_element_from_env = []
+        additional_ai_element_from_env = []
         if os.getenv("ASKUI_AI_ELEMENT_LOCATIONS", "") != "":
-            addional_ai_element_from_env = [pathlib.Path(ai_element_loc) for ai_element_loc in os.getenv("ASKUI_AI_ELEMENT_LOCATIONS", "").split(",")],
+            additional_ai_element_from_env = [pathlib.Path(ai_element_loc) for ai_element_loc in os.getenv("ASKUI_AI_ELEMENT_LOCATIONS", "").split(",")],
         
         self.ai_element_locations = [
             pathlib.Path.home() / ".askui" / "SnippingTool" / "AIElement" / workspace_id,
-            *addional_ai_element_from_env,
+            *additional_ai_element_from_env,
             *additional_ai_element_locations
         ]
 
