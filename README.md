@@ -1,6 +1,6 @@
 # 🤖 Enable AI to control your desktop and mobile devices
 
-**##We make Windows, MacOS, Linux,  Android an iOS accessible for AI agents by finding any element on screen.**
+**We make Windows, MacOS, Linux,  Android an iOS accessible for AI agents by finding any element on screen.**
 
 Key features of AskUI include:
 
