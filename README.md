@@ -377,7 +377,7 @@ Example:
 from askui import locators as loc
 
 password_textfield_label = loc.Text("Password")
-password_textfield = loc.Class("textfield").right_of(password_textfield_label)
+password_textfield = loc.Element("textfield").right_of(password_textfield_label)
 
 agent.click(password_textfield)
 agent.type("********")
