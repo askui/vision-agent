@@ -19,7 +19,14 @@ class Prompt(Locator):
     """Locator for finding ui elements by a textual prompt / description of a ui element, e.g., "green sign up button"."""
 
     @validate_call
-    def __init__(self, prompt: str) -> None:
+    def __init__(self, prompt: Annotated[str, Field(
+        description="""A textual prompt / description of a ui element, e.g., "green sign up button"."""
+    )]) -> None:
+        """Initialize a Prompt locator.
+        
+        Args:
+            prompt: A textual prompt / description of a ui element, e.g., "green sign up button"
+        """
         super().__init__()
         self._prompt = prompt
         
@@ -41,8 +48,15 @@ class Element(Locator):
     @validate_call
     def __init__(
         self,
-        class_name: Literal["text", "textfield"] | None = None,
+        class_name: Annotated[Literal["text", "textfield"] | None, Field(
+            description="""The class name of the ui element, e.g., 'text' or 'textfield'."""
+        )] = None,
     ) -> None:
+        """Initialize an Element locator.
+        
+        Args:
+            class_name: The class name of the ui element, e.g., 'text' or 'textfield'
+        """
         super().__init__()
         self._class_name = class_name
 
@@ -73,10 +87,35 @@ class Text(Element):
     @validate_call
     def __init__(
         self,
-        text: str | None = None,
-        match_type: TextMatchType = DEFAULT_TEXT_MATCH_TYPE,
-        similarity_threshold: Annotated[int, Field(ge=0, le=100)] = DEFAULT_SIMILARITY_THRESHOLD,
+        text: Annotated[str | None, Field(
+            description="""The text content of the ui element, e.g., 'Sign up'."""
+        )] = None,
+        match_type: Annotated[TextMatchType, Field(
+            description="""The type of match to use. Defaults to 'similar'.
+            'similar' uses a similarity threshold to determine if the text is a match.
+            'exact' requires the text to be exactly the same.
+            'contains' requires the text to contain the specified text.
+            'regex' uses a regular expression to match the text."""
+        )] = DEFAULT_TEXT_MATCH_TYPE,
+        similarity_threshold: Annotated[int, Field(
+            ge=0,
+            le=100, 
+            description="""A threshold for how similar the text 
+            needs to be to the text content of the ui element to be considered a match. 
+            Takes values between 0 and 100 (higher is more similar). Defaults to 70. 
+            Only used if match_type is 'similar'.""")] = DEFAULT_SIMILARITY_THRESHOLD,
     ) -> None:
+        """Initialize a Text locator.
+        
+        Args:
+            text: The text content of the ui element, e.g., 'Sign up'
+            match_type: The type of match to use. Defaults to 'similar'. 'similar' uses a similarity threshold to 
+                determine if the text is a match. 'exact' requires the text to be exactly the same. 'contains' 
+                requires the text to contain the specified text. 'regex' uses a regular expression to match the text.
+            similarity_threshold: A threshold for how similar the text needs to be to the text content of the ui 
+                element to be considered a match. Takes values between 0 and 100 (higher is more similar). 
+                Defaults to 70. Only used if match_type is 'similar'.
+        """
         super().__init__()
         self._text = text
         self._match_type = match_type
@@ -159,7 +198,7 @@ class ImageBase(Locator, ABC):
 
 
 def _generate_name() -> str:
-    return f"anonymous custom element {uuid.uuid4()}"
+    return f"anonymous image {uuid.uuid4()}"
 
 
 class Image(ImageBase):
@@ -168,13 +207,61 @@ class Image(ImageBase):
     def __init__(
         self,
         image: Union[PILImage.Image, pathlib.Path, str],
-        threshold: Annotated[float, Field(ge=0, le=1)] = 0.5,
-        stop_threshold: Annotated[float, Field(ge=0, le=1)] = 0.9,
-        mask: Annotated[list[tuple[float, float]] | None, Field(min_length=3)] = None,
-        rotation_degree_per_step: Annotated[int, Field(ge=0, lt=360)] = 0,
+        threshold: Annotated[float, Field(
+            ge=0, 
+            le=1,
+            description="""A threshold for how similar UI elements need to be to the image to be considered a match. 
+            Takes values between 0.0 (= all elements are recognized) and 1.0 (= elements need to look exactly 
+            like defined). Defaults to 0.5. Important: The threshold impacts the prediction quality."""
+        )] = 0.5,
+        stop_threshold: Annotated[float, Field(
+            ge=0, 
+            le=1,
+            description="""A threshold for when to stop searching for UI elements similar to the image. As soon 
+            as UI elements have been found that are at least as similar as the stop_threshold, the search stops. Should 
+            be greater than or equal to threshold. Takes values between 0.0 and 1.0. Defaults to 0.9. Important: The 
+            stop_threshold impacts the prediction speed."""
+        )] = 0.9,
+        mask: Annotated[list[tuple[float, float]] | None, Field(
+            min_length=3,
+            description="A polygon to match only a certain area of the image."
+        )] = None,
+        rotation_degree_per_step: Annotated[int, Field(
+            ge=0, 
+            lt=360,
+            description="""A step size in rotation degree. Rotates the image by rotation_degree_per_step until 
+            360° is exceeded. Range is between 0° - 360°. Defaults to 0°. Important: This increases the prediction time 
+            quite a bit. So only use it when absolutely necessary."""
+        )] = 0,
         name: str | None = None,
-        image_compare_format: Literal["RGB", "grayscale", "edges"] = "grayscale",
+        image_compare_format: Annotated[Literal["RGB", "grayscale", "edges"], Field(
+            description="""A color compare style. Defaults to 'grayscale'. 
+            Important: The image_compare_format impacts the prediction time as well as quality. As a rule of thumb, 
+            'edges' is likely to be faster than 'grayscale' and 'grayscale' is likely to be faster than 'RGB'. For 
+            quality it is most often the other way around."""
+        )] = "grayscale",
     ) -> None:
+        """Initialize an Image locator.
+        
+        Args:
+            image: The image to match against (PIL Image, path, or string)
+            threshold: A threshold for how similar UI elements need to be to the image to be considered a match. 
+                Takes values between 0.0 (= all elements are recognized) and 1.0 (= elements need to look exactly 
+                like defined). Defaults to 0.5. Important: The threshold impacts the prediction quality.
+            stop_threshold: A threshold for when to stop searching for UI elements similar to the image. As soon 
+                as UI elements have been found that are at least as similar as the stop_threshold, the search stops. 
+                Should be greater than or equal to threshold. Takes values between 0.0 and 1.0. Defaults to 0.9. 
+                Important: The stop_threshold impacts the prediction speed.
+            mask: A polygon to match only a certain area of the image. Must have at least 3 points.
+            rotation_degree_per_step: A step size in rotation degree. Rotates the image by rotation_degree_per_step 
+                until 360° is exceeded. Range is between 0° - 360°. Defaults to 0°. Important: This increases the 
+                prediction time quite a bit. So only use it when absolutely necessary.
+            name: Optional name for the image. Defaults to generated UUID.
+            image_compare_format: A color compare style. Defaults to 'grayscale'. Important: The image_compare_format 
+                impacts the prediction time as well as quality. As a rule of thumb, 'edges' is likely to be faster 
+                than 'grayscale' and 'grayscale' is likely to be faster than 'RGB'. For quality it is most often 
+                the other way around.
+        """
         super().__init__(
             threshold=threshold,
             stop_threshold=stop_threshold,
@@ -204,12 +291,60 @@ class AiElement(ImageBase):
     def __init__(
         self,
         name: str,
-        threshold: Annotated[float, Field(ge=0, le=1)] = 0.5,
-        stop_threshold: Annotated[float, Field(ge=0, le=1)] = 0.9,
-        mask: Annotated[list[tuple[float, float]] | None, Field(min_length=3)] = None,
-        rotation_degree_per_step: Annotated[int, Field(ge=0, lt=360)] = 0,
-        image_compare_format: Literal["RGB", "grayscale", "edges"] = "grayscale",
+        threshold: Annotated[float, Field(
+            ge=0, 
+            le=1,
+            description="""A threshold for how similar UI elements need to be to be considered a match. 
+            Takes values between 0.0 (= all elements are recognized) and 1.0 (= elements need to be an exact match). 
+            Defaults to 0.5. Important: The threshold impacts the prediction quality."""
+        )] = 0.5,
+        stop_threshold: Annotated[float, Field(
+            ge=0, 
+            le=1,
+            description="""A threshold for when to stop searching for UI elements. As soon 
+            as UI elements have been found that are at least as similar as the stop_threshold, the search stops. 
+            Should be greater than or equal to threshold. Takes values between 0.0 and 1.0. Defaults to 0.9. 
+            Important: The stop_threshold impacts the prediction speed."""
+        )] = 0.9,
+        mask: Annotated[list[tuple[float, float]] | None, Field(
+            min_length=3,
+            description="A polygon to match only a certain area of the image of the element saved on disk."
+        )] = None,
+        rotation_degree_per_step: Annotated[int, Field(
+            ge=0, 
+            lt=360,
+            description="""A step size in rotation degree. Rotates the image of the element saved on disk by 
+            rotation_degree_per_step until 360° is exceeded. Range is between 0° - 360°. Defaults to 0°. 
+            Important: This increases the prediction time quite a bit. So only use it when absolutely necessary."""
+        )] = 0,
+        image_compare_format: Annotated[Literal["RGB", "grayscale", "edges"], Field(
+            description="""A color compare style. Defaults to 'grayscale'. 
+            Important: The image_compare_format impacts the prediction time as well as quality. As a rule of thumb, 
+            'edges' is likely to be faster than 'grayscale' and 'grayscale' is likely to be faster than 'RGB'. For 
+            quality it is most often the other way around."""
+        )] = "grayscale",
     ) -> None:
+        """Initialize an AiElement locator.
+        
+        Args:
+            name: Name of the AI element
+            threshold: A threshold for how similar UI elements need to be to be considered a match. Takes values 
+                between 0.0 (= all elements are recognized) and 1.0 (= elements need to be an exact match). 
+                Defaults to 0.5. Important: The threshold impacts the prediction quality.
+            stop_threshold: A threshold for when to stop searching for UI elements. As soon as UI elements have 
+                been found that are at least as similar as the stop_threshold, the search stops. Should be greater 
+                than or equal to threshold. Takes values between 0.0 and 1.0. Defaults to 0.9. Important: The 
+                stop_threshold impacts the prediction speed.
+            mask: A polygon to match only a certain area of the image of the element saved on disk. Must have at 
+                least 3 points.
+            rotation_degree_per_step: A step size in rotation degree. Rotates the image of the element saved on 
+                disk by rotation_degree_per_step until 360° is exceeded. Range is between 0° - 360°. Defaults to 0°. 
+                Important: This increases the prediction time quite a bit. So only use it when absolutely necessary.
+            image_compare_format: A color compare style. Defaults to 'grayscale'. Important: The image_compare_format 
+                impacts the prediction time as well as quality. As a rule of thumb, 'edges' is likely to be faster 
+                than 'grayscale' and 'grayscale' is likely to be faster than 'RGB'. For quality it is most often 
+                the other way around.
+        """
         super().__init__(
             name=name,
             threshold=threshold,
