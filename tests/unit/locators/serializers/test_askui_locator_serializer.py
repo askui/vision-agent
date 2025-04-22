@@ -143,7 +143,7 @@ def test_serialize_right_relation(askui_serializer: AskUiLocatorSerializer) -> N
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text <|string|>hello<|string|> index 0 right of intersection_area element_edge_area text <|string|>world<|string|>"
+        == "text <|string|>hello<|string|> index 0 right of intersection_area element_center_line text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -154,7 +154,7 @@ def test_serialize_left_relation(askui_serializer: AskUiLocatorSerializer) -> No
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text <|string|>hello<|string|> index 0 left of intersection_area element_edge_area text <|string|>world<|string|>"
+        == "text <|string|>hello<|string|> index 0 left of intersection_area element_center_line text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 

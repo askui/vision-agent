@@ -13,7 +13,7 @@ class TestDescriptionLocator:
     def test_initialization_with_description(self) -> None:
         desc = Prompt(prompt="test")
         assert desc.prompt == "test"
-        assert str(desc) == 'element with description "test"'
+        assert str(desc) == 'element with prompt "test"'
 
     def test_initialization_without_description_raises(self) -> None:
         with pytest.raises(ValueError):

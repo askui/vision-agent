@@ -411,7 +411,7 @@ class Relatable(ABC):
         self,
         other_locator: "Relatable",
         index: RelationIndex = 0,
-        reference_point: ReferencePoint = "boundary",
+        reference_point: ReferencePoint = "center",
     ) -> Self:
         """Defines the element (located by *self*) to be **right of** another element /
         other elements (located by *other_locator*).
@@ -449,7 +449,7 @@ class Relatable(ABC):
                   be **right of** a point (in a straight horizontal line) of the
                   other element(s) (located by *other_locator*).
 
-                *Default is **"boundary".***
+                *Default is **"center".***
 
         Returns:
             Self: The locator with the relation added.
@@ -550,7 +550,7 @@ class Relatable(ABC):
         self,
         other_locator: "Relatable",
         index: RelationIndex = 0,
-        reference_point: ReferencePoint = "boundary",
+        reference_point: ReferencePoint = "center",
     ) -> Self:
         """Defines the element (located by *self*) to be **left of** another element /
         other elements (located by *other_locator*).
@@ -588,7 +588,7 @@ class Relatable(ABC):
                   be **left of** a point (in a straight horizontal line) of the
                   other element(s) (located by *other_locator*).
 
-                *Default is **"boundary".***
+                *Default is **"center".***
 
         Returns:
             Self: The locator with the relation added.

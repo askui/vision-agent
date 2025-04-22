@@ -40,7 +40,7 @@ def test_class_without_name_str() -> None:
 
 def test_description_str() -> None:
     desc = Prompt("a big red button")
-    assert str(desc) == 'element with description "a big red button"'
+    assert str(desc) == 'element with prompt "a big red button"'
 
 
 def test_text_with_above_relation_str() -> None:
@@ -66,7 +66,7 @@ def test_text_with_right_relation_str() -> None:
     text.right_of(Text("world"))
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. right of boundary of the 1st text similar to "world" (similarity >= 70%)'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. right of center of the 1st text similar to "world" (similarity >= 70%)'
     )
 
 
@@ -75,7 +75,7 @@ def test_text_with_left_relation_str() -> None:
     text.left_of(Text("world"))
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. left of boundary of the 1st text similar to "world" (similarity >= 70%)'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. left of center of the 1st text similar to "world" (similarity >= 70%)'
     )
 
 
@@ -157,7 +157,7 @@ def test_description_with_relation_str() -> None:
     desc.above_of(Prompt("input"))
     assert (
         str(desc)
-        == 'element with description "button"\n  1. above of boundary of the 1st element with description "input"'
+        == 'element with prompt "button"\n  1. above of boundary of the 1st element with prompt "input"'
     )
 
 
@@ -174,7 +174,7 @@ def test_complex_relation_chain_str() -> None:
     )
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of boundary of the 1st text "world"\n    2. and element with description "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "textfield"'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of center of the 1st text "world"\n    2. and element with prompt "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "textfield"'
     )
 
 
@@ -231,7 +231,7 @@ def test_multiple_references_no_cycle_str() -> None:
     textfield = Element("textfield")
     textfield.right_of(heading)
     textfield.below_of(heading)
-    assert str(textfield) == 'element with class "textfield"\n  1. right of boundary of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
+    assert str(textfield) == 'element with class "textfield"\n  1. right of center of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
 
 
 def test_image_cycle_str() -> None:
