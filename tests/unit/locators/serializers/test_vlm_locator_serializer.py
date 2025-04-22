@@ -1,6 +1,6 @@
 import pytest
 from askui.locators.locators import Locator
-from askui.locators import Element, Description, Text
+from askui.locators import Element, Prompt, Text
 from askui.locators.locators import Image
 from askui.locators.relatable import CircularDependencyError
 from askui.locators.serializers import VlmLocatorSerializer
@@ -53,7 +53,7 @@ def test_serialize_class_no_name(vlm_serializer: VlmLocatorSerializer) -> None:
 
 
 def test_serialize_description(vlm_serializer: VlmLocatorSerializer) -> None:
-    desc = Description("a big red button")
+    desc = Prompt("a big red button")
     result = vlm_serializer.serialize(desc)
     assert result == "a big red button"
 

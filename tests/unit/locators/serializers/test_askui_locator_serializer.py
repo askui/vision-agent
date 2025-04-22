@@ -5,7 +5,7 @@ from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
 from askui.locators.locators import Locator
-from askui.locators import Element, Description, Text, Image
+from askui.locators import Element, Prompt, Text, Image
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils.image_utils import image_to_base64
@@ -66,7 +66,7 @@ def test_serialize_class_no_name(askui_serializer: AskUiLocatorSerializer) -> No
 
 
 def test_serialize_description(askui_serializer: AskUiLocatorSerializer) -> None:
-    desc = Description("a big red button")
+    desc = Prompt("a big red button")
     result = askui_serializer.serialize(desc)
     assert result["instruction"] == "pta <|string|>a big red button<|string|>"
     assert result["customElements"] == []

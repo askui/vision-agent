@@ -3,7 +3,7 @@ import re
 import pytest
 from PIL import Image as PILImage
 
-from askui.locators import Description, Element, Text, Image, AiElement
+from askui.locators import Prompt, Element, Text, Image, AiElement
 
 
 TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
@@ -11,24 +11,24 @@ TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
 
 class TestDescriptionLocator:
     def test_initialization_with_description(self) -> None:
-        desc = Description(description="test")
-        assert desc.description == "test"
+        desc = Prompt(prompt="test")
+        assert desc.prompt == "test"
         assert str(desc) == 'element with description "test"'
 
     def test_initialization_without_description_raises(self) -> None:
         with pytest.raises(ValueError):
-            Description()  # type: ignore
+            Prompt()  # type: ignore
 
     def test_initialization_with_positional_arg(self) -> None:
-        desc = Description("test")
-        assert desc.description == "test"
+        desc = Prompt("test")
+        assert desc.prompt == "test"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
-            Description(description=123)  # type: ignore
+            Prompt(prompt=123)  # type: ignore
 
         with pytest.raises(ValueError):
-            Description(123)  # type: ignore
+            Prompt(123)  # type: ignore
 
 
 class TestClassLocator:

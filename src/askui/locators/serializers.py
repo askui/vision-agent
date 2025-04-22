@@ -8,7 +8,7 @@ from .locators import (
     ImageBase,
     AiElement as AiElementLocator,
     Element,
-    Description,
+    Prompt,
     Image,
     Text,
 )
@@ -35,8 +35,8 @@ class VlmLocatorSerializer:
             return self._serialize_text(locator)
         elif isinstance(locator, Element):
             return self._serialize_class(locator)
-        elif isinstance(locator, Description):
-            return self._serialize_description(locator)
+        elif isinstance(locator, Prompt):
+            return self._serialize_prompt(locator)
         elif isinstance(locator, Image):
             raise NotImplementedError(
                 "Serializing image locators is not yet supported for VLMs"
@@ -50,8 +50,8 @@ class VlmLocatorSerializer:
         else:
             return "an arbitrary ui element (e.g., text, button, textfield, etc.)"
 
-    def _serialize_description(self, description: Description) -> str:
-        return description.description
+    def _serialize_prompt(self, prompt: Prompt) -> str:
+        return prompt.prompt
 
     def _serialize_text(self, text: Text) -> str:
         if text.match_type == "similar":
@@ -110,8 +110,8 @@ class AskUiLocatorSerializer:
             result["instruction"] = self._serialize_text(locator)
         elif isinstance(locator, Element):
             result["instruction"] = self._serialize_class(locator)
-        elif isinstance(locator, Description):
-            result["instruction"] = self._serialize_description(locator)
+        elif isinstance(locator, Prompt):
+            result["instruction"] = self._serialize_prompt(locator)
         elif isinstance(locator, Image):
             result = self._serialize_image(
                 image_locator=locator,
@@ -133,9 +133,9 @@ class AskUiLocatorSerializer:
     def _serialize_class(self, class_: Element) -> str:
         return class_.class_name or "element"
 
-    def _serialize_description(self, description: Description) -> str:
+    def _serialize_prompt(self, prompt: Prompt) -> str:
         return (
-            f"pta {self._TEXT_DELIMITER}{description.description}{self._TEXT_DELIMITER}"
+            f"pta {self._TEXT_DELIMITER}{prompt.prompt}{self._TEXT_DELIMITER}"
         )
 
     def _serialize_text(self, text: Text) -> str:

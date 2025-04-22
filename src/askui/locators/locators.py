@@ -15,20 +15,20 @@ class Locator(Relatable, ABC):
     pass
 
 
-class Description(Locator):
-    """Locator for finding ui elements by a textual description of the ui element."""
+class Prompt(Locator):
+    """Locator for finding ui elements by a textual prompt / description of a ui element, e.g., "green sign up button"."""
 
     @validate_call
-    def __init__(self, description: str) -> None:
+    def __init__(self, prompt: str) -> None:
         super().__init__()
-        self._description = description
+        self._prompt = prompt
         
     @property
-    def description(self) -> str:
-        return self._description
+    def prompt(self) -> str:
+        return self._prompt
 
     def _str_with_relation(self) -> str:
-        result = f'element with description "{self.description}"'
+        result = f'element with prompt "{self.prompt}"'
         return result + super()._relations_str()
 
     def __str__(self) -> str:

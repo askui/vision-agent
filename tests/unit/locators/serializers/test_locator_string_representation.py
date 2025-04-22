@@ -1,6 +1,6 @@
 import re
 import pytest
-from askui.locators import Element, Description, Text, Image
+from askui.locators import Element, Prompt, Text, Image
 from askui.locators.relatable import CircularDependencyError
 from PIL import Image as PILImage
 
@@ -39,7 +39,7 @@ def test_class_without_name_str() -> None:
 
 
 def test_description_str() -> None:
-    desc = Description("a big red button")
+    desc = Prompt("a big red button")
     assert str(desc) == 'element with description "a big red button"'
 
 
@@ -153,8 +153,8 @@ def test_mixed_locator_types_with_relations_str() -> None:
 
 
 def test_description_with_relation_str() -> None:
-    desc = Description("button")
-    desc.above_of(Description("input"))
+    desc = Prompt("button")
+    desc.above_of(Prompt("input"))
     assert (
         str(desc)
         == 'element with description "button"\n  1. above of boundary of the 1st element with description "input"'
@@ -167,7 +167,7 @@ def test_complex_relation_chain_str() -> None:
         Element("textfield")
         .right_of(Text("world", match_type="exact"))
         .and_(
-            Description("input")
+            Prompt("input")
             .below_of(Text("earth", match_type="contains"))
             .nearest_to(Element("textfield"))
         )

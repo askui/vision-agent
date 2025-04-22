@@ -7,7 +7,7 @@ from askui.locators.locators import AiElement
 from askui.exceptions import ElementNotFoundError
 from askui.agent import VisionAgent
 from askui.locators import (
-    Description,
+    Prompt,
     Element,
     Text,
     Image,
@@ -321,7 +321,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using description with relation."""
-        locator = Description("Sign in button").below_of(Description("Password field"))
+        locator = Prompt("Sign in button").below_of(Prompt("Password field"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -336,7 +336,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using description with relation."""
-        locator = Description("Sign in button").below_of(
+        locator = Prompt("Sign in button").below_of(
             Element("textfield").below_of(Text("Password"))
         )
         x, y = vision_agent.locate(

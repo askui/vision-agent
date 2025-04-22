@@ -3,14 +3,13 @@ from typing_extensions import override
 from PIL import Image
 
 from askui.container import telemetry
-from askui.locators.locators import AiElement, Description, Text
+from askui.locators.locators import AiElement, Prompt, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
 from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
-from askui.tools.askui.askui_controller import AskUiControllerClient
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 from .askui.api import AskUiInferenceApi
@@ -83,18 +82,18 @@ class AskUiModelRouter(GroundingModelRouter):
             )
         if model == ModelName.ASKUI__PTA:
             logger.debug("Routing locate prediction to askui-pta")
-            x, y = self._inference_api.predict(screenshot, Description(locator))
+            x, y = self._inference_api.predict(screenshot, Prompt(locator))
             return handle_response((x, y), locator)
         if model == ModelName.ASKUI__OCR:
             logger.debug("Routing locate prediction to askui-ocr")
             return self._locate_with_askui_ocr(screenshot, locator)
         if model == ModelName.ASKUI__COMBO or model is None:
             logger.debug("Routing locate prediction to askui-combo")
-            description_locator = Description(locator)
-            x, y = self._inference_api.predict(screenshot, description_locator)
+            prompt_locator = Prompt(locator)
+            x, y = self._inference_api.predict(screenshot, prompt_locator)
             if x is None or y is None:
                 return self._locate_with_askui_ocr(screenshot, locator)
-            return handle_response((x, y), description_locator)
+            return handle_response((x, y), prompt_locator)
         if model == ModelName.ASKUI__AI_ELEMENT:
             logger.debug("Routing click prediction to askui-ai-element")
             _locator = AiElement(locator)

@@ -1,9 +1,9 @@
-from askui.locators.locators import AiElement, Element, Description, Image, Text
+from askui.locators.locators import AiElement, Element, Prompt, Image, Text
 
 __all__ = [
     "AiElement",
     "Element",
-    "Description",
+    "Prompt",
     "Image",
     "Text",
 ]
