@@ -353,9 +353,9 @@ class VisionAgent:
                 )
             ```
         """
-        self._reporter.add_message("User", f'get: "{query}"')
         logger.debug("VisionAgent received instruction to get '%s'", query)
         _image = ImageSource(self.tools.agent_os.screenshot() if image is None else image) # type: ignore
+        self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
         response = self.model_router.get_inference(
             image=_image,
             query=query,
