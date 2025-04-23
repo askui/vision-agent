@@ -1,12 +1,15 @@
 from typing_extensions import NotRequired, TypedDict
 
-from askui.locators.image_utils import ImageSource
-from askui.models.askui.ai_element_utils import AiElementCollection, AiElementNotFound
+from askui.reporting import Reporter
+from askui.utils.image_utils import ImageSource
+from askui.models.askui.ai_element_utils import AiElementCollection
 from .locators import (
-    ImageMetadata,
+    DEFAULT_SIMILARITY_THRESHOLD,
+    DEFAULT_TEXT_MATCH_TYPE,
+    ImageBase,
     AiElement as AiElementLocator,
-    Class,
-    Description,
+    Element,
+    Prompt,
     Image,
     Text,
 )
@@ -31,25 +34,29 @@ class VlmLocatorSerializer:
 
         if isinstance(locator, Text):
             return self._serialize_text(locator)
-        elif isinstance(locator, Class):
+        elif isinstance(locator, Element):
             return self._serialize_class(locator)
-        elif isinstance(locator, Description):
-            return self._serialize_description(locator)
+        elif isinstance(locator, Prompt):
+            return self._serialize_prompt(locator)
         elif isinstance(locator, Image):
             raise NotImplementedError(
                 "Serializing image locators is not yet supported for VLMs"
             )
+        elif isinstance(locator, AiElementLocator):
+            raise NotImplementedError(
+                "Serializing AI element locators is not yet supported for VLMs"
+            )
         else:
             raise ValueError(f"Unsupported locator type: {type(locator)}")
 
-    def _serialize_class(self, class_: Class) -> str:
+    def _serialize_class(self, class_: Element) -> str:
         if class_.class_name:
             return f"an arbitrary {class_.class_name} shown"
         else:
             return "an arbitrary ui element (e.g., text, button, textfield, etc.)"
 
-    def _serialize_description(self, description: Description) -> str:
-        return description.description
+    def _serialize_prompt(self, prompt: Prompt) -> str:
+        return prompt.prompt
 
     def _serialize_text(self, text: Text) -> str:
         if text.match_type == "similar":
@@ -92,8 +99,9 @@ class AskUiLocatorSerializer:
         "or": "or",
     }
 
-    def __init__(self, ai_element_collection: AiElementCollection):
+    def __init__(self, ai_element_collection: AiElementCollection, reporter: Reporter):
         self._ai_element_collection = ai_element_collection
+        self._reporter = reporter
 
     def serialize(self, locator: Relatable) -> AskUiSerializedLocator:
         locator.raise_if_cycle()
@@ -106,15 +114,12 @@ class AskUiLocatorSerializer:
         result = AskUiSerializedLocator(instruction="", customElements=[])
         if isinstance(locator, Text):
             result["instruction"] = self._serialize_text(locator)
-        elif isinstance(locator, Class):
+        elif isinstance(locator, Element):
             result["instruction"] = self._serialize_class(locator)
-        elif isinstance(locator, Description):
-            result["instruction"] = self._serialize_description(locator)
+        elif isinstance(locator, Prompt):
+            result["instruction"] = self._serialize_prompt(locator)
         elif isinstance(locator, Image):
-            result = self._serialize_image(
-                image_metadata=locator,
-                image_sources=[locator.image],
-            )
+            result = self._serialize_image(locator)
         elif isinstance(locator, AiElementLocator):
             result = self._serialize_ai_element(locator)
         else:
@@ -128,17 +133,23 @@ class AskUiLocatorSerializer:
         result["customElements"] += serialized_relation["customElements"]
         return result
 
-    def _serialize_class(self, class_: Class) -> str:
+    def _serialize_class(self, class_: Element) -> str:
         return class_.class_name or "element"
 
-    def _serialize_description(self, description: Description) -> str:
-        return (
-            f"pta {self._TEXT_DELIMITER}{description.description}{self._TEXT_DELIMITER}"
-        )
+    def _serialize_prompt(self, prompt: Prompt) -> str:
+        return f"pta {self._TEXT_DELIMITER}{prompt.prompt}{self._TEXT_DELIMITER}"
 
     def _serialize_text(self, text: Text) -> str:
         match text.match_type:
             case "similar":
+                if (
+                    text.similarity_threshold == DEFAULT_SIMILARITY_THRESHOLD
+                    and text.match_type == DEFAULT_TEXT_MATCH_TYPE
+                ):
+                    # Necessary so that we can use wordlevel ocr for these texts
+                    return (
+                        f"text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER}"
+                    )
                 return f"text with text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER} that matches to {text.similarity_threshold} %"
             case "exact":
                 return f"text equals text {self._TEXT_DELIMITER}{text.text}{self._TEXT_DELIMITER}"
@@ -182,47 +193,65 @@ class AskUiLocatorSerializer:
 
     def _serialize_image_to_custom_element(
         self,
-        image_metadata: ImageMetadata,
+        image_locator: ImageBase,
         image_source: ImageSource,
     ) -> CustomElement:
         custom_element: CustomElement = CustomElement(
             customImage=image_source.to_data_url(),
-            threshold=image_metadata.threshold,
-            stopThreshold=image_metadata.stop_threshold,
-            rotationDegreePerStep=image_metadata.rotation_degree_per_step,
-            imageCompareFormat=image_metadata.image_compare_format,
-            name=image_metadata.name,
+            threshold=image_locator.threshold,
+            stopThreshold=image_locator.stop_threshold,
+            rotationDegreePerStep=image_locator.rotation_degree_per_step,
+            imageCompareFormat=image_locator.image_compare_format,
+            name=image_locator.name,
         )
-        if image_metadata.mask:
-            custom_element["mask"] = image_metadata.mask
+        if image_locator.mask:
+            custom_element["mask"] = image_locator.mask
         return custom_element
 
-    def _serialize_image(
+    def _serialize_image_base(
         self,
-        image_metadata: ImageMetadata,
+        image_locator: ImageBase,
         image_sources: list[ImageSource],
     ) -> AskUiSerializedLocator:
         custom_elements: list[CustomElement] = [
             self._serialize_image_to_custom_element(
-                image_metadata=image_metadata,
+                image_locator=image_locator,
                 image_source=image_source,
             )
             for image_source in image_sources
         ]
         return AskUiSerializedLocator(
-            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_metadata.name}{self._TEXT_DELIMITER}",
+            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_locator.name}{self._TEXT_DELIMITER}",
             customElements=custom_elements,
+        )
+        
+    def _serialize_image(
+        self,
+        image: Image,
+    ) -> AskUiSerializedLocator:
+        self._reporter.add_message(
+            "AskUiLocatorSerializer",
+            f"Image locator: {image}",
+            image=image.image.root,
+        )
+        return self._serialize_image_base(
+            image_locator=image,
+            image_sources=[image.image],
         )
 
     def _serialize_ai_element(
         self, ai_element_locator: AiElementLocator
     ) -> AskUiSerializedLocator:
         ai_elements = self._ai_element_collection.find(ai_element_locator.name)
-        if len(ai_elements) == 0:
-            raise AiElementNotFound(
-                f"Could not find AI element with name \"{ai_element_locator.name}\""
-            )
-        return self._serialize_image(
-            image_metadata=ai_element_locator,
-            image_sources=[ImageSource.model_construct(root=ai_element.image) for ai_element in ai_elements],
+        self._reporter.add_message(
+            "AskUiLocatorSerializer",
+            f"Found {len(ai_elements)} ai elements named {ai_element_locator.name}",
+            image=[ai_element.image for ai_element in ai_elements],
+        )
+        return self._serialize_image_base(
+            image_locator=ai_element_locator,
+            image_sources=[
+                ImageSource.model_construct(root=ai_element.image)
+                for ai_element in ai_elements
+            ],
         )

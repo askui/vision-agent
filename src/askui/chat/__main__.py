@@ -6,13 +6,16 @@ import streamlit as st
 from askui import VisionAgent
 import logging
 from askui.chat.click_recorder import ClickRecorder
+from askui.models import ModelName
 from askui.reporting import Reporter
-from askui.utils import base64_to_image, draw_point_on_image
+from askui.utils.image_utils import base64_to_image
 import json
 from datetime import datetime
 import os
 import glob
 import re
+
+from askui.utils.image_utils import draw_point_on_image
 
 
 st.set_page_config(
@@ -67,7 +70,7 @@ def write_message(
     role: str,
     content: str | dict | list,
     timestamp: str,
-    image: Image.Image |str | None = None,
+    image: Image.Image | str | list[str | Image.Image] | list[str] | list[Image.Image] | None = None,
 ):
     _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
     avatar = None if _role != UNKNOWN_ROLE else "❔"
@@ -75,8 +78,13 @@ def write_message(
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
         st.markdown(json.dumps(content, indent=2) if isinstance(content, (dict, list)) else content)
         if image:
-            img = get_image(image) if isinstance(image, str) else image
-            st.image(img)
+            if isinstance(image, list):
+                for img in image:
+                    img = get_image(img) if isinstance(img, str) else img
+                    st.image(img)
+            else:
+                img = get_image(image) if isinstance(image, str) else image
+                st.image(img)
 
 
 def save_image(image: Image.Image) -> str:
@@ -90,7 +98,7 @@ class Message(TypedDict):
     role: str
     content: str | dict | list
     timestamp: str
-    image: str | None
+    image: str | list[str] | None
 
 
 class ChatHistoryAppender(Reporter):
@@ -98,13 +106,21 @@ class ChatHistoryAppender(Reporter):
         self._session_id = session_id
 
     @override
-    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | None = None) -> None:
-        image_path = save_image(image) if image else None
+    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | list[Image.Image] | None = None) -> None:
+        image_paths: list[str] = []
+        if image is None:
+            _images = []
+        elif isinstance(image, list):
+            _images = image
+        else:
+            _images = [image]
+        for img in _images:
+            image_paths.append(save_image(img))
         message = Message(
             role=role,
             content=content,
             timestamp=datetime.now().isoformat(),
-            image=image_path,
+            image=image_paths,
         )
         write_message(**message)
         with open(
@@ -199,9 +215,9 @@ def rerun():
                                 screenshot, (x, y)
                             )
                             element_description = agent.get(
-                                prompt,
-                                screenshot=screenshot_with_crosshair,
-                                model_name="anthropic-claude-3-5-sonnet-20241022",
+                                query=prompt,
+                                image=screenshot_with_crosshair,
+                                model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
                             write_message(
                                 message["role"],
@@ -211,7 +227,7 @@ def rerun():
                             )
                             agent.mouse_move(
                                 locator=element_description.replace('"', ""),
-                                model_name="anthropic-claude-3-5-sonnet-20241022",
+                                model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
                         else:
                             write_message(
@@ -304,7 +320,7 @@ if act_prompt := st.chat_input("Ask AI"):
         log_level=logging.DEBUG,
         reporters=[reporter],
     ) as agent:
-        agent.act(act_prompt, model_name="claude")
+        agent.act(act_prompt, model="claude")
         st.rerun()
 
 if st.button("Rerun"):

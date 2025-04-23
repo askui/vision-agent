@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+import random
 from jinja2 import Template
 from datetime import datetime
 from typing import List, Dict, Optional, Union
@@ -19,7 +20,7 @@ class Reporter(ABC):
         self,
         role: str,
         content: Union[str, dict, list],
-        image: Optional[Image.Image] = None,
+        image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         raise NotImplementedError()
 
@@ -29,15 +30,15 @@ class Reporter(ABC):
 
 
 class CompositeReporter(Reporter):
-    def __init__(self, reports: list[Reporter]) -> None:
-        self._reports = reports
+    def __init__(self, reports: list[Reporter] | None = None) -> None:
+        self._reports = reports or []
 
     @override
     def add_message(
         self,
         role: str,
         content: Union[str, dict, list],
-        image: Optional[Image.Image] = None,
+        image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         for report in self._reports:
             report.add_message(role, content, image)
@@ -82,15 +83,22 @@ class SimpleHtmlReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict, list],
-        image: Optional[Image.Image] = None,
+        image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         """Add a message to the report, optionally with an image"""
+        if image is None:
+            _images = []
+        elif isinstance(image, list):
+            _images = image
+        else:
+            _images = [image]
+
         message = {
             "timestamp": datetime.now(),
             "role": role,
             "content": self._format_content(content),
             "is_json": isinstance(content, (dict, list)),
-            "image": self._image_to_base64(image) if image else None,
+            "images": [self._image_to_base64(img) for img in _images],
         }
         self.messages.append(message)
 
@@ -232,12 +240,12 @@ class SimpleHtmlReporter(Reporter):
                                 {% else %}
                                     {{ msg.content }}
                                 {% endif %}
-                                {% if msg.image %}
+                                {% for image in msg.images %}
                                     <br>
-                                    <img src="data:image/png;base64,{{ msg.image }}" 
+                                    <img src="data:image/png;base64,{{ image }}" 
                                          class="message-image" 
                                          alt="Message image">
-                                {% endif %}
+                                {% endfor %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -253,5 +261,5 @@ class SimpleHtmlReporter(Reporter):
             system_info=self.system_info,
         )
 
-        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d_%H%M%S}.html"
+        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
         report_path.write_text(html)

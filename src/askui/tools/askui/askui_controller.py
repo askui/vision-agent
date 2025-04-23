@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import pathlib
 from typing import Literal
 from typing_extensions import Self, override
@@ -17,7 +18,7 @@ from ..utils import process_exists, wait_for_port
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.utils import draw_point_on_image
+from askui.utils.image_utils import draw_point_on_image
 
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
@@ -58,9 +59,29 @@ class AskUiControllerSettings(BaseSettings):
         if self.component_registry_file is None and self.installation_directory is None:
             raise ValueError("Either ASKUI_COMPONENT_REGISTRY_FILE or ASKUI_INSTALLATION_DIRECTORY environment variable must be set")
         return self
+    
+
+class ControllerServer(ABC):
+    @abstractmethod
+    def start(self, clean_up: bool = False) -> None:
+        raise NotImplementedError()
+    
+    @abstractmethod
+    def stop(self, force: bool = False) -> None:
+        raise NotImplementedError()
+    
+
+class EmptyControllerServer(ControllerServer):
+    @override
+    def start(self, clean_up: bool = False) -> None:
+        pass
+    
+    @override
+    def stop(self, force: bool = False) -> None:
+        pass
 
 
-class AskUiControllerServer:
+class AskUiControllerServer(ControllerServer):
     def __init__(self) -> None:
         self._process = None
         self._settings = AskUiControllerSettings()  # type: ignore
@@ -97,8 +118,9 @@ class AskUiControllerServer:
     def __start_process(self, path):
         self.process = subprocess.Popen(path)
         wait_for_port(23000)
-        
-    def start(self, clean_up=False):
+    
+    @override
+    def start(self, clean_up: bool = False) -> None:
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
@@ -111,7 +133,8 @@ class AskUiControllerServer:
             subprocess.run("taskkill.exe /IM AskUI*")
             time.sleep(0.1)
 
-    def stop(self, force=False):
+    @override
+    def stop(self, force: bool = False) -> None:
         if force:
             self.process.terminate()
             self.clean_up()
@@ -121,7 +144,7 @@ class AskUiControllerServer:
 
 class AskUiControllerClient(AgentOs):
     @telemetry.record_call(exclude={"report"})
-    def __init__(self, reporter: Reporter, display: int = 1) -> None:
+    def __init__(self, reporter: Reporter, display: int = 1, controller_server: ControllerServer | None = None) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
@@ -130,10 +153,12 @@ class AskUiControllerClient(AgentOs):
         self.max_retries = 10
         self.display = display
         self._reporter = reporter
+        self._controller_server = controller_server or EmptyControllerServer()
 
     @telemetry.record_call()
     @override
     def connect(self) -> None:
+        self._controller_server.start()
         self.channel = grpc.insecure_channel('localhost:23000', options=[
                 ('grpc.max_send_message_length', 2**30 ),
                 ('grpc.max_receive_message_length', 2**30 ),
@@ -165,7 +190,8 @@ class AskUiControllerClient(AgentOs):
         self._stop_execution()
         self._stop_session()
         self.channel.close()
-        
+        self._controller_server.stop()
+
     @telemetry.record_call()
     def __enter__(self) -> Self:
         self.connect()

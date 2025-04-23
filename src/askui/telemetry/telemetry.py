@@ -174,9 +174,14 @@ class Telemetry:
                 )
                 if exclude_first_arg:
                     processed_args = processed_args[1:] if processed_args else ()
+                processed_args = tuple(arg.model_dump() if isinstance(arg, BaseModel) else arg for arg in processed_args)
                 processed_kwargs = {
                     k: v if k not in _exclude else self._EXCLUDE_MASK
                     for k, v in kwargs.items()
+                }
+                processed_kwargs = {
+                    k: v.model_dump() if isinstance(v, BaseModel) else v
+                    for k, v in processed_kwargs.items()
                 }
                 attributes: dict[str, Any] = {
                     "module": module,
