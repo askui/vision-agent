@@ -39,9 +39,10 @@ path = "src/askui/__init__.py"
 distribution = true
 
 [tool.pdm.scripts]
-test = "pytest"
-"test:unit" = "pytest tests/unit"
-"test:integration" = "pytest tests/integration"
+test = "pytest -n auto"
+"test:e2e" = "pytest -n auto tests/e2e"
+"test:integration" = "pytest -n auto tests/integration"
+"test:unit" = "pytest -n auto tests/unit"
 sort = "isort ."
 format = "black ."
 lint = "ruff check ."
@@ -56,6 +57,7 @@ test = [
     "black>=25.1.0",
     "ruff>=0.9.5",
     "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.1",
 ]
 chat = [
     "streamlit>=1.42.0",

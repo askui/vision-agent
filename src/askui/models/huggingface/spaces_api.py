@@ -2,7 +2,7 @@ import json
 import tempfile
 
 from gradio_client import Client, handle_file
-from askui.utils import AutomationError
+from askui.exceptions import AutomationError
 
 
 class HFSpacesHandler:

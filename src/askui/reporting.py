@@ -1,7 +1,10 @@
+from abc import ABC, abstractmethod
 from pathlib import Path
+import random
 from jinja2 import Template
 from datetime import datetime
-from typing import Any, List, Dict, Optional, Union, Callable
+from typing import List, Dict, Optional, Union
+from typing_extensions import override
 import platform
 import sys
 from importlib.metadata import distributions
@@ -11,49 +14,96 @@ from PIL import Image
 import json
 
 
-class SimpleReportGenerator:
-    def __init__(self, report_dir: str = "reports", report_callback: Callable[[str | dict[str, Any]], None] | None = None) -> None:
+class Reporter(ABC):
+    @abstractmethod
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict, list],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def generate(self) -> None:
+        raise NotImplementedError()
+
+
+class CompositeReporter(Reporter):
+    def __init__(self, reports: list[Reporter] | None = None) -> None:
+        self._reports = reports or []
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict, list],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
+        for report in self._reports:
+            report.add_message(role, content, image)
+
+    @override
+    def generate(self) -> None:
+        for report in self._reports:
+            report.generate()
+
+
+class SimpleHtmlReporter(Reporter):
+    def __init__(self, report_dir: str = "reports") -> None:
         self.report_dir = Path(report_dir)
         self.report_dir.mkdir(exist_ok=True)
         self.messages: List[Dict] = []
         self.system_info = self._collect_system_info()
-        self.report_callback = report_callback
 
     def _collect_system_info(self) -> Dict[str, str]:
         """Collect system and Python information"""
         return {
             "platform": platform.platform(),
             "python_version": sys.version.split()[0],
-            "packages": sorted([f"{dist.metadata['Name']}=={dist.version}" 
-                              for dist in distributions()])
+            "packages": sorted(
+                [f"{dist.metadata['Name']}=={dist.version}" for dist in distributions()]
+            ),
         }
-    
+
     def _image_to_base64(self, image: Image.Image) -> str:
         """Convert PIL Image to base64 string"""
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode()
-    
+
     def _format_content(self, content: Union[str, dict, list]) -> str:
         """Format content based on its type"""
         if isinstance(content, (dict, list)):
             return json.dumps(content, indent=2)
         return str(content)
-    
-    def add_message(self, role: str, content: Union[str, dict, list], image: Optional[Image.Image] = None):
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict, list],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
         """Add a message to the report, optionally with an image"""
+        if image is None:
+            _images = []
+        elif isinstance(image, list):
+            _images = image
+        else:
+            _images = [image]
+
         message = {
             "timestamp": datetime.now(),
             "role": role,
             "content": self._format_content(content),
             "is_json": isinstance(content, (dict, list)),
-            "image": self._image_to_base64(image) if image else None
+            "images": [self._image_to_base64(img) for img in _images],
         }
         self.messages.append(message)
-        if self.report_callback is not None:
-            self.report_callback(message)
 
-    def generate_report(self) -> str:
+    @override
+    def generate(self) -> None:
         """Generate HTML report using a Jinja template"""
         template_str = """
         <html>
@@ -190,12 +240,12 @@ class SimpleReportGenerator:
                                 {% else %}
                                     {{ msg.content }}
                                 {% endif %}
-                                {% if msg.image %}
+                                {% for image in msg.images %}
                                     <br>
-                                    <img src="data:image/png;base64,{{ msg.image }}" 
+                                    <img src="data:image/png;base64,{{ image }}" 
                                          class="message-image" 
                                          alt="Message image">
-                                {% endif %}
+                                {% endfor %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -203,14 +253,13 @@ class SimpleReportGenerator:
             </body>
         </html>
         """
-        
+
         template = Template(template_str)
         html = template.render(
             timestamp=datetime.now(),
             messages=self.messages,
-            system_info=self.system_info
+            system_info=self.system_info,
         )
-        
-        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d_%H%M%S}.html"
+
+        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
         report_path.write_text(html)
-        return str(report_path)

@@ -20,10 +20,12 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
+from askui.tools.agent_os import AgentOs
+
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logger import logger
-from ...utils import truncate_long_strings
-from askui.reporting.report import SimpleReportGenerator
+from ...utils.str_utils import truncate_long_strings
+from askui.reporting import Reporter
 
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
@@ -60,10 +62,10 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 
 
 class ClaudeComputerAgent:
-    def __init__(self, controller_client, report: SimpleReportGenerator | None = None) -> None:
-        self.report = report
+    def __init__(self, agent_os: AgentOs, reporter: Reporter) -> None:
+        self._reporter = reporter
         self.tool_collection = ToolCollection(
-            ComputerTool(controller_client),
+            ComputerTool(agent_os),
         )
         self.system = BetaTextBlockParam(
             type="text",
@@ -109,8 +111,8 @@ class ClaudeComputerAgent:
         }
         logger.debug(new_message)
         messages.append(new_message)
-        if self.report is not None: 
-            self.report.add_message("Anthropic Computer Use", response_params)
+        if self._reporter is not None: 
+            self._reporter.add_message("Anthropic Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:

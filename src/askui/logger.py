@@ -11,7 +11,7 @@ if not logger.hasHandlers():
     logger.setLevel(logging.INFO)
 
 
-def configure_logging(level=logging.INFO):
+def configure_logging(level: str | int = logging.INFO):
     logger.setLevel(level)
 
 
