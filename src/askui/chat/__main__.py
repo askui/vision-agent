@@ -70,7 +70,7 @@ def write_message(
     role: str,
     content: str | dict | list,
     timestamp: str,
-    image: Image.Image |str | None = None,
+    image: Image.Image | str | list[str | Image.Image] | list[str] | list[Image.Image] | None = None,
 ):
     _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
     avatar = None if _role != UNKNOWN_ROLE else "❔"
@@ -78,8 +78,13 @@ def write_message(
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
         st.markdown(json.dumps(content, indent=2) if isinstance(content, (dict, list)) else content)
         if image:
-            img = get_image(image) if isinstance(image, str) else image
-            st.image(img)
+            if isinstance(image, list):
+                for img in image:
+                    img = get_image(img) if isinstance(img, str) else img
+                    st.image(img)
+            else:
+                img = get_image(image) if isinstance(image, str) else image
+                st.image(img)
 
 
 def save_image(image: Image.Image) -> str:
@@ -93,7 +98,7 @@ class Message(TypedDict):
     role: str
     content: str | dict | list
     timestamp: str
-    image: str | None
+    image: str | list[str] | None
 
 
 class ChatHistoryAppender(Reporter):
@@ -101,13 +106,21 @@ class ChatHistoryAppender(Reporter):
         self._session_id = session_id
 
     @override
-    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | None = None) -> None:
-        image_path = save_image(image) if image else None
+    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | list[Image.Image] | None = None) -> None:
+        image_paths: list[str] = []
+        if image is None:
+            _images = []
+        elif isinstance(image, list):
+            _images = image
+        else:
+            _images = [image]
+        for img in _images:
+            image_paths.append(save_image(img))
         message = Message(
             role=role,
             content=content,
             timestamp=datetime.now().isoformat(),
-            image=image_path,
+            image=image_paths,
         )
         write_message(**message)
         with open(

@@ -9,6 +9,7 @@ from askui.locators import Element, Prompt, Text, Image
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils.image_utils import image_to_base64
+from askui.reporting import CompositeReporter
 from askui.locators.relatable import CircularDependencyError
 
 
@@ -23,7 +24,8 @@ def askui_serializer(path_fixtures: pathlib.Path) -> AskUiLocatorSerializer:
             additional_ai_element_locations=[
                 path_fixtures / "images"
             ]
-        )
+        ),
+        reporter=CompositeReporter()
     )
 
 

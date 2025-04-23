@@ -27,7 +27,7 @@ Point = tuple[int, int]
 
 def handle_response(response: tuple[int | None, int | None], locator: str | Locator):
     if response[0] is None or response[1] is None:
-        raise ElementNotFoundError(f"Could not locate\n{locator}")
+        raise ElementNotFoundError(f"Element not found: {locator}")
     return response
 
 
@@ -121,6 +121,7 @@ class ModelRouter:
         self._askui = AskUiInferenceApi(
             locator_serializer=AskUiLocatorSerializer(
                 ai_element_collection=AiElementCollection(),
+                reporter=_reporter,
             ),
         )
         self._grounding_model_routers = grounding_model_routers or [AskUiModelRouter(inference_api=self._askui)]

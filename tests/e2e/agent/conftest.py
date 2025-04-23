@@ -33,9 +33,9 @@ def vision_agent(
     ai_element_collection = AiElementCollection(
         additional_ai_element_locations=[path_fixtures / "images"]
     )
-    serializer = AskUiLocatorSerializer(ai_element_collection=ai_element_collection)
-    inference_api = AskUiInferenceApi(locator_serializer=serializer)
     reporter = SimpleHtmlReporter()
+    serializer = AskUiLocatorSerializer(ai_element_collection=ai_element_collection, reporter=reporter)
+    inference_api = AskUiInferenceApi(locator_serializer=serializer)
     model_router = ModelRouter(
         tools=agent_toolbox_mock,
         reporter=reporter,

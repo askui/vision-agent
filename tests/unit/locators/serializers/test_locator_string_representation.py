@@ -178,7 +178,7 @@ def test_complex_relation_chain_str() -> None:
     )
 
 
-IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image$')
+IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$')
 
 
 def test_image_str() -> None:
@@ -188,14 +188,14 @@ def test_image_str() -> None:
 
 def test_image_with_name_str() -> None:
     image = Image(TEST_IMAGE, name="test_image")
-    assert str(image) == 'element "test_image" located by image'
+    assert str(image) == 'element "test_image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
 
 
 def test_image_with_relation_str() -> None:
     image = Image(TEST_IMAGE, name="image")
     image.above_of(Text("hello"))
     lines = str(image).split("\n")
-    assert lines[0] == 'element "image" located by image'
+    assert lines[0] == 'element "image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
     assert lines[1] == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
 
 

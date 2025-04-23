@@ -860,6 +860,9 @@ class Relatable(ABC):
         )
         return self
 
+    def _str(self) -> str:
+        return "relatable"
+
     def _relations_str(self) -> str:
         if not self._relations:
             return ""
@@ -871,6 +874,9 @@ class Relatable(ABC):
             for nested_relation_str in nested_relation_strs:
                 result.append(f"  {nested_relation_str}")
         return "\n" + "\n".join(result)
+    
+    def _str_with_relation(self) -> str:
+        return self._str() + self._relations_str()
 
     def raise_if_cycle(self) -> None:
         """Raises CircularDependencyError if the relations form a cycle (see [Cycle (graph theory)](https://en.wikipedia.org/wiki/Cycle_(graph_theory)))."""
@@ -900,3 +906,7 @@ class Relatable(ABC):
             return False
 
         return _dfs(self)
+
+    def __str__(self) -> str:
+        self.raise_if_cycle()
+        return self._str_with_relation()

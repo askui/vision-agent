@@ -57,7 +57,7 @@ class ClaudeHandler:
         try:
             scaled_x, scaled_y = extract_click_coordinates(response)
         except Exception as e:
-            raise ElementNotFoundError(f"Couldn't locate {locator} on the screen.")
+            raise ElementNotFoundError(f"Element not found: {locator}")
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
         return int(x), int(y)
 
