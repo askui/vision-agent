@@ -6,10 +6,10 @@ from askui.tools.askui.askui_hub import AskUIHub
 
 
 class AgentToolbox:
-    def __init__(self, os: AgentOs):
+    def __init__(self, agent_os: AgentOs):
         self.webbrowser = webbrowser
         self.clipboard: pyperclip = pyperclip
-        self.os = os
+        self.agent_os = agent_os
         self._hub = AskUIHub()
         self.httpx = httpx
     

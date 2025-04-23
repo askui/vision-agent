@@ -1,7 +1,7 @@
-from .models import ANTHROPIC__CLAUDE__3_5__SONNET__20241022, ANTHROPIC, ASKUI
+from .models import ModelName, ModelComposition, ModelDefinition
 
 __all__ = [
-    "ANTHROPIC__CLAUDE__3_5__SONNET__20241022",
-    "ANTHROPIC",
-    "ASKUI",
+    "ModelName",
+    "ModelComposition",
+    "ModelDefinition",
 ]

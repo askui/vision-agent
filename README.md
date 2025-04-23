@@ -88,7 +88,7 @@ pip install askui
 |  | AskUI [INFO](https://hub.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
 | ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
-| Supported Commands    | `click()`, `locate()`, `mouse_move()`   | `act()`, `get()`, `click()`, `locate()`, `mouse_move()`  |
+| Supported Commands    | `click()`, `get()`, `locate()`, `mouse_move()`   | `act()`, `click()`, `get()`, `locate()`, `mouse_move()`  |
 | Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 
 To get started, set the environment variables required to authenticate with your chosen model provider.
@@ -130,7 +130,7 @@ You can test the Vision Agent with Huggingface models via their Spaces API. Plea
 
 **Example Code:**
 ```python
-agent.click("search field", model_name="OS-Copilot/OS-Atlas-Base-7B")
+agent.click("search field", model="OS-Copilot/OS-Atlas-Base-7B")
 ```
 
 ### 3c. Host your own **AI Models**
@@ -143,7 +143,7 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
 
-3. Step: Use the `model_name="tars"` parameter in your `click()`, `get()` and `act()` etc. commands.
+3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands or when initializing the `VisionAgent`.
 
 
 ## ▶️ Start Building
@@ -171,18 +171,34 @@ with VisionAgent() as agent:
 
 ### 🎛️ Model Selection
 
-Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model_name` parameter.
+Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model` parameter or when initializing the `VisionAgent` (overridden by the `model` parameter of individual commands).
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
 | `act()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
 | `click()`    | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element` | `anthropic-claude-3-5-sonnet-20241022`   |
-| `get()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
+| `get()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
 | `locate()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 | `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 
 
-**Example:** `agent.click("Preview", model_name="askui-combo")`
+**Example:** 
+
+```python
+from askui import VisionAgent
+
+with VisionAgent() as agent:
+    # Uses the default model (depending on the environment variables set, see above)
+    agent.click("Next")
+
+with VisionAgent(model="askui-combo") as agent:
+    # Uses the "askui-combo" model because it was specified when initializing the agent
+    agent.click("Next")
+    # Uses the "anthropic-claude-3-5-sonnet-20241022" model
+    agent.click("Previous", model="anthropic-claude-3-5-sonnet-20241022")
+    # Uses the "askui-combo" model again as no model was specified
+    agent.click("Next")
+```
 
 <details>
   <summary>AskUI AI Models</summary>
@@ -353,7 +369,7 @@ agent.type("********")
 
 you can build more sophisticated locators.
 
-**⚠️ Warning:** Support can vary depending on the model you are using. Currently, only, the `askui` model provides best support for locators. This model is chosen by default if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` environment variables are set and it is not overridden using the  `model_name` parameter.
+**⚠️ Warning:** Support can vary depending on the model you are using. Currently, only, the `askui` model provides best support for locators. This model is chosen by default if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` environment variables are set and it is not overridden using the  `model` parameter.
 
 Example:
 
@@ -361,7 +377,7 @@ Example:
 from askui import locators as loc
 
 password_textfield_label = loc.Text("Password")
-password_textfield = loc.Class("textfield").right_of(password_textfield_label)
+password_textfield = loc.Element("textfield").right_of(password_textfield_label)
 
 agent.click(password_textfield)
 agent.type("********")
@@ -398,14 +414,13 @@ Instead of taking a screenshot, you can analyze specific images:
 
 ```python
 from PIL import Image
-from askui.utils.image_utils import ImageSource
 
 # From PIL Image
 image = Image.open("screenshot.png")
-result = agent.get("What's in this image?", ImageSource(image))
+result = agent.get("What's in this image?", image)
 
 # From file path
-result = agent.get("What's in this image?", ImageSource("screenshot.png"))
+result = agent.get("What's in this image?", "screenshot.png")
 ```
 
 #### Using response schemas

@@ -1,16 +1,18 @@
 import os
 import base64
 import pathlib
+from pydantic import RootModel
 import requests
 import json as json_lib
 from PIL import Image
 from typing import Any, Type, Union
+from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.locators.locators import Locator
 from askui.utils.image_utils import image_to_base64
 from askui.logger import logger
-from ..types import JsonSchema
+from ..types.response_schemas import ResponseSchema, to_response_schema
 
 
 
@@ -49,14 +51,18 @@ class AskUiInferenceApi:
 
         return response.json()
 
-    def predict(self, image: Union[pathlib.Path, Image.Image], locator: Locator) -> tuple[int | None, int | None]:
+    def predict(self, image: Union[pathlib.Path, Image.Image], locator: Locator, model: ModelComposition | None = None) -> tuple[int | None, int | None]:
         serialized_locator = self._locator_serializer.serialize(locator=locator)
+        logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
         json: dict[str, Any] = {
             "image": f",{image_to_base64(image)}",
             "instruction": f"Click on {serialized_locator['instruction']}",
         }
         if "customElements" in serialized_locator:
             json["customElements"] = serialized_locator["customElements"]
+        if model is not None:
+            json["modelComposition"] = model.model_dump(by_alias=True)
+            logger.debug(f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}")
         content = self._request(endpoint="inference", json=json)
         assert content["type"] == "COMMANDS", f"Received unknown content type {content['type']}"
         actions = [el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"]
@@ -70,19 +76,20 @@ class AskUiInferenceApi:
         self, 
         image: ImageSource, 
         query: str, 
-        response_schema: Type[JsonSchema] | None = None
-    ) -> JsonSchema | str:
+        response_schema: Type[ResponseSchema] | None = None
+    ) -> ResponseSchema | str:
         json: dict[str, Any] = {
             "image": image.to_data_url(),
             "prompt": query,
         }
-        if response_schema is not None:
-            json["config"] = {
-                "json_schema": response_schema.model_json_schema()
-            }
-            logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
+        _response_schema = to_response_schema(response_schema)
+        json["config"] = {
+            "json_schema": _response_schema.model_json_schema()
+        }
+        logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
         content = self._request(endpoint="vqa/inference", json=json)
         response = content["data"]["response"]
-        if response_schema is not None:
-            return response_schema.model_validate(response)
-        return response
+        validated_response = _response_schema.model_validate(response)
+        if isinstance(validated_response, RootModel):
+            return validated_response.root
+        return validated_response

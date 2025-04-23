@@ -4,6 +4,7 @@ import pathlib
 from typing import Any, Union
 from openai import OpenAI
 from askui.reporting import Reporter
+from askui.tools.agent_os import AgentOs
 from askui.utils.image_utils import image_to_base64
 from PIL import Image
 
@@ -14,7 +15,8 @@ import time
 
 
 class UITarsAPIHandler:
-    def __init__(self, reporter: Reporter):
+    def __init__(self, agent_os: AgentOs, reporter: Reporter):
+        self._agent_os = agent_os
         self._reporter = reporter
         if os.getenv("TARS_URL") is None or os.getenv("TARS_API_KEY") is None:
             self.authenticated = False
@@ -83,8 +85,8 @@ class UITarsAPIHandler:
             prompt=PROMPT_QA,
         )
 
-    def act(self, controller_client, goal: str) -> None:
-        screenshot = controller_client.screenshot()
+    def act(self, goal: str) -> None:
+        screenshot = self._agent_os.screenshot()
         self.act_history = [
             {
                 "role": "user",
@@ -102,10 +104,10 @@ class UITarsAPIHandler:
                 ]
             }
         ]
-        self.execute_act(controller_client, self.act_history)
+        self.execute_act(self.act_history)
 
-    def add_screenshot_to_history(self, controller_client, message_history):
-        screenshot = controller_client.screenshot()
+    def add_screenshot_to_history(self, message_history):
+        screenshot = self._agent_os.screenshot()
         message_history.append(
             {
                 "role": "user",
@@ -159,7 +161,7 @@ class UITarsAPIHandler:
                 
         return filtered_messages
 
-    def execute_act(self, controller_client, message_history):
+    def execute_act(self, message_history):
         message_history = self.filter_message_thread(message_history)
         
         chat_completion = self.client.chat.completions.create(
@@ -195,21 +197,21 @@ class UITarsAPIHandler:
                     ]
                 }
             )
-            self.execute_act(controller_client, message_history)
+            self.execute_act(message_history)
             return
 
         action = message.parsed_action
         if action.action_type == "click":
-            controller_client.mouse(action.start_box.x, action.start_box.y)
-            controller_client.click("left")
+            self._agent_os.mouse(action.start_box.x, action.start_box.y)
+            self._agent_os.click("left")
             time.sleep(1)
         if action.action_type == "type":
-            controller_client.click("left")
-            controller_client.type(action.content)
+            self._agent_os.click("left")
+            self._agent_os.type(action.content)
             time.sleep(0.5)
         if action.action_type == "hotkey":
-            controller_client.keyboard_pressed(action.content)
-            controller_client.keyboard_release(action.content)
+            self._agent_os.keyboard_pressed(action.content)
+            self._agent_os.keyboard_release(action.content)
             time.sleep(0.5)
         if action.action_type == "call_user":
             time.sleep(1)
@@ -218,5 +220,5 @@ class UITarsAPIHandler:
         if action.action_type == "finished":
             return
 
-        self.add_screenshot_to_history(controller_client, message_history)
-        self.execute_act(controller_client, message_history)
+        self.add_screenshot_to_history(message_history)
+        self.execute_act(message_history)

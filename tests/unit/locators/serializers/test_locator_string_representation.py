@@ -1,6 +1,6 @@
 import re
 import pytest
-from askui.locators import Class, Description, Text, Image
+from askui.locators import Element, Prompt, Text, Image
 from askui.locators.relatable import CircularDependencyError
 from PIL import Image as PILImage
 
@@ -29,18 +29,18 @@ def test_text_regex_str() -> None:
 
 
 def test_class_with_name_str() -> None:
-    class_ = Class("textfield")
+    class_ = Element("textfield")
     assert str(class_) == 'element with class "textfield"'
 
 
 def test_class_without_name_str() -> None:
-    class_ = Class()
-    assert str(class_) == "element that has a class"
+    class_ = Element()
+    assert str(class_) == "element"
 
 
 def test_description_str() -> None:
-    desc = Description("a big red button")
-    assert str(desc) == 'element with description "a big red button"'
+    desc = Prompt("a big red button")
+    assert str(desc) == 'element with prompt "a big red button"'
 
 
 def test_text_with_above_relation_str() -> None:
@@ -66,7 +66,7 @@ def test_text_with_right_relation_str() -> None:
     text.right_of(Text("world"))
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. right of boundary of the 1st text similar to "world" (similarity >= 70%)'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. right of center of the 1st text similar to "world" (similarity >= 70%)'
     )
 
 
@@ -75,7 +75,7 @@ def test_text_with_left_relation_str() -> None:
     text.left_of(Text("world"))
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. left of boundary of the 1st text similar to "world" (similarity >= 70%)'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. left of center of the 1st text similar to "world" (similarity >= 70%)'
     )
 
 
@@ -145,7 +145,7 @@ def test_text_with_chained_relations_str() -> None:
 
 def test_mixed_locator_types_with_relations_str() -> None:
     text = Text("hello")
-    text.above_of(Class("textfield"))
+    text.above_of(Element("textfield"))
     assert (
         str(text)
         == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"'
@@ -153,32 +153,32 @@ def test_mixed_locator_types_with_relations_str() -> None:
 
 
 def test_description_with_relation_str() -> None:
-    desc = Description("button")
-    desc.above_of(Description("input"))
+    desc = Prompt("button")
+    desc.above_of(Prompt("input"))
     assert (
         str(desc)
-        == 'element with description "button"\n  1. above of boundary of the 1st element with description "input"'
+        == 'element with prompt "button"\n  1. above of boundary of the 1st element with prompt "input"'
     )
 
 
 def test_complex_relation_chain_str() -> None:
     text = Text("hello")
     text.above_of(
-        Class("textfield")
+        Element("textfield")
         .right_of(Text("world", match_type="exact"))
         .and_(
-            Description("input")
+            Prompt("input")
             .below_of(Text("earth", match_type="contains"))
-            .nearest_to(Class("textfield"))
+            .nearest_to(Element("textfield"))
         )
     )
     assert (
         str(text)
-        == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of boundary of the 1st text "world"\n    2. and element with description "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "textfield"'
+        == 'text similar to "hello" (similarity >= 70%)\n  1. above of boundary of the 1st element with class "textfield"\n    1. right of center of the 1st text "world"\n    2. and element with prompt "input"\n      1. below of boundary of the 1st text containing text "earth"\n      2. nearest to element with class "textfield"'
     )
 
 
-IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image$')
+IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$')
 
 
 def test_image_str() -> None:
@@ -188,14 +188,14 @@ def test_image_str() -> None:
 
 def test_image_with_name_str() -> None:
     image = Image(TEST_IMAGE, name="test_image")
-    assert str(image) == 'element "test_image" located by image'
+    assert str(image) == 'element "test_image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
 
 
 def test_image_with_relation_str() -> None:
     image = Image(TEST_IMAGE, name="image")
     image.above_of(Text("hello"))
     lines = str(image).split("\n")
-    assert lines[0] == 'element "image" located by image'
+    assert lines[0] == 'element "image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
     assert lines[1] == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
 
 
@@ -228,10 +228,10 @@ def test_deep_cycle_str() -> None:
 
 def test_multiple_references_no_cycle_str() -> None:
     heading = Text("heading")
-    textfield = Class("textfield")
+    textfield = Element("textfield")
     textfield.right_of(heading)
     textfield.below_of(heading)
-    assert str(textfield) == 'element with class "textfield"\n  1. right of boundary of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
+    assert str(textfield) == 'element with class "textfield"\n  1. right of center of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
 
 
 def test_image_cycle_str() -> None:
