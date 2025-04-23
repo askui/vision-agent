@@ -210,8 +210,8 @@ class UITarsAPIHandler:
             self._agent_os.type(action.content)
             time.sleep(0.5)
         if action.action_type == "hotkey":
-            self._agent_os.keyboard_pressed(action.content)
-            self._agent_os.keyboard_release(action.content)
+            self._agent_os.keyboard_pressed(action.key)
+            self._agent_os.keyboard_release(action.key)
             time.sleep(0.5)
         if action.action_type == "call_user":
             time.sleep(1)
