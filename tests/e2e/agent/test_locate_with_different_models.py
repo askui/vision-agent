@@ -5,7 +5,7 @@ from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import (
-    Description,
+    Prompt,
     Text,
     AiElement,
 )
@@ -66,7 +66,7 @@ class TestVisionAgentLocateWithDifferentModels:
         model: str,
     ) -> None:
         """Test that OCR model fails with wrong locator type."""
-        locator = Description("Forgot password?")
+        locator = Prompt("Forgot password?")
         with pytest.raises(AutomationError):
             vision_agent.locate(locator, github_login_screenshot, model=model)
 

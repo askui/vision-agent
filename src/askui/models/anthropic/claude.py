@@ -10,11 +10,10 @@ from .utils import extract_click_coordinates
 
 
 class ClaudeHandler:
-    def __init__(self, log_level):
+    def __init__(self):
         self.model = "claude-3-5-sonnet-20241022"
         self.client = anthropic.Anthropic()
         self.resolution = (1280, 800)
-        self.log_level = log_level
         self.authenticated = True
         if os.getenv("ANTHROPIC_API_KEY") is None:
             self.authenticated = False
@@ -58,7 +57,7 @@ class ClaudeHandler:
         try:
             scaled_x, scaled_y = extract_click_coordinates(response)
         except Exception as e:
-            raise ElementNotFoundError(f"Couldn't locate {locator} on the screen.")
+            raise ElementNotFoundError(f"Element not found: {locator}")
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
         return int(x), int(y)
 

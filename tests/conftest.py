@@ -34,7 +34,7 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
 @pytest.fixture
 def agent_toolbox_mock(agent_os_mock: AgentOs) -> AgentToolbox:
     """Fixture providing a mock agent toolbox."""
-    return AgentToolbox(os=agent_os_mock)
+    return AgentToolbox(agent_os=agent_os_mock)
 
 @pytest.fixture
 def model_router_mock(mocker: MockerFixture) -> ModelRouter:

@@ -247,6 +247,9 @@ def scale_coordinates_back(
     return original_x, original_y
 
 
+Img = Union[str, Path, PILImage.Image]
+
+
 class ImageSource(RootModel):
     """
     A Pydantic model that represents an image source and provides methods to convert it to different formats.
@@ -260,7 +263,7 @@ class ImageSource(RootModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     root: PILImage.Image
 
-    def __init__(self, root: Union[str, Path, PILImage.Image], **kwargs) -> None:
+    def __init__(self, root: Img, **kwargs) -> None:
         super().__init__(root=root, **kwargs)
 
     @field_validator("root", mode="before")

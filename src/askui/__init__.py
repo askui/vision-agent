@@ -3,7 +3,8 @@
 __version__ = "0.2.4"
 
 from .agent import VisionAgent
-from .models.types import JsonSchemaBase
+from .models.router import ModelRouter
+from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .tools.toolbox import AgentToolbox
 from .tools.agent_os import AgentOs, ModifierKey, PcKey
 
@@ -11,8 +12,10 @@ from .tools.agent_os import AgentOs, ModifierKey, PcKey
 __all__ = [
     "AgentOs",
     "AgentToolbox",
-    "JsonSchemaBase",
+    "ModelRouter",
     "ModifierKey",
     "PcKey",
+    "ResponseSchema",
+    "ResponseSchemaBase",
     "VisionAgent",
 ]

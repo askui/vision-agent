@@ -7,8 +7,8 @@ from askui.locators.locators import AiElement
 from askui.exceptions import ElementNotFoundError
 from askui.agent import VisionAgent
 from askui.locators import (
-    Description,
-    Class,
+    Prompt,
+    Element,
     Text,
     Image,
 )
@@ -30,7 +30,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using above_of relation."""
-        locator = Text("Forgot password?").above_of(Class("textfield"))
+        locator = Text("Forgot password?").above_of(Element("textfield"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -44,7 +44,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using below_of relation."""
-        locator = Text("Forgot password?").below_of(Class("textfield"))
+        locator = Text("Forgot password?").below_of(Element("textfield"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -86,7 +86,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using containing relation."""
-        locator = Class("textfield").containing(Text("github.com/login"))
+        locator = Element("textfield").containing(Text("github.com/login"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -100,7 +100,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using inside_of relation."""
-        locator = Text("github.com/login").inside_of(Class("textfield"))
+        locator = Text("github.com/login").inside_of(Element("textfield"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -114,7 +114,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using nearest_to relation."""
-        locator = Class("textfield").nearest_to(Text("Password"))
+        locator = Element("textfield").nearest_to(Text("Password"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -129,7 +129,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using and_ relation."""
-        locator = Text("Forgot password?").and_(Class("text"))
+        locator = Text("Forgot password?").and_(Element("text"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -143,7 +143,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using or_ relation."""
-        locator = Class("textfield").nearest_to(
+        locator = Element("textfield").nearest_to(
             Text("Password").or_(Text("Username or email address"))
         )
         x, y = vision_agent.locate(
@@ -159,7 +159,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using relation with index."""
-        locator = Class("textfield").below_of(
+        locator = Element("textfield").below_of(
             Text("Username or email address"), index=0
         )
         x, y = vision_agent.locate(
@@ -175,7 +175,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using relation with index."""
-        locator = Class("textfield").below_of(Class("textfield"), index=1)
+        locator = Element("textfield").below_of(Element("textfield"), index=1)
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -274,8 +274,8 @@ class TestVisionAgentLocateWithRelations:
         """Test locating elements using multiple relations with same locator which is not supported by AskUI."""
         locator = (
             Text("Forgot password?")
-            .below_of(Class("textfield"))
-            .below_of(Class("textfield"))
+            .below_of(Element("textfield"))
+            .below_of(Element("textfield"))
         )
         with pytest.raises(NotImplementedError):
             vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -305,7 +305,7 @@ class TestVisionAgentLocateWithRelations:
     ) -> None:
         """Test locating elements using relation with different locator types."""
         locator = Text("Sign in").below_of(
-            Class("textfield").below_of(Text("Username or email address")),
+            Element("textfield").below_of(Text("Username or email address")),
             reference_point="center",
         )
         x, y = vision_agent.locate(
@@ -321,7 +321,7 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using description with relation."""
-        locator = Description("Sign in button").below_of(Description("Password field"))
+        locator = Prompt("Sign in button").below_of(Prompt("Password field"))
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -336,8 +336,8 @@ class TestVisionAgentLocateWithRelations:
         model: str,
     ) -> None:
         """Test locating elements using description with relation."""
-        locator = Description("Sign in button").below_of(
-            Class("textfield").below_of(Text("Password"))
+        locator = Prompt("Sign in button").below_of(
+            Element("textfield").below_of(Text("Password"))
         )
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
@@ -393,7 +393,7 @@ class TestVisionAgentLocateWithRelations:
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(image=image).below_of(
-            Class("textfield").below_of(Text("Password"))
+            Element("textfield").below_of(Text("Password"))
         )
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model

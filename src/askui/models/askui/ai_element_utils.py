@@ -61,38 +61,49 @@ class AiElement():
                     image = Image.open(image_path))
 
 
-class AiElementNotFound(Exception):
-    pass
+class AiElementNotFound(ValueError):
+    def __init__(self, name: str, locations: list[pathlib.Path]):
+        self.name = name
+        self.locations = locations
+        locations_str = ", ".join([str(location) for location in locations])
+        super().__init__(
+            f'AI element "{name}" not found in {locations_str}\n'
+            'Solutions:\n'
+            '1. Verify the element exists in these locations and try again if you are sure it is present\n'
+            '2. Add location to ASKUI_AI_ELEMENT_LOCATIONS env var (paths, comma separated)\n'
+            '3. Create new AI element (see https://docs.askui.com/02-api-reference/02-askui-suite/02-askui-suite/AskUIRemoteDeviceSnippingTool/Public/AskUI-NewAIElement)'
+        )
 
 
 class AiElementCollection:
     def __init__(self, additional_ai_element_locations: Optional[List[pathlib.Path]] = None):
+        additional_ai_element_locations = additional_ai_element_locations or []
+
         workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         if workspace_id is None:
             raise ValueError("ASKUI_WORKSPACE_ID is not set")
         
-        if additional_ai_element_locations is None:
-            additional_ai_element_locations = []
+        locations_from_env: list[pathlib.Path] = []
+        if locations_env := os.getenv("ASKUI_AI_ELEMENT_LOCATIONS"):
+            locations_from_env = [pathlib.Path(loc) for loc in locations_env.split(",")]
         
-        addional_ai_element_from_env = []
-        if os.getenv("ASKUI_AI_ELEMENT_LOCATIONS", "") != "":
-            addional_ai_element_from_env = [pathlib.Path(ai_element_loc) for ai_element_loc in os.getenv("ASKUI_AI_ELEMENT_LOCATIONS", "").split(",")],
-        
-        self.ai_element_locations = [
+        self._ai_element_locations = [
             pathlib.Path.home() / ".askui" / "SnippingTool" / "AIElement" / workspace_id,
-            *addional_ai_element_from_env,
+            *locations_from_env,
             *additional_ai_element_locations
         ]
 
-        logger.debug("AI Element locations: %s", self.ai_element_locations)
+        logger.debug("AI Element locations: %s", self._ai_element_locations)
 
     def find(self, name: str) -> list[AiElement]:
         ai_elements: list[AiElement] = []
-        for location in self.ai_element_locations:
+        for location in self._ai_element_locations:
             path = pathlib.Path(location)
             json_files = list(path.glob("*.json"))
             for json_file in json_files:
                 ai_element = AiElement.from_json_file(json_file)
                 if ai_element.metadata.name == name:
                     ai_elements.append(ai_element)
+        if len(ai_elements) == 0:
+            raise AiElementNotFound(name=name, locations=self._ai_element_locations)
         return ai_elements

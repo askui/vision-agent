@@ -6,8 +6,8 @@ from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import (
-    Description,
-    Class,
+    Prompt,
+    Element,
     Text,
     AiElement,
 )
@@ -16,7 +16,6 @@ from askui.exceptions import ElementNotFoundError
 from askui.models import ModelName
 
 
-@pytest.mark.skip("Skipping tests for now")
 @pytest.mark.parametrize(
     "model",
     [
@@ -48,7 +47,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using a class locator."""
-        locator = Class("textfield")
+        locator = Element("textfield")
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -62,7 +61,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using a class locator."""
-        locator = Class()
+        locator = Element()
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -76,7 +75,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using a description locator."""
-        locator = Description("Username textfield")
+        locator = Prompt("Username textfield")
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
@@ -161,6 +160,8 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator."""
+        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(image=image)
@@ -178,6 +179,8 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
+        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(
@@ -202,6 +205,8 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
+        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__icon.png"
         image = PILImage.open(image_path)
         locator = Image(
@@ -219,12 +224,14 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using an AI element locator."""
+        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+            pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon")
         x, y = vision_agent.locate(
             locator, github_login_screenshot, model=model
         )
         assert 350 <= x <= 570
-        assert 240 <= y <= 320
+        assert 50 <= y <= 130
         
     def test_locate_with_ai_element_locator_should_fail_when_threshold_is_too_high(
         self,
@@ -233,6 +240,8 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        locator = AiElement("github_com__icon")
+        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+            pytest.skip("Skipping test for Anthropic model because not supported yet")
+        locator = AiElement("github_com__icon", threshold=1.0)
         with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot, model=model)

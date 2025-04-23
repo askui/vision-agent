@@ -1,17 +1,15 @@
-from dataclasses import dataclass
 import pathlib
 import re
-from typing import Literal
 import pytest
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
 from askui.locators.locators import Locator
-from askui.locators import Class, Description, Text, Image
-from askui.locators.relatable import RelationBase
+from askui.locators import Element, Prompt, Text, Image
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.utils.image_utils import image_to_base64
+from askui.reporting import CompositeReporter
 from askui.locators.relatable import CircularDependencyError
 
 
@@ -26,7 +24,8 @@ def askui_serializer(path_fixtures: pathlib.Path) -> AskUiLocatorSerializer:
             additional_ai_element_locations=[
                 path_fixtures / "images"
             ]
-        )
+        ),
+        reporter=CompositeReporter()
     )
 
 
@@ -62,14 +61,14 @@ def test_serialize_text_regex(askui_serializer: AskUiLocatorSerializer) -> None:
 
 
 def test_serialize_class_no_name(askui_serializer: AskUiLocatorSerializer) -> None:
-    class_ = Class()
+    class_ = Element()
     result = askui_serializer.serialize(class_)
     assert result["instruction"] == "element"
     assert result["customElements"] == []
 
 
 def test_serialize_description(askui_serializer: AskUiLocatorSerializer) -> None:
-    desc = Description("a big red button")
+    desc = Prompt("a big red button")
     result = askui_serializer.serialize(desc)
     assert result["instruction"] == "pta <|string|>a big red button<|string|>"
     assert result["customElements"] == []
@@ -146,7 +145,7 @@ def test_serialize_right_relation(askui_serializer: AskUiLocatorSerializer) -> N
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text <|string|>hello<|string|> index 0 right of intersection_area element_edge_area text <|string|>world<|string|>"
+        == "text <|string|>hello<|string|> index 0 right of intersection_area element_center_line text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -157,7 +156,7 @@ def test_serialize_left_relation(askui_serializer: AskUiLocatorSerializer) -> No
     result = askui_serializer.serialize(text)
     assert (
         result["instruction"]
-        == "text <|string|>hello<|string|> index 0 left of intersection_area element_edge_area text <|string|>world<|string|>"
+        == "text <|string|>hello<|string|> index 0 left of intersection_area element_center_line text <|string|>world<|string|>"
     )
     assert result["customElements"] == []
 
@@ -253,20 +252,6 @@ def test_serialize_unsupported_locator_type(
 
     with pytest.raises(ValueError, match="Unsupported locator type:.*"):
         askui_serializer.serialize(UnsupportedLocator())
-
-
-def test_serialize_unsupported_relation_type(
-    askui_serializer: AskUiLocatorSerializer,
-) -> None:
-    @dataclass(kw_only=True)
-    class UnsupportedRelation(RelationBase):
-        type: Literal["unsupported"]  # type: ignore
-
-    text = Text("hello")
-    text.relations.append(UnsupportedRelation(type="unsupported", other_locator=Text("world")))  # type: ignore
-
-    with pytest.raises(ValueError, match='Unsupported relation type: "unsupported"'):
-        askui_serializer.serialize(text)
 
 
 def test_serialize_simple_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:

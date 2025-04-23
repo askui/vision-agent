@@ -3,7 +3,7 @@ import re
 import pytest
 from PIL import Image as PILImage
 
-from askui.locators import Description, Class, Text, Image, AiElement
+from askui.locators import Prompt, Element, Text, Image, AiElement
 
 
 TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
@@ -11,50 +11,50 @@ TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
 
 class TestDescriptionLocator:
     def test_initialization_with_description(self) -> None:
-        desc = Description(description="test")
-        assert desc.description == "test"
-        assert str(desc) == 'element with description "test"'
+        desc = Prompt(prompt="test")
+        assert desc.prompt == "test"
+        assert str(desc) == 'element with prompt "test"'
 
     def test_initialization_without_description_raises(self) -> None:
-        with pytest.raises(TypeError):
-            Description()  # type: ignore
+        with pytest.raises(ValueError):
+            Prompt()  # type: ignore
 
     def test_initialization_with_positional_arg(self) -> None:
-        desc = Description("test")
-        assert desc.description == "test"
+        desc = Prompt("test")
+        assert desc.prompt == "test"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
-            Description(description=123)  # type: ignore
+            Prompt(prompt=123)  # type: ignore
 
         with pytest.raises(ValueError):
-            Description(123)  # type: ignore
+            Prompt(123)  # type: ignore
 
 
 class TestClassLocator:
     def test_initialization_with_class_name(self) -> None:
-        cls = Class(class_name="text")
+        cls = Element(class_name="text")
         assert cls.class_name == "text"
         assert str(cls) == 'element with class "text"'
 
     def test_initialization_without_class_name(self) -> None:
-        cls = Class()
+        cls = Element()
         assert cls.class_name is None
-        assert str(cls) == "element that has a class"
+        assert str(cls) == "element"
 
     def test_initialization_with_positional_arg(self) -> None:
-        cls = Class("text")
+        cls = Element("text")
         assert cls.class_name == "text"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
-            Class(class_name="button")  # type: ignore
+            Element(class_name="button")  # type: ignore
 
         with pytest.raises(ValueError):
-            Class(class_name=123)  # type: ignore
+            Element(class_name=123)  # type: ignore
 
         with pytest.raises(ValueError):
-            Class(123)  # type: ignore
+            Element(123)  # type: ignore
 
 
 class TestTextLocator:
@@ -111,13 +111,13 @@ class TestImageLocator:
     def test_image(self) -> PILImage.Image:
         return PILImage.open(TEST_IMAGE_PATH)
     
-    _STR_PATTERN = re.compile(r'^element ".*" located by image$')
+    _STR_PATTERN = re.compile(r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$')
 
     def test_initialization_with_basic_params(self, test_image: PILImage.Image) -> None:
         locator = Image(image=test_image)
         assert locator.image.root == test_image
         assert locator.threshold == 0.5
-        assert locator.stop_threshold == 0.9
+        assert locator.stop_threshold == 0.5
         assert locator.mask is None
         assert locator.rotation_degree_per_step == 0
         assert locator.image_compare_format == "grayscale"
@@ -125,7 +125,7 @@ class TestImageLocator:
 
     def test_initialization_with_name(self, test_image: PILImage.Image) -> None:
         locator = Image(image=test_image, name="test")
-        assert str(locator) == 'element "test" located by image'
+        assert str(locator) == 'element "test" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
 
     def test_initialization_with_custom_params(self, test_image: PILImage.Image) -> None:
         locator = Image(
@@ -141,7 +141,7 @@ class TestImageLocator:
         assert locator.mask == [(0, 0), (1, 0), (1, 1)]
         assert locator.rotation_degree_per_step == 45
         assert locator.image_compare_format == "RGB"
-        assert re.match(self._STR_PATTERN, str(locator))
+        assert re.match(r'^element "anonymous image [a-f0-9-]+" located by image \(threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: \[\(0.0, 0.0\), \(1.0, 0.0\), \(1.0, 1.0\)\]\)$', str(locator))
 
     def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
         with pytest.raises(ValueError):
@@ -176,10 +176,10 @@ class TestAiElementLocator:
     def test_initialization_with_name(self) -> None:
         locator = AiElement("github_com__icon")
         assert locator.name == "github_com__icon"
-        assert str(locator) == 'ai element named "github_com__icon"'
+        assert str(locator) == 'ai element named "github_com__icon" (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
 
     def test_initialization_without_name_raises(self) -> None:
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             AiElement()  # type: ignore
 
     def test_initialization_with_invalid_args_raises(self) -> None:
@@ -201,7 +201,7 @@ class TestAiElementLocator:
         assert locator.mask == [(0, 0), (1, 0), (1, 1)]
         assert locator.rotation_degree_per_step == 45
         assert locator.image_compare_format == "RGB"
-        assert str(locator) == 'ai element named "test_element"'
+        assert str(locator) == 'ai element named "test_element" (threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])'
 
     def test_initialization_with_invalid_threshold(self) -> None:
         with pytest.raises(ValueError):
