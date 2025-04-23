@@ -1,4 +1,4 @@
-# 🤖 Enable AI to control your desktop and mobile devices
+# 🤖 Enable AI to control your desktop, mobile and HMI devices
 
 **We make Windows, MacOS, Linux,  Android an iOS accessible for AI agents by finding any element on screen.**
 
