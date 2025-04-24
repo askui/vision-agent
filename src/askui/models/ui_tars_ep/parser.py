@@ -1,5 +1,7 @@
+import time
+from askui.tools.agent_os import AgentOs
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, Union, Tuple
+from typing import Literal, Union
 import re
 
 class BoxCoordinate(BaseModel):
@@ -15,54 +17,98 @@ class BoxCoordinate(BaseModel):
             raise ValueError(f"Invalid coordinate format: {coord_str}")
         return cls(x=int(match.group(1)), y=int(match.group(2)))
 
-class ClickAction(BaseModel):
-    """Click action with start box coordinates."""
+class BaseAction(BaseModel):
+    action_type: str
+
+    def execute(self, agent_os: AgentOs) -> None:
+        raise NotImplementedError(f"Action '{self.action_type}' must implement execute method.")
+
+        
+class ClickAction(BaseAction):
     action_type: Literal["click"] = "click"
     start_box: BoxCoordinate
 
-class DoubleClickAction(BaseModel):
-    """Double left click action with start box coordinates."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.mouse(x=self.start_box.x, y=self.start_box.y)
+        time.sleep(0.2)
+        agent_os.click("left")
+
+class DoubleClickAction(BaseAction):
     action_type: Literal["left_double"] = "left_double"
     start_box: BoxCoordinate
 
-class RightClickAction(BaseModel):
-    """Right click action with start box coordinates."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.mouse(x=self.start_box.x, y=self.start_box.y)
+        time.sleep(0.2)
+        agent_os.click('left')
+
+class RightClickAction(BaseAction):
     action_type: Literal["right_single"] = "right_single"
     start_box: BoxCoordinate
 
-class DragAction(BaseModel):
-    """Drag action with start and end box coordinates."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.mouse(x=self.start_box.x, y=self.start_box.y)
+        time.sleep(0.2)
+        agent_os.click("right")
+
+class DragAction(BaseAction):
     action_type: Literal["drag"] = "drag"
     start_box: BoxCoordinate
     end_box: BoxCoordinate
 
-class HotkeyAction(BaseModel):
-    """Hotkey action with key combination."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.mouse(x=self.start_box.x, y=self.start_box.y)
+        time.sleep(0.2)
+        agent_os.mouse_down()
+        time.sleep(0.2)
+        agent_os.mouse(x=self.end_box.x, y=self.end_box.y)
+        time.sleep(0.2)
+        agent_os.mouse_up()
+
+
+class HotkeyAction(BaseAction):
     action_type: Literal["hotkey"] = "hotkey"
     key: str
 
-class TypeAction(BaseModel):
-    """Type action with content."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.keyboard_pressed(self.key)
+        agent_os.keyboard_release(self.key)
+
+class TypeAction(BaseAction):
     action_type: Literal["type"] = "type"
     content: str
 
-class ScrollAction(BaseModel):
-    """Scroll action with direction and start box."""
+    def execute(self, agent_os: AgentOs) -> None:
+        agent_os.click("left")
+        agent_os.type(self.content)
+
+class ScrollAction(BaseAction):
     action_type: Literal["scroll"] = "scroll"
     start_box: BoxCoordinate
     direction: Literal["up", "down", "left", "right"]
 
-class WaitAction(BaseModel):
-    """Wait action."""
+    def execute(self, agent_os: AgentOs) -> None:
+        dx, dy = self.start_box.x, self.start_box.y
+        if self.direction == "left":
+            dx = -1 * dx
+        if self.direction == "up":
+            dy = -1 * dy
+        agent_os.mouse_scroll(dx, dy)
+
+class WaitAction(BaseAction):
     action_type: Literal["wait"] = "wait"
 
-class FinishedAction(BaseModel):
-    """Finished action."""
+    def execute(self, _agent_os: AgentOs) -> None:
+        time.sleep(5)
+
+class FinishedAction(BaseAction):
     action_type: Literal["finished"] = "finished"
 
-class CallUserAction(BaseModel):
-    """Call user action."""
+class CallUserAction(BaseAction):
     action_type: Literal["call_user"] = "call_user"
+
+    def execute(self, _agent_os: AgentOs) -> None:
+        raise Exception("Call user action executed. This should be handled by the agent's logic, not directly here.")
 
 ActionType = Union[
     ClickAction, DoubleClickAction, RightClickAction, DragAction,

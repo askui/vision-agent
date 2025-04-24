@@ -2,6 +2,7 @@ import re
 import os
 import pathlib
 from typing import Any, Union
+from askui.logger import logger
 from openai import OpenAI
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
@@ -10,7 +11,7 @@ from PIL import Image
 
 from askui.utils.image_utils import ImageSource
 from .prompts import PROMPT, PROMPT_QA
-from .parser import UITarsEPMessage
+from .parser import CallUserAction, FinishedAction, UITarsEPMessage
 import time
 
 
@@ -107,6 +108,7 @@ class UITarsAPIHandler:
         self.execute_act(self.act_history)
 
     def add_screenshot_to_history(self, message_history):
+        time.sleep(0.5)
         screenshot = self._agent_os.screenshot()
         message_history.append(
             {
@@ -177,14 +179,14 @@ class UITarsAPIHandler:
             presence_penalty=None
         )
         raw_message = chat_completion.choices[-1].message.content
-        print(raw_message)
+        logger.debug(f"Raw message: {raw_message}")
 
         if self._reporter is not None: 
             self._reporter.add_message("UI-TARS", raw_message)
 
         try:
             message = UITarsEPMessage.parse_message(raw_message)
-            print(message)
+            logger.debug(f"Parsed message: {message}")
         except Exception as e:
             message_history.append(
                 {
@@ -201,24 +203,13 @@ class UITarsAPIHandler:
             return
 
         action = message.parsed_action
-        if action.action_type == "click":
-            self._agent_os.mouse(action.start_box.x, action.start_box.y)
-            self._agent_os.click("left")
-            time.sleep(1)
-        if action.action_type == "type":
-            self._agent_os.click("left")
-            self._agent_os.type(action.content)
-            time.sleep(0.5)
-        if action.action_type == "hotkey":
-            self._agent_os.keyboard_pressed(action.key)
-            self._agent_os.keyboard_release(action.key)
-            time.sleep(0.5)
-        if action.action_type == "call_user":
-            time.sleep(1)
-        if action.action_type == "wait":
-            time.sleep(2)
-        if action.action_type == "finished":
+        if  isinstance(action, CallUserAction):
+            raise Exception(f'Agent is stuck. Call user action executed. Here is the thought: {message.thought}')
+        
+        if isinstance(action, FinishedAction):
             return
+        
+        action.execute(self._agent_os)
 
         self.add_screenshot_to_history(message_history)
         self.execute_act(message_history)
