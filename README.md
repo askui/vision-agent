@@ -327,7 +327,7 @@ class CustomReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict, list],
-        image: Optional[Image.Image] = None,
+        image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         # adding message to the report (see implementation of `SimpleHtmlReporter` as an example)
         pass
