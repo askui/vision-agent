@@ -1,9 +1,16 @@
-from askui.locators.locators import AiElement, Element, Prompt, Image, Text
+from .locators import AiElement, Element, Prompt, Image, Text, TextMatchType, Locator
+from .relatable import CircularDependencyError, ReferencePoint, RelationIndex, Relatable
 
 __all__ = [
     "AiElement",
+    "CircularDependencyError",
     "Element",
-    "Prompt",
     "Image",
+    "Locator",
+    "Prompt",
+    "ReferencePoint",
+    "Relatable",
+    "RelationIndex",
     "Text",
+    "TextMatchType",
 ]

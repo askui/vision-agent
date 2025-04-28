@@ -23,6 +23,9 @@ from abc import ABC, abstractmethod
 
 
 Point = tuple[int, int]
+"""
+A tuple of two integers representing the coordinates of a point on the screen.
+"""
 
 
 def handle_response(response: tuple[int | None, int | None], locator: str | Locator):

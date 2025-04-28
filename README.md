@@ -425,12 +425,12 @@ result = agent.get("What's in this image?", "screenshot.png")
 
 #### Using response schemas
 
-For structured data extraction, use Pydantic models extending `JsonSchemaBase`:
+For structured data extraction, use Pydantic models extending `ResponseSchemaBase`:
 
 ```python
-from askui import JsonSchemaBase
+from askui import ResponseSchemaBase
 
-class UserInfo(JsonSchemaBase):
+class UserInfo(ResponseSchemaBase):
     username: str
     is_online: bool
 

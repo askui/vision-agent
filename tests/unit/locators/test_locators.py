@@ -12,7 +12,7 @@ TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
 class TestDescriptionLocator:
     def test_initialization_with_description(self) -> None:
         desc = Prompt(prompt="test")
-        assert desc.prompt == "test"
+        assert desc._prompt == "test"
         assert str(desc) == 'element with prompt "test"'
 
     def test_initialization_without_description_raises(self) -> None:
@@ -21,7 +21,7 @@ class TestDescriptionLocator:
 
     def test_initialization_with_positional_arg(self) -> None:
         desc = Prompt("test")
-        assert desc.prompt == "test"
+        assert desc._prompt == "test"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
@@ -34,17 +34,17 @@ class TestDescriptionLocator:
 class TestClassLocator:
     def test_initialization_with_class_name(self) -> None:
         cls = Element(class_name="text")
-        assert cls.class_name == "text"
+        assert cls._class_name == "text"
         assert str(cls) == 'element with class "text"'
 
     def test_initialization_without_class_name(self) -> None:
         cls = Element()
-        assert cls.class_name is None
+        assert cls._class_name is None
         assert str(cls) == "element"
 
     def test_initialization_with_positional_arg(self) -> None:
         cls = Element("text")
-        assert cls.class_name == "text"
+        assert cls._class_name == "text"
 
     def test_initialization_with_invalid_args_raises(self) -> None:
         with pytest.raises(ValueError):
@@ -60,20 +60,20 @@ class TestClassLocator:
 class TestTextLocator:
     def test_initialization_with_positional_text(self) -> None:
         text = Text("Hello")
-        assert text.text == "Hello"
-        assert text.match_type == "similar"
-        assert text.similarity_threshold == 70
+        assert text._text == "Hello"
+        assert text._match_type == "similar"
+        assert text._similarity_threshold == 70
         assert str(text) == 'text similar to "Hello" (similarity >= 70%)'
 
     def test_initialization_with_named_text(self) -> None:
         text = Text(text="hello", match_type="exact")
-        assert text.text == "hello"
-        assert text.match_type == "exact"
+        assert text._text == "hello"
+        assert text._match_type == "exact"
         assert str(text) == 'text "hello"'
 
     def test_initialization_with_similarity(self) -> None:
         text = Text(text="hello", match_type="similar", similarity_threshold=80)
-        assert text.similarity_threshold == 80
+        assert text._similarity_threshold == 80
         assert str(text) == 'text similar to "hello" (similarity >= 80%)'
 
     def test_initialization_with_contains(self) -> None:
@@ -86,7 +86,7 @@ class TestTextLocator:
 
     def test_initialization_without_text(self) -> None:
         text = Text()
-        assert text.text is None
+        assert text._text is None
         assert str(text) == "text"
 
     def test_initialization_with_invalid_args(self) -> None:
@@ -115,12 +115,12 @@ class TestImageLocator:
 
     def test_initialization_with_basic_params(self, test_image: PILImage.Image) -> None:
         locator = Image(image=test_image)
-        assert locator.image.root == test_image
-        assert locator.threshold == 0.5
-        assert locator.stop_threshold == 0.5
-        assert locator.mask is None
-        assert locator.rotation_degree_per_step == 0
-        assert locator.image_compare_format == "grayscale"
+        assert locator._image.root == test_image
+        assert locator._threshold == 0.5
+        assert locator._stop_threshold == 0.5
+        assert locator._mask is None
+        assert locator._rotation_degree_per_step == 0
+        assert locator._image_compare_format == "grayscale"
         assert re.match(self._STR_PATTERN, str(locator))
 
     def test_initialization_with_name(self, test_image: PILImage.Image) -> None:
@@ -136,11 +136,11 @@ class TestImageLocator:
             rotation_degree_per_step=45,
             image_compare_format="RGB"
         )
-        assert locator.threshold == 0.7
-        assert locator.stop_threshold == 0.95
-        assert locator.mask == [(0, 0), (1, 0), (1, 1)]
-        assert locator.rotation_degree_per_step == 45
-        assert locator.image_compare_format == "RGB"
+        assert locator._threshold == 0.7
+        assert locator._stop_threshold == 0.95
+        assert locator._mask == [(0, 0), (1, 0), (1, 1)]
+        assert locator._rotation_degree_per_step == 45
+        assert locator._image_compare_format == "RGB"
         assert re.match(r'^element "anonymous image [a-f0-9-]+" located by image \(threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: \[\(0.0, 0.0\), \(1.0, 0.0\), \(1.0, 1.0\)\]\)$', str(locator))
 
     def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
@@ -175,7 +175,7 @@ class TestImageLocator:
 class TestAiElementLocator:
     def test_initialization_with_name(self) -> None:
         locator = AiElement("github_com__icon")
-        assert locator.name == "github_com__icon"
+        assert locator._name == "github_com__icon"
         assert str(locator) == 'ai element named "github_com__icon" (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
 
     def test_initialization_without_name_raises(self) -> None:
@@ -195,12 +195,12 @@ class TestAiElementLocator:
             rotation_degree_per_step=45,
             image_compare_format="RGB"
         )
-        assert locator.name == "test_element"
-        assert locator.threshold == 0.7
-        assert locator.stop_threshold == 0.95
-        assert locator.mask == [(0, 0), (1, 0), (1, 1)]
-        assert locator.rotation_degree_per_step == 45
-        assert locator.image_compare_format == "RGB"
+        assert locator._name == "test_element"
+        assert locator._threshold == 0.7
+        assert locator._stop_threshold == 0.95
+        assert locator._mask == [(0, 0), (1, 0), (1, 1)]
+        assert locator._rotation_degree_per_step == 45
+        assert locator._image_compare_format == "RGB"
         assert str(locator) == 'ai element named "test_element" (threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])'
 
     def test_initialization_with_invalid_threshold(self) -> None:

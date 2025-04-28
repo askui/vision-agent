@@ -15,6 +15,11 @@ import json
 
 
 class Reporter(ABC):
+    """Abstract base class for reporters. Cannot be instantiated directly.
+    
+    Defines the interface that all reporters must implement to be used with `askui.VisionAgent`.
+    """
+
     @abstractmethod
     def add_message(
         self,
@@ -22,16 +27,37 @@ class Reporter(ABC):
         content: Union[str, dict, list],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
+        """Add a message to the report.
+        
+        Args:
+            role (str): The role of the message sender (e.g., `"User"`, `"Assistant"`, `"System"`)
+            content (Union[str, dict, list]): The message content, which can be a string, dictionary, or list, e.g. `'click 2x times on text "Edit"'`
+            image (Optional[PIL.Image.Image | list[PIL.Image.Image]], optional): PIL Image or list of PIL Images to include with the message
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def generate(self) -> None:
-        raise NotImplementedError()
+        """Generates the final report.
+        
+        Implementing this method is only required if the report is not generated in "real-time", e.g., on calls of `add_message()`, but must be generated at the end of the execution.
+        
+        This method is called when the `askui.VisionAgent` context is exited or `askui.VisionAgent.close()` is called.
+        """
+        pass
 
 
 class CompositeReporter(Reporter):
-    def __init__(self, reports: list[Reporter] | None = None) -> None:
-        self._reports = reports or []
+    """A reporter that combines multiple reporters.
+    
+    Allows generating different reports simultaneously. Each message added will be forwarded to all reporters passed to the constructor. The reporters are called (`add_message()`, `generate()`) in the order they are ordered in the `reporters` list.
+    
+    Args:
+        reporters (list[Reporter] | None, optional): List of reporters to combine
+    """
+
+    def __init__(self, reporters: list[Reporter] | None = None) -> None:
+        self._reporters = reporters or []
 
     @override
     def add_message(
@@ -40,16 +66,24 @@ class CompositeReporter(Reporter):
         content: Union[str, dict, list],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
-        for report in self._reports:
+        """Add a message to the report."""
+        for report in self._reporters:
             report.add_message(role, content, image)
 
     @override
     def generate(self) -> None:
-        for report in self._reports:
+        """Generates the final report."""
+        for report in self._reporters:
             report.generate()
 
 
 class SimpleHtmlReporter(Reporter):
+    """A reporter that generates HTML reports with conversation logs and system information.
+    
+    Args:
+        report_dir (str, optional): Directory where reports will be saved. Defaults to `reports`.
+    """
+
     def __init__(self, report_dir: str = "reports") -> None:
         self.report_dir = Path(report_dir)
         self.report_dir.mkdir(exist_ok=True)
@@ -67,13 +101,11 @@ class SimpleHtmlReporter(Reporter):
         }
 
     def _image_to_base64(self, image: Image.Image) -> str:
-        """Convert PIL Image to base64 string"""
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode()
 
     def _format_content(self, content: Union[str, dict, list]) -> str:
-        """Format content based on its type"""
         if isinstance(content, (dict, list)):
             return json.dumps(content, indent=2)
         return str(content)
@@ -85,7 +117,7 @@ class SimpleHtmlReporter(Reporter):
         content: Union[str, dict, list],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
-        """Add a message to the report, optionally with an image"""
+        """Add a message to the report."""
         if image is None:
             _images = []
         elif isinstance(image, list):
@@ -104,7 +136,13 @@ class SimpleHtmlReporter(Reporter):
 
     @override
     def generate(self) -> None:
-        """Generate HTML report using a Jinja template"""
+        """Generate an HTML report file.
+        
+        Creates a timestamped HTML file in the `report_dir` containing:
+        - System information
+        - All collected messages with their content and images
+        - Syntax-highlighted JSON content
+        """
         template_str = """
         <html>
             <head>

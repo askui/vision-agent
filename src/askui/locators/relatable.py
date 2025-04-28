@@ -5,6 +5,153 @@ from typing_extensions import Self
 
 
 ReferencePoint = Literal["center", "boundary", "any"]
+"""
+Defines under which conditions an element *A* is considered to be above, below, right or left of another element *B*.
+
+- `"center"`: *A* is considered to be above, below, right or left of *B* if it is above, below, right or left of *A*'s center (in a straight vertical or horizontal line). 
+
+Examples:
+
+    *A* being above *B* (imaginary straight vertical line also shown):
+
+    ```text
+    ===========
+    |    A    |
+    ===========
+         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    ```text
+         ===========
+         |    A    |
+         ===========
+         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    *A* **NOT** being above *B* (imaginary straight vertical line also shown):
+
+    ```text
+         |===========
+         ||    A    |
+         |===========
+         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    ```text
+         |      ===========
+         |      |    A    |
+         |      ===========
+         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    ```text
+         |
+         |   
+    ===========
+    |    B    |
+    ===========
+                
+    ===========
+    |    A    |
+    ===========
+    ```
+
+
+- `"boundary"`: *A* is considered to be above, below, right or left of *B* if it is above, below, right or left of (any point of the bounding box of) *A* (in a straight vertical or horizontal line). 
+
+Examples:
+
+    *A* being above *B* (imaginary straight vertical line also shown):
+
+    ```text
+    |    ===========
+    |    |    A    |
+    |    ===========
+    |         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    *A* **NOT** being above *B* (imaginary straight vertical line also shown):
+
+    ```text
+    |         | ===========
+    |         | |    A    |
+    |         | ===========
+    |         |
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    ```text
+    |         |
+    |         |
+    ===========
+    |    B    |
+    ===========
+                
+    ===========
+    |    A    |
+    ===========
+    ```
+
+
+- `"any"`: *A* is considered to be above, below, right or left of *B* if it is above, below, right or left of *B* no matter if it can be reached in a straight vertical or horizontal line from (a point of the bounding box of) *A*.
+
+Examples:
+
+    *A* being above *B*:
+
+    ```text
+                ===========
+                |    A    |
+                ===========
+                
+    ===========
+    |    B    |
+    ===========
+    ```
+
+    ```text
+                ===========
+    =========== |    A    |
+    |    B    | ===========
+    ===========
+    ```
+
+
+    *A* **NOT** being above *B*:
+
+    ```text
+    ===========
+    |    B    |
+    ===========
+                
+    ===========
+    |    A    |
+    ===========
+    ```
+
+        ```text
+    =========== ===========
+    |    B    | |    A    |
+    =========== ===========
+    ```
+"""
 
 
 RelationTypeMapping = {
@@ -21,6 +168,37 @@ RelationTypeMapping = {
 
 
 RelationIndex = Annotated[int, Field(ge=0)]
+"""
+Index of the element *A* above, below, right or left of the other element *B*, 
+e.g., the first (`0`), second (`1`), third (`2`) etc. element 
+above, below, right or left of the other element *B*. *A*'s position relative 
+to other elements above, below, right or left of *B*
+(which determines its index) is determined by the relative position of its
+lowest (above), highest (below), leftmost (right) or rightmost (left) point(s) 
+(edge of its bounding box).
+
+**Important**: Which elements are counted ("indexed") depends on the locator used, e.g.,
+when using `Text` only text matched is counted, and the `reference_point`.
+
+Examples: 
+
+```text
+===========
+|    A    | ===========
+=========== |    B    |
+            ===========
+                   ===========                  
+                   |    C    |                  
+    ===========    ===========                  
+    |    D    |
+    ===========
+```
+
+For `reference_point` 
+- `"center"`, *A* is the first (`index=0`) element above *B*.
+- `"boundary"`, *A* is the second (`index=1`) element above *B*.
+- `"any"`, *A* is the third (`index=2`) element above *B*.
+"""
 
 
 class RelationBase(BaseModel):
@@ -95,18 +273,10 @@ class CircularDependencyError(ValueError):
 
 
 class Relatable(ABC):
-    """Base class for locators that can be related to other locators, e.g., spatially, logically, distance based etc.
-
-    Attributes:
-        relations: List of relations to other locators
-    """
+    """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly."""
 
     def __init__(self) -> None:
         self._relations: list[Relation] = []
-
-    @property
-    def relations(self) -> list[Relation]:
-        return self._relations
 
     # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def above_of(
@@ -127,31 +297,15 @@ class Relatable(ABC):
           bounding box).
 
         Args:
-            other_locator:
-                Locator for an element / elements to relate to
-            index:
-                Index of the element (located by *self*) above the other element(s)
-                (located by *other_locator*), e.g., the first (index=0), second
-                (index=1), third (index=2) etc. element above the other element(s).
+            other_locator (Relatable): Locator for an element / elements to relate to
+            index (RelationIndex, optional): Index of the element (located by *self*) above the other element(s)
+                (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element above the other element(s).
                 Elements' (relative) position is determined by the **bottom border**
                 (*y*-coordinate) of their bounding box.  
                 We don't guarantee the order of elements with the same bottom border
-                (*y*-coordinate).
-            reference_point:
-                Defines which element (located by *self*) is considered to be above the
-                other element(s) (located by *other_locator*):
-
-                **"center"**: One point of the element (located by *self*) is above the
-                  center (in a straight vertical line) of the other element(s) (located
-                  by *other_locator*).
-                **"boundary"**: One point of the element (located by *self*) is above
-                  any other point (in a straight vertical line) of the other element(s)
-                  (located by *other_locator*).
-                **"any"**: No point of the element (located by *self*) has to be above
-                  a point (in a straight vertical line) of the other element(s) (located
-                  by *other_locator*).
-
-                *Default is **"boundary".***
+                (*y*-coordinate). Defaults to `0`.
+            reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be above the
+                other element(s) (located by *other_locator*). Defaults to `"boundary"`.
 
         Returns:
             Self: The locator with the relation added
@@ -240,7 +394,7 @@ class Relatable(ABC):
             ```python
             from askui import locators as loc
             # locates text "A" as it is the second (index 1) element above text "C"
-            # (reference point "any")
+            # (reference point "center" or "boundary" won't work here)
             text = loc.Text().above_of(loc.Text("C"), index=1, reference_point="any")
             # locates also text "A" as it is the first (index 0) element above text "C"
             # with reference point "boundary"
@@ -276,34 +430,18 @@ class Relatable(ABC):
           box).
 
         Args:
-            other_locator:
-                Locator for an element / elements to relate to.
-            index:
-                Index of the element (located by *self*) **below** the other
-                element(s) (located by *other_locator*), e.g., the first (*index=0*),
-                second (*index=1*), third (*index=2*) etc. element below the other
-                element(s).  Elements' (relative) position is determined by the **top
+            other_locator (Relatable): Locator for an element / elements to relate to
+            index (RelationIndex, optional): Index of the element (located by *self*) **below** the other
+                element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element below the other
+                element(s). Elements' (relative) position is determined by the **top
                 border** (*y*-coordinate) of their bounding box.  
                 We don't guarantee the order of elements with the same top border
-                (*y*-coordinate).
-            reference_point:
-                Defines which element (located by *self*) is considered to be
-                *below* the other element(s) (located by *other_locator*):
-                
-                **"center"**: One point of the element (located by *self*) is
-                  **below** the *center* (in a straight vertical line) of the other
-                  element(s) (located by *other_locator*).
-                **"boundary"**: One point of the element (located by *self*) is
-                  **below** *any* other point (in a straight vertical line) of the
-                  other element(s) (located by *other_locator*).
-                **"any"**: No point of the element (located by *self*) has to
-                  be **below** a point (in a straight vertical line) of the other
-                  element(s) (located by *other_locator*).
-
-                *Default is **"boundary".***
+                (*y*-coordinate). Defaults to `0`.
+            reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
+                *below* the other element(s) (located by *other_locator*). Defaults to `"boundary"`.
 
         Returns:
-            Self: The locator with the relation added.
+            Self: The locator with the relation added
 
         Examples:
             ```text
@@ -425,34 +563,18 @@ class Relatable(ABC):
           bounding box).
 
         Args:
-            other_locator:
-                Locator for an element / elements to relate to.
-            index:
-                Index of the element (located by *self*) **right of** the other
-                element(s) (located by *other_locator*), e.g., the first (*index=0*),
-                second (*index=1*), third (*index=2*) etc. element right of the other
-                element(s).  Elements' (relative) position is determined by the **left
+            other_locator (Relatable): Locator for an element / elements to relate to
+            index (RelationIndex, optional): Index of the element (located by *self*) **right of** the other
+                element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element right of the other
+                element(s). Elements' (relative) position is determined by the **left
                 border** (*x*-coordinate) of their bounding box.  
                 We don't guarantee the order of elements with the same left border
-                (*x*-coordinate).
-            reference_point:
-                Defines which element (located by *self*) is considered to be
-                *right of* the other element(s) (located by *other_locator*):
-
-                **"center"**: One point of the element (located by *self*) is
-                  **right of** the *center* (in a straight horizontal line) of the
-                  other element(s) (located by *other_locator*).
-                **"boundary"**: One point of the element (located by *self*) is
-                  **right of** *any* other point (in a straight horizontal line) of
-                  the other element(s) (located by *other_locator*).
-                **"any"**: No point of the element (located by *self*) has to
-                  be **right of** a point (in a straight horizontal line) of the
-                  other element(s) (located by *other_locator*).
-
-                *Default is **"center".***
+                (*x*-coordinate). Defaults to `0`.
+            reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
+                *right of* the other element(s) (located by *other_locator*). Defaults to `"center"`.
 
         Returns:
-            Self: The locator with the relation added.
+            Self: The locator with the relation added
 
         Examples:
             ```text
@@ -564,34 +686,18 @@ class Relatable(ABC):
           bounding box).
 
         Args:
-            other_locator:
-                Locator for an element / elements to relate to.
-            index:
-                Index of the element (located by *self*) **left of** the other
-                element(s) (located by *other_locator*), e.g., the first (*index=0*),
-                second (*index=1*), third (*index=2*) etc. element left of the other
-                element(s).  Elements' (relative) position is determined by the **right
+            other_locator (Relatable): Locator for an element / elements to relate to
+            index (RelationIndex, optional): Index of the element (located by *self*) **left of** the other
+                element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element left of the other
+                element(s). Elements' (relative) position is determined by the **right
                 border** (*x*-coordinate) of their bounding box.  
                 We don't guarantee the order of elements with the same right border
-                (*x*-coordinate).
-            reference_point:
-                Defines which element (located by *self*) is considered to be
-                *left of* the other element(s) (located by *other_locator*):
-
-                **"center"**  : One point of the element (located by *self*) is
-                  **left of** the *center* (in a straight horizontal line) of the
-                  other element(s) (located by *other_locator*).
-                **"boundary"**: One point of the element (located by *self*) is
-                  **left of** *any* other point (in a straight horizontal line) of
-                  the other element(s) (located by *other_locator*).
-                **"any"**     : No point of the element (located by *self*) has to
-                  be **left of** a point (in a straight horizontal line) of the
-                  other element(s) (located by *other_locator*).
-
-                *Default is **"center".***
+                (*x*-coordinate). Defaults to `0`.
+            reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
+                *left of* the other element(s) (located by *other_locator*). Defaults to `"center"`.
 
         Returns:
-            Self: The locator with the relation added.
+            Self: The locator with the relation added
 
         Examples:
             ```text
@@ -689,7 +795,7 @@ class Relatable(ABC):
         by *other_locator*).
 
         Args:
-            other_locator: The locator to check if it's contained
+            other_locator (Relatable): The locator to check if it's contained
 
         Returns:
             Self: The locator with the relation added
@@ -725,7 +831,7 @@ class Relatable(ABC):
         (located by *other_locator*).
 
         Args:
-            other_locator: The locator to check if it contains this element
+            other_locator (Relatable): The locator to check if it contains this element
 
         Returns:
             Self: The locator with the relation added
@@ -763,7 +869,7 @@ class Relatable(ABC):
         (located by *other_locator*).
 
         Args:
-            other_locator: The locator to compare distance against
+            other_locator (Relatable): The locator to compare distance against
 
         Returns:
             Self: The locator with the relation added
@@ -805,7 +911,7 @@ class Relatable(ABC):
         element to match multiple locators.
 
         Args:
-            other_locator: The locator to combine with
+            other_locator (Relatable): The locator to combine with
 
         Returns:
             Self: The locator with the relation added
@@ -836,7 +942,7 @@ class Relatable(ABC):
         if no element is found for one of the locators.
 
         Args:
-            other_locator: The locator to combine with
+            other_locator (Relatable): The locator to combine with
 
         Returns:
             Self: The locator with the relation added
@@ -898,7 +1004,7 @@ class Relatable(ABC):
             visited_ids.add(node_id)
             recursion_stack_ids.add(node_id)
 
-            for relation in node.relations:
+            for relation in node._relations:
                 if _dfs(relation.other_locator):
                     return True
 

@@ -3,6 +3,8 @@ from typing import Literal
 from PIL import Image
 
 ModifierKey = Literal["command", "alt", "control", "shift", "right_shift"]
+"""Modifier keys for keyboard actions."""
+
 PcKey = Literal[
     "backspace",
     "delete",
@@ -125,78 +127,162 @@ PcKey = Literal[
     "}",
     "~",
 ]
+"""PC keys for keyboard actions."""
 
 
 class AgentOs(ABC):
+    """
+    Abstract base class for Agent OS. Cannot be instantiated directly.
+    
+    This class defines the interface for operating system interactions including mouse control,
+    keyboard input, and screen capture functionality. Implementations should provide concrete
+    functionality for these abstract methods.
+    """
+    
     @abstractmethod
     def connect(self) -> None:
-        """Connect to the Agent OS."""
+        """
+        Establishes a connection to the Agent OS.
+        
+        This method is called before performing any OS-level operations.
+        It handles any necessary setup or initialization required for the OS interaction.
+        """
         pass
     
     @abstractmethod
     def disconnect(self) -> None:
-        """Disconnect from the Agent OS."""
+        """
+        Terminates the connection to the Agent OS.
+        
+        This method is called after all OS-level operations are complete.
+        It handles any necessary cleanup or resource release.
+        """
         pass
     
     @abstractmethod
     def screenshot(self, report: bool = True) -> Image.Image:
-        """Take a screenshot of the current display."""
+        """
+        Captures a screenshot of the current display.
+
+        Args:
+            report (bool, optional): Whether to include the screenshot in reporting. Defaults to `True`.
+
+        Returns:
+            Image.Image: A PIL Image object containing the screenshot.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def mouse(self, x: int, y: int) -> None:
-        """Move mouse to specified coordinates."""
+        """
+        Moves the mouse cursor to specified screen coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to move to.
+            y (int): The vertical coordinate (in pixels) to move to.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def type(self, text: str, typing_speed: int = 50) -> None:
-        """Type text."""
+        """
+        Simulates typing text as if entered on a keyboard.
+
+        Args:
+            text (str): The text to be typed.
+            typing_speed (int, optional): The speed of typing in characters per minute. Defaults to `50`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def click(
         self, button: Literal["left", "middle", "right"] = "left", count: int = 1
     ) -> None:
-        """Click mouse button (repeatedly)."""
+        """
+        Simulates clicking a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to click. Defaults to `"left"`.
+            count (int, optional): Number of times to click. Defaults to `1`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def mouse_down(self, button: Literal["left", "middle", "right"] = "left") -> None:
-        """Press and hold mouse button."""
+        """
+        Simulates pressing and holding a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to press. Defaults to `"left"`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def mouse_up(self, button: Literal["left", "middle", "right"] = "left") -> None:
-        """Release mouse button."""
+        """
+        Simulates releasing a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to release. Defaults to `"left"`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def mouse_scroll(self, x: int, y: int) -> None:
-        """Scroll mouse wheel horizontally and vertically."""
+        """
+        Simulates scrolling the mouse wheel.
+
+        Args:
+            x (int): The horizontal scroll amount. Positive values scroll right, negative values scroll left.
+            y (int): The vertical scroll amount. Positive values scroll down, negative values scroll up.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def keyboard_pressed(
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
-        """Press and hold keyboard key."""
+        """
+        Simulates pressing and holding a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to press.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def keyboard_release(
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
-        """Release keyboard key."""
+        """
+        Simulates releasing a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to release.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to release along with the main key. Defaults to `None`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def keyboard_tap(
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
-        """Press and release keyboard key."""
+        """
+        Simulates pressing and immediately releasing a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to tap.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def set_display(self, displayNumber: int = 1) -> None:
-        """Set active display, e.g., when using multiple displays."""
+        """
+        Sets the active display for screen interactions.
+
+        Args:
+            displayNumber (int, optional): The display number to set as active. Defaults to `1`.
+        """
         raise NotImplementedError()
