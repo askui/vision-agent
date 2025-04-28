@@ -129,17 +129,32 @@ class AskUiControllerServer(ControllerServer):
         time.sleep(0.5) # TODO Find better way to do this, e.g., waiting for something to be logged or port to be opened
 
     def clean_up(self):
-        if sys.platform == 'win32':
-            subprocess.run("taskkill.exe /IM AskUI*")
-            time.sleep(0.1)
+        subprocess.run("taskkill.exe /IM AskUI*")
+        time.sleep(0.1)
 
     @override
     def stop(self, force: bool = False) -> None:
-        if force:
-            self.process.terminate()
-            self.clean_up()
-            return
-        self.process.kill()
+        """
+        Stop the controller process.
+
+        Args:
+            force (bool, optional): Whether to forcefully terminate the process. Defaults to `False`.
+        """
+        if not hasattr(self, "process") or self.process is None:
+            return  # Nothing to stop
+
+        try:
+            if force:
+                self.process.kill()
+                if sys.platform == "win32":
+                    self.clean_up()
+            else:
+                self.process.terminate()
+        except Exception as e:
+            logger.error("Failed to stop AskUI Remote Device Controller: %s", e)
+            pass
+        finally:
+            self.process = None
 
 
 class AskUiControllerClient(AgentOs):
