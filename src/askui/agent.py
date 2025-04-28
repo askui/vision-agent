@@ -7,14 +7,12 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.utils.image_utils import ImageSource, Img
 
-from .tools.askui.askui_controller import (
+from .tools.askui import (
     AskUiControllerClient,
     AskUiControllerServer,
-    ModifierKey,
-    PcKey,
 )
 from .logger import logger, configure_logging
-from .tools.toolbox import AgentToolbox
+from .tools import AgentToolbox, ModifierKey, PcKey
 from .models import ModelComposition
 from .models.router import ModelRouter, Point
 from .reporting import CompositeReporter, Reporter
@@ -34,23 +32,18 @@ class VisionAgent:
     This agent can perform various UI interactions like clicking, typing, scrolling, and more.
     It uses computer vision models to locate UI elements and execute actions on them.
 
-    Parameters:
-        log_level (int, optional): 
-            The logging level to use. Defaults to logging.INFO.
-        display (int, optional): 
-            The display number to use for screen interactions. Defaults to 1.
-        model_router (ModelRouter | None, optional): 
-            Custom model router instance. If None, a default one will be created.
-        reporters (list[Reporter] | None, optional): 
-            List of reporter instances for logging and reporting. If None, an empty list is used.
-        tools (AgentToolbox | None, optional): 
-            Custom toolbox instance. If None, a default one will be created with AskUiControllerClient.
-        model (ModelComposition | str | None, optional): 
-            The default composition or name of the model(s) to be used for vision tasks. 
-            Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
+    Args:
+        log_level (int | str, optional): The logging level to use. Defaults to `logging.INFO`.
+        display (int, optional): The display number to use for screen interactions. Defaults to `1`.
+        model_router (ModelRouter | None, optional): Custom model router instance. If `None`, a default one will be created.
+        reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
+        tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
+        model (ModelComposition | str | None, optional): The default composition or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
 
     Example:
         ```python
+        from askui import VisionAgent
+        
         with VisionAgent() as agent:
             agent.click("Submit button")
             agent.type("Hello World")
@@ -70,7 +63,7 @@ class VisionAgent:
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
-        self._reporter = CompositeReporter(reports=reporters)
+        self._reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
                 agent_os=AskUiControllerClient(
                 display=display,
@@ -95,21 +88,16 @@ class VisionAgent:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
 
-        Parameters:
-            locator (str | Locator | None): 
-                The identifier or description of the element to click. If None, clicks at current position.
-            button ('left' | 'middle' | 'right'): 
-                Specifies which mouse button to click. Defaults to 'left'.
-            repeat (int): 
-                The number of times to click. Must be greater than 0. Defaults to 1.
-            model (ModelComposition | str | None): 
-                The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
-
-        Raises:
-            InvalidParameterError: If the 'repeat' parameter is less than 1.
+        Args:
+            locator (str | Locator | None, optional): The identifier or description of the element to click. If `None`, clicks at current position.
+            button ('left' | 'middle' | 'right', optional): Specifies which mouse button to click. Defaults to `'left'`.
+            repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
 
         Example:
             ```python
+            from askui import VisionAgent
+            
             with VisionAgent() as agent:
                 agent.click()              # Left click on current position
                 agent.click("Edit")        # Left click on text "Edit"
@@ -149,20 +137,18 @@ class VisionAgent:
         """
         Locates the UI element identified by the provided locator.
 
-        Parameters:
-            locator (str | Locator): 
-                The identifier or description of the element to locate.
-            screenshot (Img | None, optional): 
-                The screenshot to use for locating the element. Can be a path to an image file, a PIL Image object or a data URL. 
-                If None, takes a screenshot of the currently selected display.
-            model (ModelComposition | str | None): 
-                The composition or name of the model(s) to be used for locating the element using the `locator`.
+        Args:
+            locator (str | Locator): The identifier or description of the element to locate.
+            screenshot (Img | None, optional): The screenshot to use for locating the element. Can be a path to an image file, a PIL Image object or a data URL. If `None`, takes a screenshot of the currently selected display.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element using the `locator`.
 
         Returns:
             Point: The coordinates of the element as a tuple (x, y).
 
         Example:
             ```python
+            from askui import VisionAgent
+            
             with VisionAgent() as agent:
                 point = agent.locate("Submit button")
                 print(f"Element found at coordinates: {point}")
@@ -186,14 +172,14 @@ class VisionAgent:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
 
-        Parameters:
-            locator (str | Locator): 
-                The identifier or description of the element to move to.
-            model (ModelComposition | str | None): 
-                The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
+        Args:
+            locator (str | Locator): The identifier or description of the element to move to.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.mouse_move("Submit button")  # Moves cursor to submit button
                 agent.mouse_move("Close")  # Moves cursor to close element
@@ -214,21 +200,21 @@ class VisionAgent:
         """
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
 
-        Parameters:
-            x (int): 
-                The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
-            y (int): 
-                The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
+        Args:
+            x (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
+            y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
 
         Note:
             The actual scroll direction depends on the operating system's configuration.
             Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
             
             The meaning of scroll units varies across operating systems and applications.
-            A scroll value of 10 might result in different distances depending on the application and system settings.
+            A scroll value of `10` might result in different distances depending on the application and system settings.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
                 agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
@@ -247,12 +233,13 @@ class VisionAgent:
         """
         Types the specified text as if it were entered on a keyboard.
 
-        Parameters:
-            text (str): 
-                The text to be typed. Must be at least 1 character long.
+        Args:
+            text (str): The text to be typed. Must be at least `1` character long.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.type("Hello, world!")  # Types "Hello, world!"
                 agent.type("user@example.com")  # Types an email address
@@ -293,21 +280,14 @@ class VisionAgent:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
 
-        Parameters:
-            query (str): 
-                The query describing what information to retrieve.
-            image (Img | None, optional): 
-                The image to extract information from. Defaults to a screenshot of the current screen. 
-                Can be a path to an image file, a PIL Image object or a data URL.
-            response_schema (Type[ResponseSchema] | None, optional): 
-                A Pydantic model class that defines the response schema. If not provided, returns a string.
-            model (ModelComposition | str | None, optional):
-                The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`.
-                Note: `response_schema` is not supported by all models.
+        Args:
+            query (str): The query describing what information to retrieve.
+            image (Img | None, optional): The image to extract information from. Defaults to a screenshot of the current screen. Can be a path to an image file, a PIL Image object or a data URL.
+            response_schema (Type[ResponseSchema] | None, optional): A Pydantic model class that defines the response schema. If not provided, returns a string.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`. Note: `response_schema` is not supported by all models.
 
         Returns:
-            ResponseSchema | str: 
-                The extracted information, either as an instance of ResponseSchema or string if no response_schema is provided.
+            ResponseSchema | str: The extracted information, `str` if no `response_schema` is provided.
 
         Limitations:
             - Nested Pydantic schemas are not currently supported
@@ -315,7 +295,7 @@ class VisionAgent:
 
         Example:
             ```python
-            from askui import JsonSchemaBase
+            from askui import JsonSchemaBase, VisionAgent
             from PIL import Image
 
             class UrlResponse(JsonSchemaBase):
@@ -376,15 +356,13 @@ class VisionAgent:
         """
         Pauses the execution of the program for the specified number of seconds.
 
-        Parameters:
-            sec (float): 
-                The number of seconds to wait. Must be greater than 0.0.
-
-        Raises:
-            ValueError: If the provided `sec` is negative.
+        Args:
+            sec (float): The number of seconds to wait. Must be greater than `0.0`.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.wait(5)  # Pauses execution for 5 seconds
                 agent.wait(0.5)  # Pauses execution for 500 milliseconds
@@ -401,12 +379,13 @@ class VisionAgent:
         """
         Simulates the release of a key.
 
-        Parameters:
-            key (PcKey | ModifierKey): 
-                The key to be released.
+        Args:
+            key (PcKey | ModifierKey): The key to be released.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.key_up('a')  # Release the 'a' key
                 agent.key_up('shift')  # Release the 'Shift' key
@@ -425,12 +404,13 @@ class VisionAgent:
         """
         Simulates the pressing of a key.
 
-        Parameters:
-            key (PcKey | ModifierKey): 
-                The key to be pressed.
+        Args:
+            key (PcKey | ModifierKey): The key to be pressed.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.key_down('a')  # Press the 'a' key
                 agent.key_down('shift')  # Press the 'Shift' key
@@ -454,14 +434,14 @@ class VisionAgent:
         to accomplish the goal. This may include clicking, typing, scrolling, and other
         interface interactions.
 
-        Parameters:
-            goal (str): 
-                A description of what the agent should achieve.
-            model (ModelComposition | str | None, optional): 
-                The composition or name of the model(s) to be used for achieving the `goal`.
+        Args:
+            goal (str): A description of what the agent should achieve.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.act("Open the settings menu")
                 agent.act("Search for 'printer' in the search box")
@@ -484,14 +464,14 @@ class VisionAgent:
         """
         Simulates pressing a key or key combination on the keyboard.
 
-        Parameters:
-            key (PcKey | ModifierKey): 
-                The main key to press. This can be a letter, number, special character, or function key.
-            modifier_keys (list[ModifierKey] | None, optional): 
-                List of modifier keys to press along with the main key. Common modifier keys include 'ctrl', 'alt', 'shift'.
+        Args:
+            key (PcKey | ModifierKey): The main key to press. This can be a letter, number, special character, or function key.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Common modifier keys include `'ctrl'`, `'alt'`, `'shift'`.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.keyboard('a')  # Press 'a' key
                 agent.keyboard('enter')  # Press 'Enter' key
@@ -514,12 +494,13 @@ class VisionAgent:
         This method allows running shell commands directly from the agent. The command
         is split on spaces and executed as a subprocess.
 
-        Parameters:
-            command (str): 
-                The command to execute on the command line.
+        Args:
+            command (str): The command to execute on the command line.
 
         Example:
             ```python
+            from askui import VisionAgent
+
             with VisionAgent() as agent:
                 agent.cli("echo Hello World")  # Prints "Hello World"
                 agent.cli("ls -la")  # Lists files in current directory with details

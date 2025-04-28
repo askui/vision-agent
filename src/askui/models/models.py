@@ -27,7 +27,16 @@ ModelDefinitionProperty = Annotated[
 class ModelDefinition(BaseModel):
     """
     A definition of a model.
+
+    Args:
+        task (str): The task the model is trained for, e.g., end-to-end OCR (`"e2e_ocr"`) or object detection (`"od"`)
+        architecture (str): The architecture of the model, e.g., `"easy_ocr"` or `"yolo"`
+        version (str): The version of the model
+        interface (str): The interface the model is trained for, e.g., `"online_learning"`
+        use_case (str, optional): The use case the model is trained for. In the case of workspace specific AskUI models, this is often the workspace id but with "-" replaced by "_". Defaults to `"00000000_0000_0000_0000_000000000000"` (custom null value).
+        tags (list[str], optional): Tags for identifying the model that cannot be represented by other properties, e.g., `["trained", "word_level"]`
     """
+
     model_config = ConfigDict(
         populate_by_name=True,
     )
@@ -41,7 +50,7 @@ class ModelDefinition(BaseModel):
     version: str = Field(pattern=r"^[0-9]{1,6}$")
     interface: ModelDefinitionProperty = Field(
         description="The interface the model is trained for",
-        examples=["online_learning", "offline_learning"],
+        examples=["online_learning"],
     )
     use_case: ModelDefinitionProperty = Field(
         description='The use case the model is trained for. In the case of workspace specific AskUI models, this is often the workspace id but with "-" replaced by "_"',
@@ -60,27 +69,28 @@ class ModelDefinition(BaseModel):
 
     @property
     def model_name(self) -> str:
-        return (
-            "-".join(
-                [
-                    self.task,
-                    self.architecture,
-                    self.interface,
-                    self.use_case,
-                    self.version,
-                    *self.tags,
-                ]
-            )
+        """
+        The name of the model.
+        """
+        return "-".join(
+            [
+                self.task,
+                self.architecture,
+                self.interface,
+                self.use_case,
+                self.version,
+                *self.tags,
+            ]
         )
 
 
 class ModelComposition(RootModel[list[ModelDefinition]]):
     """
-    A composition of models.
+    A composition of models (list of `ModelDefinition`) to be used for a task, e.g., locating an element on the screen to be able to click on it or extracting text from an image.
     """
 
     def __iter__(self):
         return iter(self.root)
-    
+
     def __getitem__(self, index: int) -> ModelDefinition:
         return self.root[index]

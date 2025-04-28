@@ -248,6 +248,13 @@ def scale_coordinates_back(
 
 
 Img = Union[str, Path, PILImage.Image]
+"""Type of the input images for `askui.VisionAgent.get()`, `askui.VisionAgent.locate()`, etc.
+
+Accepts:
+- `PIL.Image.Image`
+- Relative or absolute file path (`str` or `pathlib.Path`)
+- Data URL (e.g., `"data:image/png;base64,..."`)
+"""
 
 
 class ImageSource(RootModel):

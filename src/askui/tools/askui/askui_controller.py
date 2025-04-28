@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import pathlib
 from typing import Literal
 from typing_extensions import Self, override
@@ -59,29 +58,13 @@ class AskUiControllerSettings(BaseSettings):
         if self.component_registry_file is None and self.installation_directory is None:
             raise ValueError("Either ASKUI_COMPONENT_REGISTRY_FILE or ASKUI_INSTALLATION_DIRECTORY environment variable must be set")
         return self
-    
-
-class ControllerServer(ABC):
-    @abstractmethod
-    def start(self, clean_up: bool = False) -> None:
-        raise NotImplementedError()
-    
-    @abstractmethod
-    def stop(self, force: bool = False) -> None:
-        raise NotImplementedError()
-    
-
-class EmptyControllerServer(ControllerServer):
-    @override
-    def start(self, clean_up: bool = False) -> None:
-        pass
-    
-    @override
-    def stop(self, force: bool = False) -> None:
-        pass
 
 
-class AskUiControllerServer(ControllerServer):
+class AskUiControllerServer:
+    """
+    Concrete implementation of `ControllerServer` for managing the AskUI Remote Device Controller process.
+    Handles process discovery, startup, and shutdown for the native controller binary.
+    """
     def __init__(self) -> None:
         self._process = None
         self._settings = AskUiControllerSettings()  # type: ignore
@@ -118,9 +101,14 @@ class AskUiControllerServer(ControllerServer):
     def __start_process(self, path):
         self.process = subprocess.Popen(path)
         wait_for_port(23000)
-    
-    @override
+
     def start(self, clean_up: bool = False) -> None:
+        """
+        Start the controller process.
+
+        Args:
+            clean_up (bool, optional): Whether to clean up existing processes (only on Windows) before starting. Defaults to `False`.
+        """
         if sys.platform == 'win32' and clean_up and process_exists("AskuiRemoteDeviceController.exe"):
             self.clean_up()
         remote_device_controller_path = self._find_remote_device_controller()
@@ -132,7 +120,6 @@ class AskUiControllerServer(ControllerServer):
         subprocess.run("taskkill.exe /IM AskUI*")
         time.sleep(0.1)
 
-    @override
     def stop(self, force: bool = False) -> None:
         """
         Stop the controller process.
@@ -158,8 +145,16 @@ class AskUiControllerServer(ControllerServer):
 
 
 class AskUiControllerClient(AgentOs):
+    """
+    Implementation of `AgentOs` that communicates with the AskUI Remote Device Controller via gRPC.
+
+    Args:
+        reporter (Reporter): Reporter used for reporting with the `"AgentOs"`.
+        display (int, optional): Display number to use. Defaults to `1`.
+        controller_server (AskUiControllerServer | None, optional): Custom controller server. Defaults to `ControllerServer`.
+    """
     @telemetry.record_call(exclude={"report"})
-    def __init__(self, reporter: Reporter, display: int = 1, controller_server: ControllerServer | None = None) -> None:
+    def __init__(self, reporter: Reporter, display: int = 1, controller_server: AskUiControllerServer | None = None) -> None:
         self.stub = None
         self.channel = None
         self.session_info = None
@@ -168,11 +163,17 @@ class AskUiControllerClient(AgentOs):
         self.max_retries = 10
         self.display = display
         self._reporter = reporter
-        self._controller_server = controller_server or EmptyControllerServer()
+        self._controller_server = controller_server or AskUiControllerServer()
 
     @telemetry.record_call()
     @override
     def connect(self) -> None:
+        """
+        Establishes a connection to the AskUI Remote Device Controller.
+        
+        This method starts the controller server, establishes a gRPC channel,
+        creates a session, and sets up the initial display.
+        """
         self._controller_server.start()
         self.channel = grpc.insecure_channel('localhost:23000', options=[
                 ('grpc.max_send_message_length', 2**30 ),
@@ -202,6 +203,12 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def disconnect(self) -> None:
+        """
+        Terminates the connection to the AskUI Remote Device Controller.
+        
+        This method stops the execution, ends the session, closes the gRPC channel,
+        and stops the controller server.
+        """
         self._stop_execution()
         self._stop_session()
         self.channel.close()
@@ -209,11 +216,25 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     def __enter__(self) -> Self:
+        """
+        Context manager entry point that establishes the connection.
+        
+        Returns:
+            Self: The instance of AskUiControllerClient.
+        """
         self.connect()
         return self
     
     @telemetry.record_call(exclude={"exc_value", "traceback"})
     def __exit__(self, exc_type, exc_value, traceback) -> None:
+        """
+        Context manager exit point that disconnects the client.
+        
+        Args:
+            exc_type: The exception type if an exception was raised.
+            exc_value: The exception value if an exception was raised.
+            traceback: The traceback if an exception was raised.
+        """
         self.disconnect()
 
     def _start_session(self):
@@ -232,6 +253,15 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def screenshot(self, report: bool = True) -> Image.Image:
+        """
+        Captures a screenshot of the current display.
+
+        Args:
+            report (bool, optional): Whether to include the screenshot in reporting. Defaults to `True`.
+
+        Returns:
+            Image.Image: A PIL Image object containing the screenshot.
+        """
         assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
@@ -242,19 +272,39 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def mouse(self, x: int, y: int) -> None:
+        """
+        Moves the mouse cursor to specified screen coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to move to.
+            y (int): The vertical coordinate (in pixels) to move to.
+        """
         self._reporter.add_message("AgentOS", f"mouse({x}, {y})", draw_point_on_image(self.screenshot(report=False), x, y, size=5))
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseMove, action_parameters=controller_v1_pbs.ActionParameters(mouseMove=controller_v1_pbs.ActionParameters_MouseMove(position=controller_v1_pbs.Coordinate2(x=x, y=y))))
-
 
     @telemetry.record_call(exclude={"text"})
     @override
     def type(self, text: str, typing_speed: int = 50) -> None:
+        """
+        Simulates typing text as if entered on a keyboard.
+
+        Args:
+            text (str): The text to be typed.
+            typing_speed (int, optional): The speed of typing in characters per second. Defaults to `50`.
+        """
         self._reporter.add_message("AgentOS", f"type(\"{text}\", {typing_speed})")
         self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_KeyboardType_UnicodeText, action_parameters=controller_v1_pbs.ActionParameters(keyboardTypeUnicodeText=controller_v1_pbs.ActionParameters_KeyboardType_UnicodeText(text=text.encode('utf-16-le'), typingSpeed=typing_speed, typingSpeedValue=controller_v1_pbs.TypingSpeedValue.TypingSpeedValue_CharactersPerSecond)))
         
     @telemetry.record_call()
     @override
     def click(self, button: Literal['left', 'middle', 'right'] = 'left', count: int = 1) -> None:
+        """
+        Simulates clicking a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to click. Defaults to `"left"`.
+            count (int, optional): Number of times to click. Defaults to `1`.
+        """
         self._reporter.add_message("AgentOS", f"click(\"{button}\", {count})")
         mouse_button = None
         match button:
@@ -269,6 +319,12 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def mouse_down(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:
+        """
+        Simulates pressing and holding a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to press. Defaults to `"left"`.
+        """
         self._reporter.add_message("AgentOS", f"mouse_down(\"{button}\")")
         mouse_button = None
         match button:
@@ -283,6 +339,12 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def mouse_up(self, button: Literal['left', 'middle', 'right'] = 'left') -> None:       
+        """
+        Simulates releasing a mouse button.
+
+        Args:
+            button (Literal["left", "middle", "right"], optional): The mouse button to release. Defaults to `"left"`.
+        """
         self._reporter.add_message("AgentOS", f"mouse_up(\"{button}\")")  
         mouse_button = None
         match button:
@@ -297,6 +359,13 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def mouse_scroll(self, x: int, y: int) -> None:
+        """
+        Simulates scrolling the mouse wheel.
+
+        Args:
+            x (int): The horizontal scroll amount. Positive values scroll right, negative values scroll left.
+            y (int): The vertical scroll amount. Positive values scroll down, negative values scroll up.
+        """
         self._reporter.add_message("AgentOS", f"mouse_scroll({x}, {y})")
         if x != 0:
             self._run_recorder_action(acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll, action_parameters=controller_v1_pbs.ActionParameters(mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
@@ -313,10 +382,16 @@ class AskUiControllerClient(AgentOs):
                 milliseconds = 50
             )))
 
-
     @telemetry.record_call()
     @override
     def keyboard_pressed(self, key: PcKey | ModifierKey,  modifier_keys: list[ModifierKey] | None = None) -> None: 
+        """
+        Simulates pressing and holding a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to press.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+        """
         self._reporter.add_message("AgentOS", f"keyboard_pressed(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
@@ -325,6 +400,13 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def keyboard_release(self, key: PcKey | ModifierKey,  modifier_keys: list[ModifierKey] | None = None) -> None:
+        """
+        Simulates releasing a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to release.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to release along with the main key. Defaults to `None`.
+        """
         self._reporter.add_message("AgentOS", f"keyboard_release(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
@@ -333,6 +415,13 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def keyboard_tap(self, key: PcKey | ModifierKey,  modifier_keys: list[ModifierKey] | None = None) -> None: 
+        """
+        Simulates pressing and immediately releasing a keyboard key.
+
+        Args:
+            key (PcKey | ModifierKey): The key to tap.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+        """
         self._reporter.add_message("AgentOS", f"keyboard_tap(\"{key}\", {modifier_keys})")
         if modifier_keys is None:
             modifier_keys = []   
@@ -341,6 +430,12 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def set_display(self, displayNumber: int = 1) -> None:
+        """
+        Sets the active display for screen interactions.
+
+        Args:
+            displayNumber (int, optional): The display number to set as active. Defaults to `1`.
+        """
         assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         self._reporter.add_message("AgentOS", f"set_display({displayNumber})")
         self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
