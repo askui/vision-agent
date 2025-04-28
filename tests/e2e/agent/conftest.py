@@ -17,7 +17,7 @@ from askui.tools.toolbox import AgentToolbox
 
 class ReporterMock(Reporter):
     @override
-    def add_message(self, role: str, content: Union[str, dict, list], image: Optional[PILImage.Image] = None) -> None:
+    def add_message(self, role: str, content: Union[str, dict, list], image: Optional[PILImage.Image | list[PILImage.Image]] = None) -> None:
         pass
     
     @override
