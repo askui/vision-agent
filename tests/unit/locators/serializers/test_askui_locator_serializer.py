@@ -84,12 +84,12 @@ def test_serialize_image(askui_serializer: AskUiLocatorSerializer) -> None:
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
     assert custom_element["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
-    assert custom_element["threshold"] == image.threshold
-    assert custom_element["stopThreshold"] == image.stop_threshold
+    assert custom_element["threshold"] == image._threshold
+    assert custom_element["stopThreshold"] == image._stop_threshold
     assert "mask" not in custom_element
-    assert custom_element["rotationDegreePerStep"] == image.rotation_degree_per_step
-    assert custom_element["imageCompareFormat"] == image.image_compare_format
-    assert custom_element["name"] == image.name
+    assert custom_element["rotationDegreePerStep"] == image._rotation_degree_per_step
+    assert custom_element["imageCompareFormat"] == image._image_compare_format
+    assert custom_element["name"] == image._name
 
 
 def test_serialize_image_with_all_options(

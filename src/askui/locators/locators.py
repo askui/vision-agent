@@ -39,13 +39,9 @@ class Prompt(Locator):
         """
         super().__init__()
         self._prompt = prompt
-
-    @property
-    def prompt(self) -> str:
-        return self._prompt
     
     def _str(self) -> str:
-        return f'element with prompt "{self.prompt}"'
+        return f'element with prompt "{self._prompt}"'
 
 
 class Element(Locator):
@@ -69,13 +65,9 @@ class Element(Locator):
         super().__init__()
         self._class_name = class_name
 
-    @property
-    def class_name(self) -> Literal["text", "textfield"] | None:
-        return self._class_name
-
     def _str(self) -> str:
         return (
-            f'element with class "{self.class_name}"' if self.class_name else "element"
+            f'element with class "{self._class_name}"' if self._class_name else "element"
         )
 
 
@@ -134,32 +126,20 @@ class Text(Element):
         self._match_type = match_type
         self._similarity_threshold = similarity_threshold
 
-    @property
-    def text(self) -> str | None:
-        return self._text
-
-    @property
-    def match_type(self) -> TextMatchType:
-        return self._match_type
-
-    @property
-    def similarity_threshold(self) -> int:
-        return self._similarity_threshold
-
     def _str(self) -> str:
-        if self.text is None:
+        if self._text is None:
             result = "text"
         else:
             result = "text "
-            match self.match_type:
+            match self._match_type:
                 case "similar":
-                    result += f'similar to "{self.text}" (similarity >= {self.similarity_threshold}%)'
+                    result += f'similar to "{self._text}" (similarity >= {self._similarity_threshold}%)'
                 case "exact":
-                    result += f'"{self.text}"'
+                    result += f'"{self._text}"'
                 case "contains":
-                    result += f'containing text "{self.text}"'
+                    result += f'containing text "{self._text}"'
                 case "regex":
-                    result += f'matching regex "{self.text}"'
+                    result += f'matching regex "{self._text}"'
         return result
 
 
@@ -184,47 +164,23 @@ class ImageBase(Locator, ABC):
         self._rotation_degree_per_step = rotation_degree_per_step
         self._name = name
         self._image_compare_format = image_compare_format
-
-    @property
-    def threshold(self) -> float:
-        return self._threshold
-
-    @property
-    def stop_threshold(self) -> float:
-        return self._stop_threshold
-
-    @property
-    def mask(self) -> list[tuple[float, float]] | None:
-        return self._mask
-
-    @property
-    def rotation_degree_per_step(self) -> int:
-        return self._rotation_degree_per_step
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def image_compare_format(self) -> Literal["RGB", "grayscale", "edges"]:
-        return self._image_compare_format
     
     def _params_str(self) -> str:
         return (
             "("
             + ", ".join([
-                f"threshold: {self.threshold}",
-                f"stop_threshold: {self.stop_threshold}",
-                f"rotation_degree_per_step: {self.rotation_degree_per_step}",
-                f"image_compare_format: {self.image_compare_format}",
-                f"mask: {self.mask}"
+                f"threshold: {self._threshold}",
+                f"stop_threshold: {self._stop_threshold}",
+                f"rotation_degree_per_step: {self._rotation_degree_per_step}",
+                f"image_compare_format: {self._image_compare_format}",
+                f"mask: {self._mask}"
             ])
             + ")"
         )
     
     def _str(self) -> str:
         return (
-            f'element "{self.name}" located by image '
+            f'element "{self._name}" located by image '
             + self._params_str()
         )
 
@@ -320,10 +276,6 @@ class Image(ImageBase):
         )  # type: ignore
         self._image = ImageSource(image)
 
-    @property
-    def image(self) -> ImageSource:
-        return self._image
-
 
 class AiElement(ImageBase):
     """Locator for finding ui elements by an image and other kinds data saved on the disk."""
@@ -413,6 +365,6 @@ class AiElement(ImageBase):
 
     def _str(self) -> str:
         return (
-            f'ai element named "{self.name}" '
+            f'ai element named "{self._name}" '
             + self._params_str()
         )

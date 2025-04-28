@@ -104,10 +104,6 @@ class Relatable(ABC):
     def __init__(self) -> None:
         self._relations: list[Relation] = []
 
-    @property
-    def relations(self) -> list[Relation]:
-        return self._relations
-
     # cannot be validated by pydantic using @validate_call because of the recursive nature of the relations --> validate using NeighborRelation
     def above_of(
         self,
@@ -898,7 +894,7 @@ class Relatable(ABC):
             visited_ids.add(node_id)
             recursion_stack_ids.add(node_id)
 
-            for relation in node.relations:
+            for relation in node._relations:
                 if _dfs(relation.other_locator):
                     return True
 
