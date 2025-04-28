@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, fields, replace
-from typing import Any
+from typing import Any, List
 
 from anthropic.types.beta import BetaToolUnionParam
 
@@ -29,7 +29,7 @@ class ToolResult:
 
     output: str | None = None
     error: str | None = None
-    base64_image: str | None = None
+    base64_images: List[str]  | None = None
     system: str | None = None
 
     def __bool__(self):
@@ -48,7 +48,7 @@ class ToolResult:
         return ToolResult(
             output=combine_fields(self.output, other.output),
             error=combine_fields(self.error, other.error),
-            base64_image=combine_fields(self.base64_image, other.base64_image, False),
+            base64_images=combine_fields(self.base64_images, other.base64_images, False),
             system=combine_fields(self.system, other.system),
         )
 

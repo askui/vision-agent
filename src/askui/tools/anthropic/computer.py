@@ -209,4 +209,4 @@ class ComputerTool(BaseAnthropicTool):
         self.real_screen_height = screenshot.height
         scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
         base64_image = image_to_base64(scaled_screenshot)
-        return ToolResult(base64_image=base64_image)
+        return ToolResult(base64_images=[base64_image])

@@ -24,7 +24,7 @@ class AndroidScreenshotTool(Tool):
             self.controller_client.scaled_resolution[1],
         )
         base64_image = image_to_base64(scale_image)
-        return ToolResult(output=f"Screenshot was taken.", base64_image=base64_image)
+        return ToolResult(output=f"Screenshot was taken.", base64_images=[base64_image])
 
 
 class AndroidGetConnectedDisplaysTool(Tool):
@@ -367,4 +367,4 @@ class DebugDrawTool(Tool):
         x2, y2 = self.controller_client.rescale_back_coordinates(x2, y2)
         image = self.controller_client.debug_draw(x1, y1, x2, y2)
         base64_image = image_to_base64(image)
-        return ToolResult(output="Box drawn on the image.", base64_image=base64_image)
+        return ToolResult(output="Box drawn on the image.", base64_images=[base64_image])

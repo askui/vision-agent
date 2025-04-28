@@ -54,8 +54,14 @@ class ClaudeAgent:
             text=f"{system_prompt}",
         )
 
+    def set_tool_collection(self, tools: List[BaseAnthropicTool]):
+        self.tool_collection = ToolCollection(
+            ExceptionTool(),
+            *tools
+        )
+
     def step(self, messages: list):
-        if self.only_n_most_recent_images:
+        if self.only_n_most_recent_images is not None:
             self._maybe_filter_to_n_most_recent_images(
                 messages,
                 self.only_n_most_recent_images,
@@ -215,17 +221,18 @@ class ClaudeAgent:
                         "text": self._maybe_prepend_system_tool_result(result, result.output),
                     }
                 )
-            if result.base64_image:
-                tool_result_content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": result.base64_image,
-                        },
-                    }
-                )
+            if result.base64_images and len(result.base64_images) > 0:
+                for base64_image in result.base64_images:
+                    tool_result_content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": base64_image,
+                            },
+                        }
+                    )
         return {
             "type": "tool_result",
             "content": tool_result_content,
