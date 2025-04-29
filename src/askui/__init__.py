@@ -1,6 +1,6 @@
 """AskUI Vision Agent"""
 
-__version__ = "0.3.0"
+__version__ = "0.3.2"
 
 from .agent import VisionAgent
 from .models import ModelComposition, ModelDefinition
