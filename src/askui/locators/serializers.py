@@ -140,6 +140,9 @@ class AskUiLocatorSerializer:
         return f"pta {self._TEXT_DELIMITER}{prompt._prompt}{self._TEXT_DELIMITER}"
 
     def _serialize_text(self, text: Text) -> str:
+        if text._text is None:
+            return "text"
+
         match text._match_type:
             case "similar":
                 if (

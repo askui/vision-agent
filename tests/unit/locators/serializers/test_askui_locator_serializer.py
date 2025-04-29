@@ -27,6 +27,20 @@ def askui_serializer(path_fixtures: pathlib.Path) -> AskUiLocatorSerializer:
         ),
         reporter=CompositeReporter()
     )
+    
+
+def test_serialize_text_without_content(askui_serializer: AskUiLocatorSerializer) -> None:
+    text = Text()
+    result = askui_serializer.serialize(text)
+    assert result["instruction"] == "text"
+    assert result["customElements"] == []
+    
+
+def test_serialize_text_without_content_in_relation(askui_serializer: AskUiLocatorSerializer) -> None:
+    locator = Text().right_of(Text("Name"))
+    result = askui_serializer.serialize(locator)
+    assert result["instruction"] == "text index 0 right of intersection_area element_center_line text <|string|>Name<|string|>"
+    assert result["customElements"] == []
 
 
 def test_serialize_text_similar(askui_serializer: AskUiLocatorSerializer) -> None:
