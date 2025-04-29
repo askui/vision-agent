@@ -62,6 +62,12 @@ class AiElement():
 
 
 class AiElementNotFound(ValueError):
+    """Exception raised when an AI element is not found.
+    
+    Args:
+        name (str): The name of the AI element that was not found.
+        locations (list[pathlib.Path]): The locations that were searched for the AI element.
+    """
     def __init__(self, name: str, locations: list[pathlib.Path]):
         self.name = name
         self.locations = locations
