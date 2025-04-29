@@ -27,7 +27,8 @@ DEFAULT_SIMILARITY_THRESHOLD = 70
 
 
 class Locator(Relatable, ABC):
-    """Abstract base class for all locators. Cannot be instantiated directly."""
+    """Abstract base class for all locators. Cannot be instantiated directly. 
+    Subclassed by all locators, e.g., `Prompt`, `Text`, `Image`, etc."""
     
     def _str(self) -> str:
         return "locator"
@@ -248,8 +249,18 @@ class Image(ImageBase):
     Examples:
         ```python
         from askui import locators as loc
-        # locates an image element with an image similar to "sign up button"
+        from PIL import Image as PILImage
+        from pathlib import Path
+
+        # locates an element using an image of the element
+        # passed as `str` path
         image = loc.Image("path/to/image.png")
+        # passed as `pathlib.Path`
+        image = loc.Image(Path("path/to/image.png"))
+        # passed as `PIL.Image.Image`
+        image = loc.Image(PILImage.open("path/to/image.png"))
+        # passed as data url `str`
+        image = loc.Image("data:image/png;base64,...")
         ```
     """
 

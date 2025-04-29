@@ -38,7 +38,7 @@ Examples:
 
     ```text
          |===========
-         ||    A    |
+         |     A    |
          |===========
          |
     ===========
@@ -273,7 +273,8 @@ class CircularDependencyError(ValueError):
 
 
 class Relatable(ABC):
-    """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly."""
+    """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly. 
+    Subclassed by all (relatable) locators, e.g., `Prompt`, `Text`, `Image`, etc."""
 
     def __init__(self) -> None:
         self._relations: list[Relation] = []
@@ -924,7 +925,7 @@ class Relatable(ABC):
             # multi-colored Google logo (instead of, e.g., simply some text that says
             # "Google")
             icon_user = loc.Element().containing(
-                loc.Text("Google").and_(loc.Description("Multi-colored Google logo"))
+                loc.Text("Google").and_(loc.Prompt("Multi-colored Google logo"))
             )
             ```
         """
@@ -953,7 +954,7 @@ class Relatable(ABC):
 
             # Searches for element using a description and if the element cannot be
             # found, searches for it using an image
-            search_icon = loc.Description("search icon").or_(
+            search_icon = loc.Prompt("search icon").or_(
                 loc.Image("search_icon.png")
             )
             ```
