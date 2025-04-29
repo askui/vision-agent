@@ -21,10 +21,6 @@ from dotenv import load_dotenv
 from .models.types.response_schemas import ResponseSchema
 
 
-class InvalidParameterError(Exception):
-    pass
-
-
 class VisionAgent:
     """
     A vision-based agent that can interact with user interfaces through computer vision and AI.
@@ -106,8 +102,6 @@ class VisionAgent:
                 agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
             ```
         """
-        if repeat < 1:
-            raise InvalidParameterError("InvalidParameterError! The parameter 'repeat' needs to be greater than 0.")
         msg = 'click'
         if button != 'left':
             msg = f'{button} ' + msg 

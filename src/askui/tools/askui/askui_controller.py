@@ -25,11 +25,6 @@ import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controlle
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class AgentOSBinaryNotFoundException(Exception):
-    pass
-class AskUISuiteNotInstalledError(Exception):
-    pass
-
 
 class RemoteDeviceController(BaseModel):
     askui_remote_device_controller: pathlib.Path = Field(alias="AskUIRemoteDeviceController")

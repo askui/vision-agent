@@ -22,7 +22,14 @@ class BaseAnthropicTool(metaclass=ABCMeta):
 
 @dataclass(kw_only=True, frozen=True)
 class ToolResult:
-    """Represents the result of a tool execution."""
+    """Represents the result of a tool execution.
+    
+    Args:
+        output (str | None, optional): The output of the tool.
+        error (str | None, optional): The error message of the tool.
+        base64_image (str | None, optional): The base64 image of the tool.
+        system (str | None, optional): The system message of the tool.
+    """
 
     output: str | None = None
     error: str | None = None
@@ -63,7 +70,13 @@ class ToolFailure(ToolResult):
 
 
 class ToolError(Exception):
-    """Raised when a tool encounters an error."""
+    """Raised when a tool encounters an error.
+    
+    Args:
+        message (str): The error message.
+        result (ToolResult): The ToolResult that caused the error.
+    """
 
-    def __init__(self, message):
+    def __init__(self, message: str, result: ToolResult):
         self.message = message
+        self.result = result
