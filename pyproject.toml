@@ -43,6 +43,7 @@ test = "pytest -n auto"
 "test:e2e" = "pytest -n auto tests/e2e"
 "test:integration" = "pytest -n auto tests/integration"
 "test:unit" = "pytest -n auto tests/unit"
+"test:cov:view" = "python -m http.server --directory htmlcov"
 sort = "isort ."
 format = "black ."
 lint = "ruff check ."
@@ -58,7 +59,15 @@ test = [
     "ruff>=0.9.5",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.1",
+    "pytest-cov>=4.1.0",
 ]
 chat = [
     "streamlit>=1.42.0",
 ]
+
+[tool.pytest.ini_options]
+addopts = "--cov=src/askui --cov-report=term-missing --cov-report=html"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
