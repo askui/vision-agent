@@ -61,7 +61,7 @@ class VisionAgent:
         configure_logging(level=log_level)
         self._reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
-                agent_os=AskUiControllerClient(
+            agent_os=AskUiControllerClient(
                 display=display,
                 reporter=self._reporter, 
                 controller_server=AskUiControllerServer()

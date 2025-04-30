@@ -148,7 +148,7 @@ class AskUiControllerClient(AgentOs):
         display (int, optional): Display number to use. Defaults to `1`.
         controller_server (AskUiControllerServer | None, optional): Custom controller server. Defaults to `ControllerServer`.
     """
-    @telemetry.record_call(exclude={"report"})
+    @telemetry.record_call(exclude={"reporter", "controller_server"})
     def __init__(self, reporter: Reporter, display: int = 1, controller_server: AskUiControllerServer | None = None) -> None:
         self.stub = None
         self.channel = None
