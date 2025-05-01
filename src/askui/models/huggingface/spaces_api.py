@@ -31,13 +31,13 @@ class HFSpacesHandler:
         return self.clients[space_name]
 
     @staticmethod
-    def _rescale_bounding_boxes(
+    def _rescale_bounding_boxes(  # type: ignore
         bounding_boxes,
         original_width,
         original_height,
         scaled_width=1000,
         scaled_height=1000,
-    ):  # type: ignore
+    ):
         x_scale = original_width / scaled_width
         y_scale = original_height / scaled_height
         rescaled_boxes = []

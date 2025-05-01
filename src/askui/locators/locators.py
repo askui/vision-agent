@@ -33,7 +33,6 @@ class Locator(Relatable, ABC):
         return "locator"
 
 
-
 class Prompt(Locator):
     """Locator for finding ui elements by a textual prompt / description of a ui element, e.g., "green sign up button".
 

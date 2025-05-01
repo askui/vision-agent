@@ -49,8 +49,6 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
-checks = {composite = ["format . --check", "lint", "typecheck"]}
-fix-all = {composite = ["format", "lint:fix", "typecheck"]}
 chat = "streamlit run src/askui/chat/__main__.py"
 
 [dependency-groups]
