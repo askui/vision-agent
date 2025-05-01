@@ -1,17 +1,20 @@
 from typing_extensions import NotRequired, TypedDict
 
+from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.reporting import Reporter
 from askui.utils.image_utils import ImageSource
-from askui.models.askui.ai_element_utils import AiElementCollection
+
 from .locators import (
     DEFAULT_SIMILARITY_THRESHOLD,
     DEFAULT_TEXT_MATCH_TYPE,
-    ImageBase,
-    AiElement as AiElementLocator,
     Element,
-    Prompt,
     Image,
+    ImageBase,
+    Prompt,
     Text,
+)
+from .locators import (
+    AiElement as AiElementLocator,
 )
 from .relatable import (
     BoundingRelation,
@@ -34,26 +37,24 @@ class VlmLocatorSerializer:
 
         if isinstance(locator, Text):
             return self._serialize_text(locator)
-        elif isinstance(locator, Element):
+        if isinstance(locator, Element):
             return self._serialize_class(locator)
-        elif isinstance(locator, Prompt):
+        if isinstance(locator, Prompt):
             return self._serialize_prompt(locator)
-        elif isinstance(locator, Image):
+        if isinstance(locator, Image):
             raise NotImplementedError(
                 "Serializing image locators is not yet supported for VLMs"
             )
-        elif isinstance(locator, AiElementLocator):
+        if isinstance(locator, AiElementLocator):
             raise NotImplementedError(
                 "Serializing AI element locators is not yet supported for VLMs"
             )
-        else:
-            raise ValueError(f"Unsupported locator type: {type(locator)}")
+        raise ValueError(f"Unsupported locator type: {type(locator)}")
 
     def _serialize_class(self, class_: Element) -> str:
         if class_._class_name:
             return f"an arbitrary {class_._class_name} shown"
-        else:
-            return "an arbitrary ui element (e.g., text, button, textfield, etc.)"
+        return "an arbitrary ui element (e.g., text, button, textfield, etc.)"
 
     def _serialize_prompt(self, prompt: Prompt) -> str:
         return prompt._prompt
@@ -227,7 +228,7 @@ class AskUiLocatorSerializer:
             instruction=f"custom element with text {self._TEXT_DELIMITER}{image_locator._name}{self._TEXT_DELIMITER}",
             customElements=custom_elements,
         )
-        
+
     def _serialize_image(
         self,
         image: Image,

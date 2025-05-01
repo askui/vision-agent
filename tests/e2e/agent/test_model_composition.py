@@ -2,8 +2,10 @@
 
 import pytest
 from PIL import Image as PILImage
+
 from askui.agent import VisionAgent
-from askui.locators.locators import DEFAULT_SIMILARITY_THRESHOLD, Text
+from askui.locators import Text
+from askui.locators.locators import DEFAULT_SIMILARITY_THRESHOLD
 from askui.models import ModelComposition, ModelDefinition
 
 
@@ -104,8 +106,24 @@ class TestWordLevelOcrModel:
         if any("trained" not in m.tags for m in model):
             pytest.skip("Skipping test for non-trained model")
         with pytest.raises(Exception):
-            vision_agent.locate(Text("Sign in", text_type="exact"), github_login_screenshot, model=model)
-            vision_agent.locate(Text("Sign in", text_type="regex"), github_login_screenshot, model=model)
-            vision_agent.locate(Text("Sign in", text_type="contains"), github_login_screenshot, model=model)
+            vision_agent.locate(
+                Text("Sign in", match_type="exact"),
+                github_login_screenshot,
+                model=model,
+            )
+            vision_agent.locate(
+                Text("Sign in", match_type="regex"),
+                github_login_screenshot,
+                model=model,
+            )
+            vision_agent.locate(
+                Text("Sign in", match_type="contains"),
+                github_login_screenshot,
+                model=model,
+            )
             assert DEFAULT_SIMILARITY_THRESHOLD != 80
-            vision_agent.locate(Text("Sign in", similarity_threshold=80), github_login_screenshot, model=model)
+            vision_agent.locate(
+                Text("Sign in", similarity_threshold=80),
+                github_login_screenshot,
+                model=model,
+            )

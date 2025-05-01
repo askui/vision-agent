@@ -1,8 +1,23 @@
-from google.protobuf.internal import containers as _containers
-from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
+from typing import (
+    ClassVar as _ClassVar,
+)
+from typing import (
+    Iterable as _Iterable,
+)
+from typing import (
+    Mapping as _Mapping,
+)
+from typing import (
+    Optional as _Optional,
+)
+from typing import (
+    Union as _Union,
+)
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -55,6 +70,7 @@ class TypingSpeedValue(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     TypingSpeedValue_Undefined: _ClassVar[TypingSpeedValue]
     TypingSpeedValue_CharactersPerSecond: _ClassVar[TypingSpeedValue]
     TypingSpeedValue_Seconds: _ClassVar[TypingSpeedValue]
+
 PollEventID_Undefined: PollEventID
 PollEventID_ActionFinished: PollEventID
 MouseButton_Undefined: MouseButton
@@ -106,7 +122,9 @@ class Size2(_message.Message):
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     width: int
     height: int
-    def __init__(self, width: _Optional[int] = ..., height: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, width: _Optional[int] = ..., height: _Optional[int] = ...
+    ) -> None: ...
 
 class Delta2(_message.Message):
     __slots__ = ("x", "y")
@@ -134,10 +152,23 @@ class Rectangle(_message.Message):
     top: int
     right: int
     bottom: int
-    def __init__(self, left: _Optional[int] = ..., top: _Optional[int] = ..., right: _Optional[int] = ..., bottom: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        left: _Optional[int] = ...,
+        top: _Optional[int] = ...,
+        right: _Optional[int] = ...,
+        bottom: _Optional[int] = ...,
+    ) -> None: ...
 
 class Bitmap(_message.Message):
-    __slots__ = ("width", "height", "lineWidth", "bitsPerPixel", "bytesPerPixel", "data")
+    __slots__ = (
+        "width",
+        "height",
+        "lineWidth",
+        "bitsPerPixel",
+        "bytesPerPixel",
+        "data",
+    )
     WIDTH_FIELD_NUMBER: _ClassVar[int]
     HEIGHT_FIELD_NUMBER: _ClassVar[int]
     LINEWIDTH_FIELD_NUMBER: _ClassVar[int]
@@ -150,7 +181,15 @@ class Bitmap(_message.Message):
     bitsPerPixel: int
     bytesPerPixel: int
     data: bytes
-    def __init__(self, width: _Optional[int] = ..., height: _Optional[int] = ..., lineWidth: _Optional[int] = ..., bitsPerPixel: _Optional[int] = ..., bytesPerPixel: _Optional[int] = ..., data: _Optional[bytes] = ...) -> None: ...
+    def __init__(
+        self,
+        width: _Optional[int] = ...,
+        height: _Optional[int] = ...,
+        lineWidth: _Optional[int] = ...,
+        bitsPerPixel: _Optional[int] = ...,
+        bytesPerPixel: _Optional[int] = ...,
+        data: _Optional[bytes] = ...,
+    ) -> None: ...
 
 class Color(_message.Message):
     __slots__ = ("r", "g", "b")
@@ -160,7 +199,9 @@ class Color(_message.Message):
     r: int
     g: int
     b: int
-    def __init__(self, r: _Optional[int] = ..., g: _Optional[int] = ..., b: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, r: _Optional[int] = ..., g: _Optional[int] = ..., b: _Optional[int] = ...
+    ) -> None: ...
 
 class GUID(_message.Message):
     __slots__ = ("highPart", "lowPart")
@@ -168,7 +209,9 @@ class GUID(_message.Message):
     LOWPART_FIELD_NUMBER: _ClassVar[int]
     highPart: int
     lowPart: int
-    def __init__(self, highPart: _Optional[int] = ..., lowPart: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, highPart: _Optional[int] = ..., lowPart: _Optional[int] = ...
+    ) -> None: ...
 
 class SessionInfo(_message.Message):
     __slots__ = ("sessionGUID", "sessionID")
@@ -176,7 +219,11 @@ class SessionInfo(_message.Message):
     SESSIONID_FIELD_NUMBER: _ClassVar[int]
     sessionGUID: GUID
     sessionID: int
-    def __init__(self, sessionGUID: _Optional[_Union[GUID, _Mapping]] = ..., sessionID: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionGUID: _Optional[_Union[GUID, _Mapping]] = ...,
+        sessionID: _Optional[int] = ...,
+    ) -> None: ...
 
 class CaptureArea(_message.Message):
     __slots__ = ("size", "coordinate")
@@ -184,7 +231,11 @@ class CaptureArea(_message.Message):
     COORDINATE_FIELD_NUMBER: _ClassVar[int]
     size: Size2
     coordinate: Coordinate2
-    def __init__(self, size: _Optional[_Union[Size2, _Mapping]] = ..., coordinate: _Optional[_Union[Coordinate2, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        size: _Optional[_Union[Size2, _Mapping]] = ...,
+        coordinate: _Optional[_Union[Coordinate2, _Mapping]] = ...,
+    ) -> None: ...
 
 class CaptureParameters(_message.Message):
     __slots__ = ("displayID", "captureArea")
@@ -192,7 +243,11 @@ class CaptureParameters(_message.Message):
     CAPTUREAREA_FIELD_NUMBER: _ClassVar[int]
     displayID: int
     captureArea: CaptureArea
-    def __init__(self, displayID: _Optional[int] = ..., captureArea: _Optional[_Union[CaptureArea, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        displayID: _Optional[int] = ...,
+        captureArea: _Optional[_Union[CaptureArea, _Mapping]] = ...,
+    ) -> None: ...
 
 class PollEventParameters_ActionFinished(_message.Message):
     __slots__ = ("actionID",)
@@ -204,7 +259,12 @@ class PollEventParameters(_message.Message):
     __slots__ = ("actionFinished",)
     ACTIONFINISHED_FIELD_NUMBER: _ClassVar[int]
     actionFinished: PollEventParameters_ActionFinished
-    def __init__(self, actionFinished: _Optional[_Union[PollEventParameters_ActionFinished, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        actionFinished: _Optional[
+            _Union[PollEventParameters_ActionFinished, _Mapping]
+        ] = ...,
+    ) -> None: ...
 
 class ActionParameters_Wait(_message.Message):
     __slots__ = ("milliseconds",)
@@ -216,13 +276,17 @@ class ActionParameters_MouseButton_Press(_message.Message):
     __slots__ = ("mouseButton",)
     MOUSEBUTTON_FIELD_NUMBER: _ClassVar[int]
     mouseButton: MouseButton
-    def __init__(self, mouseButton: _Optional[_Union[MouseButton, str]] = ...) -> None: ...
+    def __init__(
+        self, mouseButton: _Optional[_Union[MouseButton, str]] = ...
+    ) -> None: ...
 
 class ActionParameters_MouseButton_Release(_message.Message):
     __slots__ = ("mouseButton",)
     MOUSEBUTTON_FIELD_NUMBER: _ClassVar[int]
     mouseButton: MouseButton
-    def __init__(self, mouseButton: _Optional[_Union[MouseButton, str]] = ...) -> None: ...
+    def __init__(
+        self, mouseButton: _Optional[_Union[MouseButton, str]] = ...
+    ) -> None: ...
 
 class ActionParameters_MouseButton_PressAndRelease(_message.Message):
     __slots__ = ("mouseButton", "count")
@@ -230,7 +294,11 @@ class ActionParameters_MouseButton_PressAndRelease(_message.Message):
     COUNT_FIELD_NUMBER: _ClassVar[int]
     mouseButton: MouseButton
     count: int
-    def __init__(self, mouseButton: _Optional[_Union[MouseButton, str]] = ..., count: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        mouseButton: _Optional[_Union[MouseButton, str]] = ...,
+        count: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_MouseWheelScroll(_message.Message):
     __slots__ = ("direction", "deltaType", "delta", "milliseconds")
@@ -242,7 +310,13 @@ class ActionParameters_MouseWheelScroll(_message.Message):
     deltaType: MouseWheelDeltaType
     delta: int
     milliseconds: int
-    def __init__(self, direction: _Optional[_Union[MouseWheelScrollDirection, str]] = ..., deltaType: _Optional[_Union[MouseWheelDeltaType, str]] = ..., delta: _Optional[int] = ..., milliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        direction: _Optional[_Union[MouseWheelScrollDirection, str]] = ...,
+        deltaType: _Optional[_Union[MouseWheelDeltaType, str]] = ...,
+        delta: _Optional[int] = ...,
+        milliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_MouseMove(_message.Message):
     __slots__ = ("position", "milliseconds")
@@ -250,7 +324,11 @@ class ActionParameters_MouseMove(_message.Message):
     MILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     position: Coordinate2
     milliseconds: int
-    def __init__(self, position: _Optional[_Union[Coordinate2, _Mapping]] = ..., milliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        position: _Optional[_Union[Coordinate2, _Mapping]] = ...,
+        milliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_MouseMove_Delta(_message.Message):
     __slots__ = ("delta", "milliseconds")
@@ -258,7 +336,11 @@ class ActionParameters_MouseMove_Delta(_message.Message):
     MILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     delta: Delta2
     milliseconds: int
-    def __init__(self, delta: _Optional[_Union[Delta2, _Mapping]] = ..., milliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        delta: _Optional[_Union[Delta2, _Mapping]] = ...,
+        milliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKey_Press(_message.Message):
     __slots__ = ("keyName", "modifierKeyNames")
@@ -266,7 +348,11 @@ class ActionParameters_KeyboardKey_Press(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyName: str
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyName: _Optional[str] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyName: _Optional[str] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKey_Release(_message.Message):
     __slots__ = ("keyName", "modifierKeyNames")
@@ -274,7 +360,11 @@ class ActionParameters_KeyboardKey_Release(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyName: str
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyName: _Optional[str] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyName: _Optional[str] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKey_PressAndRelease(_message.Message):
     __slots__ = ("keyName", "modifierKeyNames")
@@ -282,7 +372,11 @@ class ActionParameters_KeyboardKey_PressAndRelease(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyName: str
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyName: _Optional[str] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyName: _Optional[str] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKeys_Press(_message.Message):
     __slots__ = ("keyNames", "modifierKeyNames")
@@ -290,7 +384,11 @@ class ActionParameters_KeyboardKeys_Press(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyNames: _containers.RepeatedScalarFieldContainer[str]
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyNames: _Optional[_Iterable[str]] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyNames: _Optional[_Iterable[str]] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKeys_Release(_message.Message):
     __slots__ = ("keyNames", "modifierKeyNames")
@@ -298,7 +396,11 @@ class ActionParameters_KeyboardKeys_Release(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyNames: _containers.RepeatedScalarFieldContainer[str]
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyNames: _Optional[_Iterable[str]] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyNames: _Optional[_Iterable[str]] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardKeys_PressAndRelease(_message.Message):
     __slots__ = ("keyNames", "modifierKeyNames")
@@ -306,7 +408,11 @@ class ActionParameters_KeyboardKeys_PressAndRelease(_message.Message):
     MODIFIERKEYNAMES_FIELD_NUMBER: _ClassVar[int]
     keyNames: _containers.RepeatedScalarFieldContainer[str]
     modifierKeyNames: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, keyNames: _Optional[_Iterable[str]] = ..., modifierKeyNames: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(
+        self,
+        keyNames: _Optional[_Iterable[str]] = ...,
+        modifierKeyNames: _Optional[_Iterable[str]] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardType_Text(_message.Message):
     __slots__ = ("text", "typingSpeedValue", "typingSpeed")
@@ -316,7 +422,12 @@ class ActionParameters_KeyboardType_Text(_message.Message):
     text: str
     typingSpeedValue: TypingSpeedValue
     typingSpeed: int
-    def __init__(self, text: _Optional[str] = ..., typingSpeedValue: _Optional[_Union[TypingSpeedValue, str]] = ..., typingSpeed: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        text: _Optional[str] = ...,
+        typingSpeedValue: _Optional[_Union[TypingSpeedValue, str]] = ...,
+        typingSpeed: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_KeyboardType_UnicodeText(_message.Message):
     __slots__ = ("text", "typingSpeedValue", "typingSpeed")
@@ -326,7 +437,12 @@ class ActionParameters_KeyboardType_UnicodeText(_message.Message):
     text: bytes
     typingSpeedValue: TypingSpeedValue
     typingSpeed: int
-    def __init__(self, text: _Optional[bytes] = ..., typingSpeedValue: _Optional[_Union[TypingSpeedValue, str]] = ..., typingSpeed: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        text: _Optional[bytes] = ...,
+        typingSpeedValue: _Optional[_Union[TypingSpeedValue, str]] = ...,
+        typingSpeed: _Optional[int] = ...,
+    ) -> None: ...
 
 class ActionParameters_RunCommand(_message.Message):
     __slots__ = ("command", "timeoutInMilliseconds")
@@ -334,10 +450,30 @@ class ActionParameters_RunCommand(_message.Message):
     TIMEOUTINMILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     command: str
     timeoutInMilliseconds: int
-    def __init__(self, command: _Optional[str] = ..., timeoutInMilliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, command: _Optional[str] = ..., timeoutInMilliseconds: _Optional[int] = ...
+    ) -> None: ...
 
 class ActionParameters(_message.Message):
-    __slots__ = ("none", "wait", "mouseButtonPress", "mouseButtonRelease", "mouseButtonPressAndRelease", "mouseWheelScroll", "mouseMove", "mouseMoveDelta", "keyboardKeyPress", "keyboardKeyRelease", "keyboardKeyPressAndRelease", "keyboardKeysPress", "keyboardKeysRelease", "keyboardKeysPressAndRelease", "keyboardTypeText", "keyboardTypeUnicodeText", "runcommand")
+    __slots__ = (
+        "none",
+        "wait",
+        "mouseButtonPress",
+        "mouseButtonRelease",
+        "mouseButtonPressAndRelease",
+        "mouseWheelScroll",
+        "mouseMove",
+        "mouseMoveDelta",
+        "keyboardKeyPress",
+        "keyboardKeyRelease",
+        "keyboardKeyPressAndRelease",
+        "keyboardKeysPress",
+        "keyboardKeysRelease",
+        "keyboardKeysPressAndRelease",
+        "keyboardTypeText",
+        "keyboardTypeUnicodeText",
+        "runcommand",
+    )
     NONE_FIELD_NUMBER: _ClassVar[int]
     WAIT_FIELD_NUMBER: _ClassVar[int]
     MOUSEBUTTONPRESS_FIELD_NUMBER: _ClassVar[int]
@@ -372,7 +508,52 @@ class ActionParameters(_message.Message):
     keyboardTypeText: ActionParameters_KeyboardType_Text
     keyboardTypeUnicodeText: ActionParameters_KeyboardType_UnicodeText
     runcommand: ActionParameters_RunCommand
-    def __init__(self, none: _Optional[_Union[Void, _Mapping]] = ..., wait: _Optional[_Union[ActionParameters_Wait, _Mapping]] = ..., mouseButtonPress: _Optional[_Union[ActionParameters_MouseButton_Press, _Mapping]] = ..., mouseButtonRelease: _Optional[_Union[ActionParameters_MouseButton_Release, _Mapping]] = ..., mouseButtonPressAndRelease: _Optional[_Union[ActionParameters_MouseButton_PressAndRelease, _Mapping]] = ..., mouseWheelScroll: _Optional[_Union[ActionParameters_MouseWheelScroll, _Mapping]] = ..., mouseMove: _Optional[_Union[ActionParameters_MouseMove, _Mapping]] = ..., mouseMoveDelta: _Optional[_Union[ActionParameters_MouseMove_Delta, _Mapping]] = ..., keyboardKeyPress: _Optional[_Union[ActionParameters_KeyboardKey_Press, _Mapping]] = ..., keyboardKeyRelease: _Optional[_Union[ActionParameters_KeyboardKey_Release, _Mapping]] = ..., keyboardKeyPressAndRelease: _Optional[_Union[ActionParameters_KeyboardKey_PressAndRelease, _Mapping]] = ..., keyboardKeysPress: _Optional[_Union[ActionParameters_KeyboardKeys_Press, _Mapping]] = ..., keyboardKeysRelease: _Optional[_Union[ActionParameters_KeyboardKeys_Release, _Mapping]] = ..., keyboardKeysPressAndRelease: _Optional[_Union[ActionParameters_KeyboardKeys_PressAndRelease, _Mapping]] = ..., keyboardTypeText: _Optional[_Union[ActionParameters_KeyboardType_Text, _Mapping]] = ..., keyboardTypeUnicodeText: _Optional[_Union[ActionParameters_KeyboardType_UnicodeText, _Mapping]] = ..., runcommand: _Optional[_Union[ActionParameters_RunCommand, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        none: _Optional[_Union[Void, _Mapping]] = ...,
+        wait: _Optional[_Union[ActionParameters_Wait, _Mapping]] = ...,
+        mouseButtonPress: _Optional[
+            _Union[ActionParameters_MouseButton_Press, _Mapping]
+        ] = ...,
+        mouseButtonRelease: _Optional[
+            _Union[ActionParameters_MouseButton_Release, _Mapping]
+        ] = ...,
+        mouseButtonPressAndRelease: _Optional[
+            _Union[ActionParameters_MouseButton_PressAndRelease, _Mapping]
+        ] = ...,
+        mouseWheelScroll: _Optional[
+            _Union[ActionParameters_MouseWheelScroll, _Mapping]
+        ] = ...,
+        mouseMove: _Optional[_Union[ActionParameters_MouseMove, _Mapping]] = ...,
+        mouseMoveDelta: _Optional[
+            _Union[ActionParameters_MouseMove_Delta, _Mapping]
+        ] = ...,
+        keyboardKeyPress: _Optional[
+            _Union[ActionParameters_KeyboardKey_Press, _Mapping]
+        ] = ...,
+        keyboardKeyRelease: _Optional[
+            _Union[ActionParameters_KeyboardKey_Release, _Mapping]
+        ] = ...,
+        keyboardKeyPressAndRelease: _Optional[
+            _Union[ActionParameters_KeyboardKey_PressAndRelease, _Mapping]
+        ] = ...,
+        keyboardKeysPress: _Optional[
+            _Union[ActionParameters_KeyboardKeys_Press, _Mapping]
+        ] = ...,
+        keyboardKeysRelease: _Optional[
+            _Union[ActionParameters_KeyboardKeys_Release, _Mapping]
+        ] = ...,
+        keyboardKeysPressAndRelease: _Optional[
+            _Union[ActionParameters_KeyboardKeys_PressAndRelease, _Mapping]
+        ] = ...,
+        keyboardTypeText: _Optional[
+            _Union[ActionParameters_KeyboardType_Text, _Mapping]
+        ] = ...,
+        keyboardTypeUnicodeText: _Optional[
+            _Union[ActionParameters_KeyboardType_UnicodeText, _Mapping]
+        ] = ...,
+        runcommand: _Optional[_Union[ActionParameters_RunCommand, _Mapping]] = ...,
+    ) -> None: ...
 
 class Request_StartSession(_message.Message):
     __slots__ = ("sessionGUID", "immediateExecution")
@@ -380,19 +561,25 @@ class Request_StartSession(_message.Message):
     IMMEDIATEEXECUTION_FIELD_NUMBER: _ClassVar[int]
     sessionGUID: str
     immediateExecution: bool
-    def __init__(self, sessionGUID: _Optional[str] = ..., immediateExecution: bool = ...) -> None: ...
+    def __init__(
+        self, sessionGUID: _Optional[str] = ..., immediateExecution: bool = ...
+    ) -> None: ...
 
 class Response_StartSession(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_EndSession(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_Poll(_message.Message):
     __slots__ = ("sessionInfo", "pollEventID")
@@ -400,19 +587,27 @@ class Request_Poll(_message.Message):
     POLLEVENTID_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     pollEventID: PollEventID
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., pollEventID: _Optional[_Union[PollEventID, str]] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        pollEventID: _Optional[_Union[PollEventID, str]] = ...,
+    ) -> None: ...
 
 class Request_StartExecution(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_StopExecution(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Response_Poll(_message.Message):
     __slots__ = ("pollEventID", "pollEventParameters")
@@ -420,7 +615,11 @@ class Response_Poll(_message.Message):
     POLLEVENTPARAMETERS_FIELD_NUMBER: _ClassVar[int]
     pollEventID: PollEventID
     pollEventParameters: PollEventParameters
-    def __init__(self, pollEventID: _Optional[_Union[PollEventID, str]] = ..., pollEventParameters: _Optional[_Union[PollEventParameters, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        pollEventID: _Optional[_Union[PollEventID, str]] = ...,
+        pollEventParameters: _Optional[_Union[PollEventParameters, _Mapping]] = ...,
+    ) -> None: ...
 
 class Request_RunRecordedAction(_message.Message):
     __slots__ = ("sessionInfo", "actionClassID", "actionParameters")
@@ -430,7 +629,12 @@ class Request_RunRecordedAction(_message.Message):
     sessionInfo: SessionInfo
     actionClassID: ActionClassID
     actionParameters: ActionParameters
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., actionClassID: _Optional[_Union[ActionClassID, str]] = ..., actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        actionClassID: _Optional[_Union[ActionClassID, str]] = ...,
+        actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_RunRecordedAction(_message.Message):
     __slots__ = ("actionID", "requiredMilliseconds")
@@ -438,7 +642,9 @@ class Response_RunRecordedAction(_message.Message):
     REQUIREDMILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     actionID: int
     requiredMilliseconds: int
-    def __init__(self, actionID: _Optional[int] = ..., requiredMilliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self, actionID: _Optional[int] = ..., requiredMilliseconds: _Optional[int] = ...
+    ) -> None: ...
 
 class Request_ScheduleBatchedAction(_message.Message):
     __slots__ = ("sessionInfo", "actionClassID", "actionParameters")
@@ -448,7 +654,12 @@ class Request_ScheduleBatchedAction(_message.Message):
     sessionInfo: SessionInfo
     actionClassID: ActionClassID
     actionParameters: ActionParameters
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., actionClassID: _Optional[_Union[ActionClassID, str]] = ..., actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        actionClassID: _Optional[_Union[ActionClassID, str]] = ...,
+        actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_ScheduleBatchedAction(_message.Message):
     __slots__ = ("actionID",)
@@ -460,7 +671,9 @@ class Request_GetActionCount(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Response_GetActionCount(_message.Message):
     __slots__ = ("actionCount",)
@@ -474,7 +687,11 @@ class Request_GetAction(_message.Message):
     ACTIONINDEX_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     actionIndex: int
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., actionIndex: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        actionIndex: _Optional[int] = ...,
+    ) -> None: ...
 
 class Response_GetAction(_message.Message):
     __slots__ = ("actionID", "actionClassID", "actionParameters")
@@ -484,7 +701,12 @@ class Response_GetAction(_message.Message):
     actionID: int
     actionClassID: ActionClassID
     actionParameters: ActionParameters
-    def __init__(self, actionID: _Optional[int] = ..., actionClassID: _Optional[_Union[ActionClassID, str]] = ..., actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        actionID: _Optional[int] = ...,
+        actionClassID: _Optional[_Union[ActionClassID, str]] = ...,
+        actionParameters: _Optional[_Union[ActionParameters, _Mapping]] = ...,
+    ) -> None: ...
 
 class Request_RemoveAction(_message.Message):
     __slots__ = ("sessionInfo", "actionID")
@@ -492,25 +714,35 @@ class Request_RemoveAction(_message.Message):
     ACTIONID_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     actionID: int
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., actionID: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        actionID: _Optional[int] = ...,
+    ) -> None: ...
 
 class Request_RemoveAllActions(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_StartBatchRun(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_StopBatchRun(_message.Message):
     __slots__ = ("sessionInfo",)
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...
+    ) -> None: ...
 
 class Request_CaptureScreen(_message.Message):
     __slots__ = ("sessionInfo", "captureParameters")
@@ -518,7 +750,11 @@ class Request_CaptureScreen(_message.Message):
     CAPTUREPARAMETERS_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     captureParameters: CaptureParameters
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., captureParameters: _Optional[_Union[CaptureParameters, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        captureParameters: _Optional[_Union[CaptureParameters, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_CaptureScreen(_message.Message):
     __slots__ = ("bitmap",)
@@ -533,7 +769,12 @@ class Response_GetContinuousCapturedScreen(_message.Message):
     def __init__(self, bitmap: _Optional[_Union[Bitmap, _Mapping]] = ...) -> None: ...
 
 class Reuqest_SetTestConfiguration(_message.Message):
-    __slots__ = ("sessionInfo", "defaultCaptureParameters", "mouseDelayInMilliseconds", "keyboardDelayInMilliseconds")
+    __slots__ = (
+        "sessionInfo",
+        "defaultCaptureParameters",
+        "mouseDelayInMilliseconds",
+        "keyboardDelayInMilliseconds",
+    )
     SESSIONINFO_FIELD_NUMBER: _ClassVar[int]
     DEFAULTCAPTUREPARAMETERS_FIELD_NUMBER: _ClassVar[int]
     MOUSEDELAYINMILLISECONDS_FIELD_NUMBER: _ClassVar[int]
@@ -542,7 +783,13 @@ class Reuqest_SetTestConfiguration(_message.Message):
     defaultCaptureParameters: CaptureParameters
     mouseDelayInMilliseconds: int
     keyboardDelayInMilliseconds: int
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., defaultCaptureParameters: _Optional[_Union[CaptureParameters, _Mapping]] = ..., mouseDelayInMilliseconds: _Optional[int] = ..., keyboardDelayInMilliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        defaultCaptureParameters: _Optional[_Union[CaptureParameters, _Mapping]] = ...,
+        mouseDelayInMilliseconds: _Optional[int] = ...,
+        keyboardDelayInMilliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class Request_SetMouseDelay(_message.Message):
     __slots__ = ("sessionInfo", "delayInMilliseconds")
@@ -550,7 +797,11 @@ class Request_SetMouseDelay(_message.Message):
     DELAYINMILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     delayInMilliseconds: int
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., delayInMilliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        delayInMilliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class Request_SetKeyboardDelay(_message.Message):
     __slots__ = ("sessionInfo", "delayInMilliseconds")
@@ -558,7 +809,11 @@ class Request_SetKeyboardDelay(_message.Message):
     DELAYINMILLISECONDS_FIELD_NUMBER: _ClassVar[int]
     sessionInfo: SessionInfo
     delayInMilliseconds: int
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., delayInMilliseconds: _Optional[int] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        delayInMilliseconds: _Optional[int] = ...,
+    ) -> None: ...
 
 class DisplayInformation(_message.Message):
     __slots__ = ("displayID", "name", "sizeInPixels", "virtualScreenRectangle")
@@ -570,7 +825,13 @@ class DisplayInformation(_message.Message):
     name: str
     sizeInPixels: Size2
     virtualScreenRectangle: Rectangle
-    def __init__(self, displayID: _Optional[int] = ..., name: _Optional[str] = ..., sizeInPixels: _Optional[_Union[Size2, _Mapping]] = ..., virtualScreenRectangle: _Optional[_Union[Rectangle, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        displayID: _Optional[int] = ...,
+        name: _Optional[str] = ...,
+        sizeInPixels: _Optional[_Union[Size2, _Mapping]] = ...,
+        virtualScreenRectangle: _Optional[_Union[Rectangle, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_GetDisplayInformation(_message.Message):
     __slots__ = ("displays", "virtualScreenRectangle")
@@ -578,7 +839,11 @@ class Response_GetDisplayInformation(_message.Message):
     VIRTUALSCREENRECTANGLE_FIELD_NUMBER: _ClassVar[int]
     displays: _containers.RepeatedCompositeFieldContainer[DisplayInformation]
     virtualScreenRectangle: Rectangle
-    def __init__(self, displays: _Optional[_Iterable[_Union[DisplayInformation, _Mapping]]] = ..., virtualScreenRectangle: _Optional[_Union[Rectangle, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        displays: _Optional[_Iterable[_Union[DisplayInformation, _Mapping]]] = ...,
+        virtualScreenRectangle: _Optional[_Union[Rectangle, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_GetMousePosition(_message.Message):
     __slots__ = ("x", "y")
@@ -602,7 +867,12 @@ class Request_GetColor(_message.Message):
     x: int
     y: int
     bitmap: Bitmap
-    def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., bitmap: _Optional[_Union[Bitmap, _Mapping]] = ...) -> None: ...
+    def __init__(
+        self,
+        x: _Optional[int] = ...,
+        y: _Optional[int] = ...,
+        bitmap: _Optional[_Union[Bitmap, _Mapping]] = ...,
+    ) -> None: ...
 
 class Response_GetColor(_message.Message):
     __slots__ = ("color",)
@@ -632,4 +902,9 @@ class Request_SetDisplayLabel(_message.Message):
     sessionInfo: SessionInfo
     displayID: int
     label: str
-    def __init__(self, sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ..., displayID: _Optional[int] = ..., label: _Optional[str] = ...) -> None: ...
+    def __init__(
+        self,
+        sessionInfo: _Optional[_Union[SessionInfo, _Mapping]] = ...,
+        displayID: _Optional[int] = ...,
+        label: _Optional[str] = ...,
+    ) -> None: ...

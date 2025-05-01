@@ -1,5 +1,5 @@
-from .locators import AiElement, Element, Prompt, Image, Text, TextMatchType, Locator
-from .relatable import CircularDependencyError, ReferencePoint, RelationIndex, Relatable
+from .locators import AiElement, Element, Image, Locator, Prompt, Text, TextMatchType
+from .relatable import CircularDependencyError, ReferencePoint, Relatable, RelationIndex
 
 __all__ = [
     "AiElement",

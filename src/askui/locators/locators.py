@@ -1,14 +1,13 @@
-from abc import ABC
 import pathlib
-from typing import Annotated, Literal, Union
 import uuid
+from abc import ABC
+from typing import Annotated, Literal, Union
 
 from PIL import Image as PILImage
 from pydantic import ConfigDict, Field, validate_call
 
-from askui.utils.image_utils import ImageSource
 from askui.locators.relatable import Relatable
-
+from askui.utils.image_utils import ImageSource
 
 TextMatchType = Literal["similar", "exact", "contains", "regex"]
 """The type of match to use.
@@ -27,13 +26,11 @@ DEFAULT_SIMILARITY_THRESHOLD = 70
 
 
 class Locator(Relatable, ABC):
-    """Abstract base class for all locators. Cannot be instantiated directly. 
+    """Abstract base class for all locators. Cannot be instantiated directly.
     Subclassed by all locators, e.g., `Prompt`, `Text`, `Image`, etc."""
-    
+
     def _str(self) -> str:
         return "locator"
-
-    pass
 
 
 class Prompt(Locator):
@@ -59,12 +56,12 @@ class Prompt(Locator):
         self,
         prompt: Annotated[
             str,
-            Field(),
+            Field(min_length=1),
         ],
     ) -> None:
         super().__init__()
         self._prompt = prompt
-    
+
     def _str(self) -> str:
         return f'element with prompt "{self._prompt}"'
 
@@ -74,11 +71,11 @@ class Element(Locator):
 
     Args:
         class_name (Literal["text", "textfield"] | None, optional): The class of the ui element, e.g., `'text'` or `'textfield'`. Defaults to `None`.
-        
+
     Examples:
         ```python
         from askui import locators as loc
-        # locates a text elementAdd 
+        # locates a text elementAdd
         text = loc.Element(class_name="text")
         # locates a textfield element
         textfield = loc.Element(class_name="textfield")
@@ -100,7 +97,9 @@ class Element(Locator):
 
     def _str(self) -> str:
         return (
-            f'element with class "{self._class_name}"' if self._class_name else "element"
+            f'element with class "{self._class_name}"'
+            if self._class_name
+            else "element"
         )
 
 
@@ -108,14 +107,14 @@ class Text(Element):
     """Locator for finding text elements by their textual content.
 
     Args:
-        text (str | None, optional): The text content of the ui element, e.g., `'Sign up'`. Defaults to `None`. 
+        text (str | None, optional): The text content of the ui element, e.g., `'Sign up'`. Defaults to `None`.
             If `None`, the locator will match any text element.
         match_type (TextMatchType, optional): The type of match to use. Defaults to `"similar"`.
-        similarity_threshold (int, optional): A threshold for how similar the actual text content of the ui element 
-            needs to be to the specified text to be considered a match when `match_type` is `"similar"`. 
+        similarity_threshold (int, optional): A threshold for how similar the actual text content of the ui element
+            needs to be to the specified text to be considered a match when `match_type` is `"similar"`.
             Takes values between `0` and `100` (inclusive, higher is more similar).
             Defaults to `70`.
-            
+
     Examples:
         ```python
         from askui import locators as loc
@@ -198,25 +197,24 @@ class ImageBase(Locator, ABC):
         self._rotation_degree_per_step = rotation_degree_per_step
         self._name = name
         self._image_compare_format = image_compare_format
-    
+
     def _params_str(self) -> str:
         return (
             "("
-            + ", ".join([
-                f"threshold: {self._threshold}",
-                f"stop_threshold: {self._stop_threshold}",
-                f"rotation_degree_per_step: {self._rotation_degree_per_step}",
-                f"image_compare_format: {self._image_compare_format}",
-                f"mask: {self._mask}"
-            ])
+            + ", ".join(
+                [
+                    f"threshold: {self._threshold}",
+                    f"stop_threshold: {self._stop_threshold}",
+                    f"rotation_degree_per_step: {self._rotation_degree_per_step}",
+                    f"image_compare_format: {self._image_compare_format}",
+                    f"mask: {self._mask}",
+                ]
+            )
             + ")"
         )
-    
+
     def _str(self) -> str:
-        return (
-            f'element "{self._name}" located by image '
-            + self._params_str()
-        )
+        return f'element "{self._name}" located by image ' + self._params_str()
 
 
 def _generate_name() -> str:
@@ -241,11 +239,11 @@ class Image(ImageBase):
             until 360° is exceeded. Range is between `0°` - `360°`. Defaults to `0°`. Important: This increases the
             prediction time quite a bit. So only use it when absolutely necessary.
         name (str | None, optional): Name for the image. Defaults to random name.
-        image_compare_format (Literal["RGB", "grayscale", "edges"], optional): A color compare style. Defaults to `'grayscale'`. **Important**: 
-            The `image_compare_format` impacts the prediction time as well as quality. As a rule of thumb, 
-            `'edges'` is likely to be faster than `'grayscale'` and `'grayscale'` is likely to be faster than `'RGB'`. 
+        image_compare_format (Literal["RGB", "grayscale", "edges"], optional): A color compare style. Defaults to `'grayscale'`. **Important**:
+            The `image_compare_format` impacts the prediction time as well as quality. As a rule of thumb,
+            `'edges'` is likely to be faster than `'grayscale'` and `'grayscale'` is likely to be faster than `'RGB'`.
             For quality it is most often the other way around.
-            
+
     Examples:
         ```python
         from askui import locators as loc
@@ -308,14 +306,14 @@ class Image(ImageBase):
             rotation_degree_per_step=rotation_degree_per_step,
             image_compare_format=image_compare_format,
             name=_generate_name() if name is None else name,
-        )  # type: ignore
+        )
         self._image = ImageSource(image)
 
 
 class AiElement(ImageBase):
     """
     Locator for finding ui elements by data (e.g., image) collected with the [AskUIRemoteDeviceSnippingTool](http://localhost:3000/02-api-reference/02-askui-suite/02-askui-suite/AskUIRemoteDeviceSnippingTool/Public/AskUI-NewAIElement) using the `name` assigned to the AI element during *snipping* to retrieve the data used for locating the ui element(s).
-    
+
     Args:
         name (str): Name of the AI element
         threshold (float, optional): A threshold for how similar UI elements need to be to the image to be considered a match.
@@ -331,9 +329,9 @@ class AiElement(ImageBase):
             until 360° is exceeded. Range is between `0°` - `360°`. Defaults to `0°`. Important: This increases the
             prediction time quite a bit. So only use it when absolutely necessary.
         name (str | None, optional): Name for the image. Defaults to random name.
-        image_compare_format (Literal["RGB", "grayscale", "edges"], optional): A color compare style. Defaults to `'grayscale'`. **Important**: 
-            The `image_compare_format` impacts the prediction time as well as quality. As a rule of thumb, 
-            `'edges'` is likely to be faster than `'grayscale'` and `'grayscale'` is likely to be faster than `'RGB'`. 
+        image_compare_format (Literal["RGB", "grayscale", "edges"], optional): A color compare style. Defaults to `'grayscale'`. **Important**:
+            The `image_compare_format` impacts the prediction time as well as quality. As a rule of thumb,
+            `'edges'` is likely to be faster than `'grayscale'` and `'grayscale'` is likely to be faster than `'RGB'`.
             For quality it is most often the other way around.
     """
 
@@ -380,10 +378,7 @@ class AiElement(ImageBase):
             mask=mask,
             rotation_degree_per_step=rotation_degree_per_step,
             image_compare_format=image_compare_format,
-        )  # type: ignore
+        )
 
     def _str(self) -> str:
-        return (
-            f'ai element named "{self._name}" '
-            + self._params_str()
-        )
+        return f'ai element named "{self._name}" ' + self._params_str()

@@ -1,8 +1,13 @@
 import base64
-from functools import cached_property
 import os
+import types
+from functools import cached_property
+from typing import Type, cast
+
 import httpx
 from pydantic import BaseModel, Field, HttpUrl, SecretStr
+from typing_extensions import Self
+
 from askui.logger import logger
 
 
@@ -15,6 +20,7 @@ def get_askui_token_from_env() -> SecretStr | None:
 
 class UserIdentificationSettings(BaseModel):
     """Settings for user identification"""
+
     api_url: HttpUrl = HttpUrl("https://workspaces.askui.com/api/v1")
     # retrieving directly through environment variable to circumvent pydantic-settings env_prefix
     askui_token: SecretStr | None = Field(default=get_askui_token_from_env())
@@ -40,10 +46,15 @@ class UserIdentification:
 
         self._client = httpx.Client(timeout=30.0)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
         self._client.close()
 
     def get_user_id(self) -> str | None:
@@ -59,11 +70,14 @@ class UserIdentification:
                 },
                 headers={
                     "Authorization": f"Basic {self._settings.askui_token_encoded}",
-                    "Content-Type": "application/json"
-                }
+                    "Content-Type": "application/json",
+                },
             )
             response.raise_for_status()
-            return response.json()["data"][0]["user"]["id"]
+            return cast(
+                "str | None",
+                response.json().get("data", [{}])[0].get("user", {}).get("id"),
+            )
         except httpx.HTTPError as e:
             logger.debug(f"Failed to identify user: {e}")
         except Exception as e:

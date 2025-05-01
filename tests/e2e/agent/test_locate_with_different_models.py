@@ -4,12 +4,12 @@ import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
+from askui.exceptions import AutomationError
 from askui.locators import (
+    AiElement,
     Prompt,
     Text,
-    AiElement,
 )
-from askui.exceptions import AutomationError
 from askui.models.models import ModelName
 
 
@@ -25,9 +25,7 @@ class TestVisionAgentLocateWithDifferentModels:
     ) -> None:
         """Test locating elements using PTA model with description locator."""
         locator = "Username textfield"
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model=model
-        )
+        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
@@ -52,9 +50,7 @@ class TestVisionAgentLocateWithDifferentModels:
     ) -> None:
         """Test locating elements using OCR model with text locator."""
         locator = "Forgot password?"
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model=model
-        )
+        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -79,9 +75,7 @@ class TestVisionAgentLocateWithDifferentModels:
     ) -> None:
         """Test locating elements using AI element model."""
         locator = "github_com__signin__button"
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model=model
-        )
+        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
@@ -106,9 +100,7 @@ class TestVisionAgentLocateWithDifferentModels:
     ) -> None:
         """Test locating elements using combo model with description locator."""
         locator = "Username textfield"
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model=model
-        )
+        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
@@ -121,9 +113,7 @@ class TestVisionAgentLocateWithDifferentModels:
     ) -> None:
         """Test locating elements using combo model with text locator as fallback."""
         locator = "Forgot password?"
-        x, y = vision_agent.locate(
-            locator, github_login_screenshot, model=model
-        )
+        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 

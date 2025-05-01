@@ -1,26 +1,26 @@
+from abc import ABC, abstractmethod
 from typing import Type
-from typing_extensions import override
+
 from PIL import Image
+from typing_extensions import override
 
 from askui.container import telemetry
-from askui.locators.locators import AiElement, Prompt, Text
+from askui.locators.locators import AiElement, Locator, Prompt, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.locators.locators import Locator
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
-from .askui.api import AskUiInferenceApi
-from .anthropic.claude import ClaudeHandler
-from .huggingface.spaces_api import HFSpacesHandler
+
 from ..exceptions import AutomationError, ElementNotFoundError
 from ..logger import logger
-from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
+from .anthropic.claude import ClaudeHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
-from abc import ABC, abstractmethod
-
+from .askui.api import AskUiInferenceApi
+from .huggingface.spaces_api import HFSpacesHandler
+from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
 
 Point = tuple[int, int]
 """
@@ -28,10 +28,13 @@ A tuple of two integers representing the coordinates of a point on the screen.
 """
 
 
-def handle_response(response: tuple[int | None, int | None], locator: str | Locator):
-    if response[0] is None or response[1] is None:
+def handle_response(
+    response: tuple[int | None, int | None], locator: str | Locator
+) -> tuple[int, int]:
+    x, y = response
+    if x is None or y is None:
         raise ElementNotFoundError(f"Element not found: {locator}")
-    return response
+    return x, y
 
 
 class GroundingModelRouter(ABC):
@@ -56,8 +59,10 @@ class GroundingModelRouter(ABC):
 class AskUiModelRouter(GroundingModelRouter):
     def __init__(self, inference_api: AskUiInferenceApi):
         self._inference_api = inference_api
-        
-    def _locate_with_askui_ocr(self, screenshot: Image.Image, locator: str | Text) -> Point:
+
+    def _locate_with_askui_ocr(
+        self, screenshot: Image.Image, locator: str | Text
+    ) -> Point:
         locator = Text(locator) if isinstance(locator, str) else locator
         x, y = self._inference_api.predict(screenshot, locator)
         return handle_response((x, y), locator)
@@ -127,18 +132,26 @@ class ModelRouter:
                 reporter=_reporter,
             ),
         )
-        self._grounding_model_routers = grounding_model_routers or [AskUiModelRouter(inference_api=self._askui)]
+        self._grounding_model_routers = grounding_model_routers or [
+            AskUiModelRouter(inference_api=self._askui)
+        ]
         self._claude = ClaudeHandler()
         self._huggingface_spaces = HFSpacesHandler()
         self._tars = UITarsAPIHandler(agent_os=tools.agent_os, reporter=_reporter)
-        self._claude_computer_agent = ClaudeComputerAgent(agent_os=tools.agent_os, reporter=_reporter)
+        self._claude_computer_agent = ClaudeComputerAgent(
+            agent_os=tools.agent_os, reporter=_reporter
+        )
         self._locator_serializer = VlmLocatorSerializer()
 
-    def act(self, goal: str, model: ModelComposition | str | None = None):
+    def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
         if self._tars.authenticated and model == ModelName.TARS:
-            return self._tars.act(goal)
-        if self._claude.authenticated and (model is None or isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)):
-            return self._claude_computer_agent.run(goal)
+            self._tars.act(goal)
+        if self._claude.authenticated and (
+            model is None
+            or isinstance(model, str)
+            and model.startswith(ModelName.ANTHROPIC)
+        ):
+            self._claude_computer_agent.run(goal)
         raise AutomationError(f"Invalid model for act: {model}")
 
     def get_inference(
@@ -150,13 +163,17 @@ class ModelRouter:
     ) -> ResponseSchema | str:
         if self._tars.authenticated and model == ModelName.TARS:
             if response_schema not in [str, None]:
-                raise NotImplementedError("(Non-String) Response schema is not yet supported for UI-TARS models.")
+                raise NotImplementedError(
+                    "(Non-String) Response schema is not yet supported for UI-TARS models."
+                )
             return self._tars.get_inference(image=image, query=query)
         if self._claude.authenticated and (
             isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)
         ):
             if response_schema not in [str, None]:
-                raise NotImplementedError("(Non-String) Response schema is not yet supported for Anthropic models.")
+                raise NotImplementedError(
+                    "(Non-String) Response schema is not yet supported for Anthropic models."
+                )
             return self._claude.get_inference(image=image, query=query)
         if self._askui.authenticated and (model == ModelName.ASKUI or model is None):
             return self._askui.get_inference(
@@ -180,6 +197,8 @@ class ModelRouter:
         locator: str | Locator,
         model: ModelComposition | str | None = None,
     ) -> Point:
+        x: int | None = None
+        y: int | None = None
         if (
             isinstance(model, str)
             and model in self._huggingface_spaces.get_spaces_names()
@@ -206,7 +225,8 @@ class ModelRouter:
             return handle_response((x, y), locator)
         if (
             self._claude.authenticated
-            and isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)
+            and isinstance(model, str)
+            and model.startswith(ModelName.ANTHROPIC)
         ):
             logger.debug("Routing locate prediction to Anthropic")
             x, y = self._claude.locate_inference(

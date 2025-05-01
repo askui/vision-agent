@@ -1,15 +1,15 @@
-from io import BytesIO
-import pathlib
-from typing import Any, Literal, Union, Tuple
-from pathlib import Path
-from PIL import Image, Image as PILImage, ImageDraw, ImageOps, UnidentifiedImageError
 import base64
-import io
-import re
 import binascii
+import io
+import pathlib
+import re
+from io import BytesIO
+from pathlib import Path
+from typing import Any, Literal, Tuple, Union
 
-from pydantic import RootModel, field_validator, ConfigDict
-
+from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
+from PIL import Image as PILImage
+from pydantic import ConfigDict, RootModel, field_validator
 
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
 # e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
@@ -270,7 +270,7 @@ class ImageSource(RootModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     root: PILImage.Image
 
-    def __init__(self, root: Img, **kwargs) -> None:
+    def __init__(self, root: Img, **kwargs: dict[str, Any]) -> None:
         super().__init__(root=root, **kwargs)
 
     @field_validator("root", mode="before")

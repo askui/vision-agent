@@ -1,11 +1,14 @@
-from typing import Literal, TypedDict
+from typing import Any, Literal, TypedDict
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
 
-from ...utils.image_utils import image_to_base64, scale_coordinates_back, scale_image_with_padding
-
+from ...tools.agent_os import AgentOs
+from ...utils.image_utils import (
+    image_to_base64,
+    scale_coordinates_back,
+    scale_image_with_padding,
+)
 from .base import BaseAnthropicTool, ToolError, ToolResult
-
 
 Action = Literal[
     "key",
@@ -21,7 +24,128 @@ Action = Literal[
 ]
 
 
-PC_KEY = Literal['backspace', 'delete', 'enter', 'tab', 'escape', 'up', 'down', 'right', 'left', 'home', 'end', 'pageup', 'pagedown', 'f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12', 'space', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~']
+PC_KEY = Literal[
+    "backspace",
+    "delete",
+    "enter",
+    "tab",
+    "escape",
+    "up",
+    "down",
+    "right",
+    "left",
+    "home",
+    "end",
+    "pageup",
+    "pagedown",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11",
+    "f12",
+    "space",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "!",
+    '"',
+    "#",
+    "$",
+    "%",
+    "&",
+    "'",
+    "(",
+    ")",
+    "*",
+    "+",
+    ",",
+    "-",
+    ".",
+    "/",
+    ":",
+    ";",
+    "<",
+    "=",
+    ">",
+    "?",
+    "@",
+    "[",
+    "\\",
+    "]",
+    "^",
+    "_",
+    "`",
+    "{",
+    "|",
+    "}",
+    "~",
+]
 
 
 KEYSYM_MAP = {
@@ -37,8 +161,8 @@ KEYSYM_MAP = {
     "Left": "left",
     "Home": "home",
     "End": "end",
-    "Page_Up": 'pageup',
-    "Page_Down": 'pagedown',
+    "Page_Up": "pageup",
+    "Page_Down": "pagedown",
     "F1": "f1",
     "F2": "f2",
     "F3": "f3",
@@ -50,7 +174,7 @@ KEYSYM_MAP = {
     "F9": "f9",
     "F10": "f10",
     "F11": "f11",
-    "F12": "f12"
+    "F12": "f12",
 }
 
 
@@ -90,17 +214,15 @@ class ComputerTool(BaseAnthropicTool):
 
     @property
     def options(self) -> ComputerToolOptions:
-        width = self.width
-        height = self.height
         return {
-            "display_width_px": width,
-            "display_height_px": height,
+            "display_width_px": self.width,
+            "display_height_px": self.height,
         }
 
     def to_params(self) -> BetaToolComputerUse20241022Param:
         return {"name": self.name, "type": self.api_type, **self.options}
 
-    def __init__(self, controller_client):
+    def __init__(self, controller_client: AgentOs) -> None:
         super().__init__()
         self.controller_client = controller_client
 
@@ -116,11 +238,11 @@ class ComputerTool(BaseAnthropicTool):
         action: Action | None = None,
         text: str | None = None,
         coordinate: tuple[int, int] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> ToolResult:
         if action is None:
             raise ToolError("Action is missing")
-        
+
         if action in ("mouse_move", "left_click_drag"):
             if coordinate is None:
                 raise ToolError(f"coordinate is required for {action}")
@@ -131,13 +253,20 @@ class ComputerTool(BaseAnthropicTool):
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
                 raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
 
-            x, y = scale_coordinates_back(coordinate[0], coordinate[1], self.real_screen_width, self.real_screen_height, self.width, self.height)
+            x, y = scale_coordinates_back(
+                coordinate[0],
+                coordinate[1],
+                self.real_screen_width,
+                self.real_screen_height,
+                self.width,
+                self.height,
+            )
             x, y = int(x), int(y)
 
             if action == "mouse_move":
                 self.controller_client.mouse(x, y)
                 return ToolResult()
-            elif action == "left_click_drag":
+            if action == "left_click_drag":
                 self.controller_client.mouse_down("left")
                 self.controller_client.mouse(x, y)
                 self.controller_client.mouse_up("left")
@@ -156,11 +285,13 @@ class ComputerTool(BaseAnthropicTool):
                     text = KEYSYM_MAP[text]
 
                 if text not in PC_KEY.__args__:
-                    raise ToolError(f"Key {text} is not a valid PC_KEY from {', '.join(list(PC_KEY.__args__))}")
+                    raise ToolError(
+                        f"Key {text} is not a valid PC_KEY from {', '.join(list(PC_KEY.__args__))}"
+                    )
                 self.controller_client.keyboard_pressed(text)
                 self.controller_client.keyboard_release(text)
                 return ToolResult()
-            elif action == "type":
+            if action == "type":
                 self.controller_client.type(text)
                 return ToolResult()
 
@@ -179,25 +310,25 @@ class ComputerTool(BaseAnthropicTool):
 
             if action == "screenshot":
                 return self.screenshot()
-            elif action == "cursor_position":
+            if action == "cursor_position":
                 # TODO: Implement in the future
                 return ToolError("cursor_position is not implemented by this agent")
-            elif action == "left_click":
+            if action == "left_click":
                 self.controller_client.click("left")
                 return ToolResult()
-            elif action == "right_click":
+            if action == "right_click":
                 self.controller_client.click("right")
                 return ToolResult()
-            elif action == "middle_click":
+            if action == "middle_click":
                 self.controller_client.click("middle")
                 return ToolResult()
-            elif action == "double_click":
+            if action == "double_click":
                 self.controller_client.click("left", 2)
                 return ToolResult()
 
         raise ToolError(f"Invalid action: {action}")
 
-    def screenshot(self):
+    def screenshot(self) -> ToolResult:
         """Take a screenshot of the current screen, scale it and return the base64 encoded image."""
         screenshot = self.controller_client.screenshot()
         self.real_screen_width = screenshot.width

@@ -1,10 +1,10 @@
-from pathlib import Path
 import re
+from pathlib import Path
+
 import pytest
 from PIL import Image as PILImage
 
-from askui.locators import Prompt, Element, Text, Image, AiElement
-
+from askui.locators import AiElement, Element, Image, Prompt, Text
 
 TEST_IMAGE_PATH = Path("tests/fixtures/images/github_com__icon.png")
 
@@ -18,6 +18,10 @@ class TestDescriptionLocator:
     def test_initialization_without_description_raises(self) -> None:
         with pytest.raises(ValueError):
             Prompt()  # type: ignore
+
+    def test_initialization_with_empty_description_raises(self) -> None:
+        with pytest.raises(ValueError):
+            Prompt("")
 
     def test_initialization_with_positional_arg(self) -> None:
         desc = Prompt("test")
@@ -110,8 +114,10 @@ class TestImageLocator:
     @pytest.fixture
     def test_image(self) -> PILImage.Image:
         return PILImage.open(TEST_IMAGE_PATH)
-    
-    _STR_PATTERN = re.compile(r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$')
+
+    _STR_PATTERN = re.compile(
+        r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$'
+    )
 
     def test_initialization_with_basic_params(self, test_image: PILImage.Image) -> None:
         locator = Image(image=test_image)
@@ -125,27 +131,35 @@ class TestImageLocator:
 
     def test_initialization_with_name(self, test_image: PILImage.Image) -> None:
         locator = Image(image=test_image, name="test")
-        assert str(locator) == 'element "test" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+        assert (
+            str(locator)
+            == 'element "test" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+        )
 
-    def test_initialization_with_custom_params(self, test_image: PILImage.Image) -> None:
+    def test_initialization_with_custom_params(
+        self, test_image: PILImage.Image
+    ) -> None:
         locator = Image(
             image=test_image,
             threshold=0.7,
             stop_threshold=0.95,
             mask=[(0, 0), (1, 0), (1, 1)],
             rotation_degree_per_step=45,
-            image_compare_format="RGB"
+            image_compare_format="RGB",
         )
         assert locator._threshold == 0.7
         assert locator._stop_threshold == 0.95
         assert locator._mask == [(0, 0), (1, 0), (1, 1)]
         assert locator._rotation_degree_per_step == 45
         assert locator._image_compare_format == "RGB"
-        assert re.match(r'^element "anonymous image [a-f0-9-]+" located by image \(threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: \[\(0.0, 0.0\), \(1.0, 0.0\), \(1.0, 1.0\)\]\)$', str(locator))
+        assert re.match(
+            r'^element "anonymous image [a-f0-9-]+" located by image \(threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: \[\(0.0, 0.0\), \(1.0, 0.0\), \(1.0, 1.0\)\]\)$',
+            str(locator),
+        )
 
     def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
         with pytest.raises(ValueError):
-            Image(image="not_an_image")  # type: ignore
+            Image(image="not_an_image")
 
         with pytest.raises(ValueError):
             Image(image=test_image, threshold=-0.1)
@@ -176,7 +190,10 @@ class TestAiElementLocator:
     def test_initialization_with_name(self) -> None:
         locator = AiElement("github_com__icon")
         assert locator._name == "github_com__icon"
-        assert str(locator) == 'ai element named "github_com__icon" (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+        assert (
+            str(locator)
+            == 'ai element named "github_com__icon" (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+        )
 
     def test_initialization_without_name_raises(self) -> None:
         with pytest.raises(ValueError):
@@ -193,7 +210,7 @@ class TestAiElementLocator:
             stop_threshold=0.95,
             mask=[(0, 0), (1, 0), (1, 1)],
             rotation_degree_per_step=45,
-            image_compare_format="RGB"
+            image_compare_format="RGB",
         )
         assert locator._name == "test_element"
         assert locator._threshold == 0.7
@@ -201,7 +218,10 @@ class TestAiElementLocator:
         assert locator._mask == [(0, 0), (1, 0), (1, 1)]
         assert locator._rotation_degree_per_step == 45
         assert locator._image_compare_format == "RGB"
-        assert str(locator) == 'ai element named "test_element" (threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])'
+        assert (
+            str(locator)
+            == 'ai element named "test_element" (threshold: 0.7, stop_threshold: 0.95, rotation_degree_per_step: 45, image_compare_format: RGB, mask: [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])'
+        )
 
     def test_initialization_with_invalid_threshold(self) -> None:
         with pytest.raises(ValueError):
@@ -233,4 +253,4 @@ class TestAiElementLocator:
             AiElement(name="test", mask=[(0, 0), (1)])  # type: ignore
 
         with pytest.raises(ValueError):
-            AiElement(name="test", mask=[(0, 0)])  # type: ignore
+            AiElement(name="test", mask=[(0, 0)])

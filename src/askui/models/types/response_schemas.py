@@ -1,4 +1,5 @@
 from typing import Type, TypeVar, overload
+
 from pydantic import BaseModel, ConfigDict, RootModel
 
 
@@ -11,16 +12,17 @@ class ResponseSchemaBase(BaseModel):
         ```python
         class UrlResponse(ResponseSchemaBase):
             url: str
-            
+
         # nested models should also extend ResponseSchemaBase
         class NestedResponse(ResponseSchemaBase):
             nested: UrlResponse
-            
+
         # metadata, e.g., `examples` or `description` of `Field`, is generally also passed to and considered by the models
         class UrlResponse(ResponseSchemaBase):
             url: str = Field(description="The URL of the response. Should used `\"https\"` scheme.", examples=["https://www.example.com"])
         ```
     """
+
     model_config = ConfigDict(extra="forbid")
 
 
@@ -30,7 +32,7 @@ Integer = RootModel[int]
 Float = RootModel[float]
 
 
-ResponseSchema = TypeVar('ResponseSchema', ResponseSchemaBase, str, bool, int, float)
+ResponseSchema = TypeVar("ResponseSchema", ResponseSchemaBase, str, bool, int, float)
 """Type of the responses of data extracted, e.g., using `askui.VisionAgent.get()`.
 
 The following types are allowed:
@@ -56,8 +58,23 @@ def to_response_schema(response_schema: Type[int]) -> Type[Integer]: ...
 @overload
 def to_response_schema(response_schema: Type[float]) -> Type[Float]: ...
 @overload
-def to_response_schema(response_schema: Type[ResponseSchemaBase]) -> Type[ResponseSchemaBase]: ...
-def to_response_schema(response_schema: Type[ResponseSchemaBase] | Type[str] | Type[bool] | Type[int] | Type[float] | None = None) -> Type[ResponseSchemaBase] | Type[String] | Type[Boolean] | Type[Integer] | Type[Float]:
+def to_response_schema(
+    response_schema: Type[ResponseSchemaBase],
+) -> Type[ResponseSchemaBase]: ...
+def to_response_schema(
+    response_schema: Type[ResponseSchemaBase]
+    | Type[str]
+    | Type[bool]
+    | Type[int]
+    | Type[float]
+    | None = None,
+) -> (
+    Type[ResponseSchemaBase]
+    | Type[String]
+    | Type[Boolean]
+    | Type[Integer]
+    | Type[Float]
+):
     if response_schema is None:
         return String
     if response_schema is str:

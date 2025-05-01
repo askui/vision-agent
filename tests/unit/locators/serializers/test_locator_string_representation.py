@@ -1,9 +1,10 @@
 import re
+
 import pytest
-from askui.locators import Element, Prompt, Text, Image
-from askui.locators.relatable import CircularDependencyError
 from PIL import Image as PILImage
 
+from askui.locators import Element, Image, Prompt, Text
+from askui.locators.relatable import CircularDependencyError
 
 TEST_IMAGE = PILImage.new("RGB", (100, 100), color="red")
 
@@ -178,7 +179,9 @@ def test_complex_relation_chain_str() -> None:
     )
 
 
-IMAGE_STR_PATTERN = re.compile(r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$')
+IMAGE_STR_PATTERN = re.compile(
+    r'^element ".*" located by image \(threshold: \d+\.\d+, stop_threshold: \d+\.\d+, rotation_degree_per_step: \d+, image_compare_format: \w+, mask: None\)$'
+)
 
 
 def test_image_str() -> None:
@@ -188,15 +191,24 @@ def test_image_str() -> None:
 
 def test_image_with_name_str() -> None:
     image = Image(TEST_IMAGE, name="test_image")
-    assert str(image) == 'element "test_image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+    assert (
+        str(image)
+        == 'element "test_image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+    )
 
 
 def test_image_with_relation_str() -> None:
     image = Image(TEST_IMAGE, name="image")
     image.above_of(Text("hello"))
     lines = str(image).split("\n")
-    assert lines[0] == 'element "image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
-    assert lines[1] == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
+    assert (
+        lines[0]
+        == 'element "image" located by image (threshold: 0.5, stop_threshold: 0.5, rotation_degree_per_step: 0, image_compare_format: grayscale, mask: None)'
+    )
+    assert (
+        lines[1]
+        == '  1. above of boundary of the 1st text similar to "hello" (similarity >= 70%)'
+    )
 
 
 def test_simple_cycle_str() -> None:
@@ -231,7 +243,10 @@ def test_multiple_references_no_cycle_str() -> None:
     textfield = Element("textfield")
     textfield.right_of(heading)
     textfield.below_of(heading)
-    assert str(textfield) == 'element with class "textfield"\n  1. right of center of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
+    assert (
+        str(textfield)
+        == 'element with class "textfield"\n  1. right of center of the 1st text similar to "heading" (similarity >= 70%)\n  2. below of boundary of the 1st text similar to "heading" (similarity >= 70%)'
+    )
 
 
 def test_image_cycle_str() -> None:

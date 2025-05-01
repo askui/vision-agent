@@ -1,14 +1,14 @@
 import os
 from typing import TypedDict
-from typing_extensions import NotRequired
 
 from pydantic import ConfigDict
+from typing_extensions import NotRequired
 
 
 class AppContext(TypedDict, total=False):
     """App (askui SDK/library/package) context information."""
 
-    __pydantic_config__ = ConfigDict(extra="allow")
+    __pydantic_config__ = ConfigDict(extra="allow")  # type: ignore
 
     name: str
     version: str
@@ -17,7 +17,7 @@ class AppContext(TypedDict, total=False):
 class OSContext(TypedDict, total=False):
     """OS context information."""
 
-    __pydantic_config__ = ConfigDict(extra="allow")
+    __pydantic_config__ = ConfigDict(extra="allow")  # type: ignore
 
     name: str
     version: str
@@ -27,7 +27,7 @@ class OSContext(TypedDict, total=False):
 class PlatformContext(TypedDict, total=False):
     """Platform context information."""
 
-    __pydantic_config__ = ConfigDict(extra="allow")
+    __pydantic_config__ = ConfigDict(extra="allow")  # type: ignore
 
     arch: str
     python_version: str
@@ -36,7 +36,7 @@ class PlatformContext(TypedDict, total=False):
 class DeviceContext(TypedDict, total=False):
     """Device context information."""
 
-    __pydantic_config__ = ConfigDict(extra="allow")
+    __pydantic_config__ = ConfigDict(extra="allow")  # type: ignore
 
     id: str
 
@@ -44,7 +44,7 @@ class DeviceContext(TypedDict, total=False):
 class TelemetryContext(TypedDict, total=False):
     """Context information."""
 
-    __pydantic_config__ = ConfigDict(extra="allow")
+    __pydantic_config__ = ConfigDict(extra="allow")  # type: ignore
 
     app: AppContext
     user_id: NotRequired[str]
