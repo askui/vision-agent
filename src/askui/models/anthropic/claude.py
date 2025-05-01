@@ -1,11 +1,21 @@
 import os
+
 import anthropic
 from PIL import Image
 
-from askui.utils.image_utils import ImageSource, image_to_base64, scale_coordinates_back, scale_image_with_padding
+from askui.utils.image_utils import (
+    ImageSource,
+    image_to_base64,
+    scale_coordinates_back,
+    scale_image_with_padding,
+)
 
+from ...exceptions import (
+    ElementNotFoundError,
+    NoResponseToQueryError,
+    UnexpectedResponseToQueryError,
+)
 from ...logger import logger
-from ...exceptions import ElementNotFoundError, NoResponseToQueryError, UnexpectedResponseToQueryError
 from .utils import extract_click_coordinates
 
 
@@ -18,7 +28,9 @@ class ClaudeHandler:
         if os.getenv("ANTHROPIC_API_KEY") is None:
             self.authenticated = False
 
-    def _inference(self, base64_image: str, prompt: str, system_prompt: str) -> list[anthropic.types.ContentBlock]:
+    def _inference(
+        self, base64_image: str, prompt: str, system_prompt: str
+    ) -> list[anthropic.types.ContentBlock]:
         message = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
@@ -34,18 +46,15 @@ class ClaudeHandler:
                                 "type": "base64",
                                 "media_type": "image/png",
                                 "data": base64_image,
-                            }
+                            },
                         },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
+                        {"type": "text", "text": prompt},
+                    ],
                 }
-            ]
+            ],
         )
         return message.content
-    
+
     def locate_inference(self, image: Image.Image, locator: str) -> tuple[int, int]:
         prompt = f"Click on {locator}"
         screen_width, screen_height = self.resolution[0], self.resolution[1]
@@ -60,7 +69,9 @@ class ClaudeHandler:
             scaled_x, scaled_y = extract_click_coordinates(r.text)
         except Exception:
             raise ElementNotFoundError(f"Element not found: {locator}")
-        x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
+        x, y = scale_coordinates_back(
+            scaled_x, scaled_y, image.width, image.height, screen_width, screen_height
+        )
         return int(x), int(y)
 
     def get_inference(self, image: ImageSource, query: str) -> str:
@@ -73,12 +84,15 @@ class ClaudeHandler:
         response = self._inference(
             base64_image=image_to_base64(scaled_image),
             prompt=query,
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
         )
         if len(response) == 0:
-            raise NoResponseToQueryError(f"No response from Claude to query: {query}", query)
+            raise NoResponseToQueryError(
+                f"No response from Claude to query: {query}", query
+            )
         r = response[0]
         if r.type == "text":
             return r.text
-        else:
-            raise UnexpectedResponseToQueryError(f"Unexpected response from Claude: {r}", query, r)
+        raise UnexpectedResponseToQueryError(
+            f"Unexpected response from Claude: {r}", query, r
+        )

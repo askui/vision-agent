@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Annotated, Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Self
-
 
 ReferencePoint = Literal["center", "boundary", "any"]
 """
@@ -233,12 +233,18 @@ class NeighborRelation(RelationBase):
             index_str = (
                 f"{i}st"
                 if i % 10 == 1
-                else f"{i}nd" if i % 10 == 2 else f"{i}rd" if i % 10 == 3 else f"{i}th"
+                else f"{i}nd"
+                if i % 10 == 2
+                else f"{i}rd"
+                if i % 10 == 3
+                else f"{i}th"
             )
         reference_point_str = (
             " center of"
             if self.reference_point == "center"
-            else " boundary of" if self.reference_point == "boundary" else ""
+            else " boundary of"
+            if self.reference_point == "boundary"
+            else ""
         )
         return f"{RelationTypeMapping[self.type]}{reference_point_str} the {index_str} {self.other_locator._str_with_relation()}"
 
@@ -273,7 +279,7 @@ class CircularDependencyError(ValueError):
 
 
 class Relatable(ABC):
-    """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly. 
+    """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly.
     Subclassed by all (relatable) locators, e.g., `Prompt`, `Text`, `Image`, etc."""
 
     def __init__(self) -> None:
@@ -302,7 +308,7 @@ class Relatable(ABC):
             index (RelationIndex, optional): Index of the element (located by *self*) above the other element(s)
                 (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element above the other element(s).
                 Elements' (relative) position is determined by the **bottom border**
-                (*y*-coordinate) of their bounding box.  
+                (*y*-coordinate) of their bounding box.
                 We don't guarantee the order of elements with the same bottom border
                 (*y*-coordinate). Defaults to `0`.
             reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be above the
@@ -327,7 +333,7 @@ class Relatable(ABC):
             # text "B"
             text = loc.Text().above_of(loc.Text("B"), reference_point="center")
             ```
-            
+
             ```text
 
                    ===========
@@ -340,11 +346,11 @@ class Relatable(ABC):
             ```python
             from askui import locators as loc
             # locates text "A" as it is the first (index 0) element above
-            # ("boundary" of / any point of) text "B" 
+            # ("boundary" of / any point of) text "B"
             # (reference point "center" won't work here)
             text = loc.Text().above_of(loc.Text("B"), reference_point="boundary")
             ```
-            
+
             ```text
 
                         ===========
@@ -356,11 +362,11 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the first (index 0) element above text "B" 
+            # locates text "A" as it is the first (index 0) element above text "B"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().above_of(loc.Text("B"), reference_point="any")
             ```
-            
+
             ```text
 
                         ===========
@@ -375,11 +381,11 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the second (index 1) element above text "C" 
+            # locates text "A" as it is the second (index 1) element above text "C"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().above_of(loc.Text("C"), index=1, reference_point="any")
             ```
-            
+
             ```text
 
                     ===========
@@ -435,7 +441,7 @@ class Relatable(ABC):
             index (RelationIndex, optional): Index of the element (located by *self*) **below** the other
                 element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element below the other
                 element(s). Elements' (relative) position is determined by the **top
-                border** (*y*-coordinate) of their bounding box.  
+                border** (*y*-coordinate) of their bounding box.
                 We don't guarantee the order of elements with the same top border
                 (*y*-coordinate). Defaults to `0`.
             reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
@@ -472,8 +478,8 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the first (index 0) element below 
-            # ("boundary" of / any point of) text "B" 
+            # locates text "A" as it is the first (index 0) element below
+            # ("boundary" of / any point of) text "B"
             # (reference point "center" won't work here)
             text = loc.Text().below_of(loc.Text("B"), reference_point="boundary")
             ```
@@ -493,7 +499,7 @@ class Relatable(ABC):
             # (reference point "center" or "boundary won't work here)
             text = loc.Text().below_of(loc.Text("B"), reference_point="any")
             ```
-            
+
             ```text
 
             ===========
@@ -508,15 +514,15 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the second (index 1) element below text "C" 
+            # locates text "A" as it is the second (index 1) element below text "C"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().below_of(loc.Text("C"), index=1, reference_point="any")
             ```
-            
+
             ```text
 
-            =========== 
-            |         | 
+            ===========
+            |         |
             |    C    |
             |         |===========
             ===========|    B    |
@@ -568,7 +574,7 @@ class Relatable(ABC):
             index (RelationIndex, optional): Index of the element (located by *self*) **right of** the other
                 element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element right of the other
                 element(s). Elements' (relative) position is determined by the **left
-                border** (*x*-coordinate) of their bounding box.  
+                border** (*x*-coordinate) of their bounding box.
                 We don't guarantee the order of elements with the same left border
                 (*x*-coordinate). Defaults to `0`.
             reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
@@ -593,23 +599,23 @@ class Relatable(ABC):
 
             ```text
 
-            =========== 
-            |    B    | 
+            ===========
+            |    B    |
             =========== ===========
                         |    A    |
                         ===========
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the first (index 0) element right of 
-            # ("boundary" of / any point of) text "B" 
+            # locates text "A" as it is the first (index 0) element right of
+            # ("boundary" of / any point of) text "B"
             # (reference point "center" won't work here)
             text = loc.Text().right_of(loc.Text("B"), reference_point="boundary")
             ```
 
             ```text
 
-            =========== 
+            ===========
             |    B    |
             ===========
                         ===========
@@ -618,13 +624,13 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the first (index 0) element right of text "B" 
+            # locates text "A" as it is the first (index 0) element right of text "B"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().right_of(loc.Text("B"), reference_point="any")
             ```
-            
+
             ```text
-     
+
                                     ===========
                                     |    A    |
                                     ===========
@@ -634,13 +640,13 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the second (index 1) element right of text "C" 
+            # locates text "A" as it is the second (index 1) element right of text "C"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().right_of(loc.Text("C"), index=1, reference_point="any")
             ```
-            
+
             ```text
-            
+
                     ===========
                     |    B    |
                     =========== ===========
@@ -691,7 +697,7 @@ class Relatable(ABC):
             index (RelationIndex, optional): Index of the element (located by *self*) **left of** the other
                 element(s) (located by *other_locator*), e.g., the first (`0`), second (`1`), third (`2`) etc. element left of the other
                 element(s). Elements' (relative) position is determined by the **right
-                border** (*x*-coordinate) of their bounding box.  
+                border** (*x*-coordinate) of their bounding box.
                 We don't guarantee the order of elements with the same right border
                 (*x*-coordinate). Defaults to `0`.
             reference_point (ReferencePoint, optional): Defines which element (located by *self*) is considered to be
@@ -716,9 +722,9 @@ class Relatable(ABC):
 
             ```text
 
-                        =========== 
+                        ===========
             =========== |    B    |
-            |    A    | =========== 
+            |    A    | ===========
             ===========
             ```
             ```python
@@ -731,22 +737,22 @@ class Relatable(ABC):
 
             ```text
 
-                        =========== 
+                        ===========
                         |    B    |
-                        =========== 
-            ===========              
+                        ===========
+            ===========
             |    A    |
-            =========== 
+            ===========
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the first (index 0) element left of text "B" 
+            # locates text "A" as it is the first (index 0) element left of text "B"
             # (reference point "center" or "boundary won't work here)
             text = loc.Text().left_of(loc.Text("B"), reference_point="any")
             ```
 
             ```text
-     
+
             ===========
             |    A    |
             ===========
@@ -756,18 +762,18 @@ class Relatable(ABC):
             ```
             ```python
             from askui import locators as loc
-            # locates text "A" as it is the second (index 1) element left of text "C" 
+            # locates text "A" as it is the second (index 1) element left of text "C"
             # (reference point "center" or "boundary" won't work here)
             text = loc.Text().left_of(loc.Text("C"), index=1, reference_point="any")
             ```
-            
+
             ```text
-             
+
                         ===========
                         |    B    |
-            =========== =========== 
-            |    A    |        ===========         
-            ===========        |    C    |         
+            =========== ===========
+            |    A    |        ===========
+            ===========        |    C    |
                                ===========
             ```
             ```python
@@ -981,14 +987,14 @@ class Relatable(ABC):
             for nested_relation_str in nested_relation_strs:
                 result.append(f"  {nested_relation_str}")
         return "\n" + "\n".join(result)
-    
+
     def _str_with_relation(self) -> str:
         return self._str() + self._relations_str()
 
     def raise_if_cycle(self) -> None:
         """Raises CircularDependencyError if the relations form a cycle (see [Cycle (graph theory)](https://en.wikipedia.org/wiki/Cycle_(graph_theory)))."""
         if self._has_cycle():
-            raise CircularDependencyError()
+            raise CircularDependencyError
 
     def _has_cycle(self) -> bool:
         """Check if the relations form a cycle (see [Cycle (graph theory)](https://en.wikipedia.org/wiki/Cycle_(graph_theory)))."""

@@ -5,6 +5,7 @@ from askui.telemetry import TelemetrySettings
 
 class Settings(BaseSettings):
     """Main settings class"""
+
     telemetry: TelemetrySettings = TelemetrySettings()
 
     model_config = SettingsConfigDict(
@@ -15,5 +16,6 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         extra="ignore",
     )
+
 
 settings = Settings()

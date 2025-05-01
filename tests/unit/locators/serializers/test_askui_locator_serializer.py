@@ -1,17 +1,17 @@
 import pathlib
 import re
+
 import pytest
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
+from askui.locators import Element, Image, Prompt, Text
 from askui.locators.locators import Locator
-from askui.locators import Element, Prompt, Text, Image
+from askui.locators.relatable import CircularDependencyError
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.utils.image_utils import image_to_base64
 from askui.reporting import CompositeReporter
-from askui.locators.relatable import CircularDependencyError
-
+from askui.utils.image_utils import image_to_base64
 
 TEST_IMAGE = PILImage.new("RGB", (100, 100), color="red")
 TEST_IMAGE_BASE64 = image_to_base64(TEST_IMAGE)
@@ -21,25 +21,30 @@ TEST_IMAGE_BASE64 = image_to_base64(TEST_IMAGE)
 def askui_serializer(path_fixtures: pathlib.Path) -> AskUiLocatorSerializer:
     return AskUiLocatorSerializer(
         ai_element_collection=AiElementCollection(
-            additional_ai_element_locations=[
-                path_fixtures / "images"
-            ]
+            additional_ai_element_locations=[path_fixtures / "images"]
         ),
-        reporter=CompositeReporter()
+        reporter=CompositeReporter(),
     )
-    
 
-def test_serialize_text_without_content(askui_serializer: AskUiLocatorSerializer) -> None:
+
+def test_serialize_text_without_content(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     text = Text()
     result = askui_serializer.serialize(text)
     assert result["instruction"] == "text"
     assert result["customElements"] == []
-    
 
-def test_serialize_text_without_content_in_relation(askui_serializer: AskUiLocatorSerializer) -> None:
+
+def test_serialize_text_without_content_in_relation(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     locator = Text().right_of(Text("Name"))
     result = askui_serializer.serialize(locator)
-    assert result["instruction"] == "text index 0 right of intersection_area element_center_line text <|string|>Name<|string|>"
+    assert (
+        result["instruction"]
+        == "text index 0 right of intersection_area element_center_line text <|string|>Name<|string|>"
+    )
     assert result["customElements"] == []
 
 
@@ -88,7 +93,9 @@ def test_serialize_description(askui_serializer: AskUiLocatorSerializer) -> None
     assert result["customElements"] == []
 
 
-CUSTOM_ELEMENT_STR_PATTERN = re.compile(r'^custom element with text <|string|>.*<|string|>$')
+CUSTOM_ELEMENT_STR_PATTERN = re.compile(
+    r"^custom element with text <|string|>.*<|string|>$"
+)
 
 
 def test_serialize_image(askui_serializer: AskUiLocatorSerializer) -> None:
@@ -119,7 +126,10 @@ def test_serialize_image_with_all_options(
         name="test_image",
     )
     result = askui_serializer.serialize(image)
-    assert result["instruction"] == "custom element with text <|string|>test_image<|string|>"
+    assert (
+        result["instruction"]
+        == "custom element with text <|string|>test_image<|string|>"
+    )
     assert len(result["customElements"]) == 1
     custom_element = result["customElements"][0]
     assert custom_element["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
@@ -268,7 +278,9 @@ def test_serialize_unsupported_locator_type(
         askui_serializer.serialize(UnsupportedLocator())
 
 
-def test_serialize_simple_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+def test_serialize_simple_cycle_raises(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     text1 = Text("hello")
     text2 = Text("world")
     text1.above_of(text2)
@@ -277,7 +289,9 @@ def test_serialize_simple_cycle_raises(askui_serializer: AskUiLocatorSerializer)
         askui_serializer.serialize(text1)
 
 
-def test_serialize_self_reference_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+def test_serialize_self_reference_cycle_raises(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     text = Text("hello")
     text.above_of(text)
     with pytest.raises(CircularDependencyError):
@@ -295,11 +309,13 @@ def test_serialize_deep_cycle_raises(askui_serializer: AskUiLocatorSerializer) -
         askui_serializer.serialize(text1)
 
 
-def test_serialize_cycle_detection_called_once(askui_serializer: AskUiLocatorSerializer, mocker: MockerFixture) -> None:
+def test_serialize_cycle_detection_called_once(
+    askui_serializer: AskUiLocatorSerializer, mocker: MockerFixture
+) -> None:
     text1 = Text("hello")
-    mocked_text1 = mocker.patch.object(text1, '_has_cycle')
+    mocked_text1 = mocker.patch.object(text1, "_has_cycle")
     text2 = Text("world")
-    mocked_text2 = mocker.patch.object(text2, '_has_cycle')
+    mocked_text2 = mocker.patch.object(text2, "_has_cycle")
     text1.above_of(text2)
     text2.above_of(text1)
     with pytest.raises(CircularDependencyError):
@@ -308,7 +324,9 @@ def test_serialize_cycle_detection_called_once(askui_serializer: AskUiLocatorSer
     mocked_text2.assert_not_called()
 
 
-def test_serialize_image_with_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+def test_serialize_image_with_cycle_raises(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     image1 = Image(TEST_IMAGE, name="image1")
     image2 = Image(TEST_IMAGE, name="image2")
     image1.above_of(image2)
@@ -317,7 +335,9 @@ def test_serialize_image_with_cycle_raises(askui_serializer: AskUiLocatorSeriali
         askui_serializer.serialize(image1)
 
 
-def test_serialize_mixed_locator_types_cycle_raises(askui_serializer: AskUiLocatorSerializer) -> None:
+def test_serialize_mixed_locator_types_cycle_raises(
+    askui_serializer: AskUiLocatorSerializer,
+) -> None:
     text = Text("hello")
     image = Image(TEST_IMAGE, name="image")
     text.above_of(image)
@@ -370,8 +390,14 @@ def test_serialize_multiple_images_with_relation(
     assert len(result["customElements"]) == 2
     assert result["customElements"][0]["name"] == "image1"
     assert result["customElements"][1]["name"] == "image2"
-    assert result["customElements"][0]["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
-    assert result["customElements"][1]["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    assert (
+        result["customElements"][0]["customImage"]
+        == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    )
+    assert (
+        result["customElements"][1]["customImage"]
+        == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    )
 
 
 def test_serialize_images_with_non_neighbor_relation(
@@ -388,5 +414,11 @@ def test_serialize_images_with_non_neighbor_relation(
     assert len(result["customElements"]) == 2
     assert result["customElements"][0]["name"] == "image1"
     assert result["customElements"][1]["name"] == "image2"
-    assert result["customElements"][0]["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
-    assert result["customElements"][1]["customImage"] == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    assert (
+        result["customElements"][0]["customImage"]
+        == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    )
+    assert (
+        result["customElements"][1]["customImage"]
+        == f"data:image/png;base64,{TEST_IMAGE_BASE64}"
+    )

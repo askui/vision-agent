@@ -1,14 +1,12 @@
 import pytest
-from askui.locators.locators import Locator
+from PIL import Image as PILImage
+
 from askui.locators import Element, Prompt, Text
-from askui.locators.locators import Image
+from askui.locators.locators import Image, Locator
 from askui.locators.relatable import CircularDependencyError
 from askui.locators.serializers import VlmLocatorSerializer
 
-from PIL import Image as PILImage
-
-
-TEST_IMAGE = PILImage.new('RGB', (100, 100), color='red')
+TEST_IMAGE = PILImage.new("RGB", (100, 100), color="red")
 
 
 @pytest.fixture
@@ -90,7 +88,9 @@ def test_serialize_simple_cycle_raises(vlm_serializer: VlmLocatorSerializer) -> 
         vlm_serializer.serialize(text1)
 
 
-def test_serialize_self_reference_cycle_raises(vlm_serializer: VlmLocatorSerializer) -> None:
+def test_serialize_self_reference_cycle_raises(
+    vlm_serializer: VlmLocatorSerializer,
+) -> None:
     text = Text("hello")
     text.above_of(text)
     with pytest.raises(CircularDependencyError):

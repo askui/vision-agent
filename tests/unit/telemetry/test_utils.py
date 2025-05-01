@@ -1,4 +1,5 @@
 import uuid
+
 from askui.telemetry.utils import hash_to_uuid4, is_valid_uuid4
 
 
@@ -7,7 +8,7 @@ def test_is_valid_uuid4() -> None:
     assert is_valid_uuid4(str(uuid.uuid4()))
     assert is_valid_uuid4("123e4567-e89b-4456-a456-426614174000")  # Version 4 UUID
     assert is_valid_uuid4("123E4567-E89B-4456-A456-426614174000")  # Case doesn't matter
-    
+
     # Invalid UUID4
     assert not is_valid_uuid4("not-a-uuid")
     assert not is_valid_uuid4("12345678-1234-5678-1234-56781234567")  # Too short

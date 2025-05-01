@@ -44,20 +44,18 @@ test = "pytest -n auto"
 "test:integration" = "pytest -n auto tests/integration"
 "test:unit" = "pytest -n auto tests/unit"
 "test:cov:view" = "python -m http.server --directory htmlcov"
-sort = "isort ."
-format = "black ."
-lint = "ruff check ."
+format = "ruff format src tests"
+lint = "ruff check src tests"
+"lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
-checks = {composite = ["sort . -c", "format . --check", "typecheck"]}
-fix = {composite = ["sort", "format", "lint", "typecheck"]}
+checks = {composite = ["format . --check", "lint", "typecheck"]}
+fix-all = {composite = ["format", "lint:fix", "typecheck"]}
 chat = "streamlit run src/askui/chat/__main__.py"
 
 [dependency-groups]
 test = [
     "pytest>=8.3.4",
-    "isort>=6.0.0",
-    "black>=25.1.0",
     "ruff>=0.9.5",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.1",
@@ -106,3 +104,87 @@ exclude = [
 mypy_path = "src"
 explicit_package_bases = true
 namespace_packages = true
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Same as Black.
+line-length = 88
+
+# Assume Python 3.10
+target-version = "py310"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+# Enable all rules
+select = ["ALL"]
+ignore = [
+    "ANN", # Type annotations - handled by mypy
+    "COM812", # Unused import
+    "D",   # Documentation - we'll handle this separately
+    "ERA", # Commented out code
+    "FBT", # Boolean trap
+    "ICN", # Import conventions
+    "ISC", # Implicit string concatenation
+    "N",   # Naming
+    "PGH", # PyGithub
+    "PL",  # Pylint
+    "PT",  # Pytest
+    "Q",   # Quotes
+    "RUF", # Ruff-specific rules
+    "S",   # Bandit
+    "SIM", # Simplify
+    "T",   # Pycodestyle
+    "TID", # isort
+    "UP",  # Pyupgrade
+    "W",   # Pycodestyle
+    "YTT", # flake8-2020
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR2004"]
+"src/askui/chat/*" = ["F401", "F403"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
+
+[tool.ruff.lint.isort]
+known-first-party = ["askui"]
+known-third-party = ["pytest", "mypy"]

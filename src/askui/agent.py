@@ -1,25 +1,26 @@
 import logging
 import subprocess
+import time
 import types
 from typing import Annotated, Literal, Optional, Type, overload
+
+from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.utils.image_utils import ImageSource, Img
 
+from .logger import configure_logging, logger
+from .models import ModelComposition
+from .models.router import ModelRouter, Point
+from .models.types.response_schemas import ResponseSchema
+from .reporting import CompositeReporter, Reporter
+from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import (
     AskUiControllerClient,
     AskUiControllerServer,
 )
-from .logger import logger, configure_logging
-from .tools import AgentToolbox, ModifierKey, PcKey
-from .models import ModelComposition
-from .models.router import ModelRouter, Point
-from .reporting import CompositeReporter, Reporter
-import time
-from dotenv import load_dotenv
-from .models.types.response_schemas import ResponseSchema
 
 
 class VisionAgent:
@@ -40,13 +41,14 @@ class VisionAgent:
     Example:
         ```python
         from askui import VisionAgent
-        
+
         with VisionAgent() as agent:
             agent.click("Submit button")
             agent.type("Hello World")
             agent.act("Open settings menu")
         ```
     """
+
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
@@ -64,12 +66,14 @@ class VisionAgent:
         self.tools = tools or AgentToolbox(
             agent_os=AskUiControllerClient(
                 display=display,
-                reporter=self._reporter, 
-                controller_server=AskUiControllerServer()
+                reporter=self._reporter,
+                controller_server=AskUiControllerServer(),
             ),
         )
         self.model_router = (
-            ModelRouter(tools=self.tools, reporter=self._reporter) if model_router is None else model_router
+            ModelRouter(tools=self.tools, reporter=self._reporter)
+            if model_router is None
+            else model_router
         )
         self._model = model
 
@@ -78,7 +82,7 @@ class VisionAgent:
     def click(
         self,
         locator: Optional[str | Locator] = None,
-        button: Literal['left', 'middle', 'right'] = 'left',
+        button: Literal["left", "middle", "right"] = "left",
         repeat: Annotated[int, Field(gt=0)] = 1,
         model: ModelComposition | str | None = None,
     ) -> None:
@@ -94,7 +98,7 @@ class VisionAgent:
         Example:
             ```python
             from askui import VisionAgent
-            
+
             with VisionAgent() as agent:
                 agent.click()              # Left click on current position
                 agent.click("Edit")        # Left click on text "Edit"
@@ -103,25 +107,34 @@ class VisionAgent:
                 agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
             ```
         """
-        msg = 'click'
-        if button != 'left':
-            msg = f'{button} ' + msg 
+        msg = "click"
+        if button != "left":
+            msg = f"{button} " + msg
         if repeat > 1:
-            msg += f' {repeat}x times'
+            msg += f" {repeat}x times"
         if locator is not None:
-            msg += f' on {locator}'
+            msg += f" on {locator}"
         self._reporter.add_message("User", msg)
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model or self._model)
         self.tools.agent_os.click(button, repeat)
-    
-    def _locate(self, locator: str | Locator, screenshot: Optional[Img] = None, model: ModelComposition | str | None = None) -> Point:
-        _screenshot = ImageSource(self.tools.agent_os.screenshot() if screenshot is None else screenshot)
-        point = self.model_router.locate(_screenshot.root, locator, model or self._model)
+
+    def _locate(
+        self,
+        locator: str | Locator,
+        screenshot: Optional[Img] = None,
+        model: ModelComposition | str | None = None,
+    ) -> Point:
+        _screenshot = ImageSource(
+            self.tools.agent_os.screenshot() if screenshot is None else screenshot
+        )
+        point = self.model_router.locate(
+            _screenshot.root, locator, model or self._model
+        )
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
-    
+
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate(
         self,
@@ -143,7 +156,7 @@ class VisionAgent:
         Example:
             ```python
             from askui import VisionAgent
-            
+
             with VisionAgent() as agent:
                 point = agent.locate("Submit button")
                 print(f"Element found at coordinates: {point}")
@@ -153,7 +166,9 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to locate %s", locator)
         return self._locate(locator, screenshot, model or self._model)
 
-    def _mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
+    def _mouse_move(
+        self, locator: str | Locator, model: ModelComposition | str | None = None
+    ) -> None:
         point = self._locate(locator=locator, model=model or self._model)
         self.tools.agent_os.mouse(point[0], point[1])
 
@@ -181,7 +196,7 @@ class VisionAgent:
                 agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
             ```
         """
-        self._reporter.add_message("User", f'mouse_move: {locator}')
+        self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
         self._mouse_move(locator, model or self._model)
 
@@ -202,7 +217,7 @@ class VisionAgent:
         Note:
             The actual scroll direction depends on the operating system's configuration.
             Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
-            
+
             The meaning of scroll units varies across operating systems and applications.
             A scroll value of `10` might result in different distances depending on the application and system settings.
 
@@ -244,7 +259,6 @@ class VisionAgent:
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.tools.agent_os.type(text)
-
 
     @overload
     def get(
@@ -299,7 +313,7 @@ class VisionAgent:
             with VisionAgent() as agent:
                 # Get URL as string
                 url = agent.get("What is the current url shown in the url bar?")
-                
+
                 # Get URL as Pydantic model from image at (relative) path
                 response = agent.get(
                     "What is the current url shown in the url bar?",
@@ -329,7 +343,9 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.tools.agent_os.screenshot() if image is None else image)
+        _image = ImageSource(
+            self.tools.agent_os.screenshot() if image is None else image
+        )
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
         response = self.model_router.get_inference(
             image=_image,
@@ -338,10 +354,14 @@ class VisionAgent:
             response_schema=response_schema,
         )
         if self._reporter is not None:
-            message_content = str(response) if isinstance(response, (str, bool, int, float)) else response.model_dump()
+            message_content = (
+                str(response)
+                if isinstance(response, (str, bool, int, float))
+                else response.model_dump()
+            )
             self._reporter.add_message("Agent", message_content)
         return response
-    
+
     @telemetry.record_call()
     @validate_call
     def wait(
@@ -509,7 +529,7 @@ class VisionAgent:
     def close(self) -> None:
         self.tools.agent_os.disconnect()
         self._reporter.generate()
-            
+
     @telemetry.record_call()
     def open(self) -> None:
         self.tools.agent_os.connect()

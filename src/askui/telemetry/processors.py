@@ -1,9 +1,9 @@
 import abc
-
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
 from pydantic import BaseModel, HttpUrl
+
 from askui.logger import logger
 from askui.telemetry.context import TelemetryContext
 
@@ -62,7 +62,7 @@ class Segment(TelemetryProcessor):
                         "platform": context["platform"],
                         "session_id": context["session_id"],
                         "call_stack": context["call_stack"],
-                    }
+                    },
                 },
                 context={
                     "app": context["app"],
@@ -77,7 +77,7 @@ class Segment(TelemetryProcessor):
             )
         except Exception as e:
             logger.debug(f'Failed to track event "{name}" using Segment: {e}')
-    
+
     def flush(self) -> None:
         self._analytics.flush()
 

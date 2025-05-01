@@ -9,7 +9,7 @@ _device_id: str | None = None
 
 def get_device_id() -> str | None:
     """Get the device ID (hashed) of the host device
-    
+
     Returns None if the device ID is not found.
     """
     global _device_id

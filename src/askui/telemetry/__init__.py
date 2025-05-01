@@ -1,6 +1,12 @@
+from .context import (
+    AppContext,
+    DeviceContext,
+    OSContext,
+    PlatformContext,
+    TelemetryContext,
+)
+from .processors import InMemoryProcessor, Segment, TelemetryEvent, TelemetryProcessor
 from .telemetry import Telemetry, TelemetrySettings
-from .processors import InMemoryProcessor, TelemetryEvent, TelemetryProcessor, Segment
-from .context import AppContext, DeviceContext, OSContext, PlatformContext, TelemetryContext
 
 __all__ = [
     "AppContext",

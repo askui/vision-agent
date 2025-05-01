@@ -1,8 +1,8 @@
 import os
 from typing import TypedDict
-from typing_extensions import NotRequired
 
 from pydantic import ConfigDict
+from typing_extensions import NotRequired
 
 
 class AppContext(TypedDict, total=False):

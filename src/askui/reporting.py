@@ -1,22 +1,23 @@
-from abc import ABC, abstractmethod
-from pathlib import Path
-import random
-from jinja2 import Template
-from datetime import datetime
-from typing import List, Dict, Optional, Union
-from typing_extensions import TypedDict, override
-import platform
-import sys
-from importlib.metadata import distributions
 import base64
-from io import BytesIO
-from PIL import Image
 import json
+import platform
+import random
+import sys
+from abc import ABC, abstractmethod
+from datetime import datetime
+from importlib.metadata import distributions
+from io import BytesIO
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
+from jinja2 import Template
+from PIL import Image
+from typing_extensions import TypedDict, override
 
 
 class Reporter(ABC):
     """Abstract base class for reporters. Cannot be instantiated directly.
-    
+
     Defines the interface that all reporters must implement to be used with `askui.VisionAgent`.
     """
 
@@ -28,30 +29,29 @@ class Reporter(ABC):
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         """Add a message to the report.
-        
+
         Args:
             role (str): The role of the message sender (e.g., `"User"`, `"Assistant"`, `"System"`)
             content (Union[str, dict, list]): The message content, which can be a string, dictionary, or list, e.g. `'click 2x times on text "Edit"'`
             image (Optional[PIL.Image.Image | list[PIL.Image.Image]], optional): PIL Image or list of PIL Images to include with the message
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def generate(self) -> None:
         """Generates the final report.
-        
+
         Implementing this method is only required if the report is not generated in "real-time", e.g., on calls of `add_message()`, but must be generated at the end of the execution.
-        
+
         This method is called when the `askui.VisionAgent` context is exited or `askui.VisionAgent.close()` is called.
         """
-        pass
 
 
 class CompositeReporter(Reporter):
     """A reporter that combines multiple reporters.
-    
+
     Allows generating different reports simultaneously. Each message added will be forwarded to all reporters passed to the constructor. The reporters are called (`add_message()`, `generate()`) in the order they are ordered in the `reporters` list.
-    
+
     Args:
         reporters (list[Reporter] | None, optional): List of reporters to combine
     """
@@ -85,7 +85,7 @@ class SystemInfo(TypedDict):
 
 class SimpleHtmlReporter(Reporter):
     """A reporter that generates HTML reports with conversation logs and system information.
-    
+
     Args:
         report_dir (str, optional): Directory where reports will be saved. Defaults to `reports`.
     """
@@ -143,7 +143,7 @@ class SimpleHtmlReporter(Reporter):
     @override
     def generate(self) -> None:
         """Generate an HTML report file.
-        
+
         Creates a timestamped HTML file in the `report_dir` containing:
         - System information
         - All collected messages with their content and images
@@ -305,5 +305,8 @@ class SimpleHtmlReporter(Reporter):
             system_info=self.system_info,
         )
 
-        report_path = self.report_dir / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
+        report_path = (
+            self.report_dir
+            / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
+        )
         report_path.write_text(html)

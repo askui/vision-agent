@@ -2,21 +2,23 @@ import inspect
 import os
 import platform
 import time
+import uuid
+from collections.abc import Callable
 from functools import wraps
 from typing import Any
-import uuid
 
 from pydantic import BaseModel, Field
+from typing_extensions import ParamSpec, TypeVar
 
 from askui.logger import logger
 from askui.telemetry.anonymous_id import get_anonymous_id
 from askui.telemetry.context import (
+    AppContext,
     CallStack,
     DeviceContext,
-    TelemetryContext,
-    AppContext,
     OSContext,
     PlatformContext,
+    TelemetryContext,
 )
 from askui.telemetry.device_id import get_device_id
 from askui.telemetry.pkg_version import get_pkg_version
@@ -25,8 +27,6 @@ from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
-from typing_extensions import ParamSpec, TypeVar
-from collections.abc import Callable
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -53,7 +53,7 @@ class TelemetrySettings(BaseModel):
         description=(
             "The device ID of the host machine. "
             "This is used to identify the device and the user (if anynomous) across AskUI components. "
-            'We hash it with an AskUI specific salt to avoid user tracking across (non-AskUI) '
+            "We hash it with an AskUI specific salt to avoid user tracking across (non-AskUI) "
             "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
             "protect user privacy while still being able to improve the UX across components."
         ),
@@ -136,26 +136,26 @@ class Telemetry:
         flush: bool = False,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to record calls to functions and methods
-        
-        IMPORTANT: Parameters, responses and exceptions recorded must be serializable to JSON. Either make 
-        sure that they are serializable or exclude them using the `exclude` parameter or use the 
+
+        IMPORTANT: Parameters, responses and exceptions recorded must be serializable to JSON. Either make
+        sure that they are serializable or exclude them using the `exclude` parameter or use the
         `exclude_response` and `exclude_exception` parameters.
 
         Args:
-            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain 
+            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain
                 structure of the call)
-            exclude_first_arg: Whether to exclude the first argument, e.g., self or cls for instance and 
-                class methods. Defaults to `True`, for functions and static methods, it should be set to 
+            exclude_first_arg: Whether to exclude the first argument, e.g., self or cls for instance and
+                class methods. Defaults to `True`, for functions and static methods, it should be set to
                 `False`
-            exclude_response: Whether to exclude the response of the function in the telemetry event. 
+            exclude_response: Whether to exclude the response of the function in the telemetry event.
                 Defaults to `True`
-            exclude_exception: Whether to exclude the exception if one is raised in the telemetry event. 
+            exclude_exception: Whether to exclude the exception if one is raised in the telemetry event.
                 Defaults to `False`
-            exclude_start: Whether to exclude the start of the function call as a telemetry event. 
+            exclude_start: Whether to exclude the start of the function call as a telemetry event.
                 Defaults to `True`
-            flush: Whether to flush the telemetry data to the backend(s) after recording an event. 
-                Defaults to `False`. Should be set to `True` if the process is expected to exit afterwards. 
-                Setting it to `True` can have a slightly negative impact on performance but ensures that 
+            flush: Whether to flush the telemetry data to the backend(s) after recording an event.
+                Defaults to `False`. Should be set to `True` if the process is expected to exit afterwards.
+                Setting it to `True` can have a slightly negative impact on performance but ensures that
                 telemetry data is not lost in case of a crash.
         """
 
@@ -179,7 +179,10 @@ class Telemetry:
                 )
                 if exclude_first_arg:
                     processed_args = processed_args[1:] if processed_args else ()
-                processed_args = tuple(arg.model_dump() if isinstance(arg, BaseModel) else arg for arg in processed_args)
+                processed_args = tuple(
+                    arg.model_dump() if isinstance(arg, BaseModel) else arg
+                    for arg in processed_args
+                )
                 processed_kwargs = {
                     k: v if k not in _exclude else self._EXCLUDE_MASK
                     for k, v in kwargs.items()

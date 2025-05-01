@@ -4,31 +4,36 @@ from typing import Optional, Union
 from urllib.parse import urlencode, urljoin
 from uuid import UUID
 
-from askui.tools.askui.askui_workspaces.models.extract_data_command import ExtractDataCommand
-from askui.tools.askui.askui_workspaces.models.extract_data_response import ExtractDataResponse
+import requests
+from pydantic import BaseModel, Field, HttpUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+from askui.tools.askui.askui_workspaces.models.extract_data_command import (
+    ExtractDataCommand,
+)
+from askui.tools.askui.askui_workspaces.models.extract_data_response import (
+    ExtractDataResponse,
+)
 
 from .askui_workspaces import (
-    AgentsApi,
-    AgentExecutionsApi,
-    SchedulesApi,
-    ToolsApi,
-    AgentExecutionUpdateCommand,
     Agent,
     AgentExecution,
+    AgentExecutionsApi,
     AgentExecutionStateCanceled,
     AgentExecutionStateConfirmed,
     AgentExecutionStateDeliveredToDestinationInput,
     AgentExecutionStatePendingReview,
+    AgentExecutionUpdateCommand,
+    AgentsApi,
     ApiClient,
     Configuration,
     CreateScheduleRequestDto,
     CreateScheduleResponseDto,
+    SchedulesApi,
     State1,
+    ToolsApi,
 )
-from pydantic import BaseModel, Field, HttpUrl
-from pydantic_settings import BaseSettings, SettingsConfigDict
-import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class AskUIHubSettings(BaseSettings):
@@ -37,8 +42,10 @@ class AskUIHubSettings(BaseSettings):
     )
     workspace_id: str | None = Field(default=None)
     token: str | None = Field(default=None)
-    workspaces_endpoint: HttpUrl | None = Field(default=HttpUrl("https://workspaces.askui.com"))
-    
+    workspaces_endpoint: HttpUrl | None = Field(
+        default=HttpUrl("https://workspaces.askui.com")
+    )
+
     @property
     def workspaces_host(self) -> str:
         if self.workspaces_endpoint is None:
@@ -48,22 +55,21 @@ class AskUIHubSettings(BaseSettings):
     @property
     def authenticated(self) -> bool:
         return self.workspace_id is not None and self.token is not None
-    
+
     @property
     def token_base64(self) -> str:
         if self.token is None:
             raise ValueError("Token is not set")
         return base64.b64encode(self.token.encode()).decode()
-    
+
     @property
     def files_base_url(self) -> str:
         return urljoin(self.workspaces_host, "/api/v1/files")
-    
+
     @property
     def authorization_header_value(self) -> str:
         return f"Basic {self.token_base64}"
-    
-    
+
 
 ScheduleRunCommand = CreateScheduleRequestDto
 ScheduleRunResponse = CreateScheduleResponseDto
@@ -80,9 +86,9 @@ class FilesListResponseDto(BaseModel):
     next_continuation_token: Optional[str] = Field(default=None)
 
 
-REQUEST_TIMEOUT_IN_S=60
-UPLOAD_REQUEST_TIMEOUT_IN_S=3600 # allows for uploading large files
-EXTRACT_DATA_REQUEST_TIMEOUT_IN_S=300.0
+REQUEST_TIMEOUT_IN_S = 60
+UPLOAD_REQUEST_TIMEOUT_IN_S = 3600  # allows for uploading large files
+EXTRACT_DATA_REQUEST_TIMEOUT_IN_S = 300.0
 
 
 class AskUIHub:
@@ -92,7 +98,7 @@ class AskUIHub:
         if not self._settings.authenticated:
             self.disabled = True
             return
-        
+
         api_client_config = Configuration(
             host=self._settings.workspaces_host,
             api_key={"Basic": self._settings.authorization_header_value},
@@ -111,7 +117,9 @@ class AskUIHub:
             raise ValueError(f"Agent {agent_id} not found")
         return response.data[0]
 
-    def retrieve_agent_execution(self, agent_execution_id: UUID | str) -> AgentExecution:
+    def retrieve_agent_execution(
+        self, agent_execution_id: UUID | str
+    ) -> AgentExecution:
         response = self._agent_executions_api.list_agent_executions_api_v1_agent_executions_get(
             agent_execution_id=[str(agent_execution_id)]
         )
@@ -142,19 +150,15 @@ class AskUIHub:
             workspace_id=self._settings.workspace_id,
             create_schedule_request_dto=command,
         )
-        
+
     def extract_data(self, command: ExtractDataCommand) -> ExtractDataResponse:
         return self._tools_api.extract_data_api_v1_tools_extract_data_post(
             extract_data_command=command,
             _request_timeout=EXTRACT_DATA_REQUEST_TIMEOUT_IN_S,
         )
 
-    @retry(
-        stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True
-    )
-    def _upload_file(
-        self, local_file_path: str, remote_file_path: str
-    ) -> None:
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True)
+    def _upload_file(self, local_file_path: str, remote_file_path: str) -> None:
         with open(local_file_path, "rb") as f:
             url = urljoin(
                 base=self._settings.files_base_url,
@@ -174,7 +178,10 @@ class AskUIHub:
         for root, _, files in os.walk(local_dir_path):
             for file in files:
                 file_path = os.path.join(root, file)
-                relative_file_path = os.path.relpath(file_path, start=local_dir_path, )
+                relative_file_path = os.path.relpath(
+                    file_path,
+                    start=local_dir_path,
+                )
                 remote_file_path = (
                     remote_dir_path
                     + ("/" if remote_dir_path != "" else "")
@@ -187,14 +194,12 @@ class AskUIHub:
         if os.path.isdir(local_path):
             self._upload_dir(local_path, r_dir_path)
         else:
-            self._upload_file(local_path, f"{r_dir_path}/{os.path.basename(local_path)}")
+            self._upload_file(
+                local_path, f"{r_dir_path}/{os.path.basename(local_path)}"
+            )
 
-    @retry(
-        stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True
-    )
-    def _download_file(
-        self, url: str, local_file_path: str
-    ) -> None: 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True)
+    def _download_file(self, url: str, local_file_path: str) -> None:
         response = requests.get(
             url,
             headers={"Authorization": self._settings.authorization_header_value},
@@ -216,7 +221,11 @@ class AskUIHub:
         if continuation_token is not None:
             params["continuation_token"] = continuation_token
         list_url = f"{self._settings.files_base_url}?{urlencode(params)}"
-        response = requests.get(list_url, headers={"Authorization": self._settings.authorization_header_value}, timeout=REQUEST_TIMEOUT_IN_S)
+        response = requests.get(
+            list_url,
+            headers={"Authorization": self._settings.authorization_header_value},
+            timeout=REQUEST_TIMEOUT_IN_S,
+        )
         if response.status_code != 200:
             response.raise_for_status()
         return FilesListResponseDto(**response.json())
@@ -226,10 +235,10 @@ class AskUIHub:
         prefix = remote_path.lstrip("/")
         while True:
             list_objects_response = self._list_objects(prefix, continuation_token)
-            for content in list_objects_response.data:    
-                if prefix == content.path: # is a file
+            for content in list_objects_response.data:
+                if prefix == content.path:  # is a file
                     relative_remote_path = content.name
-                else: # is a prefix, e.g., folder
+                else:  # is a prefix, e.g., folder
                     relative_remote_path = content.path[len(prefix) :].lstrip("/")
                 local_file_path = os.path.join(
                     local_dir_path, *relative_remote_path.split("/")

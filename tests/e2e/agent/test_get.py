@@ -1,9 +1,10 @@
 from typing import Literal
+
 import pytest
 from PIL import Image as PILImage
+
+from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
-from askui import VisionAgent
-from askui import ResponseSchemaBase
 
 
 class UrlResponse(ResponseSchemaBase):
@@ -33,7 +34,9 @@ def test_get(
     assert url in ["github.com/login", "https://github.com/login"]
 
 
-@pytest.mark.skip("Skip for now as this pops up in our observability systems as a false positive")
+@pytest.mark.skip(
+    "Skip for now as this pops up in our observability systems as a false positive"
+)
 def test_get_with_response_schema_without_additional_properties_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -47,7 +50,9 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
         )
 
 
-@pytest.mark.skip("Skip for now as this pops up in our observability systems as a false positive")
+@pytest.mark.skip(
+    "Skip for now as this pops up in our observability systems as a false positive"
+)
 def test_get_with_response_schema_without_required_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -91,7 +96,9 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
 
 
 @pytest.mark.parametrize("model", [ModelName.ASKUI])
-@pytest.mark.skip("Skip as there is currently a bug on the api side not supporting definitions used for nested schemas")
+@pytest.mark.skip(
+    "Skip as there is currently a bug on the api side not supporting definitions used for nested schemas"
+)
 def test_get_with_nested_and_inherited_response_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -188,7 +195,7 @@ def test_get_returns_str_when_no_schema_specified(
 
 class Basis(ResponseSchemaBase):
     answer: str
-    
+
 
 @pytest.mark.parametrize("model", [ModelName.ASKUI])
 def test_get_with_basis_schema(
@@ -203,4 +210,4 @@ def test_get_with_basis_schema(
         model=model,
     )
     assert isinstance(response, Basis)
-    assert response.answer != "\"What is the display showing?\""
+    assert response.answer != '"What is the display showing?"'

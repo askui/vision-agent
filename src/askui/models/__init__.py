@@ -1,4 +1,4 @@
-from .models import ModelName, ModelComposition, ModelDefinition
+from .models import ModelComposition, ModelDefinition, ModelName
 
 __all__ = [
     "ModelName",

@@ -23,7 +23,7 @@ class BaseAnthropicTool(metaclass=ABCMeta):
 @dataclass(kw_only=True, frozen=True)
 class ToolResult:
     """Represents the result of a tool execution.
-    
+
     Args:
         output (str | None, optional): The output of the tool.
         error (str | None, optional): The error message of the tool.
@@ -71,7 +71,7 @@ class ToolFailure(ToolResult):
 
 class ToolError(Exception):
     """Raised when a tool encounters an error.
-    
+
     Args:
         message (str): The error message.
         result (ToolResult): The ToolResult that caused the error.

@@ -1,8 +1,9 @@
-from enum import Enum
 import re
-from typing import Annotated
-from pydantic import BaseModel, ConfigDict, Field, RootModel
 from collections.abc import Iterator
+from enum import Enum
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class ModelName(str, Enum):

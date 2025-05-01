@@ -1,5 +1,5 @@
-import sys
 import platform
+import sys
 from datetime import datetime
 from typing import Any, cast
 
@@ -20,13 +20,12 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
+from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 
-from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...logger import logger
+from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...utils.str_utils import truncate_long_strings
-from askui.reporting import Reporter
-
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
@@ -159,8 +158,8 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
 * When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
 * When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
-* Valid keyboard keys available are {', '.join(PC_KEY)}
-* The current date is {datetime.today().strftime('%A, %B %d, %Y').replace(' 0', ' ')}.
+* Valid keyboard keys available are {", ".join(PC_KEY)}
+* The current date is {datetime.today().strftime("%A, %B %d, %Y").replace(" 0", " ")}.
 </SYSTEM_CAPABILITY>
 
 <IMPORTANT>
@@ -227,7 +226,7 @@ class ClaudeComputerAgent:
             if content_block["type"] == "tool_use":
                 result = self.tool_collection.run(
                     name=content_block["name"],
-                    tool_input=cast(dict[str, Any], content_block["input"]),
+                    tool_input=cast("dict[str, Any]", content_block["input"]),
                 )
                 tool_result_content.append(
                     self._make_api_tool_result(result, content_block["id"])
@@ -260,7 +259,7 @@ class ClaudeComputerAgent:
             return messages
 
         tool_result_blocks = cast(
-            list[BetaToolResultBlockParam],
+            "list[BetaToolResultBlockParam]",
             [
                 item
                 for message in messages
@@ -300,7 +299,7 @@ class ClaudeComputerAgent:
             if isinstance(block, BetaTextBlock):
                 res.append({"type": "text", "text": block.text})
             else:
-                res.append(cast(BetaToolUseBlockParam, block.model_dump()))
+                res.append(cast("BetaToolUseBlockParam", block.model_dump()))
         return res
 
     @staticmethod
@@ -335,7 +334,9 @@ class ClaudeComputerAgent:
         is_error = False
         if result.error:
             is_error = True
-            tool_result_content = self._maybe_prepend_system_tool_result(result, result.error)
+            tool_result_content = self._maybe_prepend_system_tool_result(
+                result, result.error
+            )
         else:
             assert isinstance(tool_result_content, list)
             if result.output:

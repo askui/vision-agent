@@ -1,22 +1,21 @@
-from random import randint
-from PIL import Image, ImageDraw
-from typing import Union
-from typing_extensions import override, TypedDict
-import streamlit as st
-from askui import VisionAgent
+import glob
+import json
 import logging
+import os
+import re
+from datetime import datetime
+from random import randint
+from typing import Union
+
+import streamlit as st
+from PIL import Image, ImageDraw
+from typing_extensions import TypedDict, override
+
+from askui import VisionAgent
 from askui.chat.click_recorder import ClickRecorder
 from askui.models import ModelName
 from askui.reporting import Reporter
-from askui.utils.image_utils import base64_to_image
-import json
-from datetime import datetime
-import os
-import glob
-import re
-
-from askui.utils.image_utils import draw_point_on_image
-
+from askui.utils.image_utils import base64_to_image, draw_point_on_image
 
 st.set_page_config(
     page_title="Vision Agent Chat",
@@ -70,13 +69,22 @@ def write_message(
     role: str,
     content: str | dict | list,
     timestamp: str,
-    image: Image.Image | str | list[str | Image.Image] | list[str] | list[Image.Image] | None = None,
+    image: Image.Image
+    | str
+    | list[str | Image.Image]
+    | list[str]
+    | list[Image.Image]
+    | None = None,
 ):
     _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
     avatar = None if _role != UNKNOWN_ROLE else "❔"
     with st.chat_message(_role, avatar=avatar):
         st.markdown(f"*{timestamp}* - **{role}**\n\n")
-        st.markdown(json.dumps(content, indent=2) if isinstance(content, (dict, list)) else content)
+        st.markdown(
+            json.dumps(content, indent=2)
+            if isinstance(content, (dict, list))
+            else content
+        )
         if image:
             if isinstance(image, list):
                 for img in image:
@@ -106,7 +114,12 @@ class ChatHistoryAppender(Reporter):
         self._session_id = session_id
 
     @override
-    def add_message(self, role: str, content: Union[str, dict, list], image: Image.Image | list[Image.Image] | None = None) -> None:
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict, list],
+        image: Image.Image | list[Image.Image] | None = None,
+    ) -> None:
         image_paths: list[str] = []
         if image is None:
             _images = []
@@ -202,7 +215,7 @@ def rerun():
                     if message.get("content") == "screenshot()":
                         screenshot = get_image(message["image"])
                         continue
-                    elif message.get("content"):
+                    if message.get("content"):
                         if match := re.match(
                             r"mouse\((\d+),\s*(\d+)\)", message["content"]
                         ):

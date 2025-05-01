@@ -29,6 +29,6 @@ class ToolCollection:
         if not tool:
             return ToolFailure(error=f"Tool {name} is invalid")
         try:
-            return cast(ToolResult, tool(**tool_input))
+            return cast("ToolResult", tool(**tool_input))
         except ToolError as e:
             return ToolFailure(error=e.message)

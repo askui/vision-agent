@@ -1,10 +1,12 @@
+from pathlib import Path
+
 import pytest
+
 from askui.reporting import CompositeReporter
 from askui.tools.askui.askui_controller import (
     AskUiControllerClient,
     AskUiControllerServer,
 )
-from pathlib import Path
 
 
 @pytest.fixture
@@ -13,7 +15,9 @@ def controller_server() -> AskUiControllerServer:
 
 
 @pytest.fixture
-def controller_client(controller_server: AskUiControllerServer) -> AskUiControllerClient:
+def controller_client(
+    controller_server: AskUiControllerServer,
+) -> AskUiControllerClient:
     return AskUiControllerClient(
         reporter=CompositeReporter(),
         display=1,
