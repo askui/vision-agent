@@ -1,8 +1,9 @@
-from typing import Literal, TypedDict
+from typing import Literal, TypedDict, Any
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
 
 from ...utils.image_utils import image_to_base64, scale_coordinates_back, scale_image_with_padding
+from ...tools.agent_os import AgentOs
 
 from .base import BaseAnthropicTool, ToolError, ToolResult
 
@@ -90,17 +91,15 @@ class ComputerTool(BaseAnthropicTool):
 
     @property
     def options(self) -> ComputerToolOptions:
-        width = self.width
-        height = self.height
         return {
-            "display_width_px": width,
-            "display_height_px": height,
+            "display_width_px": self.width,
+            "display_height_px": self.height,
         }
 
     def to_params(self) -> BetaToolComputerUse20241022Param:
         return {"name": self.name, "type": self.api_type, **self.options}
 
-    def __init__(self, controller_client):
+    def __init__(self, controller_client: AgentOs) -> None:
         super().__init__()
         self.controller_client = controller_client
 
@@ -116,8 +115,8 @@ class ComputerTool(BaseAnthropicTool):
         action: Action | None = None,
         text: str | None = None,
         coordinate: tuple[int, int] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> ToolResult:
         if action is None:
             raise ToolError("Action is missing")
         
@@ -197,7 +196,7 @@ class ComputerTool(BaseAnthropicTool):
 
         raise ToolError(f"Invalid action: {action}")
 
-    def screenshot(self):
+    def screenshot(self) -> ToolResult:
         """Take a screenshot of the current screen, scale it and return the base64 encoded image."""
         screenshot = self.controller_client.screenshot()
         self.real_screen_width = screenshot.width

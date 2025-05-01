@@ -1,9 +1,10 @@
+from typing import Any
 import pytest
 
 from askui.telemetry import InMemoryProcessor, Telemetry, TelemetrySettings
 
 
-def test_telemetry_disabled():
+def test_telemetry_disabled() -> None:
     settings = TelemetrySettings(enabled=False)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -18,7 +19,7 @@ def test_telemetry_disabled():
     assert len(processor.get_events()) == 0
 
 
-def test_telemetry_enabled():
+def test_telemetry_enabled() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -50,7 +51,7 @@ def test_telemetry_enabled():
     assert end_event["attributes"]["duration_ms"] >= 0
 
 
-def test_telemetry_error():
+def test_telemetry_error() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -83,7 +84,7 @@ def test_telemetry_error():
     assert error_event["attributes"]["duration_ms"] >= 0
 
 
-def test_multiple_processors():
+def test_multiple_processors() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor1 = InMemoryProcessor()
@@ -115,7 +116,7 @@ def test_multiple_processors():
         assert e1["timestamp"] <= e2["timestamp"]
 
 
-def test_function_tracking():
+def test_function_tracking() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -134,7 +135,7 @@ def test_function_tracking():
     assert events[1]["attributes"]["fn_name"].endswith("standalone_function")
 
 
-def test_instance_method_tracking():
+def test_instance_method_tracking() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -155,7 +156,7 @@ def test_instance_method_tracking():
     assert events[1]["attributes"]["fn_name"].endswith("TestClass.instance_method")
 
 
-def test_class_method_tracking():
+def test_class_method_tracking() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -176,7 +177,7 @@ def test_class_method_tracking():
     assert events[1]["attributes"]["fn_name"].endswith("TestClass.class_method")
 
 
-def test_static_method_tracking():
+def test_static_method_tracking() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -197,7 +198,7 @@ def test_static_method_tracking():
     assert events[1]["attributes"]["fn_name"].endswith("TestClass.static_method")
 
 
-def test_nested_class_tracking():
+def test_nested_class_tracking() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -218,7 +219,7 @@ def test_nested_class_tracking():
     assert events[1]["attributes"]["fn_name"].endswith("Outer.Inner.nested_method")
 
 
-def test_exclude_parameter():
+def test_exclude_parameter() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -246,14 +247,14 @@ def test_exclude_parameter():
     assert end_event["attributes"]["args"][2] == "masked"
 
 
-def test_exclude_kwargs():
+def test_exclude_kwargs() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
     telemetry.add_processor(processor)
 
     @telemetry.record_call(exclude={"password", "token"}, exclude_first_arg=False, exclude_start=False)
-    def sensitive_function(username: str, **kwargs) -> str:
+    def sensitive_function(username: str, **kwargs: Any) -> str:
         return f"User: {username}"
 
     result = sensitive_function("test_user", password="secret_password", token="private_token", visible="ok")
@@ -270,7 +271,7 @@ def test_exclude_kwargs():
     assert start_event["attributes"]["kwargs"]["visible"] == "ok"
 
 
-def test_include_first_arg_function():
+def test_include_first_arg_function() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -291,7 +292,7 @@ def test_include_first_arg_function():
     assert events[1]["attributes"]["args"] == ("one", "two")
 
 
-def test_include_first_arg_method():
+def test_include_first_arg_method() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -318,7 +319,7 @@ def test_include_first_arg_method():
     # Can't directly check self, but we can check it's not removed
 
 
-def test_default_exclude_self_method():
+def test_default_exclude_self_method() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -344,7 +345,7 @@ def test_default_exclude_self_method():
     assert events[1]["attributes"]["args"] == ("param",)
 
 
-def test_combined_exclude_and_include_first_arg():
+def test_combined_exclude_and_include_first_arg() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -372,7 +373,7 @@ def test_combined_exclude_and_include_first_arg():
     assert events[1]["attributes"]["args"][2] == "masked"
 
 
-def test_static_method_with_include_first_arg():
+def test_static_method_with_include_first_arg() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -396,7 +397,7 @@ def test_static_method_with_include_first_arg():
 
 
 # Tests for new parameters
-def test_exclude_response():
+def test_exclude_response() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -417,7 +418,7 @@ def test_exclude_response():
     assert "response" not in end_event["attributes"]
 
 
-def test_include_response():
+def test_include_response() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -439,7 +440,7 @@ def test_include_response():
     assert end_event["attributes"]["response"] == 10
 
 
-def test_exclude_exception():
+def test_exclude_exception() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -460,7 +461,7 @@ def test_exclude_exception():
     assert "exception" not in end_event["attributes"]
 
 
-def test_include_exception():
+def test_include_exception() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -483,7 +484,7 @@ def test_include_exception():
     assert end_event["attributes"]["exception"]["message"] == "Test error"
 
 
-def test_exclude_start():
+def test_exclude_start() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -504,7 +505,7 @@ def test_exclude_start():
     assert end_event["name"] == "Function called"
 
 
-def test_include_start():
+def test_include_start() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()
@@ -527,7 +528,7 @@ def test_include_start():
     assert end_event["name"] == "Function called"
 
 
-def test_all_new_parameters_together():
+def test_all_new_parameters_together() -> None:
     settings = TelemetrySettings(enabled=True)
     telemetry = Telemetry(settings)
     processor = InMemoryProcessor()

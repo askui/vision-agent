@@ -1,8 +1,8 @@
-from collections.abc import Iterator
 from enum import Enum
 import re
 from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, RootModel
+from collections.abc import Iterator
 
 
 class ModelName(str, Enum):
@@ -89,7 +89,7 @@ class ModelComposition(RootModel[list[ModelDefinition]]):
     A composition of models (list of `ModelDefinition`) to be used for a task, e.g., locating an element on the screen to be able to click on it or extracting text from an image.
     """
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ModelDefinition]:  # type: ignore
         return iter(self.root)
 
     def __getitem__(self, index: int) -> ModelDefinition:

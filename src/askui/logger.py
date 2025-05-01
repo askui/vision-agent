@@ -11,11 +11,11 @@ if not logger.hasHandlers():
     logger.setLevel(logging.INFO)
 
 
-def configure_logging(level: str | int = logging.INFO):
+def configure_logging(level: str | int = logging.INFO) -> None:
     logger.setLevel(level)
 
 
-def add_file_log(path: str = "./"):
+def add_file_log(path: str = "./") -> None:
     file_handler = logging.FileHandler(Path(path, "vision_agent.log"))
     file_formatter = logging.Formatter("%(message)s")
     file_handler.setFormatter(file_formatter)

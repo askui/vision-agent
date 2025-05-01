@@ -86,7 +86,7 @@ EXTRACT_DATA_REQUEST_TIMEOUT_IN_S=300.0
 
 
 class AskUIHub:
-    def __init__(self):
+    def __init__(self) -> None:
         self._settings = AskUIHubSettings()
         self.disabled = False
         if not self._settings.authenticated:
@@ -129,13 +129,15 @@ class AskUIHub:
             AgentExecutionStateDeliveredToDestinationInput,
         ],
     ) -> AgentExecution:
-        command = AgentExecutionUpdateCommand(state=State1(state.model_dump()))  # type: ignore
+        command = AgentExecutionUpdateCommand(state=State1(state.model_dump()))
         return self._agent_executions_api.update_agent_execution_api_v1_agent_executions_agent_execution_id_patch(
             agent_execution_id=str(agent_execution_id),
             agent_execution_update_command=command,
         )
 
     def schedule_run(self, command: ScheduleRunCommand) -> ScheduleRunResponse:
+        if self._settings.workspace_id is None:
+            raise ValueError("`ASKUI_WORKSPACE_ID` environment variable is not set")
         return self._schedules_api.create_schedule_api_v1_workspaces_workspace_id_schedules_post(
             workspace_id=self._settings.workspace_id,
             create_schedule_request_dto=command,
@@ -161,7 +163,7 @@ class AskUIHub:
             with requests.put(
                 url,
                 files={"file": f},
-                headers=self._settings.authorization_header_value,
+                headers={"Authorization": self._settings.authorization_header_value},
                 timeout=UPLOAD_REQUEST_TIMEOUT_IN_S,
                 stream=True,
             ) as response:
@@ -195,7 +197,7 @@ class AskUIHub:
     ) -> None: 
         response = requests.get(
             url,
-            headers=self._settings.authorization_header_value,
+            headers={"Authorization": self._settings.authorization_header_value},
             timeout=REQUEST_TIMEOUT_IN_S,
             stream=True,
         )
@@ -214,7 +216,7 @@ class AskUIHub:
         if continuation_token is not None:
             params["continuation_token"] = continuation_token
         list_url = f"{self._settings.files_base_url}?{urlencode(params)}"
-        response = requests.get(list_url, headers=self._settings.authorization_header_value, timeout=REQUEST_TIMEOUT_IN_S)
+        response = requests.get(list_url, headers={"Authorization": self._settings.authorization_header_value}, timeout=REQUEST_TIMEOUT_IN_S)
         if response.status_code != 200:
             response.raise_for_status()
         return FilesListResponseDto(**response.json())

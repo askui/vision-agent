@@ -19,6 +19,10 @@ class TestDescriptionLocator:
         with pytest.raises(ValueError):
             Prompt()  # type: ignore
 
+    def test_initialization_with_empty_description_raises(self) -> None:
+        with pytest.raises(ValueError):
+            Prompt("")
+
     def test_initialization_with_positional_arg(self) -> None:
         desc = Prompt("test")
         assert desc._prompt == "test"
@@ -145,7 +149,7 @@ class TestImageLocator:
 
     def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
         with pytest.raises(ValueError):
-            Image(image="not_an_image")  # type: ignore
+            Image(image="not_an_image")
 
         with pytest.raises(ValueError):
             Image(image=test_image, threshold=-0.1)
@@ -233,4 +237,4 @@ class TestAiElementLocator:
             AiElement(name="test", mask=[(0, 0), (1)])  # type: ignore
 
         with pytest.raises(ValueError):
-            AiElement(name="test", mask=[(0, 0)])  # type: ignore
+            AiElement(name="test", mask=[(0, 0)])

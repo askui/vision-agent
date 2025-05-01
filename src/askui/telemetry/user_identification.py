@@ -1,6 +1,9 @@
 import base64
 from functools import cached_property
 import os
+import types
+from typing import Type, cast
+from typing_extensions import Self
 import httpx
 from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from askui.logger import logger
@@ -40,10 +43,15 @@ class UserIdentification:
 
         self._client = httpx.Client(timeout=30.0)
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
         self._client.close()
 
     def get_user_id(self) -> str | None:
@@ -63,7 +71,7 @@ class UserIdentification:
                 }
             )
             response.raise_for_status()
-            return response.json()["data"][0]["user"]["id"]
+            return cast(str | None, response.json().get("data", [{}])[0].get("user", {}).get("id"))
         except httpx.HTTPError as e:
             logger.debug(f"Failed to identify user: {e}")
         except Exception as e:

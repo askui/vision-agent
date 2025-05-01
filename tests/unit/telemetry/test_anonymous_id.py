@@ -1,3 +1,4 @@
+from collections.abc import Generator
 import uuid
 
 import pytest
@@ -8,7 +9,7 @@ import machineid
 
 
 @pytest.fixture(autouse=True)
-def reset_caches():
+def reset_caches() -> Generator[None, None, None]:
     """Reset the module-level caches before each test."""
     import askui.telemetry.anonymous_id
     import askui.telemetry.device_id
@@ -19,7 +20,7 @@ def reset_caches():
     askui.telemetry.device_id._device_id = None
 
 
-def test_get_anonymous_id_returns_cached_id():
+def test_get_anonymous_id_returns_cached_id() -> None:
     # First call to get_anonymous_id will set the cache
     first_id = get_anonymous_id()
     
@@ -28,7 +29,7 @@ def test_get_anonymous_id_returns_cached_id():
     assert first_id == second_id
 
 
-def test_get_anonymous_id_uses_device_id_when_available(mocker: MockerFixture):
+def test_get_anonymous_id_uses_device_id_when_available(mocker: MockerFixture) -> None:
     test_device_id = "test-device-id"
     expected_anonymous_id = "7c810ac9-d1be-4620-a665-95f9554920ec"
     
@@ -44,7 +45,7 @@ def test_get_anonymous_id_uses_device_id_when_available(mocker: MockerFixture):
     mock_write.assert_called_once_with(expected_anonymous_id)
 
 
-def test_get_anonymous_id_uses_random_uuid_when_device_id_unavailable(mocker: MockerFixture):
+def test_get_anonymous_id_uses_random_uuid_when_device_id_unavailable(mocker: MockerFixture) -> None:
     test_id = "1c9cb557-1c83-45b0-8aa8-6938c84d5893"
     
     mocker.patch("askui.telemetry.anonymous_id._read_anonymous_id_from_file", return_value=None)
@@ -59,7 +60,7 @@ def test_get_anonymous_id_uses_random_uuid_when_device_id_unavailable(mocker: Mo
     mock_write.assert_called_once_with(test_id)
 
 
-def test_get_anonymous_id_reads_from_file(mocker: MockerFixture):
+def test_get_anonymous_id_reads_from_file(mocker: MockerFixture) -> None:
     test_id = "1c9cb557-1c83-45b0-8aa8-6938c84d5893"
     mocker.patch("askui.telemetry.anonymous_id._read_anonymous_id_from_file", return_value=test_id)
     mocker.patch("askui.telemetry.utils.is_valid_uuid4", return_value=True)
@@ -68,7 +69,7 @@ def test_get_anonymous_id_reads_from_file(mocker: MockerFixture):
     assert anonymous_id == test_id
 
 
-def test_get_anonymous_id_writes_to_file(mocker: MockerFixture):
+def test_get_anonymous_id_writes_to_file(mocker: MockerFixture) -> None:
     test_id = "1c9cb557-1c83-45b0-8aa8-6938c84d5893"
     
     mocker.patch("askui.telemetry.anonymous_id._read_anonymous_id_from_file", return_value=None)

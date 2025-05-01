@@ -13,6 +13,7 @@
 
 
 import datetime
+import types
 from dateutil.parser import parse
 from enum import Enum
 import json
@@ -22,7 +23,7 @@ import re
 import tempfile
 
 from urllib.parse import quote
-from typing import Tuple, Optional, List, Dict, Union
+from typing import Tuple, Optional, List, Dict, Type, Union
 from pydantic import SecretStr
 
 from askui.tools.askui.askui_workspaces.configuration import Configuration
@@ -94,7 +95,12 @@ class ApiClient:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
         pass
 
     @property

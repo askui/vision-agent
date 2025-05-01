@@ -1,7 +1,8 @@
 from datetime import datetime
+import json
 import os
 import pathlib
-from typing import List, Optional
+from typing import List, Optional, TypedDict, Any
 from pydantic import UUID4, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 from PIL import Image
@@ -12,7 +13,7 @@ from askui.logger import logger
 class Rectangle(BaseModel):
     xmin: int
     ymin: int
-    ymax: int
+    xmax: int
     ymax: int
 
 class Annotation(BaseModel):
@@ -29,7 +30,6 @@ class AskUIImageMetadata(BaseModel):
 class AiElementMetadata(BaseModel):    
     model_config = ConfigDict(
         alias_generator=to_camel,
-        serialization_alias=to_camel,
     )
 
     version: int
@@ -38,27 +38,27 @@ class AiElementMetadata(BaseModel):
     creation_date_time: datetime
     image_metadata: AskUIImageMetadata = Field(alias="image")
 
-class AiElement():
-    image_path: pathlib.Path
+class AiElement(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        arbitrary_types_allowed=True,
+        populate_by_name=True,
+    )
+
     image: Image.Image
+    image_path: pathlib.Path
     json_path: pathlib.Path
     metadata: AiElementMetadata
 
-    def __init__(self, image_path: pathlib.Path, image: Image.Image, metadata_path: pathlib.Path, metadata: AiElementMetadata):
-        self.image_path = image_path
-        self.image = image
-        self.metadata_path = metadata_path
-        self.metadata = metadata
-
     @classmethod
     def from_json_file(cls, json_file_path: pathlib.Path) -> "AiElement":
-            image_path = json_file_path.parent /  (json_file_path.stem + ".png")
-            with open(json_file_path) as f:
-                return cls(
-                    metadata_path= json_file_path,
-                    image_path= image_path,
-                    metadata = AiElementMetadata.model_validate_json(f.read()),
-                    image = Image.open(image_path))
+        image_path = json_file_path.parent /  (json_file_path.stem + ".png")
+        return cls(
+            image=Image.open(image_path),
+            image_path=image_path,
+            json_path=json_file_path,
+            metadata=json.loads(json_file_path.read_text()),
+        )
 
 
 class AiElementNotFound(ValueError):

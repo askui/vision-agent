@@ -1,4 +1,5 @@
 import pathlib
+from typing import cast
 
 import pytest
 from PIL import Image
@@ -29,7 +30,7 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
     """Fixture providing a mock agent os."""
     mock = mocker.MagicMock(spec=AgentOs)
     mock.screenshot.return_value = Image.new('RGB', (100, 100), color='white')
-    return mock
+    return cast(AgentOs, mock)
 
 @pytest.fixture
 def agent_toolbox_mock(agent_os_mock: AgentOs) -> AgentToolbox:
@@ -42,4 +43,4 @@ def model_router_mock(mocker: MockerFixture) -> ModelRouter:
     mock = mocker.MagicMock(spec=ModelRouter)
     mock.locate.return_value = (100, 100)  # Return fixed point for all locate calls
     mock.get_inference.return_value = "Mock response"  # Return fixed response for all get_inference calls
-    return mock
+    return cast(ModelRouter, mock)

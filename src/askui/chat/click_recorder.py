@@ -62,8 +62,8 @@ class AskUiSnippingTool():
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/DependencyCache/AskUIRemoteDeviceSnippingTool-0.2.0/AskuiRemoteDeviceSnippingTool"
         raise NotImplementedError("Snipping tool not supported on this platform, yet, as the path was unknown at the time of writing")
     
-    def __start_process(self, binary_path, output_directory):
-            self.process = subprocess.check_output((binary_path, "-Annotate", "-OneShot", "-OutDirectory", output_directory))
+    def __start_process(self, binary_path: str, output_directory: str) -> None:
+        self.process = subprocess.check_output((binary_path, "-Annotate", "-OneShot", "-OutDirectory", output_directory))
         
     def annotate(self) -> Tuple[Image.Image, AnnoationContainer]:
         with tempfile.TemporaryDirectory() as tempdir:

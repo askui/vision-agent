@@ -1,6 +1,7 @@
 import logging
 import subprocess
-from typing import Annotated, Any, Literal, Optional, Type, overload
+import types
+from typing import Annotated, Literal, Optional, Type, overload
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
@@ -113,7 +114,7 @@ class VisionAgent:
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model or self._model)
-        self.tools.agent_os.click(button, repeat) # type: ignore
+        self.tools.agent_os.click(button, repeat)
     
     def _locate(self, locator: str | Locator, screenshot: Optional[Img] = None, model: ModelComposition | str | None = None) -> Point:
         _screenshot = ImageSource(self.tools.agent_os.screenshot() if screenshot is None else screenshot)
@@ -154,7 +155,7 @@ class VisionAgent:
 
     def _mouse_move(self, locator: str | Locator, model: ModelComposition | str | None = None) -> None:
         point = self._locate(locator=locator, model=model or self._model)
-        self.tools.agent_os.mouse(point[0], point[1]) # type: ignore
+        self.tools.agent_os.mouse(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -242,23 +243,23 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.tools.agent_os.type(text) # type: ignore
+        self.tools.agent_os.type(text)
 
 
     @overload
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
-        response_schema: None = None,
         image: Optional[Img] = None,
+        response_schema: None = None,
         model: ModelComposition | str | None = None,
     ) -> str: ...
     @overload
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
+        image: Optional[Img],
         response_schema: Type[ResponseSchema],
-        image: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> ResponseSchema: ...
 
@@ -328,7 +329,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.tools.agent_os.screenshot() if image is None else image) # type: ignore
+        _image = ImageSource(self.tools.agent_os.screenshot() if image is None else image)
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
         response = self.model_router.get_inference(
             image=_image,
@@ -474,7 +475,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.agent_os.keyboard_tap(key, modifier_keys)  # type: ignore
+        self.tools.agent_os.keyboard_tap(key, modifier_keys)
 
     @telemetry.record_call(exclude={"command"})
     @validate_call
@@ -521,8 +522,8 @@ class VisionAgent:
     @telemetry.record_call(exclude={"exc_value", "traceback"})
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[Any],
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
     ) -> None:
         self.close()

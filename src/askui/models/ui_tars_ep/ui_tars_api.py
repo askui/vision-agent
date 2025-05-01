@@ -3,6 +3,7 @@ import os
 import pathlib
 from typing import Any, Union
 from openai import OpenAI
+from askui.exceptions import NoResponseToQueryError
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.utils.image_utils import image_to_base64
@@ -15,7 +16,7 @@ import time
 
 
 class UITarsAPIHandler:
-    def __init__(self, agent_os: AgentOs, reporter: Reporter):
+    def __init__(self, agent_os: AgentOs, reporter: Reporter) -> None:
         self._agent_os = agent_os
         self._reporter = reporter
         if os.getenv("TARS_URL") is None or os.getenv("TARS_API_KEY") is None:
@@ -27,7 +28,7 @@ class UITarsAPIHandler:
                 api_key=os.getenv("TARS_API_KEY")
             )
 
-    def _predict(self, image_url: str, instruction: str, prompt: str) -> Any:
+    def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
         chat_completion = self.client.chat.completions.create(
         model="tgi",
         messages=[
@@ -79,11 +80,14 @@ class UITarsAPIHandler:
         return None, None
 
     def get_inference(self, image: ImageSource, query: str) -> str:
-        return self._predict(
+        response = self._predict(
             image_url=image.to_data_url(),
             instruction=query,
             prompt=PROMPT_QA,
         )
+        if response is None:
+            raise NoResponseToQueryError(f"No response from UI-TARS to query: {query}", query)
+        return response
 
     def act(self, goal: str) -> None:
         screenshot = self._agent_os.screenshot()
@@ -106,7 +110,7 @@ class UITarsAPIHandler:
         ]
         self.execute_act(self.act_history)
 
-    def add_screenshot_to_history(self, message_history):
+    def add_screenshot_to_history(self, message_history: list[dict[str, Any]]) -> None:
         screenshot = self._agent_os.screenshot()
         message_history.append(
             {
@@ -122,7 +126,7 @@ class UITarsAPIHandler:
             }
         )
 
-    def filter_message_thread(self, message_history, max_screenshots=3):
+    def filter_message_thread(self, message_history: list[dict[str, Any]], max_screenshots: int = 3) -> list[dict[str, Any]]:
         """
         Filter message history to keep only the last n screenshots while preserving all text content.
         
@@ -132,7 +136,7 @@ class UITarsAPIHandler:
         """
         # Count screenshots from the end to keep track of the most recent ones
         screenshot_count = 0
-        filtered_messages = []
+        filtered_messages: list[dict[str, Any]] = []
         
         # Iterate through messages in reverse to keep the most recent screenshots
         for message in reversed(message_history):
@@ -161,7 +165,7 @@ class UITarsAPIHandler:
                 
         return filtered_messages
 
-    def execute_act(self, message_history):
+    def execute_act(self, message_history: list[dict[str, Any]]) -> None:
         message_history = self.filter_message_thread(message_history)
         
         chat_completion = self.client.chat.completions.create(
@@ -222,3 +226,6 @@ class UITarsAPIHandler:
 
         self.add_screenshot_to_history(message_history)
         self.execute_act(message_history)
+
+    def _filter_messages(self, messages: list[UITarsEPMessage], max_messages: int) -> list[UITarsEPMessage]:
+        return messages[-max_messages:]

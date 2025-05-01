@@ -4,7 +4,7 @@ import random
 from jinja2 import Template
 from datetime import datetime
 from typing import List, Dict, Optional, Union
-from typing_extensions import override
+from typing_extensions import TypedDict, override
 import platform
 import sys
 from importlib.metadata import distributions
@@ -77,6 +77,12 @@ class CompositeReporter(Reporter):
             report.generate()
 
 
+class SystemInfo(TypedDict):
+    platform: str
+    python_version: str
+    packages: list[str]
+
+
 class SimpleHtmlReporter(Reporter):
     """A reporter that generates HTML reports with conversation logs and system information.
     
@@ -90,7 +96,7 @@ class SimpleHtmlReporter(Reporter):
         self.messages: List[Dict] = []
         self.system_info = self._collect_system_info()
 
-    def _collect_system_info(self) -> Dict[str, str]:
+    def _collect_system_info(self) -> SystemInfo:
         """Collect system and Python information"""
         return {
             "platform": platform.platform(),

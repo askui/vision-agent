@@ -9,7 +9,7 @@ class BaseAnthropicTool(metaclass=ABCMeta):
     """Abstract base class for Anthropic-defined tools."""
 
     @abstractmethod
-    def __call__(self, **kwargs) -> Any:
+    def __call__(self, **kwargs: Any) -> Any:
         """Executes the tool with the given arguments."""
         ...
 
@@ -36,13 +36,13 @@ class ToolResult:
     base64_image: str | None = None
     system: str | None = None
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any(getattr(self, field.name) for field in fields(self))
 
-    def __add__(self, other: "ToolResult"):
+    def __add__(self, other: "ToolResult") -> "ToolResult":
         def combine_fields(
             field: str | None, other_field: str | None, concatenate: bool = True
-        ):
+        ) -> str | None:
             if field and other_field:
                 if concatenate:
                     return field + other_field
@@ -56,7 +56,7 @@ class ToolResult:
             system=combine_fields(self.system, other.system),
         )
 
-    def replace(self, **kwargs):
+    def replace(self, **kwargs: Any) -> "ToolResult":
         """Returns a new ToolResult with the given fields replaced."""
         return replace(self, **kwargs)
 

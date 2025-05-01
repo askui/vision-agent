@@ -1,5 +1,6 @@
 import pathlib
-from typing import Literal
+import types
+from typing import Literal, Type
 from typing_extensions import Self, override
 import grpc
 import os
@@ -61,8 +62,8 @@ class AskUiControllerServer:
     Handles process discovery, startup, and shutdown for the native controller binary.
     """
     def __init__(self) -> None:
-        self._process = None
-        self._settings = AskUiControllerSettings()  # type: ignore
+        self._process: subprocess.Popen[bytes] | None = None
+        self._settings = AskUiControllerSettings()
 
     def _find_remote_device_controller(self) -> pathlib.Path:
         if self._settings.installation_directory is not None and self._settings.component_registry_file is None:
@@ -93,8 +94,8 @@ class AskUiControllerServer:
             case _:
                 raise NotImplementedError(f"Platform {sys.platform} not supported by AskUI Remote Device Controller")
             
-    def __start_process(self, path):
-        self.process = subprocess.Popen(path)
+    def __start_process(self, path: pathlib.Path) -> None:
+        self._process = subprocess.Popen(path)
         wait_for_port(23000)
 
     def start(self, clean_up: bool = False) -> None:
@@ -111,7 +112,7 @@ class AskUiControllerServer:
         self.__start_process(remote_device_controller_path)
         time.sleep(0.5) # TODO Find better way to do this, e.g., waiting for something to be logged or port to be opened
 
-    def clean_up(self):
+    def clean_up(self) -> None:
         subprocess.run("taskkill.exe /IM AskUI*")
         time.sleep(0.1)
 
@@ -122,21 +123,21 @@ class AskUiControllerServer:
         Args:
             force (bool, optional): Whether to forcefully terminate the process. Defaults to `False`.
         """
-        if not hasattr(self, "process") or self.process is None:
+        if not hasattr(self, "process") or self._process is None:
             return  # Nothing to stop
 
         try:
             if force:
-                self.process.kill()
+                self._process.kill()
                 if sys.platform == "win32":
                     self.clean_up()
             else:
-                self.process.terminate()
+                self._process.terminate()
         except Exception as e:
             logger.error("Failed to stop AskUI Remote Device Controller: %s", e)
             pass
         finally:
-            self.process = None
+            self._process = None
 
 
 class AskUiControllerClient(AgentOs):
@@ -150,13 +151,13 @@ class AskUiControllerClient(AgentOs):
     """
     @telemetry.record_call(exclude={"reporter", "controller_server"})
     def __init__(self, reporter: Reporter, display: int = 1, controller_server: AskUiControllerServer | None = None) -> None:
-        self.stub = None
-        self.channel = None
-        self.session_info = None
-        self.pre_action_wait = 0
-        self.post_action_wait = 0.05
-        self.max_retries = 10
-        self.display = display
+        self._stub: controller_v1.ControllerAPIStub | None = None
+        self._channel: grpc.Channel | None = None
+        self._session_info: controller_v1_pbs.SessionInfo | None = None
+        self._pre_action_wait = 0
+        self._post_action_wait = 0.05
+        self._max_retries = 10
+        self._display = display
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
 
@@ -170,28 +171,36 @@ class AskUiControllerClient(AgentOs):
         creates a session, and sets up the initial display.
         """
         self._controller_server.start()
-        self.channel = grpc.insecure_channel('localhost:23000', options=[
+        self._channel = grpc.insecure_channel(
+            'localhost:23000', 
+            options=[
                 ('grpc.max_send_message_length', 2**30 ),
                 ('grpc.max_receive_message_length', 2**30 ),
-                ('grpc.default_deadline', 300000)])        
-        self.stub = controller_v1.ControllerAPIStub(self.channel)        
+                ('grpc.default_deadline', 300000),
+            ],
+        )        
+        self._stub = controller_v1.ControllerAPIStub(self._channel)        
         self._start_session()
         self._start_execution()
-        self.set_display(self.display)
+        self.set_display(self._display)
 
-    def _run_recorder_action(self, acion_class_id: controller_v1_pbs.ActionClassID, action_parameters: controller_v1_pbs.ActionParameters):
-        time.sleep(self.pre_action_wait)
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
-        response: controller_v1_pbs.Response_RunRecordedAction = self.stub.RunRecordedAction(controller_v1_pbs.Request_RunRecordedAction(sessionInfo=self.session_info, actionClassID=acion_class_id, actionParameters=action_parameters))
+    def _run_recorder_action(
+        self, 
+        acion_class_id: controller_v1_pbs.ActionClassID,
+        action_parameters: controller_v1_pbs.ActionParameters,
+    ) -> controller_v1_pbs.Response_RunRecordedAction:
+        time.sleep(self._pre_action_wait)
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        response: controller_v1_pbs.Response_RunRecordedAction = self._stub.RunRecordedAction(controller_v1_pbs.Request_RunRecordedAction(sessionInfo=self._session_info, actionClassID=acion_class_id, actionParameters=action_parameters))
         
         time.sleep((response.requiredMilliseconds / 1000))    
-        for num_retries in range(self.max_retries):
-            assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
-            poll_response: controller_v1_pbs.Response_Poll = self.stub.Poll(controller_v1_pbs.Request_Poll(sessionInfo=self.session_info, pollEventID=controller_v1_pbs.PollEventID.PollEventID_ActionFinished))
+        for num_retries in range(self._max_retries):
+            assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+            poll_response: controller_v1_pbs.Response_Poll = self._stub.Poll(controller_v1_pbs.Request_Poll(sessionInfo=self._session_info, pollEventID=controller_v1_pbs.PollEventID.PollEventID_ActionFinished))
             if poll_response.pollEventParameters.actionFinished.actionID == response.actionID:
                 break
-            time.sleep(self.post_action_wait)
-        if num_retries == self.max_retries - 1:
+            time.sleep(self._post_action_wait)
+        if num_retries == self._max_retries - 1:
             raise Exception("Action not yet done")
         return response
     
@@ -206,7 +215,8 @@ class AskUiControllerClient(AgentOs):
         """
         self._stop_execution()
         self._stop_session()
-        self.channel.close()
+        if self._channel is not None:
+            self._channel.close()
         self._controller_server.stop()
 
     @telemetry.record_call()
@@ -221,7 +231,12 @@ class AskUiControllerClient(AgentOs):
         return self
     
     @telemetry.record_call(exclude={"exc_value", "traceback"})
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None:
         """
         Context manager exit point that disconnects the client.
         
@@ -232,18 +247,22 @@ class AskUiControllerClient(AgentOs):
         """
         self.disconnect()
 
-    def _start_session(self):
-        response = self.stub.StartSession(controller_v1_pbs.Request_StartSession(sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True))
-        self.session_info = response.sessionInfo
+    def _start_session(self) -> None:
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        response = self._stub.StartSession(controller_v1_pbs.Request_StartSession(sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True))
+        self._session_info = response.sessionInfo
 
-    def _stop_session(self):
-        self.stub.EndSession(controller_v1_pbs.Request_EndSession(sessionInfo = self.session_info))
+    def _stop_session(self) -> None:
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._stub.EndSession(controller_v1_pbs.Request_EndSession(sessionInfo = self._session_info))
 
-    def _start_execution(self):
-        self.stub.StartExecution(controller_v1_pbs.Request_StartExecution(sessionInfo=self.session_info))        
+    def _start_execution(self) -> None:
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._stub.StartExecution(controller_v1_pbs.Request_StartExecution(sessionInfo=self._session_info))        
 
-    def _stop_execution(self):
-        self.stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self.session_info))        
+    def _stop_execution(self) -> None:
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        self._stub.StopExecution(controller_v1_pbs.Request_StopExecution(sessionInfo=self._session_info))        
 
     @telemetry.record_call()
     @override
@@ -257,8 +276,8 @@ class AskUiControllerClient(AgentOs):
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
         """
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
-        screenResponse = self.stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self.session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self.display)))        
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        screenResponse = self._stub.CaptureScreen(controller_v1_pbs.Request_CaptureScreen(sessionInfo=self._session_info, captureParameters=controller_v1_pbs.CaptureParameters(displayID=self._display)))        
         r, g, b, _ = Image.frombytes('RGBA', (screenResponse.bitmap.width, screenResponse.bitmap.height), screenResponse.bitmap.data).split()
         image = Image.merge("RGB", (b, g, r))
         self._reporter.add_message("AgentOS", "screenshot()", image)
@@ -431,7 +450,7 @@ class AskUiControllerClient(AgentOs):
         Args:
             displayNumber (int, optional): The display number to set as active. Defaults to `1`.
         """
-        assert isinstance(self.stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), "Stub is not initialized"
         self._reporter.add_message("AgentOS", f"set_display({displayNumber})")
-        self.stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
-        self.display = displayNumber
+        self._stub.SetActiveDisplay(controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber))
+        self._display = displayNumber

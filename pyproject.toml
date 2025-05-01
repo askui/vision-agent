@@ -47,8 +47,10 @@ test = "pytest -n auto"
 sort = "isort ."
 format = "black ."
 lint = "ruff check ."
-checks = {composite = ["sort . -c", "format . --check"]}
-fix = {composite = ["sort", "format", "lint"]}
+typecheck = "mypy"
+"typecheck:all" = "mypy src tests"
+checks = {composite = ["sort . -c", "format . --check", "typecheck"]}
+fix = {composite = ["sort", "format", "lint", "typecheck"]}
 chat = "streamlit run src/askui/chat/__main__.py"
 
 [dependency-groups]
@@ -60,14 +62,47 @@ test = [
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.6.1",
     "pytest-cov>=4.1.0",
+    "mypy>=1.9.0",
+    "types-requests>=2.31.0.20240311",
+    "types-python-dateutil>=2.8.19.20240106",
+    "types-Pillow>=10.2.0.20240311",
+    "types-protobuf>=4.24.0.20240311",
+    "grpc-stubs>=1.53.0.3",
+    "types-pyperclip>=1.8.2.20240311",
 ]
 chat = [
     "streamlit>=1.42.0",
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=src/askui --cov-report=term-missing --cov-report=html"
+addopts = "--cov=src/askui --cov-report=html"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_optional = true
+plugins = ["pydantic.mypy"]
+exclude = [
+    "src/askui/chat/.*",
+    "src/askui/models/ui_tars_ep/ui_tars_api.py",
+    "src/askui/tools/anthropic/computer.py",
+    "src/askui/tools/askui/askui_ui_controller_grpc/.*",
+    "src/askui/tools/askui/askui_workspaces/.*",
+]
+mypy_path = "src"
+explicit_package_bases = true
+namespace_packages = true

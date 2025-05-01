@@ -28,10 +28,11 @@ A tuple of two integers representing the coordinates of a point on the screen.
 """
 
 
-def handle_response(response: tuple[int | None, int | None], locator: str | Locator):
-    if response[0] is None or response[1] is None:
+def handle_response(response: tuple[int | None, int | None], locator: str | Locator) -> tuple[int, int]:
+    x, y = response
+    if x is None or y is None:
         raise ElementNotFoundError(f"Element not found: {locator}")
-    return response
+    return x, y
 
 
 class GroundingModelRouter(ABC):
@@ -134,11 +135,11 @@ class ModelRouter:
         self._claude_computer_agent = ClaudeComputerAgent(agent_os=tools.agent_os, reporter=_reporter)
         self._locator_serializer = VlmLocatorSerializer()
 
-    def act(self, goal: str, model: ModelComposition | str | None = None):
+    def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
         if self._tars.authenticated and model == ModelName.TARS:
-            return self._tars.act(goal)
+            self._tars.act(goal)
         if self._claude.authenticated and (model is None or isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)):
-            return self._claude_computer_agent.run(goal)
+            self._claude_computer_agent.run(goal)
         raise AutomationError(f"Invalid model for act: {model}")
 
     def get_inference(
@@ -180,6 +181,8 @@ class ModelRouter:
         locator: str | Locator,
         model: ModelComposition | str | None = None,
     ) -> Point:
+        x: int | None = None
+        y: int | None = None
         if (
             isinstance(model, str)
             and model in self._huggingface_spaces.get_spaces_names()

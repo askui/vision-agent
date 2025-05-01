@@ -59,7 +59,7 @@ class Prompt(Locator):
         self,
         prompt: Annotated[
             str,
-            Field(),
+            Field(min_length=1),
         ],
     ) -> None:
         super().__init__()
@@ -308,7 +308,7 @@ class Image(ImageBase):
             rotation_degree_per_step=rotation_degree_per_step,
             image_compare_format=image_compare_format,
             name=_generate_name() if name is None else name,
-        )  # type: ignore
+        )
         self._image = ImageSource(image)
 
 
@@ -380,7 +380,7 @@ class AiElement(ImageBase):
             mask=mask,
             rotation_degree_per_step=rotation_degree_per_step,
             image_compare_format=image_compare_format,
-        )  # type: ignore
+        )
 
     def _str(self) -> str:
         return (

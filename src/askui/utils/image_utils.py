@@ -270,7 +270,7 @@ class ImageSource(RootModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     root: PILImage.Image
 
-    def __init__(self, root: Img, **kwargs) -> None:
+    def __init__(self, root: Img, **kwargs: dict[str, Any]) -> None:
         super().__init__(root=root, **kwargs)
 
     @field_validator("root", mode="before")

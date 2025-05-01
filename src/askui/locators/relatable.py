@@ -216,7 +216,7 @@ class RelationBase(BaseModel):
         "nearest_to",
     ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{RelationTypeMapping[self.type]} {self.other_locator._str_with_relation()}"
 
 
@@ -225,7 +225,7 @@ class NeighborRelation(RelationBase):
     index: RelationIndex
     reference_point: ReferencePoint
 
-    def __str__(self):
+    def __str__(self) -> str:
         i = self.index + 1
         if i == 11 or i == 12 or i == 13:
             index_str = f"{i}th"

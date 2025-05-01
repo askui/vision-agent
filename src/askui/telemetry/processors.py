@@ -37,7 +37,7 @@ class Segment(TelemetryProcessor):
     def __init__(self, settings: SegmentSettings) -> None:
         self._settings = settings
 
-        from segment import analytics
+        from segment import analytics  # type: ignore
 
         self._analytics = analytics
         self._analytics.write_key = settings.write_key

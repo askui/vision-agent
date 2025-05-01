@@ -28,7 +28,7 @@ def generate_ai_element_json(image_path: pathlib.Path) -> None:
     with open(json_path, 'w') as f:
         json.dump(metadata, f, indent=2)
 
-def main():
+def main() -> None:
     fixtures_dir = pathlib.Path('tests/fixtures/images')
     for image_path in fixtures_dir.glob('*.png'):
         generate_ai_element_json(image_path)

@@ -5,12 +5,12 @@ from PIL import Image
 from askui.utils.image_utils import ImageSource, image_to_base64, scale_coordinates_back, scale_image_with_padding
 
 from ...logger import logger
-from ...exceptions import ElementNotFoundError
+from ...exceptions import ElementNotFoundError, NoResponseToQueryError, UnexpectedResponseToQueryError
 from .utils import extract_click_coordinates
 
 
 class ClaudeHandler:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = "claude-3-5-sonnet-20241022"
         self.client = anthropic.Anthropic()
         self.resolution = (1280, 800)
@@ -52,11 +52,13 @@ class ClaudeHandler:
         system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"
         scaled_image = scale_image_with_padding(image, screen_width, screen_height)
         response = self._inference(image_to_base64(scaled_image), prompt, system_prompt)
-        response = response[0].text
-        logger.debug("ClaudeHandler received locator: %s", response)
+        assert len(response) > 0
+        r = response[0]
+        assert r.type == "text"
+        logger.debug("ClaudeHandler received locator: %s", r.text)
         try:
-            scaled_x, scaled_y = extract_click_coordinates(response)
-        except Exception as e:
+            scaled_x, scaled_y = extract_click_coordinates(r.text)
+        except Exception:
             raise ElementNotFoundError(f"Element not found: {locator}")
         x, y = scale_coordinates_back(scaled_x, scaled_y, image.width, image.height, screen_width, screen_height)
         return int(x), int(y)
@@ -73,5 +75,10 @@ class ClaudeHandler:
             prompt=query,
             system_prompt=system_prompt
         )
-        response = response[0].text
-        return response
+        if len(response) == 0:
+            raise NoResponseToQueryError(f"No response from Claude to query: {query}", query)
+        r = response[0]
+        if r.type == "text":
+            return r.text
+        else:
+            raise UnexpectedResponseToQueryError(f"Unexpected response from Claude: {r}", query, r)

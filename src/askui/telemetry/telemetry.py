@@ -3,7 +3,7 @@ import os
 import platform
 import time
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 import uuid
 
 from pydantic import BaseModel, Field
@@ -25,6 +25,11 @@ from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
+from typing_extensions import ParamSpec, TypeVar
+from collections.abc import Callable
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class TelemetrySettings(BaseModel):
@@ -129,7 +134,7 @@ class Telemetry:
         exclude_exception: bool = False,
         exclude_start: bool = True,
         flush: bool = False,
-    ) -> Callable:
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to record calls to functions and methods
         
         IMPORTANT: Parameters, responses and exceptions recorded must be serializable to JSON. Either make 
@@ -156,11 +161,11 @@ class Telemetry:
 
         _exclude = exclude or set()
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[P, R]) -> Callable[P, R]:
             param_names_sorted = list(inspect.signature(func).parameters.keys())
 
             @wraps(func)
-            def wrapper(*args: Any, **kwargs: Any) -> Any:
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 if not self._settings.enabled:
                     return func(*args, **kwargs)
 
