@@ -414,13 +414,15 @@ Instead of taking a screenshot, you can analyze specific images:
 
 ```python
 from PIL import Image
+from askui import VisionAgent
 
 # From PIL Image
-image = Image.open("screenshot.png")
-result = agent.get("What's in this image?", image)
+with VisionAgent() as agent:
+  image = Image.open("screenshot.png")
+  result = agent.get("What's in this image?", image)
 
-# From file path
-result = agent.get("What's in this image?", "screenshot.png")
+  # From file path
+  result = agent.get("What's in this image?", "screenshot.png")
 ```
 
 #### Using response schemas
