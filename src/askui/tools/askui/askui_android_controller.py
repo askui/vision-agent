@@ -87,10 +87,7 @@ class AskUiAndroidControllerClient:
 
     def connect(self) -> None:
         self._client = AdbClient()
-        devices = self._client.devices()
-        if not devices:
-            raise RuntimeError("No devices connected")
-        self._device = devices[0]
+        self.set_device_by_index()
         self._displays = self.get_connected_displays()
         if not self._displays:
             raise RuntimeError("No displays found")
@@ -111,7 +108,9 @@ class AskUiAndroidControllerClient:
         if not self._displays:
             raise RuntimeError("No displays connected")
         if displayNumber >= len(self._displays):
-            raise RuntimeError(f"Display number {displayNumber} out of range it must be less than {len(self._displays)}")
+            raise RuntimeError(
+                f"Display number {displayNumber} out of range it must be less than {len(self._displays)}"
+            )
         self._set_display(self._displays[displayNumber])
 
     def set_display_by_id(self, display_id: int) -> None:
@@ -132,14 +131,16 @@ class AskUiAndroidControllerClient:
                 return
         raise RuntimeError(f"Display name {display_name} not found")
 
-    def set_device_by_id(self, displayNumber: int = 1) -> None:
+    def set_device_by_index(self, device_index: int = 0) -> None:
         devices = self._client.devices()
         if not devices:
             raise RuntimeError("No devices connected")
-        if displayNumber > len(devices):
-            raise RuntimeError(f"Display number {displayNumber} out of range")
-        self._device = devices[displayNumber - 1]
-        self._add_report_message("AgentOS", f"set_display({displayNumber})")
+        if device_index >= len(devices):
+            raise RuntimeError(
+                f"Device index {device_index} out of range it must be less than {len(devices)}"
+            )
+        self._device = devices[device_index]
+        self._add_report_message("AgentOS", f"set_display({device_index})")
 
     def set_device_by_name(self, displayName: str) -> None:
         devices = self._client.devices()
@@ -150,7 +151,7 @@ class AskUiAndroidControllerClient:
                 self._device = device
                 self._add_report_message("AgentOS", f"set_display({displayName})")
                 return
-        raise RuntimeError(f"Display name {displayName} not found")
+        raise RuntimeError(f"Device name {displayName} not found")
 
     def screenshot(self, report: bool = True) -> Image.Image:
         self._check_if_device_is_connected()
