@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, fields, replace
-from typing import Any
+from typing import Any, Optional
 
 from anthropic.types.beta import BetaToolUnionParam
 
@@ -74,9 +74,10 @@ class ToolError(Exception):
 
     Args:
         message (str): The error message.
-        result (ToolResult): The ToolResult that caused the error.
+        result (ToolResult, optional): The ToolResult that caused the error.
     """
 
-    def __init__(self, message: str, result: ToolResult):
+    def __init__(self, message: str, result: Optional[ToolResult] = None):
         self.message = message
         self.result = result
+        super().__init__(self.message)

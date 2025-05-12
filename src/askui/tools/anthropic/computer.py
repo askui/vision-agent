@@ -278,7 +278,7 @@ class ComputerTool(BaseAnthropicTool):
             if coordinate is not None:
                 raise ToolError(f"coordinate is not accepted for {action}")
             if not isinstance(text, str):
-                raise ToolError(output=f"{text} must be a string")
+                raise ToolError(f"{text} must be a string")
 
             if action == "key":
                 if text in KEYSYM_MAP.keys():
@@ -312,7 +312,7 @@ class ComputerTool(BaseAnthropicTool):
                 return self.screenshot()
             if action == "cursor_position":
                 # TODO: Implement in the future
-                return ToolError("cursor_position is not implemented by this agent")
+                raise ToolError("cursor_position is not implemented by this agent")
             if action == "left_click":
                 self.controller_client.click("left")
                 return ToolResult()
