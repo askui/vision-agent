@@ -31,9 +31,10 @@ class VlmLocatorSerializer:
     def serialize(self, locator: Relatable) -> str:
         locator.raise_if_cycle()
         if len(locator._relations) > 0:
-            raise NotImplementedError(
+            error_msg = (
                 "Serializing locators with relations is not yet supported for VLMs"
             )
+            raise NotImplementedError(error_msg)
 
         if isinstance(locator, Text):
             return self._serialize_text(locator)
@@ -42,14 +43,13 @@ class VlmLocatorSerializer:
         if isinstance(locator, Prompt):
             return self._serialize_prompt(locator)
         if isinstance(locator, Image):
-            raise NotImplementedError(
-                "Serializing image locators is not yet supported for VLMs"
-            )
+            error_msg = "Serializing image locators is not yet supported for VLMs"
+            raise NotImplementedError(error_msg)
         if isinstance(locator, AiElementLocator):
-            raise NotImplementedError(
-                "Serializing AI element locators is not yet supported for VLMs"
-            )
-        raise ValueError(f"Unsupported locator type: {type(locator)}")
+            error_msg = "Serializing AI element locators is not yet supported for VLMs"
+            raise NotImplementedError(error_msg)
+        error_msg = f"Unsupported locator type: {type(locator)}"
+        raise ValueError(error_msg)
 
     def _serialize_class(self, class_: Element) -> str:
         if class_._class_name:
@@ -107,10 +107,11 @@ class AskUiLocatorSerializer:
     def serialize(self, locator: Relatable) -> AskUiSerializedLocator:
         locator.raise_if_cycle()
         if len(locator._relations) > 1:
-            # If we lift this constraint, we also have to make sure that custom element references are still working + we need, e.g., some symbol or a structured format to indicate precedence
-            raise NotImplementedError(
-                "Serializing locators with multiple relations is not yet supported by AskUI"
-            )
+            # If we lift this constraint, we also have to make sure that custom element
+            # references are still working + we need, e.g., some symbol or a structured
+            # format to indicate precedence
+            error_msg = "Serializing locators with multiple relations is not yet supported by AskUI"
+            raise NotImplementedError(error_msg)
 
         result = AskUiSerializedLocator(instruction="", customElements=[])
         if isinstance(locator, Text):
@@ -124,7 +125,8 @@ class AskUiLocatorSerializer:
         elif isinstance(locator, AiElementLocator):
             result = self._serialize_ai_element(locator)
         else:
-            raise ValueError(f'Unsupported locator type: "{type(locator)}"')
+            error_msg = f'Unsupported locator type: "{type(locator)}"'
+            raise TypeError(error_msg)
 
         if len(locator._relations) == 0:
             return result
@@ -154,15 +156,13 @@ class AskUiLocatorSerializer:
                     return (
                         f"text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"
                     )
-                return f"text with text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER} that matches to {text._similarity_threshold} %"
+                return f"text with text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER} that matches to {text._similarity_threshold} %"  # noqa: E501
             case "exact":
-                return f"text equals text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"
+                return f"text equals text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"  # noqa: E501
             case "contains":
-                return f"text contain text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"
+                return f"text contain text {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"  # noqa: E501
             case "regex":
-                return f"text match regex pattern {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"
-            case _:
-                raise ValueError(f'Unsupported text match type: "{text.match_type}"')
+                return f"text match regex pattern {self._TEXT_DELIMITER}{text._text}{self._TEXT_DELIMITER}"  # noqa: E501
 
     def _serialize_relation(self, relation: Relation) -> AskUiSerializedLocator:
         match relation.type:
@@ -174,15 +174,13 @@ class AskUiLocatorSerializer:
                     relation, LogicalRelation | BoundingRelation | NearestToRelation
                 )
                 return self._serialize_non_neighbor_relation(relation)
-            case _:
-                raise ValueError(f'Unsupported relation type: "{relation.type}"')
 
     def _serialize_neighbor_relation(
         self, relation: NeighborRelation
     ) -> AskUiSerializedLocator:
         serialized_other_locator = self.serialize(relation.other_locator)
         return AskUiSerializedLocator(
-            instruction=f"index {relation.index} {self._RELATION_TYPE_MAPPING[relation.type]} intersection_area {self._RP_TO_INTERSECTION_AREA_MAPPING[relation.reference_point]} {serialized_other_locator['instruction']}",
+            instruction=f"index {relation.index} {self._RELATION_TYPE_MAPPING[relation.type]} intersection_area {self._RP_TO_INTERSECTION_AREA_MAPPING[relation.reference_point]} {serialized_other_locator['instruction']}",  # noqa: E501
             customElements=serialized_other_locator["customElements"],
         )
 
@@ -191,7 +189,7 @@ class AskUiLocatorSerializer:
     ) -> AskUiSerializedLocator:
         serialized_other_locator = self.serialize(relation.other_locator)
         return AskUiSerializedLocator(
-            instruction=f"{self._RELATION_TYPE_MAPPING[relation.type]} {serialized_other_locator['instruction']}",
+            instruction=f"{self._RELATION_TYPE_MAPPING[relation.type]} {serialized_other_locator['instruction']}",  # noqa: E501
             customElements=serialized_other_locator["customElements"],
         )
 
@@ -225,7 +223,7 @@ class AskUiLocatorSerializer:
             for image_source in image_sources
         ]
         return AskUiSerializedLocator(
-            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_locator._name}{self._TEXT_DELIMITER}",
+            instruction=f"custom element with text {self._TEXT_DELIMITER}{image_locator._name}{self._TEXT_DELIMITER}",  # noqa: E501
             customElements=custom_elements,
         )
 

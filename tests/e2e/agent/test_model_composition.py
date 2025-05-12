@@ -105,7 +105,7 @@ class TestWordLevelOcrModel:
     ) -> None:
         if any("trained" not in m.tags for m in model):
             pytest.skip("Skipping test for non-trained model")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             vision_agent.locate(
                 Text("Sign in", match_type="exact"),
                 github_login_screenshot,

@@ -1,4 +1,3 @@
-import os
 import pathlib
 import subprocess
 import sys
@@ -13,15 +12,20 @@ from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self, override
 
-import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2 as controller_v1_pbs
-import askui.tools.askui.askui_ui_controller_grpc.Controller_V1_pb2_grpc as controller_v1
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
+from askui.tools.askui.askui_ui_controller_grpc import (
+    Controller_V1_pb2 as controller_v1_pbs,
+)
+from askui.tools.askui.askui_ui_controller_grpc import (
+    Controller_V1_pb2_grpc as controller_v1,
+)
 from askui.utils.image_utils import draw_point_on_image
 
 from ..utils import process_exists, wait_for_port
+from .exceptions import ActionTimeoutError, ControllerOperationError
 
 
 class RemoteDeviceController(BaseModel):
@@ -58,15 +62,18 @@ class AskUiControllerSettings(BaseSettings):
         self,
     ) -> "AskUiControllerSettings":
         if self.component_registry_file is None and self.installation_directory is None:
-            raise ValueError(
-                "Either ASKUI_COMPONENT_REGISTRY_FILE or ASKUI_INSTALLATION_DIRECTORY environment variable must be set"
+            error_msg = (
+                "Either ASKUI_COMPONENT_REGISTRY_FILE or "
+                "ASKUI_INSTALLATION_DIRECTORY environment variable must be set"
             )
+            raise ValueError(error_msg)
         return self
 
 
 class AskUiControllerServer:
     """
-    Concrete implementation of `ControllerServer` for managing the AskUI Remote Device Controller process.
+    Concrete implementation of `ControllerServer` for managing the AskUI Remote Device
+    Controller process.
     Handles process discovery, startup, and shutdown for the native controller binary.
     """
 
@@ -85,10 +92,12 @@ class AskUiControllerServer:
             askui_remote_device_controller_path = (
                 self._find_remote_device_controller_by_legacy_path()
             )
-            if not os.path.isfile(askui_remote_device_controller_path):
-                raise FileNotFoundError(
-                    f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'"
+            if not askui_remote_device_controller_path.is_file():
+                error_msg = (
+                    "AskUIRemoteDeviceController executable does not exist under "
+                    f"'{askui_remote_device_controller_path}'"
                 )
+                raise FileNotFoundError(error_msg)
             return askui_remote_device_controller_path
         return self._find_remote_device_controller_by_component_registry()
 
@@ -99,11 +108,15 @@ class AskUiControllerServer:
         component_registry = AskUiComponentRegistry.model_validate_json(
             self._settings.component_registry_file.read_text()
         )
-        askui_remote_device_controller_path = component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller
-        if not os.path.isfile(askui_remote_device_controller_path):
-            raise FileNotFoundError(
-                f"AskUIRemoteDeviceController executable does not exits under '{askui_remote_device_controller_path}'"
+        askui_remote_device_controller_path = (
+            component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller  # noqa: E501
+        )
+        if not askui_remote_device_controller_path.is_file():
+            error_msg = (
+                "AskUIRemoteDeviceController executable does not exist under "
+                f"'{askui_remote_device_controller_path}'"
             )
+            raise FileNotFoundError(error_msg)
         return askui_remote_device_controller_path
 
     def _find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
@@ -112,46 +125,42 @@ class AskUiControllerServer:
         )
         match sys.platform:
             case "win32":
-                return pathlib.Path(
-                    os.path.join(
-                        self._settings.installation_directory,
-                        "Binaries",
-                        "resources",
-                        "assets",
-                        "binaries",
-                        "AskuiRemoteDeviceController.exe",
-                    )
+                return (
+                    self._settings.installation_directory
+                    / "Binaries"
+                    / "resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController.exe"
                 )
             case "darwin":
-                return pathlib.Path(
-                    os.path.join(
-                        self._settings.installation_directory,
-                        "Binaries",
-                        "askui-ui-controller.app",
-                        "Contents",
-                        "Resources",
-                        "assets",
-                        "binaries",
-                        "AskuiRemoteDeviceController",
-                    )
+                return (
+                    self._settings.installation_directory
+                    / "Binaries"
+                    / "askui-ui-controller.app"
+                    / "Contents"
+                    / "Resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController"
                 )
             case "linux":
-                return pathlib.Path(
-                    os.path.join(
-                        self._settings.installation_directory,
-                        "Binaries",
-                        "resources",
-                        "assets",
-                        "binaries",
-                        "AskuiRemoteDeviceController",
-                    )
+                return (
+                    self._settings.installation_directory
+                    / "Binaries"
+                    / "resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController"
                 )
             case _:
-                raise NotImplementedError(
-                    f"Platform {sys.platform} not supported by AskUI Remote Device Controller"
+                error_msg = (
+                    f"Platform {sys.platform} not supported by "
+                    "AskUI Remote Device Controller"
                 )
+                raise NotImplementedError(error_msg)
 
-    def __start_process(self, path: pathlib.Path) -> None:
+    def _start_process(self, path: pathlib.Path) -> None:
         self._process = subprocess.Popen(path)
         wait_for_port(23000)
 
@@ -160,7 +169,8 @@ class AskUiControllerServer:
         Start the controller process.
 
         Args:
-            clean_up (bool, optional): Whether to clean up existing processes (only on Windows) before starting. Defaults to `False`.
+            clean_up (bool, optional): Whether to clean up existing processes
+                (only on Windows) before starting. Defaults to `False`.
         """
         if (
             sys.platform == "win32"
@@ -172,10 +182,8 @@ class AskUiControllerServer:
         logger.debug(
             "Starting AskUI Remote Device Controller: %s", remote_device_controller_path
         )
-        self.__start_process(remote_device_controller_path)
-        time.sleep(
-            0.5
-        )  # TODO Find better way to do this, e.g., waiting for something to be logged or port to be opened
+        self._start_process(remote_device_controller_path)
+        time.sleep(0.5)
 
     def clean_up(self) -> None:
         subprocess.run("taskkill.exe /IM AskUI*")
@@ -186,7 +194,8 @@ class AskUiControllerServer:
         Stop the controller process.
 
         Args:
-            force (bool, optional): Whether to forcefully terminate the process. Defaults to `False`.
+            force (bool, optional): Whether to forcefully terminate the process.
+                Defaults to `False`.
         """
         if not hasattr(self, "process") or self._process is None:
             return  # Nothing to stop
@@ -198,20 +207,23 @@ class AskUiControllerServer:
                     self.clean_up()
             else:
                 self._process.terminate()
-        except Exception as e:
-            logger.error("Failed to stop AskUI Remote Device Controller: %s", e)
+        except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
+            error = ControllerOperationError("stop AskUI Remote Device Controller", e)
+            logger.error(str(error))
         finally:
             self._process = None
 
 
 class AskUiControllerClient(AgentOs):
     """
-    Implementation of `AgentOs` that communicates with the AskUI Remote Device Controller via gRPC.
+    Implementation of `AgentOs` that communicates with the AskUI Remote Device
+    Controller via gRPC.
 
     Args:
         reporter (Reporter): Reporter used for reporting with the `"AgentOs"`.
         display (int, optional): Display number to use. Defaults to `1`.
-        controller_server (AskUiControllerServer | None, optional): Custom controller server. Defaults to `ControllerServer`.
+        controller_server (AskUiControllerServer | None, optional): Custom controller
+            server. Defaults to `ControllerServer`.
     """
 
     @telemetry.record_call(exclude={"reporter", "controller_server"})
@@ -274,7 +286,8 @@ class AskUiControllerClient(AgentOs):
         )
 
         time.sleep((response.requiredMilliseconds / 1000))
-        for num_retries in range(self._max_retries):
+        num_retries = 0
+        for _ in range(self._max_retries):
             assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
                 "Stub is not initialized"
             )
@@ -290,8 +303,9 @@ class AskUiControllerClient(AgentOs):
             ):
                 break
             time.sleep(self._post_action_wait)
+            num_retries += 1
         if num_retries == self._max_retries - 1:
-            raise Exception("Action not yet done")
+            raise ActionTimeoutError
         return response
 
     @telemetry.record_call()
@@ -376,10 +390,11 @@ class AskUiControllerClient(AgentOs):
     @override
     def screenshot(self, report: bool = True) -> Image.Image:
         """
-        Captures a screenshot of the current display.
+        Take a screenshot of the current screen.
 
         Args:
-            report (bool, optional): Whether to include the screenshot in reporting. Defaults to `True`.
+            report (bool, optional): Whether to include the screenshot in reporting.
+                Defaults to `True`.
 
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
@@ -432,11 +447,12 @@ class AskUiControllerClient(AgentOs):
     @override
     def type(self, text: str, typing_speed: int = 50) -> None:
         """
-        Simulates typing text as if entered on a keyboard.
+        Type text at current cursor position as if entered on a keyboard.
 
         Args:
-            text (str): The text to be typed.
-            typing_speed (int, optional): The speed of typing in characters per second. Defaults to `50`.
+            text (str): The text to type.
+            typing_speed (int, optional): The speed of typing in characters per second.
+                Defaults to `50`.
         """
         self._reporter.add_message("AgentOS", f'type("{text}", {typing_speed})')
         self._run_recorder_action(
@@ -456,10 +472,11 @@ class AskUiControllerClient(AgentOs):
         self, button: Literal["left", "middle", "right"] = "left", count: int = 1
     ) -> None:
         """
-        Simulates clicking a mouse button.
+        Click a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to click. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse button to
+                click. Defaults to `"left"`.
             count (int, optional): Number of times to click. Defaults to `1`.
         """
         self._reporter.add_message("AgentOS", f'click("{button}", {count})')
@@ -484,10 +501,11 @@ class AskUiControllerClient(AgentOs):
     @override
     def mouse_down(self, button: Literal["left", "middle", "right"] = "left") -> None:
         """
-        Simulates pressing and holding a mouse button.
+        Press and hold a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to press. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse button to
+                press. Defaults to `"left"`.
         """
         self._reporter.add_message("AgentOS", f'mouse_down("{button}")')
         mouse_button = None
@@ -511,10 +529,11 @@ class AskUiControllerClient(AgentOs):
     @override
     def mouse_up(self, button: Literal["left", "middle", "right"] = "left") -> None:
         """
-        Simulates releasing a mouse button.
+        Release a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to release. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse button to
+                release. Defaults to `"left"`.
         """
         self._reporter.add_message("AgentOS", f'mouse_up("{button}")')
         mouse_button = None
@@ -538,11 +557,13 @@ class AskUiControllerClient(AgentOs):
     @override
     def mouse_scroll(self, x: int, y: int) -> None:
         """
-        Simulates scrolling the mouse wheel.
+        Scroll the mouse wheel.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values scroll right, negative values scroll left.
-            y (int): The vertical scroll amount. Positive values scroll down, negative values scroll up.
+            x (int): The horizontal scroll amount. Positive values scroll right,
+                negative values scroll left.
+            y (int): The vertical scroll amount. Positive values scroll down,
+                negative values scroll up.
         """
         self._reporter.add_message("AgentOS", f"mouse_scroll({x}, {y})")
         if x != 0:
@@ -576,11 +597,12 @@ class AskUiControllerClient(AgentOs):
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
         """
-        Simulates pressing and holding a keyboard key.
+        Press and hold a keyboard key.
 
         Args:
             key (PcKey | ModifierKey): The key to press.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                press along with the main key. Defaults to `None`.
         """
         self._reporter.add_message(
             "AgentOS", f'keyboard_pressed("{key}", {modifier_keys})'
@@ -602,11 +624,12 @@ class AskUiControllerClient(AgentOs):
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
         """
-        Simulates releasing a keyboard key.
+        Release a keyboard key.
 
         Args:
             key (PcKey | ModifierKey): The key to release.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to release along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                release along with the main key. Defaults to `None`.
         """
         self._reporter.add_message(
             "AgentOS", f'keyboard_release("{key}", {modifier_keys})'
@@ -628,11 +651,12 @@ class AskUiControllerClient(AgentOs):
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
     ) -> None:
         """
-        Simulates pressing and immediately releasing a keyboard key.
+        Press and immediately release a keyboard key.
 
         Args:
             key (PcKey | ModifierKey): The key to tap.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                press along with the main key. Defaults to `None`.
         """
         self._reporter.add_message("AgentOS", f'keyboard_tap("{key}", {modifier_keys})')
         if modifier_keys is None:
@@ -650,10 +674,11 @@ class AskUiControllerClient(AgentOs):
     @override
     def set_display(self, displayNumber: int = 1) -> None:
         """
-        Sets the active display for screen interactions.
+        Set the active display.
 
         Args:
-            displayNumber (int, optional): The display number to set as active. Defaults to `1`.
+            displayNumber (int, optional): The display number to set as active.
+                Defaults to `1`.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"

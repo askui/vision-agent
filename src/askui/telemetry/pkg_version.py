@@ -6,11 +6,13 @@ from askui.logger import logger
 def _get_module_name() -> str:
     """Return the top-level package name from the module path."""
     if __name__ == "__main__":
-        raise RuntimeError("This module is not meant to be run directly.")
+        error_msg = "This module is not meant to be run directly."
+        raise RuntimeError(error_msg)
 
     parts = __name__.split(".")
     if not parts:
-        raise RuntimeError("Failed to determine the module name - empty module path")
+        error_msg = "Failed to determine the module name - empty module path"
+        raise RuntimeError(error_msg)
 
     return parts[0]
 

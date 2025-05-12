@@ -1,7 +1,7 @@
 import json
 import pathlib
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from PIL import Image
 
@@ -16,13 +16,13 @@ def generate_ai_element_json(image_path: pathlib.Path) -> None:
         "version": 1,
         "id": str(uuid.uuid4()),
         "name": image_path.stem,
-        "creationDateTime": datetime.now().isoformat(),
+        "creationDateTime": datetime.now(tz=timezone.utc).isoformat(),
         "image": {"size": {"width": width, "height": height}},
     }
 
     # Write JSON file
     json_path = image_path.with_suffix(".json")
-    with open(json_path, "w") as f:
+    with pathlib.Path.open(json_path, "w") as f:
         json.dump(metadata, f, indent=2)
 
 

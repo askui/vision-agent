@@ -22,7 +22,8 @@ class UserIdentificationSettings(BaseModel):
     """Settings for user identification"""
 
     api_url: HttpUrl = HttpUrl("https://workspaces.askui.com/api/v1")
-    # retrieving directly through environment variable to circumvent pydantic-settings env_prefix
+    # retrieving directly through environment variable to circumvent pydantic-settings
+    # env_prefix
     askui_token: SecretStr | None = Field(default=get_askui_token_from_env())
     askui_workspace_id: str | None = Field(default=os.environ.get("ASKUI_WORKSPACE_ID"))
 
@@ -39,8 +40,9 @@ class UserIdentification:
         self._enabled = self._settings.askui_token and self._settings.askui_workspace_id
         if not self._enabled:
             logger.debug(
-                "User identification disabled. Set the `ASKUI_TOKEN` and `ASKUI_WORKSPACE_ID` "
-                "environment variables to allow user to be identified."
+                "User identification disabled. Set the `ASKUI_TOKEN` and "
+                "`ASKUI_WORKSPACE_ID` environment variables to allow user to be "
+                "identified."
             )
             return
 
@@ -80,7 +82,7 @@ class UserIdentification:
             )
         except httpx.HTTPError as e:
             logger.debug(f"Failed to identify user: {e}")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
             logger.debug(f"Unexpected error while identifying user: {e}")
 
         return None

@@ -69,7 +69,8 @@ class CallStack:
     def push_call(self) -> str:
         """Generates call id and adds it to the call stack and returns it"""
         if len(self._stack) >= self._max_depth:
-            raise ValueError("Call stack is at max depth")
+            error_msg = "Call stack is at max depth"
+            raise ValueError(error_msg)
 
         call_id = os.urandom(8).hex()
         self._stack.append(call_id)

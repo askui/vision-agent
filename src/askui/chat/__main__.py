@@ -1,9 +1,8 @@
-import glob
 import json
 import logging
-import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+from pathlib import Path
 from random import randint
 from typing import Union
 
@@ -13,6 +12,7 @@ from typing_extensions import TypedDict, override
 
 from askui import VisionAgent
 from askui.chat.click_recorder import ClickRecorder
+from askui.chat.exceptions import FunctionExecutionError, InvalidFunctionError
 from askui.models import ModelName
 from askui.reporting import Reporter
 from askui.utils.image_utils import base64_to_image, draw_point_on_image
@@ -23,28 +23,29 @@ st.set_page_config(
 )
 
 
-CHAT_SESSIONS_DIR_PATH = "./chat/sessions"
-CHAT_IMAGES_DIR_PATH = "./chat/images"
+CHAT_SESSIONS_DIR_PATH = Path("./chat/sessions")
+CHAT_IMAGES_DIR_PATH = Path("./chat/images")
 
 click_recorder = ClickRecorder()
 
 
-def setup_chat_dirs():
-    os.makedirs(CHAT_SESSIONS_DIR_PATH, exist_ok=True)
-    os.makedirs(CHAT_IMAGES_DIR_PATH, exist_ok=True)
+def setup_chat_dirs() -> None:
+    Path.mkdir(CHAT_SESSIONS_DIR_PATH, parents=True, exist_ok=True)
+    Path.mkdir(CHAT_IMAGES_DIR_PATH, parents=True, exist_ok=True)
 
 
-def get_session_id_from_path(path):
-    return os.path.splitext(os.path.basename(path))[0]
+def get_session_id_from_path(path: str) -> str:
+    """Get session ID from file path."""
+    return Path(path).stem
 
 
-def load_chat_history(session_id):
-    messages = []
-    session_path = os.path.join(CHAT_SESSIONS_DIR_PATH, f"{session_id}.jsonl")
-    if os.path.exists(session_path):
-        with open(session_path, "r") as f:
-            for line in f:
-                messages.append(json.loads(line))
+def load_chat_history(session_id: str) -> list[dict]:
+    """Load chat history for a given session ID."""
+    messages: list[dict] = []
+    session_path = CHAT_SESSIONS_DIR_PATH / f"{session_id}.jsonl"
+    if session_path.exists():
+        with session_path.open("r") as f:
+            messages.extend(json.loads(line) for line in f)
     return messages
 
 
@@ -60,7 +61,8 @@ UNKNOWN_ROLE = "unknown"
 
 
 def get_image(img_b64_str_or_path: str) -> Image.Image:
-    if os.path.isfile(img_b64_str_or_path):
+    """Get image from base64 string or file path."""
+    if Path(img_b64_str_or_path).is_file():
         return Image.open(img_b64_str_or_path)
     return base64_to_image(img_b64_str_or_path)
 
@@ -75,7 +77,7 @@ def write_message(
     | list[str]
     | list[Image.Image]
     | None = None,
-):
+) -> None:
     _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
     avatar = None if _role != UNKNOWN_ROLE else "❔"
     with st.chat_message(_role, avatar=avatar):
@@ -96,10 +98,11 @@ def write_message(
 
 
 def save_image(image: Image.Image) -> str:
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    image_path = os.path.join(CHAT_IMAGES_DIR_PATH, f"image_{timestamp}.png")
+    """Save image to disk and return path."""
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+    image_path = CHAT_IMAGES_DIR_PATH / f"image_{timestamp}.png"
     image.save(image_path)
-    return image_path
+    return str(image_path)
 
 
 class Message(TypedDict):
@@ -127,18 +130,15 @@ class ChatHistoryAppender(Reporter):
             _images = image
         else:
             _images = [image]
-        for img in _images:
-            image_paths.append(save_image(img))
+        image_paths.extend(save_image(img) for img in _images)
         message = Message(
             role=role,
             content=content,
-            timestamp=datetime.now().isoformat(),
+            timestamp=datetime.now(tz=timezone.utc).isoformat(),
             image=image_paths,
         )
         write_message(**message)
-        with open(
-            os.path.join(CHAT_SESSIONS_DIR_PATH, f"{self._session_id}.jsonl"), "a"
-        ) as f:
+        with (CHAT_SESSIONS_DIR_PATH / f"{self._session_id}.jsonl").open("a") as f:
             json.dump(message, f)
             f.write("\n")
 
@@ -147,17 +147,18 @@ class ChatHistoryAppender(Reporter):
         pass
 
 
-def get_available_sessions():
-    session_files = glob.glob(os.path.join(CHAT_SESSIONS_DIR_PATH, "*.jsonl"))
+def get_available_sessions() -> list[str]:
+    """Get list of available session IDs."""
+    session_files = list(CHAT_SESSIONS_DIR_PATH.glob("*.jsonl"))
     return sorted([get_session_id_from_path(f) for f in session_files], reverse=True)
 
 
 def create_new_session() -> str:
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+    """Create a new chat session."""
+    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S%f")
     random_suffix = f"{randint(100, 999)}"
     session_id = f"{timestamp}{random_suffix}"
-    with open(os.path.join(CHAT_SESSIONS_DIR_PATH, f"{session_id}.jsonl"), "w") as f:
-        pass
+    (CHAT_SESSIONS_DIR_PATH / f"{session_id}.jsonl").touch()
     return session_id
 
 
@@ -200,7 +201,7 @@ prompt = """The following image is a screenshot with a red crosshair on top of a
 """
 
 
-def rerun():
+def rerun() -> None:
     st.markdown("### Re-running...")
     with VisionAgent(
         log_level=logging.DEBUG,
@@ -220,9 +221,8 @@ def rerun():
                             r"mouse\((\d+),\s*(\d+)\)", message["content"]
                         ):
                             if not screenshot:
-                                raise ValueError(
-                                    "Screenshot is required to paint crosshair"
-                                )
+                                error_msg = "Screenshot is required to paint crosshair"
+                                raise ValueError(error_msg)  # noqa: TRY301
                             x, y = map(int, match.groups())
                             screenshot_with_crosshair = paint_crosshair(
                                 screenshot, (x, y)
@@ -235,7 +235,7 @@ def rerun():
                             write_message(
                                 message["role"],
                                 f"Move mouse to {element_description}",
-                                datetime.now().isoformat(),
+                                datetime.now(tz=timezone.utc).isoformat(),
                                 image=screenshot_with_crosshair,
                             )
                             agent.mouse_move(
@@ -246,7 +246,7 @@ def rerun():
                             write_message(
                                 message["role"],
                                 message["content"],
-                                datetime.now().isoformat(),
+                                datetime.now(tz=timezone.utc).isoformat(),
                                 message.get("image"),
                             )
                             func_call = f"agent.tools.os.{message['content']}"
@@ -254,9 +254,9 @@ def rerun():
             except json.JSONDecodeError:
                 continue
             except AttributeError:
-                st.write(f"Invalid function: {message['content']}")
-            except Exception as e:
-                st.write(f"Error executing {message['content']}: {str(e)}")
+                st.write(str(InvalidFunctionError(message["content"])))
+            except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
+                st.write(str(FunctionExecutionError(message["content"], e)))
 
 
 setup_chat_dirs()

@@ -63,8 +63,9 @@ def test_telemetry_error() -> None:
     @telemetry.record_call(
         exclude_first_arg=False, exclude_start=False, exclude_exception=False
     )
-    def test_func(x: int) -> int:
-        raise ValueError("Test error")
+    def test_func(x: int) -> int:  # noqa: ARG001
+        error_msg = "Test error"
+        raise ValueError(error_msg)
 
     with pytest.raises(ValueError):
         test_func(5)
@@ -233,7 +234,7 @@ def test_exclude_parameter() -> None:
     @telemetry.record_call(
         exclude={"password", "token"}, exclude_first_arg=False, exclude_start=False
     )
-    def sensitive_function(username: str, password: str, token: str) -> str:
+    def sensitive_function(username: str, password: str, token: str) -> str:  # noqa: ARG001
         return f"User: {username}"
 
     result = sensitive_function("test_user", "secret_password", "private_token")
@@ -263,7 +264,7 @@ def test_exclude_kwargs() -> None:
     @telemetry.record_call(
         exclude={"password", "token"}, exclude_first_arg=False, exclude_start=False
     )
-    def sensitive_function(username: str, **kwargs: Any) -> str:
+    def sensitive_function(username: str, **kwargs: Any) -> str:  # noqa: ARG001, ARG002
         return f"User: {username}"
 
     result = sensitive_function(
@@ -460,8 +461,9 @@ def test_exclude_exception() -> None:
     telemetry.add_processor(processor)
 
     @telemetry.record_call(exclude_exception=True, exclude_start=False)
-    def test_func(x: int) -> int:
-        raise ValueError("Test error")
+    def test_func(x: int) -> int:  # noqa: ARG001
+        error_msg = "Test error"
+        raise ValueError(error_msg)
 
     with pytest.raises(ValueError):
         test_func(5)
@@ -481,8 +483,9 @@ def test_include_exception() -> None:
     telemetry.add_processor(processor)
 
     @telemetry.record_call(exclude_exception=False, exclude_start=False)
-    def test_func(x: int) -> int:
-        raise ValueError("Test error")
+    def test_func(x: int) -> int:  # noqa: ARG001
+        error_msg = "Test error"
+        raise ValueError(error_msg)
 
     with pytest.raises(ValueError):
         test_func(5)
@@ -552,7 +555,8 @@ def test_all_new_parameters_together() -> None:
     )
     def test_func(x: int) -> int:
         if x < 0:
-            raise ValueError("Negative input")
+            error_msg = "Negative input"
+            raise ValueError(error_msg)
         return x * 2
 
     # Successful case

@@ -33,7 +33,8 @@ def handle_response(
 ) -> tuple[int, int]:
     x, y = response
     if x is None or y is None:
-        raise ElementNotFoundError(f"Element not found: {locator}")
+        error_msg = f"Element not found: {locator}"
+        raise ElementNotFoundError(error_msg)
     return x, y
 
 
@@ -75,9 +76,11 @@ class AskUiModelRouter(GroundingModelRouter):
         model: ModelComposition | str | None = None,
     ) -> Point:
         if not self._inference_api.authenticated:
-            raise AutomationError(
-                "NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or 'ASKUI_TOKEN' as env variables!"
+            error_msg = (
+                "NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or "
+                "'ASKUI_TOKEN' as env variables!"
             )
+            raise AutomationError(error_msg)
         if not isinstance(model, str) or model == ModelName.ASKUI:
             logger.debug("Routing locate prediction to askui")
             locator = Text(locator) if isinstance(locator, str) else locator
@@ -85,9 +88,12 @@ class AskUiModelRouter(GroundingModelRouter):
             x, y = self._inference_api.predict(screenshot, locator, _model)
             return handle_response((x, y), locator)
         if not isinstance(locator, str):
-            raise AutomationError(
-                f'Locators of type `{type(locator)}` are not supported for models "askui-pta", "askui-ocr" and "askui-combo" and "askui-ai-element". Please provide a `str`.'
+            error_msg = (
+                f"Locators of type `{type(locator)}` are not supported for models "
+                '"askui-pta", "askui-ocr" and "askui-combo" and "askui-ai-element". '
+                "Please provide a `str`."
             )
+            raise AutomationError(error_msg)
         if model == ModelName.ASKUI__PTA:
             logger.debug("Routing locate prediction to askui-pta")
             x, y = self._inference_api.predict(screenshot, Prompt(locator))
@@ -107,7 +113,8 @@ class AskUiModelRouter(GroundingModelRouter):
             _locator = AiElement(locator)
             x, y = self._inference_api.predict(screenshot, _locator)
             return handle_response((x, y), _locator)
-        raise AutomationError(f'Invalid model: "{model}"')
+        error_msg = f'Invalid model: "{model}"'
+        raise AutomationError(error_msg)
 
     @override
     def is_responsible(self, model: ModelComposition | str | None = None) -> bool:
@@ -152,7 +159,8 @@ class ModelRouter:
             and model.startswith(ModelName.ANTHROPIC)
         ):
             self._claude_computer_agent.run(goal)
-        raise AutomationError(f"Invalid model for act: {model}")
+        error_msg = f"Invalid model for act: {model}"
+        raise AutomationError(error_msg)
 
     def get_inference(
         self,
@@ -163,17 +171,21 @@ class ModelRouter:
     ) -> ResponseSchema | str:
         if self._tars.authenticated and model == ModelName.TARS:
             if response_schema not in [str, None]:
-                raise NotImplementedError(
-                    "(Non-String) Response schema is not yet supported for UI-TARS models."
+                error_msg = (
+                    "(Non-String) Response schema is not yet supported for "
+                    "UI-TARS models."
                 )
+                raise NotImplementedError(error_msg)
             return self._tars.get_inference(image=image, query=query)
         if self._claude.authenticated and (
             isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)
         ):
             if response_schema not in [str, None]:
-                raise NotImplementedError(
-                    "(Non-String) Response schema is not yet supported for Anthropic models."
+                error_msg = (
+                    "(Non-String) Response schema is not yet supported for "
+                    "Anthropic models."
                 )
+                raise NotImplementedError(error_msg)
             return self._claude.get_inference(image=image, query=query)
         if self._askui.authenticated and (model == ModelName.ASKUI or model is None):
             return self._askui.get_inference(
@@ -181,9 +193,11 @@ class ModelRouter:
                 query=query,
                 response_schema=response_schema,
             )
-        raise AutomationError(
-            f"Executing get commands requires to authenticate with an Automation Model Provider supporting it: {model}"
+        error_msg = (
+            "Executing get commands requires to authenticate with an Automation "
+            f"Model Provider supporting it: {model}"
         )
+        raise AutomationError(error_msg)
 
     def _serialize_locator(self, locator: str | Locator) -> str:
         if isinstance(locator, Locator):
@@ -191,7 +205,7 @@ class ModelRouter:
         return locator
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
-    def locate(
+    def locate(  # noqa: C901
         self,
         screenshot: Image.Image,
         locator: str | Locator,
@@ -211,13 +225,16 @@ class ModelRouter:
             return handle_response((x, y), locator)
         if isinstance(model, str):
             if model.startswith(ModelName.ANTHROPIC) and not self._claude.authenticated:
-                raise AutomationError(
+                error_msg = (
                     "You need to provide Anthropic credentials to use Anthropic models."
                 )
+                raise AutomationError(error_msg)
             if model.startswith(ModelName.TARS) and not self._tars.authenticated:
-                raise AutomationError(
-                    "You need to provide UI-TARS HF Endpoint credentials to use UI-TARS models."
+                error_msg = (
+                    "You need to provide UI-TARS HF Endpoint credentials to use "
+                    "UI-TARS models."
                 )
+                raise AutomationError(error_msg)
         if self._tars.authenticated and model == ModelName.TARS:
             x, y = self._tars.locate_prediction(
                 screenshot, self._serialize_locator(locator)
@@ -249,6 +266,8 @@ class ModelRouter:
                 )
                 return handle_response((x, y), locator)
 
-        raise AutomationError(
-            "Executing locate commands requires to authenticate with an Automation Model Provider."
+        error_msg = (
+            "Executing locate commands requires to authenticate with an "
+            "Automation Model Provider."
         )
+        raise AutomationError(error_msg)

@@ -2,6 +2,7 @@ import abc
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
+import httpx
 from pydantic import BaseModel, HttpUrl
 
 from askui.logger import logger
@@ -75,7 +76,7 @@ class Segment(TelemetryProcessor):
                 },
                 timestamp=datetime.now(tz=timezone.utc),
             )
-        except Exception as e:
+        except (ValueError, httpx.HTTPError) as e:
             logger.debug(f'Failed to track event "{name}" using Segment: {e}')
 
     def flush(self) -> None:

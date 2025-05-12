@@ -274,7 +274,7 @@ def test_serialize_unsupported_locator_type(
     class UnsupportedLocator(Locator):
         pass
 
-    with pytest.raises(ValueError, match="Unsupported locator type:.*"):
+    with pytest.raises(TypeError, match="Unsupported locator type:.*"):
         askui_serializer.serialize(UnsupportedLocator())
 
 

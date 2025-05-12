@@ -1,6 +1,6 @@
 import platform
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, cast
 
 from anthropic import (
@@ -159,7 +159,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
 * When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
 * Valid keyboard keys available are {", ".join(PC_KEY)}
-* The current date is {datetime.today().strftime("%A, %B %d, %Y").replace(" 0", " ")}.
+* The current date is {datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y").replace(" 0", " ")}.
 </SYSTEM_CAPABILITY>
 
 <IMPORTANT>

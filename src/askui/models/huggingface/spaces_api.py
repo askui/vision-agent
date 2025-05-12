@@ -2,6 +2,7 @@ import json
 import tempfile
 from typing import Callable
 
+import httpx
 from gradio_client import Client, handle_file  # type: ignore
 from PIL import Image
 
@@ -55,10 +56,12 @@ class HFSpacesHandler:
     def predict(
         self, screenshot: Image.Image, locator: str, model_name: str = "AskUI/PTA-1"
     ) -> tuple[int, int]:
+        """Predict element location using Hugging Face Spaces."""
         try:
             return self.spaces[model_name](screenshot, locator, model_name)
-        except Exception as e:
-            raise AutomationError(f"Hugging Face Spaces Exception: {e}")
+        except (ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
+            error_msg = f"Hugging Face Spaces Exception: {e}"
+            raise AutomationError(error_msg) from e
 
     def predict_askui_pta1(
         self, screenshot: Image.Image, locator: str, model_name: str | None = None
@@ -126,8 +129,12 @@ class HFSpacesHandler:
         return x, y
 
     def predict_showui(
-        self, screenshot: Image.Image, locator: str, model_name: str | None = None
+        self,
+        screenshot: Image.Image,
+        locator: str,
+        model_name: str | None = None,  # noqa: ARG002
     ) -> tuple[int, int]:
+        """Predict element location using ShowUI model."""
         client = self.get_space_client("showlab/ShowUI")
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
             screenshot.save(temp_file, format="PNG")

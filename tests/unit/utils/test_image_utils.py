@@ -42,7 +42,7 @@ class TestLoadImage:
         self, path_fixtures_github_com__icon: pathlib.Path
     ) -> None:
         # Load test image and convert to base64
-        with open(path_fixtures_github_com__icon, "rb") as f:
+        with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
 
@@ -69,7 +69,7 @@ class TestLoadImage:
             load_image("invalid_base64")
 
         with pytest.raises(ValueError):
-            with open(path_fixtures_github_com__icon, "rb") as f:
+            with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
                 img_bytes = f.read()
                 img_str = base64.b64encode(img_bytes).decode()
                 load_image(img_str)
@@ -88,7 +88,7 @@ class TestImageSource:
         assert source.root.size == (128, 125)
 
         # Test with base64
-        with open(path_fixtures_github_com__icon, "rb") as f:
+        with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
         source = ImageSource(root=f"data:image/png;base64,{img_str}")
@@ -126,7 +126,7 @@ class TestDataUrlConversion:
     def test_data_url_to_image(
         self, path_fixtures_github_com__icon: pathlib.Path
     ) -> None:
-        with open(path_fixtures_github_com__icon, "rb") as f:
+        with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
         data_url = f"data:image/png;base64,{img_str}"
@@ -154,7 +154,7 @@ class TestBase64Conversion:
     def test_base64_to_image(
         self, path_fixtures_github_com__icon: pathlib.Path
     ) -> None:
-        with open(path_fixtures_github_com__icon, "rb") as f:
+        with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
             img_bytes = f.read()
         img_str = base64.b64encode(img_bytes).decode()
 
@@ -173,6 +173,25 @@ class TestBase64Conversion:
         # Test with Path
         base64_str = image_to_base64(path_fixtures_github_com__icon)
         assert len(base64_str) > 100
+
+    def test_image_to_base64_format(
+        self, path_fixtures_github_com__icon: pathlib.Path
+    ) -> None:
+        img = Image.open(path_fixtures_github_com__icon)
+
+        # Test PNG format (default)
+        png_base64 = image_to_base64(img, format_="PNG")
+        png_img = base64_to_image(png_base64)
+        assert png_img.format == "PNG"
+
+        # Test JPEG format - convert to RGB first since JPEG doesn't support RGBA
+        rgb_img = img.convert("RGB")
+        jpeg_base64 = image_to_base64(rgb_img, format_="JPEG")
+        jpeg_img = base64_to_image(jpeg_base64)
+        assert jpeg_img.format == "JPEG"
+
+        # Verify the images are different (JPEG is lossy)
+        assert png_base64 != jpeg_base64
 
 
 class TestImageScaling:

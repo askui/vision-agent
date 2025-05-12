@@ -3,17 +3,18 @@ import uuid
 
 
 def is_valid_uuid4(uuid_str: str) -> bool:
-    """Check if a string is a valid UUID version 4."""
+    """Check if string is a valid UUID4."""
     try:
         return str(uuid.UUID(uuid_str, version=4)).lower() == uuid_str.lower()
-    except Exception:
+    except (ValueError, AttributeError):
         return False
 
 
 def hash_to_uuid4(value: str) -> str:
     """Hash a string to a valid UUID4 string.
 
-    The hashing is deterministic and collision resistant, meaning that it is highly unlikely that two different inputs produce the same output.
+    The hashing is deterministic and collision resistant, meaning that it is highly
+    unlikely that two different inputs produce the same output.
 
     Args:
         value: A string.

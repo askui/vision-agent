@@ -34,7 +34,9 @@ class AgentToolbox:
     @property
     def hub(self) -> AskUIHub:
         if self._hub.disabled:
-            raise ValueError(
-                "AskUI Hub is disabled. Please, set ASKUI_WORKSPACE_ID and ASKUI_TOKEN environment variables to enable it."
+            error_msg = (
+                "AskUI Hub is disabled. Please, set ASKUI_WORKSPACE_ID and "
+                "ASKUI_TOKEN environment variables to enable it."
             )
+            raise ValueError(error_msg)
         return self._hub

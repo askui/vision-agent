@@ -1,4 +1,3 @@
-import os
 import uuid
 from pathlib import Path
 
@@ -13,25 +12,23 @@ _anonymous_id: str | None = None
 def _read_anonymous_id_from_file() -> str | None:
     """Read anonymous ID from file if it exists."""
     try:
-        if os.path.exists(_ANONYMOUS_ID_FILE_PATH):
-            with open(_ANONYMOUS_ID_FILE_PATH, "r") as f:
-                return f.read().strip()
-        return None
-    except Exception as e:
+        if _ANONYMOUS_ID_FILE_PATH.exists():
+            return _ANONYMOUS_ID_FILE_PATH.read_text().strip()
+    except OSError as e:
         logger.warning(f"Failed to read anonymous ID from file: {str(e)}")
-        return None
+    return None
 
 
 def _write_anonymous_id_to_file(anonymous_id: str) -> bool:
     """Write anonymous ID to file, creating directories if needed."""
     try:
-        os.makedirs(os.path.dirname(_ANONYMOUS_ID_FILE_PATH), exist_ok=True)
-        with open(_ANONYMOUS_ID_FILE_PATH, "w") as f:
-            f.write(anonymous_id)
-        return True
-    except Exception as e:
+        _ANONYMOUS_ID_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _ANONYMOUS_ID_FILE_PATH.write_text(anonymous_id)
+    except OSError as e:
         logger.warning(f"Failed to write anonymous ID to file: {str(e)}")
-        return False
+    else:
+        return True
+    return False
 
 
 def get_anonymous_id() -> str:
@@ -48,7 +45,8 @@ def get_anonymous_id() -> str:
        - Random UUID if device ID unavailable
     4. Writes new ID to disk for persistence and returns it
     5. If writing to disk fails, just returns the new ID for each run
-       - Only going to be same across runs if it can be derived from the device ID, otherwise it's random
+    - Only going to be same across runs if it can be derived from the device ID,
+      otherwise it's random
     """
     global _anonymous_id
     if _anonymous_id is None:

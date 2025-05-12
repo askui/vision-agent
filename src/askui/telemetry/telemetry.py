@@ -20,7 +20,6 @@ from askui.telemetry.context import (
     PlatformContext,
     TelemetryContext,
 )
-from askui.telemetry.device_id import get_device_id
 from askui.telemetry.pkg_version import get_pkg_version
 from askui.telemetry.processors import SegmentSettings, TelemetryProcessor
 from askui.telemetry.user_identification import (
@@ -44,26 +43,29 @@ class TelemetrySettings(BaseModel):
     group_id: str | None = Field(
         default=os.environ.get("ASKUI_WORKSPACE_ID"),
         description=(
-            'The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" environment variable if set, '
-            "otherwise `None`."
+            'The group ID of the user. Defaults to the "ASKUI_WORKSPACE_ID" '
+            "environment variable if set, otherwise `None`."
         ),
     )
-    device_id: str | None = Field(
-        default_factory=get_device_id,
+    device_id: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
         description=(
             "The device ID of the host machine. "
-            "This is used to identify the device and the user (if anynomous) across AskUI components. "
-            "We hash it with an AskUI specific salt to avoid user tracking across (non-AskUI) "
-            "applications or exposing the actual machine ID. This is the trade-off we chose for now to "
-            "protect user privacy while still being able to improve the UX across components."
+            "This is used to identify the device and the user (if anynomous) across "
+            "AskUI components. "
+            "We hash it with an AskUI specific salt to avoid user tracking across "
+            "(non-AskUI) applications or exposing the actual machine ID. This is the "
+            "trade-off we chose for now to protect user privacy while still being able "
+            "to improve the UX across components."
         ),
     )
     session_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         description=(
-            "This is used to identify the current (test/automation) session. Defaults to a random UUID4. "
-            "This should be overridden if the test/automation is split across multiple processes to associate "
-            "all of them with a single session."
+            "This is used to identify the current (test/automation) session. "
+            "Defaults to a random UUID4. "
+            "This should be overridden if the test/automation is split across "
+            "multiple processes to associate all of them with a single session."
         ),
     )
     enabled: bool = True
@@ -78,14 +80,14 @@ class Telemetry:
         self._user_identification: UserIdentification | None = None
         if not self._settings.enabled:
             logger.debug(
-                "Telemetry is disabled. To enable it, set the `ASKUI__VA__TELEMETRY__ENABLED` "
-                "environment variable to `True`."
+                "Telemetry is disabled. To enable it, set the "
+                "`ASKUI__VA__TELEMETRY__ENABLED` environment variable to `True`."
             )
             return
 
         logger.debug(
-            "Telemetry is enabled. To disable it, set the `ASKUI__VA__TELEMETRY__ENABLED` "
-            "environment variable to `False`."
+            "Telemetry is enabled. To disable it, set the "
+            "`ASKUI__VA__TELEMETRY__ENABLED` environment variable to `False`."
         )
         if self._settings.user_identification:
             self._user_identification = UserIdentification(
@@ -126,7 +128,7 @@ class Telemetry:
             context["device"] = DeviceContext(id=self._settings.device_id)
         return context
 
-    def record_call(
+    def record_call(  # noqa: C901
         self,
         exclude: set[str] | None = None,
         exclude_first_arg: bool = True,
@@ -137,35 +139,39 @@ class Telemetry:
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         """Decorator to record calls to functions and methods
 
-        IMPORTANT: Parameters, responses and exceptions recorded must be serializable to JSON. Either make
-        sure that they are serializable or exclude them using the `exclude` parameter or use the
-        `exclude_response` and `exclude_exception` parameters.
+        IMPORTANT: Parameters, responses and exceptions recorded must be serializable
+        to JSON. Either make sure that they are serializable or exclude them using
+        the `exclude` parameter or use the `exclude_response` and `exclude_exception`
+        parameters.
 
         Args:
-            exclude: Set of parameters whose values are to be excluded from tracking (masked to retain
-                structure of the call)
-            exclude_first_arg: Whether to exclude the first argument, e.g., self or cls for instance and
-                class methods. Defaults to `True`, for functions and static methods, it should be set to
-                `False`
-            exclude_response: Whether to exclude the response of the function in the telemetry event.
-                Defaults to `True`
-            exclude_exception: Whether to exclude the exception if one is raised in the telemetry event.
-                Defaults to `False`
-            exclude_start: Whether to exclude the start of the function call as a telemetry event.
-                Defaults to `True`
-            flush: Whether to flush the telemetry data to the backend(s) after recording an event.
-                Defaults to `False`. Should be set to `True` if the process is expected to exit afterwards.
-                Setting it to `True` can have a slightly negative impact on performance but ensures that
-                telemetry data is not lost in case of a crash.
+            exclude (set[str] | None, optional): Set of parameters whose values are to
+                be excluded from tracking (masked to retain structure of the call).
+                Defaults to `None`.
+            exclude_first_arg (bool, optional): Whether to exclude the first argument,
+                e.g., `self` or `cls` for instance and class methods. Defaults to
+                `True`, for functions and static methods, it should be set to `False`.
+            exclude_response (bool, optional): Whether to exclude the response of the
+                function in the telemetry event. Defaults to `True`.
+            exclude_exception (bool, optional): Whether to exclude the exception if one
+                is raised in the telemetry event. Defaults to `False`.
+            exclude_start (bool, optional): Whether to exclude the start of the function
+                call as a telemetry event. Defaults to `True`.
+            flush (bool, optional): Whether to flush the telemetry data to the backend(s)
+                after recording an event. Defaults to `False`. Should be set to `True` if
+                an event. Defaults to `False`. Should be set to `True` if the process is
+                expected to exit afterwards. Setting it to `True` can have a slightly
+                negative impact on performance but ensures that telemetry data is not
+                lost in case of a crash.
         """
 
         _exclude = exclude or set()
 
-        def decorator(func: Callable[P, R]) -> Callable[P, R]:
+        def decorator(func: Callable[P, R]) -> Callable[P, R]:  # noqa: C901
             param_names_sorted = list(inspect.signature(func).parameters.keys())
 
             @wraps(func)
-            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:  # noqa: C901
                 if not self._settings.enabled:
                     return func(*args, **kwargs)
 
@@ -221,7 +227,6 @@ class Telemetry:
                         )
                     if flush:
                         self.flush()
-                    return response
                 except Exception as e:
                     duration_ms = (time.time() - start_time) * 1000
                     attributes["duration_ms"] = duration_ms
@@ -239,6 +244,8 @@ class Telemetry:
                     if flush:
                         self.flush()
                     raise
+                else:
+                    return response
                 finally:
                     self._call_stack.pop_call()
 

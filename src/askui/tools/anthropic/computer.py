@@ -2,12 +2,13 @@ from typing import Any, Literal, TypedDict
 
 from anthropic.types.beta import BetaToolComputerUse20241022Param
 
-from ...tools.agent_os import AgentOs
-from ...utils.image_utils import (
+from askui.tools.agent_os import AgentOs
+from askui.utils.image_utils import (
     image_to_base64,
     scale_coordinates_back,
     scale_image_with_padding,
 )
+
 from .base import BaseAnthropicTool, ToolError, ToolResult
 
 Action = Literal[
@@ -24,7 +25,7 @@ Action = Literal[
 ]
 
 
-PC_KEY = Literal[
+PC_KEY = [
     "backspace",
     "delete",
     "enter",
@@ -200,7 +201,8 @@ class ComputerToolOptions(TypedDict):
 
 class ComputerTool(BaseAnthropicTool):
     """
-    A tool that allows the agent to interact with the screen, keyboard, and mouse of the current computer.
+    A tool that allows the agent to interact with the screen, keyboard, and mouse of
+    the current computer.
     The tool parameters are defined by Anthropic and are not editable.
     """
 
@@ -232,26 +234,32 @@ class ComputerTool(BaseAnthropicTool):
         self.real_screen_width = None
         self.real_screen_height = None
 
-    def __call__(
+    def __call__(  # noqa: C901
         self,
         *,
         action: Action | None = None,
         text: str | None = None,
         coordinate: tuple[int, int] | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ARG002
     ) -> ToolResult:
+        """Execute computer action."""
         if action is None:
-            raise ToolError("Action is missing")
+            error_msg = "Action is missing"
+            raise ToolError(error_msg)
 
         if action in ("mouse_move", "left_click_drag"):
             if coordinate is None:
-                raise ToolError(f"coordinate is required for {action}")
+                error_msg = f"coordinate is required for {action}"
+                raise ToolError(error_msg)
             if text is not None:
-                raise ToolError(f"text is not accepted for {action}")
+                error_msg = f"text is not accepted for {action}"
+                raise ToolError(error_msg)
             if not isinstance(coordinate, list) or len(coordinate) != 2:
-                raise ToolError(f"{coordinate} must be a tuple of length 2")
+                error_msg = f"{coordinate} must be a tuple of length 2"
+                raise ToolError(error_msg)
             if not all(isinstance(i, int) and i >= 0 for i in coordinate):
-                raise ToolError(f"{coordinate} must be a tuple of non-negative ints")
+                error_msg = f"{coordinate} must be a tuple of non-negative ints"
+                raise ToolError(error_msg)
 
             x, y = scale_coordinates_back(
                 coordinate[0],
@@ -274,20 +282,24 @@ class ComputerTool(BaseAnthropicTool):
 
         if action in ("key", "type"):
             if text is None:
-                raise ToolError(f"text is required for {action}")
+                error_msg = f"text is required for {action}"
+                raise ToolError(error_msg)
             if coordinate is not None:
-                raise ToolError(f"coordinate is not accepted for {action}")
+                error_msg = f"coordinate is not accepted for {action}"
+                raise ToolError(error_msg)
             if not isinstance(text, str):
-                raise ToolError(f"{text} must be a string")
+                error_msg = f"{text} must be a string"
+                raise ToolError(error_msg)
 
             if action == "key":
                 if text in KEYSYM_MAP.keys():
                     text = KEYSYM_MAP[text]
 
-                if text not in PC_KEY.__args__:
-                    raise ToolError(
-                        f"Key {text} is not a valid PC_KEY from {', '.join(list(PC_KEY.__args__))}"
+                if text not in PC_KEY:
+                    error_msg = (
+                        f"Key {text} is not a valid PC_KEY from {', '.join(PC_KEY)}"
                     )
+                    raise ToolError(error_msg)
                 self.controller_client.keyboard_pressed(text)
                 self.controller_client.keyboard_release(text)
                 return ToolResult()
@@ -304,15 +316,17 @@ class ComputerTool(BaseAnthropicTool):
             "cursor_position",
         ):
             if text is not None:
-                raise ToolError(f"text is not accepted for {action}")
+                error_msg = f"text is not accepted for {action}"
+                raise ToolError(error_msg)
             if coordinate is not None:
-                raise ToolError(f"coordinate is not accepted for {action}")
+                error_msg = f"coordinate is not accepted for {action}"
+                raise ToolError(error_msg)
 
             if action == "screenshot":
                 return self.screenshot()
             if action == "cursor_position":
-                # TODO: Implement in the future
-                raise ToolError("cursor_position is not implemented by this agent")
+                error_msg = "cursor_position is not implemented by this agent"
+                raise ToolError(error_msg)
             if action == "left_click":
                 self.controller_client.click("left")
                 return ToolResult()
@@ -326,10 +340,14 @@ class ComputerTool(BaseAnthropicTool):
                 self.controller_client.click("left", 2)
                 return ToolResult()
 
-        raise ToolError(f"Invalid action: {action}")
+        error_msg = f"Invalid action: {action}"
+        raise ToolError(error_msg)
 
     def screenshot(self) -> ToolResult:
-        """Take a screenshot of the current screen, scale it and return the base64 encoded image."""
+        """
+        Take a screenshot of the current screen, scale it and return the base64
+        encoded image.
+        """
         screenshot = self.controller_client.screenshot()
         self.real_screen_width = screenshot.width
         self.real_screen_height = screenshot.height
