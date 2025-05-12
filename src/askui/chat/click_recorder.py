@@ -1,15 +1,17 @@
-import glob
 import json
 import os
 import subprocess
 import sys
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import List, Tuple
 
 from PIL import Image
 from pydantic import UUID4, BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+
+from askui.chat.exceptions import AnnotationError
 
 Coordinate = Tuple[int, int]
 
@@ -60,9 +62,8 @@ class AskUiSnippingTool:
     def __find_remote_device_controller(self) -> str:
         if sys.platform == "darwin":
             return f"{os.environ['ASKUI_INSTALLATION_DIRECTORY']}/DependencyCache/AskUIRemoteDeviceSnippingTool-0.2.0/AskuiRemoteDeviceSnippingTool"
-        raise NotImplementedError(
-            "Snipping tool not supported on this platform, yet, as the path was unknown at the time of writing"
-        )
+        error_msg = "Snipping tool not supported on this platform, yet, as the path was unknown at the time of writing"
+        raise NotImplementedError(error_msg)
 
     def __start_process(self, binary_path: str, output_directory: str) -> None:
         self.process = subprocess.check_output(
@@ -71,16 +72,17 @@ class AskUiSnippingTool:
 
     def annotate(self) -> Tuple[Image.Image, AnnoationContainer]:
         with tempfile.TemporaryDirectory() as tempdir:
+            tempdir_path = Path(tempdir)
             self.__start_process(self.__find_remote_device_controller(), tempdir)
 
-            json_files = glob.glob(tempdir + "/*.json")
-            png_files = glob.glob(tempdir + "/*.png")
+            json_files = list(tempdir_path.glob("*.json"))
+            png_files = list(tempdir_path.glob("*.png"))
 
             if len(json_files) != 1 or len(png_files) != 1:
-                raise Exception("No annotation Done!")
+                raise AnnotationError
             json_file = json_files[0]
             annotation = None
-            with open(json_file) as json_data:
+            with Path.open(json_file) as json_data:
                 annotation = AnnoationContainer(**json.load(json_data))
 
             return Image.open(png_files[0]).copy(), annotation

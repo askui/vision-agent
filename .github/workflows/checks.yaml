@@ -20,4 +20,5 @@ jobs:
       - run: pdm install
       - run: pdm run typecheck:all
       - run: pdm run format --check
+      - run: pdm run lint
       - run: pdm run test:unit

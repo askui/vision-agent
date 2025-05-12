@@ -30,19 +30,29 @@ class ModelDefinition(BaseModel):
     A definition of a model.
 
     Args:
-        task (str): The task the model is trained for, e.g., end-to-end OCR (`"e2e_ocr"`) or object detection (`"od"`)
-        architecture (str): The architecture of the model, e.g., `"easy_ocr"` or `"yolo"`
+        task (str): The task the model is trained for, e.g., end-to-end OCR
+            (`"e2e_ocr"`) or object detection (`"od"`)
+        architecture (str): The architecture of the model, e.g., `"easy_ocr"` or
+            `"yolo"`
         version (str): The version of the model
-        interface (str): The interface the model is trained for, e.g., `"online_learning"`
-        use_case (str, optional): The use case the model is trained for. In the case of workspace specific AskUI models, this is often the workspace id but with "-" replaced by "_". Defaults to `"00000000_0000_0000_0000_000000000000"` (custom null value).
-        tags (list[str], optional): Tags for identifying the model that cannot be represented by other properties, e.g., `["trained", "word_level"]`
+        interface (str): The interface the model is trained for, e.g.,
+            `"online_learning"`
+        use_case (str, optional): The use case the model is trained for. In the case
+            of workspace specific AskUI models, this is often the workspace id but
+            with "-" replaced by "_". Defaults to
+            `"00000000_0000_0000_0000_000000000000"` (custom null value).
+        tags (list[str], optional): Tags for identifying the model that cannot be
+            represented by other properties, e.g., `["trained", "word_level"]`
     """
 
     model_config = ConfigDict(
         populate_by_name=True,
     )
     task: ModelDefinitionProperty = Field(
-        description="The task the model is trained for, e.g., end-to-end OCR (e2e_ocr) or object detection (od)",
+        description=(
+            "The task the model is trained for, e.g., end-to-end OCR (e2e_ocr) or "
+            "object detection (od)"
+        ),
         examples=["e2e_ocr", "od"],
     )
     architecture: ModelDefinitionProperty = Field(
@@ -54,7 +64,10 @@ class ModelDefinition(BaseModel):
         examples=["online_learning"],
     )
     use_case: ModelDefinitionProperty = Field(
-        description='The use case the model is trained for. In the case of workspace specific AskUI models, this is often the workspace id but with "-" replaced by "_"',
+        description=(
+            "The use case the model is trained for. In the case of workspace specific "
+            'AskUI models, this is often the workspace id but with "-" replaced by "_"'
+        ),
         examples=[
             "fb3b9a7b_3aea_41f7_ba02_e55fd66d1c1e",
             "00000000_0000_0000_0000_000000000000",
@@ -64,7 +77,10 @@ class ModelDefinition(BaseModel):
     )
     tags: list[ModelDefinitionProperty] = Field(
         default_factory=list,
-        description="Tags for identifying the model that cannot be represented by other properties",
+        description=(
+            "Tags for identifying the model that cannot be represented by other "
+            "properties"
+        ),
         examples=["trained", "word_level"],
     )
 
@@ -87,7 +103,9 @@ class ModelDefinition(BaseModel):
 
 class ModelComposition(RootModel[list[ModelDefinition]]):
     """
-    A composition of models (list of `ModelDefinition`) to be used for a task, e.g., locating an element on the screen to be able to click on it or extracting text from an image.
+    A composition of models (list of `ModelDefinition`) to be used for a task, e.g.,
+    locating an element on the screen to be able to click on it or extracting text from
+    an image.
     """
 
     def __iter__(self) -> Iterator[ModelDefinition]:  # type: ignore

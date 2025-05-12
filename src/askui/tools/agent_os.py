@@ -135,9 +135,10 @@ class AgentOs(ABC):
     """
     Abstract base class for Agent OS. Cannot be instantiated directly.
 
-    This class defines the interface for operating system interactions including mouse control,
-    keyboard input, and screen capture functionality. Implementations should provide concrete
-    functionality for these abstract methods.
+    This class defines the interface for operating system interactions including
+    mouse control, keyboard input, and screen capture functionality.
+    Implementations should provide concrete functionality for these abstract
+    methods.
     """
 
     @abstractmethod
@@ -146,7 +147,8 @@ class AgentOs(ABC):
         Establishes a connection to the Agent OS.
 
         This method is called before performing any OS-level operations.
-        It handles any necessary setup or initialization required for the OS interaction.
+        It handles any necessary setup or initialization required for the OS
+        interaction.
         """
 
     @abstractmethod
@@ -164,7 +166,8 @@ class AgentOs(ABC):
         Captures a screenshot of the current display.
 
         Args:
-            report (bool, optional): Whether to include the screenshot in reporting. Defaults to `True`.
+            report (bool, optional): Whether to include the screenshot in
+                reporting. Defaults to `True`.
 
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
@@ -189,7 +192,8 @@ class AgentOs(ABC):
 
         Args:
             text (str): The text to be typed.
-            typing_speed (int, optional): The speed of typing in characters per minute. Defaults to `50`.
+            typing_speed (int, optional): The speed of typing in characters per
+                minute. Defaults to `50`.
         """
         raise NotImplementedError
 
@@ -201,7 +205,8 @@ class AgentOs(ABC):
         Simulates clicking a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to click. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse
+                button to click. Defaults to `"left"`.
             count (int, optional): Number of times to click. Defaults to `1`.
         """
         raise NotImplementedError
@@ -212,7 +217,8 @@ class AgentOs(ABC):
         Simulates pressing and holding a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to press. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse
+                button to press. Defaults to `"left"`.
         """
         raise NotImplementedError
 
@@ -222,7 +228,8 @@ class AgentOs(ABC):
         Simulates releasing a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse button to release. Defaults to `"left"`.
+            button (Literal["left", "middle", "right"], optional): The mouse
+                button to release. Defaults to `"left"`.
         """
         raise NotImplementedError
 
@@ -232,8 +239,10 @@ class AgentOs(ABC):
         Simulates scrolling the mouse wheel.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values scroll right, negative values scroll left.
-            y (int): The vertical scroll amount. Positive values scroll down, negative values scroll up.
+            x (int): The horizontal scroll amount. Positive values scroll right,
+                negative values scroll left.
+            y (int): The vertical scroll amount. Positive values scroll down,
+                negative values scroll up.
         """
         raise NotImplementedError
 
@@ -246,7 +255,8 @@ class AgentOs(ABC):
 
         Args:
             key (PcKey | ModifierKey): The key to press.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                press along with the main key. Defaults to `None`.
         """
         raise NotImplementedError
 
@@ -259,7 +269,8 @@ class AgentOs(ABC):
 
         Args:
             key (PcKey | ModifierKey): The key to release.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to release along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                release along with the main key. Defaults to `None`.
         """
         raise NotImplementedError
 
@@ -272,7 +283,8 @@ class AgentOs(ABC):
 
         Args:
             key (PcKey | ModifierKey): The key to tap.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Defaults to `None`.
+            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
+                press along with the main key. Defaults to `None`.
         """
         raise NotImplementedError
 
@@ -282,6 +294,7 @@ class AgentOs(ABC):
         Sets the active display for screen interactions.
 
         Args:
-            displayNumber (int, optional): The display number to set as active. Defaults to `1`.
+            displayNumber (int, optional): The display number to set as active.
+                Defaults to `1`.
         """
         raise NotImplementedError

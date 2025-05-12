@@ -278,7 +278,7 @@ class CircularDependencyError(ValueError):
         super().__init__(message)
 
 
-class Relatable(ABC):
+class Relatable(ABC):  # noqa: B024
     """Abstract base class for locators that can be related to other locators, e.g., spatially, logically etc. Cannot be instantiated directly.
     Subclassed by all (relatable) locators, e.g., `Prompt`, `Text`, `Image`, etc."""
 
@@ -984,15 +984,17 @@ class Relatable(ABC):
         for i, relation in enumerate(self._relations):
             [other_locator_str, *nested_relation_strs] = str(relation).split("\n")
             result.append(f"  {i + 1}. {other_locator_str}")
-            for nested_relation_str in nested_relation_strs:
-                result.append(f"  {nested_relation_str}")
+            result.extend(
+                f"  {nested_relation_str}"
+                for nested_relation_str in nested_relation_strs
+            )
         return "\n" + "\n".join(result)
 
     def _str_with_relation(self) -> str:
         return self._str() + self._relations_str()
 
     def raise_if_cycle(self) -> None:
-        """Raises CircularDependencyError if the relations form a cycle (see [Cycle (graph theory)](https://en.wikipedia.org/wiki/Cycle_(graph_theory)))."""
+        """Raises CircularDependencyError if the relations form a cycle (see [Cycle (graph theory)](https://en.wikipedia.org/wiki/Cycle_(graph_theory)))."""  # noqa: E501
         if self._has_cycle():
             raise CircularDependencyError
 

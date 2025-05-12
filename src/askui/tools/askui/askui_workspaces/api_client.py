@@ -19,6 +19,7 @@ import re
 import tempfile
 import types
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Type, Union
 from urllib.parse import quote
 
@@ -529,7 +530,7 @@ class ApiClient:
         params = []
         for k, v in files.items():
             if isinstance(v, str):
-                with open(v, "rb") as f:
+                with Path.open(v, "rb") as f:
                     filename = os.path.basename(f.name)
                     filedata = f.read()
             elif isinstance(v, bytes):
@@ -652,9 +653,9 @@ class ApiClient:
             m = re.search(r'filename=[\'"]?([^\'"\s]+)[\'"]?', content_disposition)
             assert m is not None, "Unexpected 'content-disposition' header value"
             filename = m.group(1)
-            path = os.path.join(os.path.dirname(path), filename)
+            path = os.path.join(Path.parent(path), filename)
 
-        with open(path, "wb") as f:
+        with Path.open(path, "wb") as f:
             f.write(response.data)
 
         return path

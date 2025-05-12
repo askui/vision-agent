@@ -1,8 +1,15 @@
+import json
 import os
 
 import anthropic
 from PIL import Image
 
+from askui.exceptions import (
+    ElementNotFoundError,
+    NoResponseToQueryError,
+    UnexpectedResponseToQueryError,
+)
+from askui.logger import logger
 from askui.utils.image_utils import (
     ImageSource,
     image_to_base64,
@@ -10,12 +17,6 @@ from askui.utils.image_utils import (
     scale_image_with_padding,
 )
 
-from ...exceptions import (
-    ElementNotFoundError,
-    NoResponseToQueryError,
-    UnexpectedResponseToQueryError,
-)
-from ...logger import logger
 from .utils import extract_click_coordinates
 
 
@@ -58,7 +59,7 @@ class ClaudeHandler:
     def locate_inference(self, image: Image.Image, locator: str) -> tuple[int, int]:
         prompt = f"Click on {locator}"
         screen_width, screen_height = self.resolution[0], self.resolution[1]
-        system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"
+        system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"  # noqa: E501
         scaled_image = scale_image_with_padding(image, screen_width, screen_height)
         response = self._inference(image_to_base64(scaled_image), prompt, system_prompt)
         assert len(response) > 0
@@ -67,8 +68,9 @@ class ClaudeHandler:
         logger.debug("ClaudeHandler received locator: %s", r.text)
         try:
             scaled_x, scaled_y = extract_click_coordinates(r.text)
-        except Exception:
-            raise ElementNotFoundError(f"Element not found: {locator}")
+        except (ValueError, json.JSONDecodeError) as e:
+            error_msg = f"Element not found: {locator}"
+            raise ElementNotFoundError(error_msg) from e
         x, y = scale_coordinates_back(
             scaled_x, scaled_y, image.width, image.height, screen_width, screen_height
         )
@@ -80,19 +82,17 @@ class ClaudeHandler:
             max_width=self.resolution[0],
             max_height=self.resolution[1],
         )
-        system_prompt = "You are an agent to process screenshots and answer questions about things on the screen or extract information from it. Answer only with the response to the question and keep it short and precise."
+        system_prompt = "You are an agent to process screenshots and answer questions about things on the screen or extract information from it. Answer only with the response to the question and keep it short and precise."  # noqa: E501
         response = self._inference(
             base64_image=image_to_base64(scaled_image),
             prompt=query,
             system_prompt=system_prompt,
         )
         if len(response) == 0:
-            raise NoResponseToQueryError(
-                f"No response from Claude to query: {query}", query
-            )
+            error_msg = f"No response from Claude to query: {query}"
+            raise NoResponseToQueryError(error_msg, query)
         r = response[0]
         if r.type == "text":
             return r.text
-        raise UnexpectedResponseToQueryError(
-            f"Unexpected response from Claude: {r}", query, r
-        )
+        error_msg = f"Unexpected response from Claude: {r}"
+        raise UnexpectedResponseToQueryError(error_msg, query, r)

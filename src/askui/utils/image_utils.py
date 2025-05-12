@@ -17,16 +17,14 @@ _DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
 
 
 def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
-    """
-    Load and validate an image from a PIL Image, a path (`str` or `pathlib.Path`), or any form of base64 data URL.
+    """Load and validate an image from a PIL Image, a path, or any form of base64 data URL.
 
-    Accepts:
-      - `PIL.Image.Image`
-      - File path (`str` or `pathlib.Path`)
-      - Data URL (e.g., "data:image/png;base64,...", "data:,...", ",...")
+    Args:
+        source (Union[str, Path, Image.Image]): The image source to load from.
+            Can be a PIL Image, file path (`str` or `pathlib.Path`), or data URL.
 
     Returns:
-        A valid `PIL.Image.Image` object.
+        Image.Image: A valid PIL Image object.
 
     Raises:
         ValueError: If the input is not a valid or recognizable image.
@@ -40,7 +38,8 @@ def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
         try:
             return Image.open(source)
         except (OSError, FileNotFoundError, UnidentifiedImageError) as e:
-            raise ValueError(f"Could not open image from file path: {source}") from e
+            error_msg = f"Could not open image from file path: {source}"
+            raise ValueError(error_msg) from e
 
     if isinstance(source, str):
         match = _DATA_URL_GENERIC_RE.match(source)
@@ -52,35 +51,36 @@ def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
                 try:
                     return Image.open(source)
                 except (FileNotFoundError, UnidentifiedImageError) as e:
-                    raise ValueError(
-                        f"Could not decode or identify image from input: {source[:100]}{'...' if len(source) > 100 else ''}"
-                    ) from e
+                    error_msg = (
+                        f"Could not decode or identify image from input:"
+                        f"{source[:100]}{'...' if len(source) > 100 else ''}"
+                    )
+                    raise ValueError(error_msg) from e
 
-    raise ValueError(f"Unsupported image input type: {type(source)}")
+    error_msg = f"Unsupported image input type: {type(source)}"
+    raise ValueError(error_msg)
 
 
 def image_to_data_url(image: PILImage.Image) -> str:
-    """
-    Convert a PIL Image to a data URL.
+    """Convert a PIL Image to a data URL.
 
     Args:
-        image: The PIL Image to convert.
+        image (PILImage.Image): The PIL Image to convert.
 
     Returns:
-        A data URL string in the format "data:image/png;base64,..."
+        str: A data URL string in the format "data:image/png;base64,..."
     """
-    return f"data:image/png;base64,{image_to_base64(image=image, format='PNG')}"
+    return f"data:image/png;base64,{image_to_base64(image=image, format_='PNG')}"
 
 
 def data_url_to_image(data_url: str) -> Image.Image:
-    """
-    Convert a data URL to a PIL Image.
+    """Convert a data URL to a PIL Image.
 
     Args:
-        data_url: The data URL string to convert.
+        data_url (str): The data URL string to convert.
 
     Returns:
-        A PIL Image object.
+        Image.Image: A PIL Image object.
 
     Raises:
         ValueError: If the data URL is invalid or the image cannot be decoded.
@@ -89,24 +89,22 @@ def data_url_to_image(data_url: str) -> Image.Image:
     while len(data_url) % 4 != 0:
         data_url += "="
     image_data = base64.b64decode(data_url)
-    image = Image.open(BytesIO(image_data))
-    return image
+    return Image.open(BytesIO(image_data))
 
 
 def draw_point_on_image(
     image: Image.Image, x: int, y: int, size: int = 3
 ) -> Image.Image:
-    """
-    Draw a red point at the specified x,y coordinates on a copy of the input image.
+    """Draw a red point at the specified x,y coordinates on a copy of the input image.
 
     Args:
-        image: The PIL Image to draw on.
-        x: The x-coordinate for the point.
-        y: The y-coordinate for the point.
-        size: The size of the point in pixels. Defaults to 3.
+        image (Image.Image): The PIL Image to draw on.
+        x (int): The x-coordinate for the point.
+        y (int): The y-coordinate for the point.
+        size (int, optional): The size of the point in pixels. Defaults to `3`.
 
     Returns:
-        A new PIL Image with the point drawn.
+        Image.Image: A new PIL Image with the point drawn.
     """
     img_copy = image.copy()
     draw = ImageDraw.Draw(img_copy)
@@ -115,35 +113,32 @@ def draw_point_on_image(
 
 
 def base64_to_image(base64_string: str) -> Image.Image:
-    """
-    Convert a base64 string to a PIL Image.
+    """Convert a base64 string to a PIL Image.
 
     Args:
-        base64_string: The base64 encoded image string.
+        base64_string (str): The base64 encoded image string.
 
     Returns:
-        A PIL Image object.
+        Image.Image: A PIL Image object.
 
     Raises:
         ValueError: If the base64 string is invalid or the image cannot be decoded.
     """
     image_bytes = base64.b64decode(base64_string)
-    image = Image.open(io.BytesIO(image_bytes))
-    return image
+    return Image.open(io.BytesIO(image_bytes))
 
 
 def image_to_base64(
-    image: Union[pathlib.Path, Image.Image], format: Literal["PNG"] | None = None
+    image: Union[pathlib.Path, Image.Image], format_: Literal["PNG", "JPEG"] = "PNG"
 ) -> str:
-    """
-    Convert an image to a base64 string.
+    """Convert an image to a base64 string.
 
     Args:
-        image: The image to convert, either a PIL Image or a file path.
-        format: The image format to use. Currently only "PNG" is supported.
+        image (Union[pathlib.Path, Image.Image]): The image to convert, either a PIL Image or a file path.
+        format_ (Literal["PNG", "JPEG"], optional): The image format to use. Defaults to `"PNG"`.
 
     Returns:
-        A base64 encoded string of the image.
+        str: A base64 encoded string of the image.
 
     Raises:
         ValueError: If the image cannot be encoded or the format is unsupported.
@@ -151,10 +146,10 @@ def image_to_base64(
     image_bytes: bytes | None = None
     if isinstance(image, Image.Image):
         with io.BytesIO() as _bytes:
-            image.save(_bytes, format="PNG")
+            image.save(_bytes, format=format_)
             image_bytes = _bytes.getvalue()
     elif isinstance(image, pathlib.Path):
-        with open(image, "rb") as f:
+        with Path.open(image, "rb") as f:
             image_bytes = f.read()
     return base64.b64encode(image_bytes).decode("utf-8")
 
@@ -162,16 +157,15 @@ def image_to_base64(
 def scale_image_with_padding(
     image: Image.Image, max_width: int, max_height: int
 ) -> Image.Image:
-    """
-    Scale an image to fit within specified dimensions while maintaining aspect ratio and adding padding.
+    """Scale an image to fit within specified dimensions while maintaining aspect ratio and adding padding.
 
     Args:
-        image: The PIL Image to scale.
-        max_width: The maximum width of the output image.
-        max_height: The maximum height of the output image.
+        image (Image.Image): The PIL Image to scale.
+        max_width (int): The maximum width of the output image.
+        max_height (int): The maximum height of the output image.
 
     Returns:
-        A new PIL Image that fits within the specified dimensions with padding.
+        Image.Image: A new PIL Image that fits within the specified dimensions with padding.
     """
     original_width, original_height = image.size
     aspect_ratio = original_width / original_height
@@ -184,7 +178,7 @@ def scale_image_with_padding(
     scaled_image = image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
     pad_left = (max_width - scaled_width) // 2
     pad_top = (max_height - scaled_height) // 2
-    padded_image = ImageOps.expand(
+    return ImageOps.expand(
         scaled_image,
         border=(
             pad_left,
@@ -194,7 +188,6 @@ def scale_image_with_padding(
         ),
         fill=(0, 0, 0),  # Black padding
     )
-    return padded_image
 
 
 def scale_coordinates_back(
@@ -205,19 +198,18 @@ def scale_coordinates_back(
     max_width: int,
     max_height: int,
 ) -> Tuple[float, float]:
-    """
-    Convert coordinates from a scaled and padded image back to the original image coordinates.
+    """Convert coordinates from a scaled and padded image back to the original image coordinates.
 
     Args:
-        x: The x-coordinate in the scaled image.
-        y: The y-coordinate in the scaled image.
-        original_width: The width of the original image.
-        original_height: The height of the original image.
-        max_width: The maximum width used for scaling.
-        max_height: The maximum height used for scaling.
+        x (float): The x-coordinate in the scaled image.
+        y (float): The y-coordinate in the scaled image.
+        original_width (int): The width of the original image.
+        original_height (int): The height of the original image.
+        max_width (int): The maximum width used for scaling.
+        max_height (int): The maximum height used for scaling.
 
     Returns:
-        A tuple of (original_x, original_y) coordinates.
+        Tuple[float, float]: A tuple of (original_x, original_y) coordinates.
 
     Raises:
         ValueError: If the coordinates are outside the padded image area.
@@ -237,11 +229,12 @@ def scale_coordinates_back(
     adjusted_y = y - pad_top
     if (
         adjusted_x < 0
-        or adjusted_x > scaled_width
         or adjusted_y < 0
+        or adjusted_x > scaled_width
         or adjusted_y > scaled_height
     ):
-        raise ValueError("Coordinates are outside the padded image area")
+        error_msg = "Coordinates are outside the padded image area"
+        raise ValueError(error_msg)
     original_x = adjusted_x / scale_factor
     original_y = adjusted_y / scale_factor
     return original_x, original_y
@@ -258,13 +251,18 @@ Accepts:
 
 
 class ImageSource(RootModel):
-    """
-    A Pydantic model that represents an image source and provides methods to convert it to different formats.
+    """A Pydantic model that represents an image source and provides methods to convert it to different formats.
 
     The model can be initialized with:
     - A PIL Image object
     - A file path (str or pathlib.Path)
     - A data URL string
+
+    Attributes:
+        root (PILImage.Image): The underlying PIL Image object.
+
+    Args:
+        root (Img): The image source to load from.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -279,19 +277,17 @@ class ImageSource(RootModel):
         return load_image(v)
 
     def to_data_url(self) -> str:
-        """
-        Convert the image to a data URL.
+        """Convert the image to a data URL.
 
         Returns:
-            A data URL string in the format "data:image/png;base64,..."
+            str: A data URL string in the format `"data:image/png;base64,..."`
         """
         return image_to_data_url(image=self.root)
 
     def to_base64(self) -> str:
-        """
-        Convert the image to a base64 string.
+        """Convert the image to a base64 string.
 
         Returns:
-            A base64 encoded string of the image.
+            str: A base64 encoded string of the image.
         """
         return image_to_base64(image=self.root)

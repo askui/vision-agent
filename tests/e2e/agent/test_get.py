@@ -41,7 +41,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
 ) -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         vision_agent.get(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,
@@ -57,7 +57,7 @@ def test_get_with_response_schema_without_required_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
 ) -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         vision_agent.get(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,

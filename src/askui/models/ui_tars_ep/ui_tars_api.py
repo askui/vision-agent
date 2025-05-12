@@ -65,6 +65,7 @@ class UITarsAPIHandler:
             instruction=askui_locator,
             prompt=PROMPT,
         )
+        assert prediction is not None
         pattern = r"click\(start_box='(\(\d+,\d+\))'\)"
         match = re.search(pattern, prediction)
         if match:
@@ -85,9 +86,8 @@ class UITarsAPIHandler:
             prompt=PROMPT_QA,
         )
         if response is None:
-            raise NoResponseToQueryError(
-                f"No response from UI-TARS to query: {query}", query
-            )
+            error_msg = f"No response from UI-TARS to query: {query}"
+            raise NoResponseToQueryError(error_msg, query)
         return response
 
     def act(self, goal: str) -> None:
@@ -99,7 +99,9 @@ class UITarsAPIHandler:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/png;base64,{image_to_base64(screenshot)}"
+                            "url": (
+                                f"data:image/png;base64,{image_to_base64(screenshot)}"
+                            )
                         },
                     },
                     {"type": "text", "text": PROMPT + goal},
@@ -117,7 +119,9 @@ class UITarsAPIHandler:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/png;base64,{image_to_base64(screenshot)}"
+                            "url": (
+                                f"data:image/png;base64,{image_to_base64(screenshot)}"
+                            )
                         },
                     }
                 ],
@@ -190,7 +194,7 @@ class UITarsAPIHandler:
         try:
             message = UITarsEPMessage.parse_message(raw_message)
             print(message)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
             message_history.append(
                 {"role": "user", "content": [{"type": "text", "text": str(e)}]}
             )

@@ -1,5 +1,5 @@
 import base64
-import os
+from pathlib import Path
 from typing import Optional, Union
 from urllib.parse import urlencode, urljoin
 from uuid import UUID
@@ -49,7 +49,8 @@ class AskUIHubSettings(BaseSettings):
     @property
     def workspaces_host(self) -> str:
         if self.workspaces_endpoint is None:
-            raise ValueError("Workspaces endpoint is not set")
+            error_msg = "Workspaces endpoint is not set"
+            raise ValueError(error_msg)
         return self.workspaces_endpoint.unicode_string().rstrip("/")
 
     @property
@@ -59,7 +60,8 @@ class AskUIHubSettings(BaseSettings):
     @property
     def token_base64(self) -> str:
         if self.token is None:
-            raise ValueError("Token is not set")
+            error_msg = "Token is not set"
+            raise ValueError(error_msg)
         return base64.b64encode(self.token.encode()).decode()
 
     @property
@@ -114,17 +116,19 @@ class AskUIHub:
             agent_id=[str(agent_id)]
         )
         if not response.data:
-            raise ValueError(f"Agent {agent_id} not found")
+            error_msg = f"Agent {agent_id} not found"
+            raise ValueError(error_msg)
         return response.data[0]
 
     def retrieve_agent_execution(
         self, agent_execution_id: UUID | str
     ) -> AgentExecution:
-        response = self._agent_executions_api.list_agent_executions_api_v1_agent_executions_get(
+        response = self._agent_executions_api.list_agent_executions_api_v1_agent_executions_get(  # noqa: E501
             agent_execution_id=[str(agent_execution_id)]
         )
         if not response.data:
-            raise ValueError(f"Agent execution {agent_execution_id} not found")
+            error_msg = f"Agent execution {agent_execution_id} not found"
+            raise ValueError(error_msg)
         return response.data[0]
 
     def update_agent_execution(
@@ -138,15 +142,16 @@ class AskUIHub:
         ],
     ) -> AgentExecution:
         command = AgentExecutionUpdateCommand(state=State1(state.model_dump()))
-        return self._agent_executions_api.update_agent_execution_api_v1_agent_executions_agent_execution_id_patch(
+        return self._agent_executions_api.update_agent_execution_api_v1_agent_executions_agent_execution_id_patch(  # noqa: E501
             agent_execution_id=str(agent_execution_id),
             agent_execution_update_command=command,
         )
 
     def schedule_run(self, command: ScheduleRunCommand) -> ScheduleRunResponse:
         if self._settings.workspace_id is None:
-            raise ValueError("`ASKUI_WORKSPACE_ID` environment variable is not set")
-        return self._schedules_api.create_schedule_api_v1_workspaces_workspace_id_schedules_post(
+            error_msg = "`ASKUI_WORKSPACE_ID` environment variable is not set"
+            raise ValueError(error_msg)
+        return self._schedules_api.create_schedule_api_v1_workspaces_workspace_id_schedules_post(  # noqa: E501
             workspace_id=self._settings.workspace_id,
             create_schedule_request_dto=command,
         )
@@ -159,7 +164,7 @@ class AskUIHub:
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True)
     def _upload_file(self, local_file_path: str, remote_file_path: str) -> None:
-        with open(local_file_path, "rb") as f:
+        with Path(local_file_path).open("rb") as f:
             url = urljoin(
                 base=self._settings.files_base_url,
                 url=remote_file_path,
@@ -175,28 +180,24 @@ class AskUIHub:
                     response.raise_for_status()
 
     def _upload_dir(self, local_dir_path: str, remote_dir_path: str) -> None:
-        for root, _, files in os.walk(local_dir_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                relative_file_path = os.path.relpath(
-                    file_path,
-                    start=local_dir_path,
-                )
+        """Upload directory to remote device."""
+        for file_path in Path(local_dir_path).rglob("*"):
+            if file_path.is_file():
+                relative_file_path = file_path.relative_to(local_dir_path)
                 remote_file_path = (
-                    remote_dir_path
-                    + ("/" if remote_dir_path != "" else "")
-                    + ("/".join(relative_file_path.split(os.sep)))
+                    f"{remote_dir_path}/{'/' if remote_dir_path else ''}"
+                    f"{'/'.join(relative_file_path.parts)}"
                 )
-                self._upload_file(file_path, remote_file_path)
+                self._upload_file(str(file_path), remote_file_path)
 
     def upload(self, local_path: str, remote_dir_path: str = "") -> None:
+        """Upload file or directory to remote device."""
         r_dir_path = remote_dir_path.rstrip("/")
-        if os.path.isdir(local_path):
+        local_path_obj = Path(local_path)
+        if local_path_obj.is_dir():
             self._upload_dir(local_path, r_dir_path)
         else:
-            self._upload_file(
-                local_path, f"{r_dir_path}/{os.path.basename(local_path)}"
-            )
+            self._upload_file(local_path, f"{r_dir_path}/{local_path_obj.name}")
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(), reraise=True)
     def _download_file(self, url: str, local_file_path: str) -> None:
@@ -208,7 +209,7 @@ class AskUIHub:
         )
         if response.status_code != 200:
             response.raise_for_status()
-        with open(local_file_path, "wb") as f:
+        with Path(local_file_path).open("wb") as f:
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
@@ -240,11 +241,13 @@ class AskUIHub:
                     relative_remote_path = content.name
                 else:  # is a prefix, e.g., folder
                     relative_remote_path = content.path[len(prefix) :].lstrip("/")
-                local_file_path = os.path.join(
-                    local_dir_path, *relative_remote_path.split("/")
+                local_file_path = Path.joinpath(
+                    Path(local_dir_path), *relative_remote_path.split("/")
                 )
-                os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
-                self._download_file(content.url, local_file_path)
+                Path.mkdir(
+                    Path.parent(Path(local_file_path)), parents=True, exist_ok=True
+                )
+                self._download_file(content.url, str(local_file_path))
             continuation_token = list_objects_response.next_continuation_token
             if continuation_token is None:
                 break

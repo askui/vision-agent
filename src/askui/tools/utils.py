@@ -10,7 +10,8 @@ def wait_for_port(port: int, host: str = "localhost", timeout: float = 5.0) -> N
         host: Host address on which the port should exist.
         timeout: In seconds. How long to wait before raising errors.
     Raises:
-        TimeoutError: The port isn't accepting connection after time specified in `timeout`.
+        TimeoutError: The port isn't accepting connection after time specified in
+            `timeout`.
     """
     start_time = time.perf_counter()
     while True:
@@ -20,10 +21,11 @@ def wait_for_port(port: int, host: str = "localhost", timeout: float = 5.0) -> N
         except OSError as ex:
             time.sleep(0.01)
             if time.perf_counter() - start_time >= timeout:
-                raise TimeoutError(
+                error_msg = (
                     "Waited too long for the port {} on host {} to start accepting "
                     "connections.".format(port, host)
-                ) from ex
+                )
+                raise TimeoutError(error_msg) from ex
 
 
 def process_exists(process_name: str) -> bool:

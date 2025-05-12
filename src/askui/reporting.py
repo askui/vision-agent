@@ -4,7 +4,7 @@ import platform
 import random
 import sys
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from importlib.metadata import distributions
 from io import BytesIO
 from pathlib import Path
@@ -31,9 +31,12 @@ class Reporter(ABC):
         """Add a message to the report.
 
         Args:
-            role (str): The role of the message sender (e.g., `"User"`, `"Assistant"`, `"System"`)
-            content (Union[str, dict, list]): The message content, which can be a string, dictionary, or list, e.g. `'click 2x times on text "Edit"'`
-            image (Optional[PIL.Image.Image | list[PIL.Image.Image]], optional): PIL Image or list of PIL Images to include with the message
+            role (str): The role of the message sender (e.g., `"User"`, `"Assistant"`,
+                `"System"`)
+            content (str | dict | list): The message content, which can be a string,
+                dictionary, or list, e.g. `'click 2x times on text "Edit"'`
+            image (PIL.Image.Image | list[PIL.Image.Image], optional): PIL Image or
+                list of PIL Images to include with the message
         """
         raise NotImplementedError
 
@@ -41,16 +44,21 @@ class Reporter(ABC):
     def generate(self) -> None:
         """Generates the final report.
 
-        Implementing this method is only required if the report is not generated in "real-time", e.g., on calls of `add_message()`, but must be generated at the end of the execution.
+        Implementing this method is only required if the report is not generated
+        in "real-time", e.g., on calls of `add_message()`, but must be generated
+        at the end of the execution.
 
-        This method is called when the `askui.VisionAgent` context is exited or `askui.VisionAgent.close()` is called.
+        This method is called when the `askui.VisionAgent` context is exited or
+        `askui.VisionAgent.close()` is called.
         """
 
 
 class CompositeReporter(Reporter):
     """A reporter that combines multiple reporters.
 
-    Allows generating different reports simultaneously. Each message added will be forwarded to all reporters passed to the constructor. The reporters are called (`add_message()`, `generate()`) in the order they are ordered in the `reporters` list.
+    Allows generating different reports simultaneously. Each message added will be forwarded to all
+        reporters passed to the constructor. The reporters are called (`add_message()`, `generate()`) in
+        the order they are ordered in the `reporters` list.
 
     Args:
         reporters (list[Reporter] | None, optional): List of reporters to combine
@@ -87,7 +95,8 @@ class SimpleHtmlReporter(Reporter):
     """A reporter that generates HTML reports with conversation logs and system information.
 
     Args:
-        report_dir (str, optional): Directory where reports will be saved. Defaults to `reports`.
+        report_dir (str, optional): Directory where reports will be saved.
+            Defaults to `reports`.
     """
 
     def __init__(self, report_dir: str = "reports") -> None:
@@ -132,7 +141,7 @@ class SimpleHtmlReporter(Reporter):
             _images = [image]
 
         message = {
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(tz=timezone.utc),
             "role": role,
             "content": self._format_content(content),
             "is_json": isinstance(content, (dict, list)),
@@ -153,8 +162,11 @@ class SimpleHtmlReporter(Reporter):
         <html>
             <head>
                 <title>Vision Agent Report - {{ timestamp }}</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+                <link rel="stylesheet" 
+                    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+                <script 
+                    src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js">
+                </script>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
                     table { 
@@ -212,8 +224,12 @@ class SimpleHtmlReporter(Reporter):
                 </style>
                 <script>
                     function togglePackages() {
-                        const hiddenPackages = document.getElementById('hiddenPackages');
-                        const toggleButton = document.getElementById('toggleButton');
+                        const hiddenPackages = document.getElementById(
+                            'hiddenPackages'
+                        );
+                        const toggleButton = document.getElementById(
+                            'toggleButton'
+                        );
                         
                         if (hiddenPackages.classList.contains('hidden-packages')) {
                             hiddenPackages.classList.remove('hidden-packages');
@@ -259,7 +275,8 @@ class SimpleHtmlReporter(Reporter):
                                     {{ package }}<br>
                                 {% endfor %}
                                 </div>
-                                <span id="toggleButton" class="show-more" onclick="togglePackages()">Show more...</span>
+                                <span id="toggleButton" class="show-more" 
+                                    onclick="togglePackages()">Show more...</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -300,13 +317,13 @@ class SimpleHtmlReporter(Reporter):
 
         template = Template(template_str)
         html = template.render(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             messages=self.messages,
             system_info=self.system_info,
         )
 
         report_path = (
-            self.report_dir
-            / f"report_{datetime.now():%Y%m%d%H%M%S%f}{random.randint(0, 1000):03}.html"
+            self.report_dir / f"report_{datetime.now(tz=timezone.utc):%Y%m%d%H%M%S%f}"
+            f"{random.randint(0, 1000):03}.html"
         )
         report_path.write_text(html)

@@ -15,6 +15,7 @@ from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource, image_to_base64
 
 from ..types.response_schemas import ResponseSchema, to_response_schema
+from .exceptions import ApiResponseError, TokenNotSetError
 
 
 class AskUiInferenceApi:
@@ -37,12 +38,15 @@ class AskUiInferenceApi:
             return {"Authorization": f"Bearer {bearer_token}"}
 
         if self.token is None:
-            raise Exception("ASKUI_TOKEN is not set.")
+            raise TokenNotSetError
         token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
         return {"Authorization": f"Basic {token_base64}"}
 
     def _build_base_url(self, endpoint: str) -> str:
-        return f"{self.inference_endpoint}/api/v3/workspaces/{self.workspace_id}/{endpoint}"
+        return (
+            f"{self.inference_endpoint}/api/v3/workspaces/"
+            f"{self.workspace_id}/{endpoint}"
+        )
 
     def _request(self, endpoint: str, json: dict[str, Any] | None = None) -> Any:
         response = requests.post(
@@ -55,9 +59,7 @@ class AskUiInferenceApi:
             timeout=30,
         )
         if response.status_code != 200:
-            raise Exception(
-                f"{response.status_code}: Unknown Status Code\n", response.text
-            )
+            raise ApiResponseError(response.status_code, response.text)
 
         return response.json()
 

@@ -46,7 +46,8 @@ class ToolResult:
             if field and other_field:
                 if concatenate:
                     return field + other_field
-                raise ValueError("Cannot combine tool results")
+                error_msg = "Cannot combine tool results"
+                raise ValueError(error_msg)
             return field or other_field
 
         return ToolResult(

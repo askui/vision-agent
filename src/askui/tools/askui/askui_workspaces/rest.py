@@ -234,6 +234,6 @@ class RESTClientObject:
                 )
         except urllib3.exceptions.SSLError as e:
             msg = "\n".join([type(e).__name__, str(e)])
-            raise ApiException(status=0, reason=msg)
+            raise ApiException(status=0, reason=msg) from e
 
         return RESTResponse(r)

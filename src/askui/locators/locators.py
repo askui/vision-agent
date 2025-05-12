@@ -188,9 +188,8 @@ class ImageBase(Locator, ABC):
     ) -> None:
         super().__init__()
         if threshold > stop_threshold:
-            raise ValueError(
-                f"threshold ({threshold}) must be less than or equal to stop_threshold ({stop_threshold})"
-            )
+            error_msg = f"threshold ({threshold}) must be less than or equal to stop_threshold ({stop_threshold})"
+            raise ValueError(error_msg)
         self._threshold = threshold
         self._stop_threshold = stop_threshold
         self._mask = mask

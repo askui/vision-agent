@@ -96,7 +96,8 @@ class AiElementCollection:
 
         workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
         if workspace_id is None:
-            raise ValueError("ASKUI_WORKSPACE_ID is not set")
+            error_msg = "ASKUI_WORKSPACE_ID is not set"
+            raise ValueError(error_msg)
 
         locations_from_env: list[pathlib.Path] = []
         if locations_env := os.getenv("ASKUI_AI_ELEMENT_LOCATIONS"):

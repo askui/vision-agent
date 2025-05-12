@@ -15,7 +15,8 @@ class BoxCoordinate(BaseModel):
         """Parse a coordinate string in the format (x,y)."""
         match = re.match(r"\((\d+),(\d+)\)", coord_str)
         if not match:
-            raise ValueError(f"Invalid coordinate format: {coord_str}")
+            error_msg = f"Invalid coordinate format: {coord_str}"
+            raise ValueError(error_msg)
         return cls(x=int(match.group(1)), y=int(match.group(2)))
 
 
@@ -133,12 +134,13 @@ class UITarsEPMessage(BaseModel):
         return cls(thought=thought, raw_action=action, parsed_action=parsed_action)
 
     @staticmethod
-    def parse_action(action_str: str) -> ActionType:
+    def parse_action(action_str: str) -> ActionType:  # noqa: C901
         """Parse the action string into the appropriate action type."""
         # Extract action type and parameters
         match = re.match(r"(\w+)\((.*)\)", action_str)
         if not match:
-            raise ValueError(f"Invalid action format: {action_str}")
+            error_msg = f"Invalid action format: {action_str}"
+            raise ValueError(error_msg)
 
         action_type, params_str = match.groups()
 
@@ -178,4 +180,5 @@ class UITarsEPMessage(BaseModel):
             return FinishedAction()
         if action_type == "call_user":
             return CallUserAction()
-        raise ValueError(f"Unknown action type: {action_type}")
+        error_msg = f"Unknown action type: {action_type}"
+        raise ValueError(error_msg)
