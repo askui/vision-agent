@@ -10,7 +10,6 @@ from PIL import Image, ImageDraw
 from askui.reporting.report import SimpleReportGenerator
 from askui.utils import ANDROID_KEY, draw_point_on_image, resize_to_max_edge
 
-
 class AndroidDisplay:
     def __init__(
         self, unique_display_id: int, display_name: str, display_index: int
@@ -87,11 +86,7 @@ class AskUiAndroidControllerClient:
 
     def connect(self) -> None:
         self._client = AdbClient()
-        self.set_device_by_index()
-        self._displays = self.get_connected_displays()
-        if not self._displays:
-            raise RuntimeError("No displays found")
-        self.set_display_by_index(0)
+        self.set_device_by_index(0)
         self._add_report_message("AgentOS", f"connect() to {self._device.serial}")
 
     def disconnect(self) -> None:
@@ -105,6 +100,7 @@ class AskUiAndroidControllerClient:
         self._add_report_message("AgentOS", f"select display {str(display)}")
 
     def set_display_by_index(self, displayNumber: int = 0) -> None:
+        self._displays = self.get_connected_displays()
         if not self._displays:
             raise RuntimeError("No displays connected")
         if displayNumber >= len(self._displays):
@@ -114,6 +110,7 @@ class AskUiAndroidControllerClient:
         self._set_display(self._displays[displayNumber])
 
     def set_display_by_id(self, display_id: int) -> None:
+        self._displays = self.get_connected_displays()
         if not self._displays:
             raise RuntimeError("No displays connected")
         for display in self._displays:
@@ -123,6 +120,7 @@ class AskUiAndroidControllerClient:
         raise RuntimeError(f"Display ID {display_id} not found")
 
     def set_display_by_name(self, display_name: str) -> None:
+        self._displays = self.get_connected_displays()
         if not self._displays:
             raise RuntimeError("No displays connected")
         for display in self._displays:
@@ -141,6 +139,7 @@ class AskUiAndroidControllerClient:
             )
         self._device = devices[device_index]
         self._add_report_message("AgentOS", f"set_display({device_index})")
+        self.set_display_by_index(0)
 
     def set_device_by_name(self, displayName: str) -> None:
         devices = self._client.devices()
@@ -149,6 +148,7 @@ class AskUiAndroidControllerClient:
         for device in devices:
             if device.serial == displayName:
                 self._device = device
+                self.set_display_by_index(0)
                 self._add_report_message("AgentOS", f"set_display({displayName})")
                 return
         raise RuntimeError(f"Device name {displayName} not found")
