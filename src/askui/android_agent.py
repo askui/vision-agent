@@ -33,7 +33,7 @@ class AndroidVisionAgent:
         self.tools = AgentToolbox(os_controller=self.client)
         self.claudeAgent =  ClaudeAndroidAgent(self.client, self.report, file_tool_base_dir_path)
 
-    def act(self, goal: str, model_name=None) -> None:
+    def act(self, goal: str) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
 
@@ -43,12 +43,10 @@ class AndroidVisionAgent:
 
         Parameters:
             goal (str): A description of what the agent should achieve.
-            model_name (str | None): The specific model to use for vision analysis.
-                If None, uses the default model.
 
         Example:
         ```python
-        with VisionAgent() as agent:
+        with AndroidVisionAgent() as agent:
             agent.act("Open the settings menu")
             agent.act("Search for 'printer' in the search box")
             agent.act("Log in with username 'admin' and password '1234'")
