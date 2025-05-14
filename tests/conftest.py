@@ -23,6 +23,15 @@ def path_fixtures_images(path_fixtures: pathlib.Path) -> pathlib.Path:
 
 
 @pytest.fixture
+def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
+    """Fixture providing the GitHub login screenshot."""
+    screenshot_path = (
+        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
+    )
+    return Image.open(screenshot_path)
+
+
+@pytest.fixture
 def path_fixtures_github_com__icon(path_fixtures_images: pathlib.Path) -> pathlib.Path:
     """Fixture providing the path to the github com icon image."""
     return path_fixtures_images / "github_com__icon.png"
@@ -51,3 +60,10 @@ def model_router_mock(mocker: MockerFixture) -> ModelRouter:
         "Mock response"  # Return fixed response for all get_inference calls
     )
     return cast("ModelRouter", mock)
+
+
+@pytest.fixture(autouse=True)
+def disable_telemetry() -> None:
+    from askui.container import telemetry
+
+    telemetry.set_processors([])

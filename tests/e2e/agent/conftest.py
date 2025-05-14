@@ -56,12 +56,3 @@ def vision_agent(
         reporters=[reporter], model_router=model_router, tools=agent_toolbox_mock
     ) as agent:
         yield agent
-
-
-@pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> PILImage.Image:
-    """Fixture providing the GitHub login screenshot."""
-    screenshot_path = (
-        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
-    )
-    return PILImage.open(screenshot_path)

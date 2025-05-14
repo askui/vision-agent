@@ -20,7 +20,9 @@ class BrowserContextResponse(ResponseSchemaBase):
     browser_type: Literal["chrome", "firefox", "edge", "safari"]
 
 
-@pytest.mark.parametrize("model", [None, ModelName.ASKUI, ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022])
+@pytest.mark.parametrize(
+    "model", [None, ModelName.ASKUI, ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]
+)
 def test_get(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,

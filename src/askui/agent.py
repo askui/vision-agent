@@ -135,6 +135,7 @@ class VisionAgent:
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
 
+    @telemetry.record_call(exclude={"locator", "screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate(
         self,

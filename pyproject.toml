@@ -65,6 +65,7 @@ test = [
     "types-protobuf>=4.24.0.20240311",
     "grpc-stubs>=1.53.0.3",
     "types-pyperclip>=1.8.2.20240311",
+    "pytest-timeout>=2.4.0",
 ]
 chat = [
     "streamlit>=1.42.0",

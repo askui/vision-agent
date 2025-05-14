@@ -291,9 +291,7 @@ class ModelRouter:
                 screenshot, self._serialize_locator(locator)
             )
             return handle_response(point, locator)
-        point = self._try_locating_using_grounding_model(
-            screenshot, locator, model
-        )
+        point = self._try_locating_using_grounding_model(screenshot, locator, model)
         if point:
             return handle_response(point, locator)
         if not point and model is None:
