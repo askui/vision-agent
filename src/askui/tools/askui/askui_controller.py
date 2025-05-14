@@ -648,7 +648,10 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call()
     @override
     def keyboard_tap(
-        self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
+        self,
+        key: PcKey | ModifierKey,
+        modifier_keys: list[ModifierKey] | None = None,
+        count: int = 1,
     ) -> None:
         """
         Press and immediately release a keyboard key.
@@ -657,18 +660,23 @@ class AskUiControllerClient(AgentOs):
             key (PcKey | ModifierKey): The key to tap.
             modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
                 press along with the main key. Defaults to `None`.
+            count (int, optional): The number of times to tap the key. Defaults to `1`.
         """
-        self._reporter.add_message("AgentOS", f'keyboard_tap("{key}", {modifier_keys})')
+        self._reporter.add_message(
+            "AgentOS",
+            f'keyboard_tap("{key}", {modifier_keys}, {count})',
+        )
         if modifier_keys is None:
             modifier_keys = []
-        self._run_recorder_action(
-            acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease,
-            action_parameters=controller_v1_pbs.ActionParameters(
-                keyboardKeyPressAndRelease=controller_v1_pbs.ActionParameters_KeyboardKey_PressAndRelease(
-                    keyName=key, modifierKeyNames=modifier_keys
-                )
-            ),
-        )
+        for _ in range(count):
+            self._run_recorder_action(
+                    acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease,
+                    action_parameters=controller_v1_pbs.ActionParameters(
+                    keyboardKeyPressAndRelease=controller_v1_pbs.ActionParameters_KeyboardKey_PressAndRelease(
+                        keyName=key, modifierKeyNames=modifier_keys
+                    )
+                ),
+            )
 
     @telemetry.record_call()
     @override

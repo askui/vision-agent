@@ -276,7 +276,10 @@ class AgentOs(ABC):
 
     @abstractmethod
     def keyboard_tap(
-        self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
+        self,
+        key: PcKey | ModifierKey,
+        modifier_keys: list[ModifierKey] | None = None,
+        count: int = 1,
     ) -> None:
         """
         Simulates pressing and immediately releasing a keyboard key.
@@ -285,6 +288,7 @@ class AgentOs(ABC):
             key (PcKey | ModifierKey): The key to tap.
             modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
                 press along with the main key. Defaults to `None`.
+            count (int, optional): The number of times to tap the key. Defaults to `1`.
         """
         raise NotImplementedError
 
