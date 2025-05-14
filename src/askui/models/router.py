@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 from typing import Type
 
 from PIL import Image
@@ -7,7 +8,13 @@ from typing_extensions import override
 from askui.container import telemetry
 from askui.locators.locators import AiElement, Locator, Prompt, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
+from askui.models.anthropic.settings import (
+    AnthropicSettings,
+    ClaudeComputerAgentSettings,
+    ClaudeSettings,
+)
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.exceptions import InvalidModelError
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
@@ -18,9 +25,9 @@ from ..exceptions import AutomationError, ElementNotFoundError
 from ..logger import logger
 from .anthropic.claude import ClaudeHandler
 from .anthropic.claude_agent import ClaudeComputerAgent
-from .askui.api import AskUiInferenceApi
+from .askui.api import AskUiInferenceApi, AskUiSettings
 from .huggingface.spaces_api import HFSpacesHandler
-from .ui_tars_ep.ui_tars_api import UITarsAPIHandler
+from .ui_tars_ep.ui_tars_api import UiTarsApiHandler, UiTarsApiHandlerSettings
 
 Point = tuple[int, int]
 """
@@ -52,10 +59,6 @@ class GroundingModelRouter(ABC):
     def is_responsible(self, model: ModelComposition | str | None = None) -> bool:
         pass
 
-    @abstractmethod
-    def is_authenticated(self) -> bool:
-        pass
-
 
 class AskUiModelRouter(GroundingModelRouter):
     def __init__(self, inference_api: AskUiInferenceApi):
@@ -75,12 +78,6 @@ class AskUiModelRouter(GroundingModelRouter):
         locator: str | Locator,
         model: ModelComposition | str | None = None,
     ) -> Point:
-        if not self._inference_api.authenticated:
-            error_msg = (
-                "NoAskUIAuthenticationSet! Please set 'AskUI ASKUI_WORKSPACE_ID' or "
-                "'ASKUI_TOKEN' as env variables!"
-            )
-            raise AutomationError(error_msg)
         if not isinstance(model, str) or model == ModelName.ASKUI:
             logger.debug("Routing locate prediction to askui")
             locator = Text(locator) if isinstance(locator, str) else locator
@@ -113,16 +110,17 @@ class AskUiModelRouter(GroundingModelRouter):
             _locator = AiElement(locator)
             x, y = self._inference_api.predict(screenshot, _locator)
             return handle_response((x, y), _locator)
-        error_msg = f'Invalid model: "{model}"'
-        raise AutomationError(error_msg)
+        raise InvalidModelError(model)
 
     @override
     def is_responsible(self, model: ModelComposition | str | None = None) -> bool:
-        return not isinstance(model, str) or model.startswith(ModelName.ASKUI)
-
-    @override
-    def is_authenticated(self) -> bool:
-        return self._inference_api.authenticated
+        return not isinstance(model, str) or model in [
+            ModelName.ASKUI,
+            ModelName.ASKUI__AI_ELEMENT,
+            ModelName.ASKUI__OCR,
+            ModelName.ASKUI__COMBO,
+            ModelName.ASKUI__PTA,
+        ]
 
 
 class ModelRouter:
@@ -131,36 +129,99 @@ class ModelRouter:
         tools: AgentToolbox,
         grounding_model_routers: list[GroundingModelRouter] | None = None,
         reporter: Reporter | None = None,
+        anthropic_settings: AnthropicSettings | None = None,
+        askui_inference_api: AskUiInferenceApi | None = None,
+        askui_settings: AskUiSettings | None = None,
+        claude: ClaudeHandler | None = None,
+        claude_computer_agent: ClaudeComputerAgent | None = None,
+        huggingface_spaces: HFSpacesHandler | None = None,
+        tars: UiTarsApiHandler | None = None,
     ):
-        _reporter = reporter or CompositeReporter()
-        self._askui = AskUiInferenceApi(
-            locator_serializer=AskUiLocatorSerializer(
-                ai_element_collection=AiElementCollection(),
-                reporter=_reporter,
-            ),
-        )
-        self._grounding_model_routers = grounding_model_routers or [
-            AskUiModelRouter(inference_api=self._askui)
-        ]
-        self._claude = ClaudeHandler()
-        self._huggingface_spaces = HFSpacesHandler()
-        self._tars = UITarsAPIHandler(agent_os=tools.agent_os, reporter=_reporter)
-        self._claude_computer_agent = ClaudeComputerAgent(
-            agent_os=tools.agent_os, reporter=_reporter
-        )
+        self._tools = tools
+        self._reporter = reporter or CompositeReporter()
+        self._grounding_model_routers_base = grounding_model_routers
+        self._anthropic_settings_base = anthropic_settings
+        self._askui_inference_api_base = askui_inference_api
+        self._askui_settings_base = askui_settings
+        self._claude_base = claude
+        self._claude_computer_agent_base = claude_computer_agent
+        self._huggingface_spaces = huggingface_spaces or HFSpacesHandler()
+        self._tars_base = tars
         self._locator_serializer = VlmLocatorSerializer()
 
+    @cached_property
+    def _anthropic_settings(self) -> AnthropicSettings:
+        if self._anthropic_settings_base is not None:
+            return self._anthropic_settings_base
+        return AnthropicSettings()
+
+    @cached_property
+    def _askui_inference_api(self) -> AskUiInferenceApi:
+        if self._askui_inference_api_base is not None:
+            return self._askui_inference_api_base
+        return AskUiInferenceApi(
+            locator_serializer=AskUiLocatorSerializer(
+                ai_element_collection=AiElementCollection(),
+                reporter=self._reporter,
+            ),
+            settings=self._askui_settings,
+        )
+
+    @cached_property
+    def _askui_settings(self) -> AskUiSettings:
+        if self._askui_settings_base is not None:
+            return self._askui_settings_base
+        return AskUiSettings()
+
+    @cached_property
+    def _claude(self) -> ClaudeHandler:
+        if self._claude_base is not None:
+            return self._claude_base
+        claude_settings = ClaudeSettings(
+            anthropic=self._anthropic_settings,
+        )
+        return ClaudeHandler(settings=claude_settings)
+
+    @cached_property
+    def _claude_computer_agent(self) -> ClaudeComputerAgent:
+        if self._claude_computer_agent_base is not None:
+            return self._claude_computer_agent_base
+        claude_computer_agent_settings = ClaudeComputerAgentSettings(
+            anthropic=self._anthropic_settings,
+        )
+        return ClaudeComputerAgent(
+            agent_os=self._tools.agent_os,
+            reporter=self._reporter,
+            settings=claude_computer_agent_settings,
+        )
+
+    @cached_property
+    def _grounding_model_routers(self) -> list[GroundingModelRouter]:
+        return self._grounding_model_routers_base or [
+            AskUiModelRouter(inference_api=self._askui_inference_api)
+        ]
+
+    @cached_property
+    def _tars(self) -> UiTarsApiHandler:
+        if self._tars_base is not None:
+            return self._tars_base
+        tars_settings = UiTarsApiHandlerSettings()
+        return UiTarsApiHandler(
+            agent_os=self._tools.agent_os,
+            reporter=self._reporter,
+            settings=tars_settings,
+        )
+
     def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
-        if self._tars.authenticated and model == ModelName.TARS:
-            self._tars.act(goal)
-        if self._claude.authenticated and (
-            model is None
-            or isinstance(model, str)
-            and model.startswith(ModelName.ANTHROPIC)
-        ):
-            self._claude_computer_agent.run(goal)
-        error_msg = f"Invalid model for act: {model}"
-        raise AutomationError(error_msg)
+        if model == ModelName.TARS:
+            logger.debug(f"Routing act prediction to {ModelName.TARS}")
+            return self._tars.act(goal)
+        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022 or model is None:
+            logger.debug(
+                f"Routing act prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
+            )
+            return self._claude_computer_agent.act(goal)
+        raise InvalidModelError(model)
 
     def get_inference(
         self,
@@ -169,35 +230,31 @@ class ModelRouter:
         response_schema: Type[ResponseSchema] | None = None,
         model: ModelComposition | str | None = None,
     ) -> ResponseSchema | str:
-        if self._tars.authenticated and model == ModelName.TARS:
-            if response_schema not in [str, None]:
-                error_msg = (
-                    "(Non-String) Response schema is not yet supported for "
-                    "UI-TARS models."
-                )
-                raise NotImplementedError(error_msg)
+        if model in [
+            ModelName.TARS,
+            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        ] and response_schema not in [str, None]:
+            error_msg = (
+                "(Non-String) Response schema is not yet supported for "
+                f'"{model}" model.'
+            )
+            raise NotImplementedError(error_msg)
+        if model == ModelName.TARS:
+            logger.debug(f"Routing get inference to {ModelName.TARS}")
             return self._tars.get_inference(image=image, query=query)
-        if self._claude.authenticated and (
-            isinstance(model, str) and model.startswith(ModelName.ANTHROPIC)
-        ):
-            if response_schema not in [str, None]:
-                error_msg = (
-                    "(Non-String) Response schema is not yet supported for "
-                    "Anthropic models."
-                )
-                raise NotImplementedError(error_msg)
+        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+            logger.debug(
+                f"Routing get inference to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
+            )
             return self._claude.get_inference(image=image, query=query)
-        if self._askui.authenticated and (model == ModelName.ASKUI or model is None):
-            return self._askui.get_inference(
+        if model == ModelName.ASKUI or model is None:
+            logger.debug(f"Routing get inference to {ModelName.ASKUI}")
+            return self._askui_inference_api.get_inference(
                 image=image,
                 query=query,
                 response_schema=response_schema,
             )
-        error_msg = (
-            "Executing get commands requires to authenticate with an Automation "
-            f"Model Provider supporting it: {model}"
-        )
-        raise AutomationError(error_msg)
+        raise InvalidModelError(model)
 
     def _serialize_locator(self, locator: str | Locator) -> str:
         if isinstance(locator, Locator):
@@ -211,63 +268,55 @@ class ModelRouter:
         locator: str | Locator,
         model: ModelComposition | str | None = None,
     ) -> Point:
-        x: int | None = None
-        y: int | None = None
-        if (
-            isinstance(model, str)
-            and model in self._huggingface_spaces.get_spaces_names()
-        ):
-            x, y = self._huggingface_spaces.predict(
+        point: tuple[int | None, int | None] | None = None
+        if model in self._huggingface_spaces.get_spaces_names():
+            logger.debug(f"Routing locate prediction to {model}")
+            point = self._huggingface_spaces.predict(
                 screenshot=screenshot,
                 locator=self._serialize_locator(locator),
-                model_name=model,
+                model_name=model,  # type: ignore
             )
-            return handle_response((x, y), locator)
-        if isinstance(model, str):
-            if model.startswith(ModelName.ANTHROPIC) and not self._claude.authenticated:
-                error_msg = (
-                    "You need to provide Anthropic credentials to use Anthropic models."
-                )
-                raise AutomationError(error_msg)
-            if model.startswith(ModelName.TARS) and not self._tars.authenticated:
-                error_msg = (
-                    "You need to provide UI-TARS HF Endpoint credentials to use "
-                    "UI-TARS models."
-                )
-                raise AutomationError(error_msg)
-        if self._tars.authenticated and model == ModelName.TARS:
-            x, y = self._tars.locate_prediction(
+            return handle_response(point, locator)
+        if model == ModelName.TARS:
+            logger.debug(f"Routing locate prediction to {ModelName.TARS}")
+            point = self._tars.locate_prediction(
                 screenshot, self._serialize_locator(locator)
             )
-            return handle_response((x, y), locator)
-        if (
-            self._claude.authenticated
-            and isinstance(model, str)
-            and model.startswith(ModelName.ANTHROPIC)
-        ):
-            logger.debug("Routing locate prediction to Anthropic")
-            x, y = self._claude.locate_inference(
+            return handle_response(point, locator)
+        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+            logger.debug(
+                f"Routing locate prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
+            )
+            point = self._claude.locate_inference(
                 screenshot, self._serialize_locator(locator)
             )
-            return handle_response((x, y), locator)
-
-        for grounding_model_router in self._grounding_model_routers:
-            if (
-                grounding_model_router.is_responsible(model)
-                and grounding_model_router.is_authenticated()
-            ):
-                return grounding_model_router.locate(screenshot, locator, model)
-
-        if model is None:
-            if self._claude.authenticated:
-                logger.debug("Routing locate prediction to Anthropic")
-                x, y = self._claude.locate_inference(
-                    screenshot, self._serialize_locator(locator)
-                )
-                return handle_response((x, y), locator)
-
-        error_msg = (
-            "Executing locate commands requires to authenticate with an "
-            "Automation Model Provider."
+            return handle_response(point, locator)
+        point = self._try_locating_using_grounding_model(
+            screenshot, locator, model
         )
-        raise AutomationError(error_msg)
+        if point:
+            return handle_response(point, locator)
+        if not point and model is None:
+            logger.debug(
+                f"Routing locate prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
+            )
+            point = self._claude.locate_inference(
+                screenshot, self._serialize_locator(locator)
+            )
+            return handle_response(point, locator)
+        raise InvalidModelError(model)
+
+    def _try_locating_using_grounding_model(
+        self,
+        screenshot: Image.Image,
+        locator: str | Locator,
+        model: ModelComposition | str | None = None,
+    ) -> Point | None:
+        try:
+            for grounding_model_router in self._grounding_model_routers:
+                if grounding_model_router.is_responsible(model):
+                    return grounding_model_router.locate(screenshot, locator, model)
+        except (InvalidModelError, ValueError):
+            if model is not None:
+                raise
+        return None

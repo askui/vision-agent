@@ -1,12 +1,13 @@
 import base64
 import json as json_lib
-import os
 import pathlib
+from functools import cached_property
 from typing import Any, Type, Union
 
 import requests
 from PIL import Image
-from pydantic import RootModel
+from pydantic import UUID4, Field, HttpUrl, RootModel, SecretStr
+from pydantic_settings import BaseSettings
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer
@@ -15,46 +16,50 @@ from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource, image_to_base64
 
 from ..types.response_schemas import ResponseSchema, to_response_schema
-from .exceptions import ApiResponseError, TokenNotSetError
+from .exceptions import ApiResponseError
+
+
+class AskUiSettings(BaseSettings):
+    """Settings for AskUI API."""
+
+    inference_endpoint: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("https://inference.askui.com"),
+        validation_alias="ASKUI_INFERENCE_ENDPOINT",
+    )
+    workspace_id: UUID4 = Field(
+        validation_alias="ASKUI_WORKSPACE_ID",
+    )
+    token: SecretStr = Field(
+        validation_alias="ASKUI_TOKEN",
+    )
+
+    @cached_property
+    def authorization_header(self) -> str:
+        token_str = self.token.get_secret_value()
+        token_base64 = base64.b64encode(token_str.encode()).decode()
+        return f"Basic {token_base64}"
+
+    @cached_property
+    def base_url(self) -> str:
+        return f"{self.inference_endpoint}/api/v1/workspaces/{self.workspace_id}"
 
 
 class AskUiInferenceApi:
-    def __init__(self, locator_serializer: AskUiLocatorSerializer):
+    def __init__(
+        self,
+        locator_serializer: AskUiLocatorSerializer,
+        settings: AskUiSettings,
+    ) -> None:
         self._locator_serializer = locator_serializer
-        self.inference_endpoint = os.getenv(
-            "ASKUI_INFERENCE_ENDPOINT", "https://inference.askui.com"
-        )
-        self.workspace_id = os.getenv("ASKUI_WORKSPACE_ID")
-        self.token = os.getenv("ASKUI_TOKEN")
-        self.authenticated = True
-        if self.workspace_id is None or self.token is None:
-            logger.warning("ASKUI_WORKSPACE_ID or ASKUI_TOKEN missing.")
-            self.authenticated = False
-
-    def _build_askui_token_auth_header(
-        self, bearer_token: str | None = None
-    ) -> dict[str, str]:
-        if bearer_token is not None:
-            return {"Authorization": f"Bearer {bearer_token}"}
-
-        if self.token is None:
-            raise TokenNotSetError
-        token_base64 = base64.b64encode(self.token.encode("utf-8")).decode("utf-8")
-        return {"Authorization": f"Basic {token_base64}"}
-
-    def _build_base_url(self, endpoint: str) -> str:
-        return (
-            f"{self.inference_endpoint}/api/v3/workspaces/"
-            f"{self.workspace_id}/{endpoint}"
-        )
+        self._settings = settings
 
     def _request(self, endpoint: str, json: dict[str, Any] | None = None) -> Any:
         response = requests.post(
-            self._build_base_url(endpoint),
+            f"{self._settings.base_url}/{endpoint}",
             json=json,
             headers={
                 "Content-Type": "application/json",
-                **self._build_askui_token_auth_header(),
+                "Authorization": self._settings.authorization_header,
             },
             timeout=30,
         )

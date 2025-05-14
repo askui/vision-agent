@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 class ModelName(str, Enum):
     ANTHROPIC__CLAUDE__3_5__SONNET__20241022 = "anthropic-claude-3-5-sonnet-20241022"
-    ANTHROPIC = "anthropic"
     ASKUI = "askui"
     ASKUI__AI_ELEMENT = "askui-ai-element"
     ASKUI__COMBO = "askui-combo"
