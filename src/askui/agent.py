@@ -135,6 +135,7 @@ class VisionAgent:
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
 
+    @telemetry.record_call(exclude={"locator", "screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate(
         self,
@@ -475,13 +476,15 @@ class VisionAgent:
         self,
         key: PcKey | ModifierKey,
         modifier_keys: Optional[list[ModifierKey]] = None,
+        repeat: Annotated[int, Field(gt=0)] = 1,
     ) -> None:
         """
-        Simulates pressing a key or key combination on the keyboard.
+        Simulates pressing (and releasing) a key or key combination on the keyboard.
 
         Args:
             key (PcKey | ModifierKey): The main key to press. This can be a letter, number, special character, or function key.
             modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Common modifier keys include `'ctrl'`, `'alt'`, `'shift'`.
+            repeat (int, optional): The number of times to press (and release) the key. Must be greater than `0`. Defaults to `1`.
 
         Example:
             ```python
@@ -492,10 +495,18 @@ class VisionAgent:
                 agent.keyboard('enter')  # Press 'Enter' key
                 agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
                 agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
+                agent.keyboard('a', repeat=2)  # Press 'a' key twice
             ```
         """
+        msg = f"press and release key '{key}'"
+        if modifier_keys is not None:
+            modifier_keys_str = ' + '.join(f"'{key}'" for key in modifier_keys)
+            msg += f" with modifiers key{'s' if len(modifier_keys) > 1 else ''} {modifier_keys_str}"
+        if repeat > 1:
+            msg += f" {repeat}x times"
+        self._reporter.add_message("User", msg)
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.agent_os.keyboard_tap(key, modifier_keys)
+        self.tools.agent_os.keyboard_tap(key, modifier_keys, count=repeat)
 
     @telemetry.record_call(exclude={"command"})
     @validate_call

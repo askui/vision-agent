@@ -1,4 +1,3 @@
-import os
 import pathlib
 import re
 import time
@@ -6,6 +5,8 @@ from typing import Any, Union
 
 from openai import OpenAI
 from PIL import Image
+from pydantic import Field, HttpUrl, SecretStr
+from pydantic_settings import BaseSettings
 
 from askui.exceptions import NoResponseToQueryError
 from askui.reporting import Reporter
@@ -16,20 +17,35 @@ from .parser import UITarsEPMessage
 from .prompts import PROMPT, PROMPT_QA
 
 
-class UITarsAPIHandler:
-    def __init__(self, agent_os: AgentOs, reporter: Reporter) -> None:
+class UiTarsApiHandlerSettings(BaseSettings):
+    """Settings for TARS API."""
+
+    tars_url: HttpUrl = Field(
+        validation_alias="TARS_URL",
+    )
+    tars_api_key: SecretStr = Field(
+        min_length=1,
+        validation_alias="TARS_API_KEY",
+    )
+
+
+class UiTarsApiHandler:
+    def __init__(
+        self,
+        agent_os: AgentOs,
+        reporter: Reporter,
+        settings: UiTarsApiHandlerSettings,
+    ) -> None:
         self._agent_os = agent_os
         self._reporter = reporter
-        if os.getenv("TARS_URL") is None or os.getenv("TARS_API_KEY") is None:
-            self.authenticated = False
-        else:
-            self.authenticated = True
-            self.client = OpenAI(
-                base_url=os.getenv("TARS_URL"), api_key=os.getenv("TARS_API_KEY")
-            )
+        self._settings = settings
+        self._client = OpenAI(
+            api_key=self._settings.tars_api_key.get_secret_value(),
+            base_url=str(self._settings.tars_url),
+        )
 
     def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
-        chat_completion = self.client.chat.completions.create(
+        chat_completion = self._client.chat.completions.create(
             model="tgi",
             messages=[
                 {
@@ -173,7 +189,7 @@ class UITarsAPIHandler:
     def execute_act(self, message_history: list[dict[str, Any]]) -> None:
         message_history = self.filter_message_thread(message_history)
 
-        chat_completion = self.client.chat.completions.create(
+        chat_completion = self._client.chat.completions.create(
             model="tgi",
             messages=message_history,
             top_p=None,

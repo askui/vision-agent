@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, TypedDict
 
 import httpx
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 from askui.logger import logger
 from askui.telemetry.context import TelemetryContext
@@ -30,8 +30,12 @@ class TelemetryEvent(TypedDict):
 
 
 class SegmentSettings(BaseModel):
-    api_url: HttpUrl = HttpUrl("https://tracking.askui.com/v1")
+    api_url: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("https://tracking.askui.com")
+    )
     write_key: str = "Iae4oWbOo509Acu5ZeEb2ihqSpemjnhY"
+    timeout: int = 10
+    max_retries: int = 3
 
 
 class Segment(TelemetryProcessor):
@@ -42,6 +46,9 @@ class Segment(TelemetryProcessor):
 
         self._analytics = analytics
         self._analytics.write_key = settings.write_key
+        self._analytics.host = settings.api_url.encoded_string()
+        self._analytics.timeout = settings.timeout
+        self._analytics.max_retries = settings.max_retries
 
     def record_event(
         self,
@@ -80,7 +87,7 @@ class Segment(TelemetryProcessor):
             logger.debug(f'Failed to track event "{name}" using Segment: {e}')
 
     def flush(self) -> None:
-        self._analytics.flush()
+        self._analytics.shutdown()
 
 
 class InMemoryProcessor(TelemetryProcessor):

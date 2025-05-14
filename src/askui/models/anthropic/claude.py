@@ -1,5 +1,4 @@
 import json
-import os
 
 import anthropic
 from PIL import Image
@@ -10,6 +9,7 @@ from askui.exceptions import (
     UnexpectedResponseToQueryError,
 )
 from askui.logger import logger
+from askui.models.anthropic.settings import ClaudeSettings
 from askui.utils.image_utils import (
     ImageSource,
     image_to_base64,
@@ -21,21 +21,19 @@ from .utils import extract_click_coordinates
 
 
 class ClaudeHandler:
-    def __init__(self) -> None:
-        self.model = "claude-3-5-sonnet-20241022"
-        self.client = anthropic.Anthropic()
-        self.resolution = (1280, 800)
-        self.authenticated = True
-        if os.getenv("ANTHROPIC_API_KEY") is None:
-            self.authenticated = False
+    def __init__(self, settings: ClaudeSettings) -> None:
+        self._settings = settings
+        self._client = anthropic.Anthropic(
+            api_key=self._settings.anthropic.api_key.get_secret_value()
+        )
 
     def _inference(
         self, base64_image: str, prompt: str, system_prompt: str
     ) -> list[anthropic.types.ContentBlock]:
-        message = self.client.messages.create(
-            model=self.model,
-            max_tokens=1000,
-            temperature=0,
+        message = self._client.messages.create(
+            model=self._settings.model,
+            max_tokens=self._settings.max_tokens,
+            temperature=self._settings.temperature,
             system=system_prompt,
             messages=[
                 {
@@ -58,7 +56,8 @@ class ClaudeHandler:
 
     def locate_inference(self, image: Image.Image, locator: str) -> tuple[int, int]:
         prompt = f"Click on {locator}"
-        screen_width, screen_height = self.resolution[0], self.resolution[1]
+        screen_width = self._settings.resolution[0]
+        screen_height = self._settings.resolution[1]
         system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"  # noqa: E501
         scaled_image = scale_image_with_padding(image, screen_width, screen_height)
         response = self._inference(image_to_base64(scaled_image), prompt, system_prompt)
@@ -79,8 +78,8 @@ class ClaudeHandler:
     def get_inference(self, image: ImageSource, query: str) -> str:
         scaled_image = scale_image_with_padding(
             image=image.root,
-            max_width=self.resolution[0],
-            max_height=self.resolution[1],
+            max_width=self._settings.resolution[0],
+            max_height=self._settings.resolution[1],
         )
         system_prompt = "You are an agent to process screenshots and answer questions about things on the screen or extract information from it. Answer only with the response to the question and keep it short and precise."  # noqa: E501
         response = self._inference(

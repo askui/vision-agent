@@ -20,6 +20,9 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
+from askui.models.anthropic.settings import (
+    ClaudeComputerAgentSettings,
+)
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 
@@ -27,8 +30,6 @@ from ...logger import logger
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
 from ...utils.str_utils import truncate_long_strings
 
-COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
-PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
 PC_KEY = [
     "backspace",
     "delete",
@@ -169,39 +170,41 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 
 
 class ClaudeComputerAgent:
-    def __init__(self, agent_os: AgentOs, reporter: Reporter) -> None:
+    def __init__(
+        self,
+        agent_os: AgentOs,
+        reporter: Reporter,
+        settings: ClaudeComputerAgentSettings,
+    ) -> None:
+        self._settings = settings
+        self._client = Anthropic(
+            api_key=self._settings.anthropic.api_key.get_secret_value()
+        )
         self._reporter = reporter
-        self.tool_collection = ToolCollection(
+        self._tool_collection = ToolCollection(
             ComputerTool(agent_os),
         )
-        self.system = BetaTextBlockParam(
+        self._system = BetaTextBlockParam(
             type="text",
             text=f"{SYSTEM_PROMPT}",
         )
-        self.enable_prompt_caching = False
-        self.betas = [COMPUTER_USE_BETA_FLAG]
-        self.image_truncation_threshold = 10
-        self.only_n_most_recent_images = 3
-        self.max_tokens = 4096
-        self.client = Anthropic()
-        self.model = "claude-3-5-sonnet-20241022"
 
     def step(self, messages: list) -> list:
-        if self.only_n_most_recent_images:
+        if self._settings.only_n_most_recent_images:
             self._maybe_filter_to_n_most_recent_images(
                 messages,
-                self.only_n_most_recent_images,
-                min_removal_threshold=self.image_truncation_threshold,
+                self._settings.only_n_most_recent_images,
+                min_removal_threshold=self._settings.image_truncation_threshold,
             )
 
         try:
-            raw_response = self.client.beta.messages.with_raw_response.create(
-                max_tokens=self.max_tokens,
+            raw_response = self._client.beta.messages.with_raw_response.create(
+                max_tokens=self._settings.max_tokens,
                 messages=messages,
-                model=self.model,
-                system=[self.system],
-                tools=self.tool_collection.to_params(),
-                betas=self.betas,
+                model=self._settings.model,
+                system=[self._system],
+                tools=self._tool_collection.to_params(),
+                betas=self._settings.betas,
             )
         except (APIStatusError, APIResponseValidationError) as e:
             logger.error(e)
@@ -224,7 +227,7 @@ class ClaudeComputerAgent:
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
             if content_block["type"] == "tool_use":
-                result = self.tool_collection.run(
+                result = self._tool_collection.run(
                     name=content_block["name"],
                     tool_input=cast("dict[str, Any]", content_block["input"]),
                 )
@@ -237,7 +240,7 @@ class ClaudeComputerAgent:
             messages.append(another_new_message)
         return messages
 
-    def run(self, goal: str) -> None:
+    def act(self, goal: str) -> None:
         messages = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":

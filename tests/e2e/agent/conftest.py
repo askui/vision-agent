@@ -10,7 +10,7 @@ from typing_extensions import override
 from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.api import AskUiInferenceApi
+from askui.models.askui.api import AskUiInferenceApi, AskUiSettings
 from askui.models.router import AskUiModelRouter, ModelRouter
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
@@ -43,7 +43,10 @@ def vision_agent(
     serializer = AskUiLocatorSerializer(
         ai_element_collection=ai_element_collection, reporter=reporter
     )
-    inference_api = AskUiInferenceApi(locator_serializer=serializer)
+    inference_api = AskUiInferenceApi(
+        locator_serializer=serializer,
+        settings=AskUiSettings(),
+    )
     model_router = ModelRouter(
         tools=agent_toolbox_mock,
         reporter=reporter,
@@ -53,12 +56,3 @@ def vision_agent(
         reporters=[reporter], model_router=model_router, tools=agent_toolbox_mock
     ) as agent:
         yield agent
-
-
-@pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> PILImage.Image:
-    """Fixture providing the GitHub login screenshot."""
-    screenshot_path = (
-        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
-    )
-    return PILImage.open(screenshot_path)

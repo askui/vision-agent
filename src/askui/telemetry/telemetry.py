@@ -96,8 +96,22 @@ class Telemetry:
         self._call_stack = CallStack()
         self._context = self._init_context()
 
+    def set_processors(self, processors: list[TelemetryProcessor]) -> None:
+        """Set the telemetry processors that will be called in order
+
+        *IMPORTANT*: This will replace the existing processors.
+
+        Args:
+            processors (list[TelemetryProcessor]): The list of telemetry processors to set (may be empty)
+        """
+        self._processors = processors
+
     def add_processor(self, processor: TelemetryProcessor) -> None:
-        """Add a telemetry processor that will be called in order of addition"""
+        """Add a telemetry processor that will be called in order of addition
+
+        Args:
+            processor (TelemetryProcessor): The telemetry processor to add
+        """
         self._processors.append(processor)
 
     def _init_context(self) -> TelemetryContext:
