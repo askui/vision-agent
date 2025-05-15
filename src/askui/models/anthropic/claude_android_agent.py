@@ -53,7 +53,7 @@ class ClaudeAndroidAgent(ClaudeAgent):
         report: SimpleReportGenerator | None = None,
         file_tool_base_dir_path: str | None = None,
     ) -> None:
-        self.file_writer_base_dir_path = None
+        self.controller_client = controller_client
         tools = [
             AndroidScreenshotTool(controller_client),
             AndroidTapTool(controller_client),
