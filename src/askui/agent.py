@@ -500,7 +500,7 @@ class VisionAgent:
         """
         msg = f"press and release key '{key}'"
         if modifier_keys is not None:
-            modifier_keys_str = ' + '.join(f"'{key}'" for key in modifier_keys)
+            modifier_keys_str = " + ".join(f"'{key}'" for key in modifier_keys)
             msg += f" with modifiers key{'s' if len(modifier_keys) > 1 else ''} {modifier_keys_str}"
         if repeat > 1:
             msg += f" {repeat}x times"

@@ -670,8 +670,8 @@ class AskUiControllerClient(AgentOs):
             modifier_keys = []
         for _ in range(count):
             self._run_recorder_action(
-                    acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease,
-                    action_parameters=controller_v1_pbs.ActionParameters(
+                acion_class_id=controller_v1_pbs.ActionClassID_KeyboardKey_PressAndRelease,
+                action_parameters=controller_v1_pbs.ActionParameters(
                     keyboardKeyPressAndRelease=controller_v1_pbs.ActionParameters_KeyboardKey_PressAndRelease(
                         keyName=key, modifierKeyNames=modifier_keys
                     )
