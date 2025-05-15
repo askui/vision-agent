@@ -37,6 +37,8 @@ class ModelNotFoundError(AutomationError):
 
     Args:
         model (str | ModelComposition): The model that was used.
+        model_type (Literal["Act", "Grounding (locate)", "Query (get/extract)"]): The 
+            type of model that was used.
     """
 
     def __init__(
