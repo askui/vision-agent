@@ -24,14 +24,14 @@ class FileWriteTool(Tool):
                         "type": "string",
                         "description": "The mode in which to open the file. Default is 'w' (write). Other options include 'a' (append).",
                         "enum": ["w", "a"],
-                        "default": "w",
+                        "default": "a",
                     },
                 },
                 "required": ["file_name", "content"],
             },
         )
 
-    def __call__(self, file_name: str, content: str, file_write_mode: str = 'w') -> None:
+    def __call__(self, file_name: str, content: str, file_write_mode: str = 'a') -> None:
         file_path = os.path.join(self.base_dir, file_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, file_write_mode, encoding="utf-8") as f:
