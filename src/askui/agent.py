@@ -75,7 +75,7 @@ class VisionAgent:
             if model_router is None
             else model_router
         )
-        self._model = model
+        self.model = model
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -117,7 +117,7 @@ class VisionAgent:
         self._reporter.add_message("User", msg)
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
-            self._mouse_move(locator, model or self._model)
+            self._mouse_move(locator, model or self.model)
         self.tools.agent_os.click(button, repeat)
 
     def _locate(
@@ -129,9 +129,7 @@ class VisionAgent:
         _screenshot = ImageSource(
             self.tools.agent_os.screenshot() if screenshot is None else screenshot
         )
-        point = self.model_router.locate(
-            _screenshot.root, locator, model or self._model
-        )
+        point = self.model_router.locate(_screenshot.root, locator, model or self.model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
 
@@ -165,12 +163,12 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f"locate {locator}")
         logger.debug("VisionAgent received instruction to locate %s", locator)
-        return self._locate(locator, screenshot, model or self._model)
+        return self._locate(locator, screenshot, model or self.model)
 
     def _mouse_move(
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
-        point = self._locate(locator=locator, model=model or self._model)
+        point = self._locate(locator=locator, model=model or self.model)
         self.tools.agent_os.mouse(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
@@ -199,7 +197,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, model or self._model)
+        self._mouse_move(locator, model or self.model)
 
     @telemetry.record_call()
     @validate_call
@@ -267,7 +265,7 @@ class VisionAgent:
         query: Annotated[str, Field(min_length=1)],
         image: Optional[Img] = None,
         response_schema: None = None,
-        model: ModelComposition | str | None = None,
+        model: str | None = None,
     ) -> str: ...
     @overload
     def get(
@@ -275,7 +273,7 @@ class VisionAgent:
         query: Annotated[str, Field(min_length=1)],
         image: Optional[Img],
         response_schema: Type[ResponseSchema],
-        model: ModelComposition | str | None = None,
+        model: str | None = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "image", "response_schema"})
@@ -285,7 +283,7 @@ class VisionAgent:
         query: Annotated[str, Field(min_length=1)],
         image: Optional[Img] = None,
         response_schema: Type[ResponseSchema] | None = None,
-        model: ModelComposition | str | None = None,
+        model: str | None = None,
     ) -> ResponseSchema | str:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
@@ -294,7 +292,7 @@ class VisionAgent:
             query (str): The query describing what information to retrieve.
             image (Img | None, optional): The image to extract information from. Defaults to a screenshot of the current screen. Can be a path to an image file, a PIL Image object or a data URL.
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model class that defines the response schema. If not provided, returns a string.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`. Note: `response_schema` is not supported by all models.
+            model (str | None, optional): The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`. Note: `response_schema` is not supported by all models.
 
         Returns:
             ResponseSchema | str: The extracted information, `str` if no `response_schema` is provided.
@@ -348,10 +346,13 @@ class VisionAgent:
             self.tools.agent_os.screenshot() if image is None else image
         )
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
+        m = model
+        if not m and not isinstance(self.model, ModelComposition):
+            m = self.model
         response = self.model_router.get_inference(
             image=_image,
             query=query,
-            model=model or self._model,
+            model=m,
             response_schema=response_schema,
         )
         if self._reporter is not None:
@@ -441,7 +442,7 @@ class VisionAgent:
     def act(
         self,
         goal: Annotated[str, Field(min_length=1)],
-        model: ModelComposition | str | None = None,
+        model: str | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -452,7 +453,7 @@ class VisionAgent:
 
         Args:
             goal (str): A description of what the agent should achieve.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
+            model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
 
         Example:
             ```python
@@ -468,7 +469,10 @@ class VisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        self.model_router.act(goal, model or self._model)
+        m = model
+        if not m and not isinstance(self.model, ModelComposition):
+            m = self.model
+        self.model_router.act(goal, m)
 
     @telemetry.record_call()
     @validate_call

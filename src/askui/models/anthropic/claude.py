@@ -5,8 +5,8 @@ from PIL import Image
 
 from askui.exceptions import (
     ElementNotFoundError,
-    NoResponseToQueryError,
-    UnexpectedResponseToQueryError,
+    QueryNoResponseError,
+    QueryUnexpectedResponseError,
 )
 from askui.logger import logger
 from askui.models.anthropic.settings import ClaudeSettings
@@ -89,9 +89,9 @@ class ClaudeHandler:
         )
         if len(response) == 0:
             error_msg = f"No response from Claude to query: {query}"
-            raise NoResponseToQueryError(error_msg, query)
+            raise QueryNoResponseError(error_msg, query)
         r = response[0]
         if r.type == "text":
             return r.text
         error_msg = f"Unexpected response from Claude: {r}"
-        raise UnexpectedResponseToQueryError(error_msg, query, r)
+        raise QueryUnexpectedResponseError(error_msg, query, r)

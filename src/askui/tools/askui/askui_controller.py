@@ -25,7 +25,10 @@ from askui.tools.askui.askui_ui_controller_grpc import (
 from askui.utils.image_utils import draw_point_on_image
 
 from ..utils import process_exists, wait_for_port
-from .exceptions import ActionTimeoutError, ControllerOperationError
+from .exceptions import (
+    AskUiControllerOperationFailedError,
+    AskUiControllerOperationTimeoutError,
+)
 
 
 class RemoteDeviceController(BaseModel):
@@ -208,7 +211,10 @@ class AskUiControllerServer:
             else:
                 self._process.terminate()
         except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
-            error = ControllerOperationError("stop AskUI Remote Device Controller", e)
+            error = AskUiControllerOperationFailedError(
+                "stop AskUI Remote Device Controller",
+                e,
+            )
             logger.error(str(error))
         finally:
             self._process = None
@@ -305,7 +311,7 @@ class AskUiControllerClient(AgentOs):
             time.sleep(self._post_action_wait)
             num_retries += 1
         if num_retries == self._max_retries - 1:
-            raise ActionTimeoutError
+            raise AskUiControllerOperationTimeoutError
         return response
 
     @telemetry.record_call()

@@ -7,8 +7,9 @@ class ResponseSchemaBase(BaseModel):
     """Response schemas for defining the response of data extraction, e.g., using
     `askui.VisionAgent.get()`.
 
-    This module adds constraints and configuration on top so that it can be used with
-    models to define the schema (type) of the data to be extracted.
+    This class extends Pydantic's `BaseModel` and adds constraints and configuration
+    on top so that it can be used with models to define the schema (type) of
+    the data to be extracted.
 
     Example:
         ```python

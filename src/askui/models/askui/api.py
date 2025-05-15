@@ -16,7 +16,7 @@ from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource, image_to_base64
 
 from ..types.response_schemas import ResponseSchema, to_response_schema
-from .exceptions import ApiResponseError
+from .exceptions import AskUiApiRequestFailedError
 
 
 class AskUiSettings(BaseSettings):
@@ -64,7 +64,7 @@ class AskUiInferenceApi:
             timeout=30,
         )
         if response.status_code != 200:
-            raise ApiResponseError(response.status_code, response.text)
+            raise AskUiApiRequestFailedError(response.status_code, response.text)
 
         return response.json()
 
