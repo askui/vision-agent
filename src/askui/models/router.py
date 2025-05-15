@@ -6,6 +6,7 @@ from PIL import Image
 from typing_extensions import override
 
 from askui.container import telemetry
+from askui.exceptions import ModelNotFoundError
 from askui.locators.locators import AiElement, Locator, Prompt, Text
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
 from askui.models.anthropic.settings import (
@@ -14,7 +15,6 @@ from askui.models.anthropic.settings import (
     ClaudeSettings,
 )
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.exceptions import InvalidModelError
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
@@ -110,7 +110,7 @@ class AskUiModelRouter(GroundingModelRouter):
             _locator = AiElement(locator)
             x, y = self._inference_api.predict(screenshot, _locator)
             return handle_response((x, y), _locator)
-        raise InvalidModelError(model)
+        raise ModelNotFoundError(model, "Grounding (locate)")
 
     @override
     def is_responsible(self, model: ModelComposition | str | None = None) -> bool:
@@ -212,7 +212,7 @@ class ModelRouter:
             settings=tars_settings,
         )
 
-    def act(self, goal: str, model: ModelComposition | str | None = None) -> None:
+    def act(self, goal: str, model: str | None = None) -> None:
         if model == ModelName.TARS:
             logger.debug(f"Routing act prediction to {ModelName.TARS}")
             return self._tars.act(goal)
@@ -221,14 +221,14 @@ class ModelRouter:
                 f"Routing act prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
             )
             return self._claude_computer_agent.act(goal)
-        raise InvalidModelError(model)
+        raise ModelNotFoundError(model, "Act")
 
     def get_inference(
         self,
         query: str,
         image: ImageSource,
         response_schema: Type[ResponseSchema] | None = None,
-        model: ModelComposition | str | None = None,
+        model: str | None = None,
     ) -> ResponseSchema | str:
         if model in [
             ModelName.TARS,
@@ -254,7 +254,7 @@ class ModelRouter:
                 query=query,
                 response_schema=response_schema,
             )
-        raise InvalidModelError(model)
+        raise ModelNotFoundError(model, "Query (get/extract)")
 
     def _serialize_locator(self, locator: str | Locator) -> str:
         if isinstance(locator, Locator):
@@ -302,7 +302,7 @@ class ModelRouter:
                 screenshot, self._serialize_locator(locator)
             )
             return handle_response(point, locator)
-        raise InvalidModelError(model)
+        raise ModelNotFoundError(model, "Grounding (locate)")
 
     def _try_locating_using_grounding_model(
         self,
@@ -314,7 +314,7 @@ class ModelRouter:
             for grounding_model_router in self._grounding_model_routers:
                 if grounding_model_router.is_responsible(model):
                     return grounding_model_router.locate(screenshot, locator, model)
-        except (InvalidModelError, ValueError):
+        except (ModelNotFoundError, ValueError):
             if model is not None:
                 raise
         return None

@@ -8,7 +8,7 @@ from PIL import Image
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
-from askui.exceptions import NoResponseToQueryError
+from askui.exceptions import QueryNoResponseError
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.utils.image_utils import ImageSource, image_to_base64
@@ -103,7 +103,7 @@ class UiTarsApiHandler:
         )
         if response is None:
             error_msg = f"No response from UI-TARS to query: {query}"
-            raise NoResponseToQueryError(error_msg, query)
+            raise QueryNoResponseError(error_msg, query)
         return response
 
     def act(self, goal: str) -> None:

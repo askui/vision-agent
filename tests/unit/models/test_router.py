@@ -10,10 +10,10 @@ from PIL import Image
 from pydantic import ValidationError
 from pytest_mock import MockerFixture
 
+from askui.exceptions import ModelNotFoundError
 from askui.models.anthropic.claude import ClaudeHandler
 from askui.models.anthropic.claude_agent import ClaudeComputerAgent
 from askui.models.askui.api import AskUiInferenceApi
-from askui.models.exceptions import InvalidModelError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import ModelName
 from askui.models.router import ModelRouter
@@ -220,7 +220,7 @@ class TestModelRouter:
         self, model_router: ModelRouter, mock_image: Image.Image
     ) -> None:
         """Test that locating with invalid model raises InvalidModelError."""
-        with pytest.raises(InvalidModelError):
+        with pytest.raises(ModelNotFoundError):
             model_router.locate(mock_image, "test locator", "invalid-model")
 
     def test_get_inference_with_askui_model(
@@ -268,7 +268,7 @@ class TestModelRouter:
         self, model_router: ModelRouter, mock_image_source: ImageSource
     ) -> None:
         """Test that getting inference with invalid model raises InvalidModelError."""
-        with pytest.raises(InvalidModelError):
+        with pytest.raises(ModelNotFoundError):
             model_router.get_inference(
                 "test query", mock_image_source, model="invalid-model"
             )
@@ -310,7 +310,7 @@ class TestModelRouter:
 
     def test_act_with_invalid_model(self, model_router: ModelRouter) -> None:
         """Test that acting with invalid model raises InvalidModelError."""
-        with pytest.raises(InvalidModelError):
+        with pytest.raises(ModelNotFoundError):
             model_router.act("test goal", "invalid-model")
 
     def test_act_with_missing_anthropic_credentials(

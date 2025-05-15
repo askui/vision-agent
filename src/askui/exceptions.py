@@ -1,6 +1,12 @@
-from typing import Any
+from typing import Any, Literal
+
+from askui.models.models import ModelComposition
 
 from .models.askui.ai_element_utils import AiElementNotFound
+from .models.askui.exceptions import (
+    AskUiApiError,
+    AskUiApiRequestFailedError,
+)
 
 
 class AutomationError(Exception):
@@ -26,7 +32,24 @@ class ElementNotFoundError(AutomationError):
         super().__init__(message)
 
 
-class NoResponseToQueryError(AutomationError):
+class ModelNotFoundError(AutomationError):
+    """Exception raised when an invalid model is used.
+
+    Args:
+        model (str | ModelComposition): The model that was used.
+    """
+
+    def __init__(
+        self,
+        model: str | ModelComposition,
+        model_type: Literal["Act", "Grounding (locate)", "Query (get/extract)"],
+    ):
+        self.model = model
+        model_str = model if isinstance(model, str) else model.model_dump_json()
+        super().__init__(f"{model_type} model not found: {model_str}")
+
+
+class QueryNoResponseError(AutomationError):
     """Exception raised when a query does not return a response.
 
     Args:
@@ -40,7 +63,7 @@ class NoResponseToQueryError(AutomationError):
         super().__init__(self.message)
 
 
-class UnexpectedResponseToQueryError(AutomationError):
+class QueryUnexpectedResponseError(AutomationError):
     """Exception raised when a query returns an unexpected response.
 
     Args:
@@ -58,8 +81,11 @@ class UnexpectedResponseToQueryError(AutomationError):
 
 __all__ = [
     "AiElementNotFound",
+    "AskUiApiError",
+    "AskUiApiRequestFailedError",
     "AutomationError",
     "ElementNotFoundError",
-    "NoResponseToQueryError",
-    "UnexpectedResponseToQueryError",
+    "ModelNotFoundError",
+    "QueryNoResponseError",
+    "QueryUnexpectedResponseError",
 ]
