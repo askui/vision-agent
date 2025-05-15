@@ -19,22 +19,16 @@ class FileWriteTool(Tool):
                     "content": {
                         "type": "string",
                         "description": "The text content to write into the file.",
-                    },
-                    "file_write_mode": {
-                        "type": "string",
-                        "description": "The mode in which to open the file. Default is 'w' (write). Other options include 'a' (append).",
-                        "enum": ["w", "a"],
-                        "default": "w",
-                    },
+                    }
                 },
                 "required": ["file_name", "content"],
             },
         )
 
-    def __call__(self, file_name: str, content: str, file_write_mode: str = 'w') -> None:
+    def __call__(self, file_name: str, content: str) -> None:
         file_path = os.path.join(self.base_dir, file_name)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, file_write_mode, encoding="utf-8") as f:
+        with open(file_path, 'a', encoding="utf-8") as f:
             f.write(content)
         return ToolResult(output=f"File '{file_name}' written successfully.")
 
