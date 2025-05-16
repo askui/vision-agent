@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union, cast
 
@@ -232,11 +231,31 @@ if thread_id:
             index_of_thread = index
             break
 
-thread_id = st.sidebar.radio(
-    "Threads",
-    [t.id for t in available_threads],
-    index=index_of_thread,
-)
+# Create columns for thread selection and delete buttons
+thread_cols = st.sidebar.columns([0.8, 0.2])
+with thread_cols[0]:
+    thread_id = st.radio(
+        "Threads",
+        [t.id for t in available_threads],
+        index=index_of_thread,
+    )
+
+# Add delete buttons for each thread
+for t in available_threads:
+    with thread_cols[1]:
+        if st.button("🗑️", key=f"delete_thread_{t.id}"):
+            if t.id == thread_id:
+                # If deleting current thread, switch to first available thread
+                remaining_threads = [th for th in available_threads if th.id != t.id]
+                if remaining_threads:
+                    st.session_state.thread_id = remaining_threads[0].id
+                else:
+                    # Create new thread if no threads left
+                    new_thread = threads_api.create()
+                    st.session_state.thread_id = new_thread.id
+            threads_api.delete(t.id)
+            st.rerun()
+
 if thread_id != st.session_state.get("thread_id"):
     st.session_state.thread_id = thread_id
     st.rerun()
