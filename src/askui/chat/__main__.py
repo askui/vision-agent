@@ -3,71 +3,43 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from random import randint
-from typing import Union
+from typing import Union, cast
 
 import streamlit as st
 from PIL import Image, ImageDraw
-from typing_extensions import TypedDict, override
+from typing_extensions import override
 
 from askui import VisionAgent
+from askui.chat.api.messages import MessageRole, MessagesApi
+from askui.chat.api.threads import ThreadsApi
 from askui.chat.click_recorder import ClickRecorder
 from askui.chat.exceptions import FunctionExecutionError, InvalidFunctionError
 from askui.models import ModelName
 from askui.reporting import Reporter
 from askui.utils.image_utils import base64_to_image, draw_point_on_image
 
+# TODO Start backend server
+
 st.set_page_config(
     page_title="Vision Agent Chat",
     page_icon="💬",
 )
 
+BASE_DIR = Path("./chat")
+threads_api = ThreadsApi(BASE_DIR)
+messages_api = MessagesApi(BASE_DIR)
 
-CHAT_SESSIONS_DIR_PATH = Path("./chat/sessions")
-CHAT_IMAGES_DIR_PATH = Path("./chat/images")
-
-click_recorder = ClickRecorder()
-
-
-def setup_chat_dirs() -> None:
-    Path.mkdir(CHAT_SESSIONS_DIR_PATH, parents=True, exist_ok=True)
-    Path.mkdir(CHAT_IMAGES_DIR_PATH, parents=True, exist_ok=True)
+click_recorder = ClickRecorder()  # TODO Tool, pynput alternatively
 
 
-def get_session_id_from_path(path: str) -> str:
-    """Get session ID from file path."""
-    return Path(path).stem
-
-
-def load_chat_history(session_id: str) -> list[dict]:
-    """Load chat history for a given session ID."""
-    messages: list[dict] = []
-    session_path = CHAT_SESSIONS_DIR_PATH / f"{session_id}.jsonl"
-    if session_path.exists():
-        with session_path.open("r") as f:
-            messages.extend(json.loads(line) for line in f)
-    return messages
-
-
-ROLE_MAP = {
-    "user": "user",
-    "anthropic computer use": "ai",
-    "agentos": "assistant",
-    "user (demonstration)": "user",
-}
-
-
-UNKNOWN_ROLE = "unknown"
-
-
-def get_image(img_b64_str_or_path: str) -> Image.Image:
+def get_image(img_b64_str_or_path: str) -> Image.Image:  # TODO Image utils
     """Get image from base64 string or file path."""
     if Path(img_b64_str_or_path).is_file():
         return Image.open(img_b64_str_or_path)
     return base64_to_image(img_b64_str_or_path)
 
 
-def write_message(
+def write_message(  # TODO updating frontend
     role: str,
     content: str | dict | list,
     timestamp: str,
@@ -77,44 +49,42 @@ def write_message(
     | list[str]
     | list[Image.Image]
     | None = None,
+    message_id: str | None = None,
 ) -> None:
-    _role = ROLE_MAP.get(role.lower(), UNKNOWN_ROLE)
-    avatar = None if _role != UNKNOWN_ROLE else "❔"
-    with st.chat_message(_role, avatar=avatar):
-        st.markdown(f"*{timestamp}* - **{role}**\n\n")
-        st.markdown(
-            json.dumps(content, indent=2)
-            if isinstance(content, (dict, list))
-            else content
-        )
-        if image:
-            if isinstance(image, list):
-                for img in image:
-                    img = get_image(img) if isinstance(img, str) else img
+    _role = messages_api.ROLE_MAP.get(role.lower(), MessageRole.UNKNOWN)
+    avatar = None if _role != MessageRole.UNKNOWN else "❔"
+
+    # Create a container for the message and delete button
+    col1, col2 = st.columns([0.95, 0.05])
+
+    with col1:
+        with st.chat_message(_role.value, avatar=avatar):
+            st.markdown(f"*{timestamp}* - **{role}**\n\n")
+            st.markdown(
+                json.dumps(content, indent=2)
+                if isinstance(content, (dict, list))
+                else content
+            )
+            if image:
+                if isinstance(image, list):
+                    for img in image:
+                        img = get_image(img) if isinstance(img, str) else img
+                        st.image(img)
+                else:
+                    img = get_image(image) if isinstance(image, str) else image
                     st.image(img)
-            else:
-                img = get_image(image) if isinstance(image, str) else image
-                st.image(img)
 
-
-def save_image(image: Image.Image) -> str:
-    """Save image to disk and return path."""
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-    image_path = CHAT_IMAGES_DIR_PATH / f"image_{timestamp}.png"
-    image.save(image_path)
-    return str(image_path)
-
-
-class Message(TypedDict):
-    role: str
-    content: str | dict | list
-    timestamp: str
-    image: str | list[str] | None
+    # Add delete button in the second column if message_id is provided
+    if message_id:
+        with col2:
+            if st.button("🗑️", key=f"delete_{message_id}"):
+                messages_api.delete(st.session_state.thread_id, message_id)
+                st.rerun()
 
 
 class ChatHistoryAppender(Reporter):
-    def __init__(self, session_id: str) -> None:
-        self._session_id = session_id
+    def __init__(self, thread_id: str) -> None:
+        self._thread_id = thread_id
 
     @override
     def add_message(
@@ -123,43 +93,20 @@ class ChatHistoryAppender(Reporter):
         content: Union[str, dict, list],
         image: Image.Image | list[Image.Image] | None = None,
     ) -> None:
-        image_paths: list[str] = []
-        if image is None:
-            _images = []
-        elif isinstance(image, list):
-            _images = image
-        else:
-            _images = [image]
-        image_paths.extend(save_image(img) for img in _images)
-        message = Message(
-            role=role,
-            content=content,
-            timestamp=datetime.now(tz=timezone.utc).isoformat(),
-            image=image_paths,
+        message = messages_api.create(
+            thread_id=self._thread_id, role=role, content=content, image=image
         )
-        write_message(**message)
-        with (CHAT_SESSIONS_DIR_PATH / f"{self._session_id}.jsonl").open("a") as f:
-            json.dump(message, f)
-            f.write("\n")
+        write_message(
+            role=message.role.value,
+            content=message.content[0].text or "",
+            timestamp=message.created_at.isoformat(),
+            image=message.content[0].image_paths,
+            message_id=message.id,
+        )
 
     @override
     def generate(self) -> None:
         pass
-
-
-def get_available_sessions() -> list[str]:
-    """Get list of available session IDs."""
-    session_files = list(CHAT_SESSIONS_DIR_PATH.glob("*.jsonl"))
-    return sorted([get_session_id_from_path(f) for f in session_files], reverse=True)
-
-
-def create_new_session() -> str:
-    """Create a new chat session."""
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S%f")
-    random_suffix = f"{randint(100, 999)}"
-    session_id = f"{timestamp}{random_suffix}"
-    (CHAT_SESSIONS_DIR_PATH / f"{session_id}.jsonl").touch()
-    return session_id
 
 
 def paint_crosshair(
@@ -207,18 +154,23 @@ def rerun() -> None:
         log_level=logging.DEBUG,
     ) as agent:
         screenshot: Image.Image | None = None
-        for message in st.session_state.messages:
+        for message in messages_api.list_(st.session_state.thread_id).data:
             try:
                 if (
-                    message.get("role") == "AgentOS"
-                    or message.get("role") == "User (Demonstration)"
+                    message.role == MessageRole.ASSISTANT
+                    or message.role == MessageRole.USER
                 ):
-                    if message.get("content") == "screenshot()":
-                        screenshot = get_image(message["image"])
+                    content = message.content[0]
+                    if content.text == "screenshot()":
+                        screenshot = (
+                            get_image(content.image_paths[0])
+                            if content.image_paths
+                            else None
+                        )
                         continue
-                    if message.get("content"):
+                    if content.text:
                         if match := re.match(
-                            r"mouse\((\d+),\s*(\d+)\)", message["content"]
+                            r"mouse\((\d+),\s*(\d+)\)", cast("str", content.text)
                         ):
                             if not screenshot:
                                 error_msg = "Screenshot is required to paint crosshair"
@@ -232,10 +184,10 @@ def rerun() -> None:
                                 image=screenshot_with_crosshair,
                                 model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
-                            write_message(
-                                message["role"],
-                                f"Move mouse to {element_description}",
-                                datetime.now(tz=timezone.utc).isoformat(),
+                            messages_api.create(
+                                thread_id=st.session_state.thread_id,
+                                role=message.role.value,
+                                content=f"Move mouse to {element_description}",
                                 image=screenshot_with_crosshair,
                             )
                             agent.mouse_move(
@@ -243,58 +195,64 @@ def rerun() -> None:
                                 model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                             )
                         else:
-                            write_message(
-                                message["role"],
-                                message["content"],
-                                datetime.now(tz=timezone.utc).isoformat(),
-                                message.get("image"),
+                            messages_api.create(
+                                thread_id=st.session_state.thread_id,
+                                role=message.role.value,
+                                content=content.text,
+                                image=None,
                             )
-                            func_call = f"agent.tools.os.{message['content']}"
+                            func_call = f"agent.tools.os.{content.text}"
                             eval(func_call)
             except json.JSONDecodeError:
                 continue
             except AttributeError:
-                st.write(str(InvalidFunctionError(message["content"])))
+                st.write(str(InvalidFunctionError(cast("str", content.text))))
             except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
-                st.write(str(FunctionExecutionError(message["content"], e)))
+                st.write(str(FunctionExecutionError(cast("str", content.text), e)))
 
-
-setup_chat_dirs()
 
 if st.sidebar.button("New Chat"):
-    st.session_state.session_id = create_new_session()
+    thread = threads_api.create()
+    st.session_state.thread_id = thread.id
     st.rerun()
 
-available_sessions = get_available_sessions()
-session_id = st.session_state.get("session_id", None)
+available_threads = threads_api.list_().data
+thread_id = st.session_state.get("thread_id", None)
 
-if not session_id and not available_sessions:
-    session_id = create_new_session()
-    st.session_state.session_id = session_id
+if not thread_id and not available_threads:
+    thread = threads_api.create()
+    thread_id = thread.id
+    st.session_state.thread_id = thread_id
     st.rerun()
 
-index_of_session = available_sessions.index(session_id) if session_id else 0
-session_id = st.sidebar.radio(
-    "Sessions",
-    available_sessions,
-    index=index_of_session,
+index_of_thread = 0
+if thread_id:
+    for index, thread in enumerate(available_threads):
+        if thread.id == thread_id:
+            index_of_thread = index
+            break
+
+thread_id = st.sidebar.radio(
+    "Threads",
+    [t.id for t in available_threads],
+    index=index_of_thread,
 )
-if session_id != st.session_state.get("session_id"):
-    st.session_state.session_id = session_id
+if thread_id != st.session_state.get("thread_id"):
+    st.session_state.thread_id = thread_id
     st.rerun()
 
-reporter = ChatHistoryAppender(session_id)
+reporter = ChatHistoryAppender(thread_id)
 
-st.title(f"Vision Agent Chat - {session_id}")
-st.session_state.messages = load_chat_history(session_id)
+st.title(f"Vision Agent Chat - {thread_id}")
 
 # Display chat history
-for message in st.session_state.messages:
+for message in messages_api.list_(thread_id).data:
     write_message(
-        message["role"],
-        message["content"],
-        message["timestamp"],
-        message.get("image"),
+        message.role.value,
+        message.content[0].text or "",
+        message.created_at.isoformat(),
+        message.content[0].image_paths,
+        message.id,  # Pass the message ID to enable deletion
     )
 
 if value_to_type := st.chat_input("Simulate Typing for User (Demonstration)"):
@@ -333,7 +291,7 @@ if act_prompt := st.chat_input("Ask AI"):
         log_level=logging.DEBUG,
         reporters=[reporter],
     ) as agent:
-        agent.act(act_prompt, model="claude")
+        agent.act(act_prompt, model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022)
         st.rerun()
 
 if st.button("Rerun"):
