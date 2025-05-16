@@ -25,6 +25,10 @@ class AndroidScreenshotTool(Tool):
             self.controller_client.scaled_resolution[1],
         )
         base64_image = image_to_base64(scale_image)
+        ui_hierarchy = self.controller_client.try_to_get_ui_hierarchy()
+        if ui_hierarchy is not None:
+            ui_hierarchy_json = ui_hierarchy.to_json(self.controller_client._get_scale_factor())
+            return ToolResult(output=f"Screenshot was taken. and ui hierarchy is {ui_hierarchy_json}", base64_images=[base64_image])
         return ToolResult(output=f"Screenshot was taken.", base64_images=[base64_image])
 
 
