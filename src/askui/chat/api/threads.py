@@ -113,3 +113,36 @@ class ThreadsApi:
             id=thread_id,
             created_at=created_at,
         )
+
+    def delete(self, thread_id: str) -> None:
+        """Delete a thread and all its associated files.
+
+        Args:
+            thread_id: ID of thread to delete
+
+        Raises:
+            FileNotFoundError: If thread doesn't exist
+        """
+        thread_file = self._threads_dir / f"{thread_id}.jsonl"
+        if not thread_file.exists():
+            error_msg = f"Thread {thread_id} not found"
+            raise FileNotFoundError(error_msg)
+
+        # Get all image paths from messages before deleting thread
+        from askui.chat.api.messages import MessagesApi
+
+        messages_api = MessagesApi(self._base_dir)
+        try:
+            messages = messages_api.list_(thread_id).data
+            for msg in messages:
+                if msg.content and msg.content[0].image_paths:
+                    for img_path in msg.content[0].image_paths:
+                        try:
+                            Path(img_path).unlink()
+                        except FileNotFoundError:
+                            pass  # Image might have been deleted already
+        except FileNotFoundError:
+            pass  # Thread might have been deleted already
+
+        # Delete thread file
+        thread_file.unlink()
