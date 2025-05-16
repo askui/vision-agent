@@ -3,7 +3,6 @@ from askui.models.utils import scale_image_with_padding
 from askui.tools.askui.askui_android_controller import AskUiAndroidControllerClient
 from askui.utils import ANDROID_KEY, image_to_base64
 from .base import Tool, ToolResult, ToolError
-import time
 
 
 class AndroidScreenshotTool(Tool):
@@ -369,32 +368,3 @@ class DebugDrawTool(Tool):
         image = self.controller_client.debug_draw(x1, y1, x2, y2)
         base64_image = image_to_base64(image)
         return ToolResult(output="Box drawn on the image.", base64_images=[base64_image])
-
-
-class AndroidUiDumpTool(Tool):
-    def __init__(self, controller_client: AskUiAndroidControllerClient):
-        super().__init__(
-            name="android_ui_dump_tool",
-            description="""
-                Captures and retrieves the UI hierarchy of the current screen using Android's UI Automator.
-                This tool dumps the view hierarchy to an XML file and returns its contents, which includes
-                information about all UI elements on the screen including their bounds, text, and other attributes.
-            """,
-            input_schema={"type": "object", "properties": {}, "required": []},
-        )
-        self.controller_client = controller_client
-
-    def __call__(self) -> ToolResult:
-        dump_file = f"/sdcard/window_dump_{int(time.time() * 1000)}.xml"
-        
-        dump_result = self.controller_client.shell(f"uiautomator dump {dump_file}")
-        if "ERROR" in dump_result:
-            raise ToolError(f"Failed to dump UI hierarchy: {dump_result}")
-            
-        xml_content = self.controller_client.shell(f"cat {dump_file}")
-        if not xml_content or "No such file" in xml_content:
-            raise ToolError("Failed to read UI hierarchy dump file")
-            
-        self.controller_client.shell(f"rm -rf {dump_file}")
-            
-        return ToolResult(output=f"UI hierarchy dump retrieved successfully:\n{xml_content}")

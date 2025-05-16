@@ -15,7 +15,6 @@ from askui.tools.anthropic.android import (
     AndroidMoveMouseTool,
     AndroidShellTool,
     AndroidGetCursorPositionTool,
-    AndroidUiDumpTool,
     DebugDrawTool,
 )
 from askui.tools.anthropic.file_tools import FileWriteTool, FileReadTool
@@ -67,7 +66,6 @@ class ClaudeAndroidAgent(ClaudeAgent):
             AndroidGetCursorPositionTool(controller_client),
             AndroidGetConnectedDisplaysTool(controller_client),
             AndroidSelectDisplayTool(controller_client),
-            AndroidUiDumpTool(controller_client),
         ]
 
         if file_tool_base_dir_path:
