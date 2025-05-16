@@ -1,0 +1,23 @@
+{
+    "recommendations": [
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "ms-python.debugpy",
+        "ms-python.isort",
+        "ms-python.mypy-type-checker",
+        "ms-python.pylint",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "njpwerner.autodocstring",
+        "njqdev.vscode-python-typehint",
+        "oderwat.indent-rainbow",
+        "streetsidesoftware.code-spell-checker",
+        "tamasfe.even-better-toml",
+        "visualstudioexptteam.vscodeintellicode",
+        "dongli.python-preview",
+        "mintlify.document",
+        "kaih2o.python-resource-monitor",
+        "littlefoxteam.vscode-python-test-adapter",
+        "almenon.arepl"
+    ]
+}
