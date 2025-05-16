@@ -5,7 +5,7 @@
 groups = ["default", "chat", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:fc9c6d1e6e03e722cea57c2a4ede898373b6ca551e8ab76321688873b5325d2d"
+content_hash = "sha256:1ed4e4370d0912416cc65444a7f6c59a6a9f78ce3d85166859bab162b9cd2e6b"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
