@@ -1,7 +1,6 @@
 {
     "version": "0.2.0",
     "configurations": [
-        
         {
             "name": "Debug Tests",
             "type": "debugpy",
@@ -11,6 +10,14 @@
                 "-vv",
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Pytest: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["-v", "--no-cov", "${file}"],
+            "justMyCode": false
         },
     ]
 }
