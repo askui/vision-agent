@@ -2,10 +2,10 @@
 # It is not intended for manual editing.
 
 [metadata]
-groups = ["default", "chat", "mcp", "pynput", "test"]
+groups = ["default", "chat", "mcp", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:0afb61ae5075adaa78afb4d2995e9714fad46da7eeafc8f4f61ae16b9ec88b18"
+content_hash = "sha256:5d81bb8ca8a8b98d18f4632c5fc1dd409c44d385724e4f321922ae71ec152f33"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -369,7 +369,7 @@ name = "evdev"
 version = "1.9.2"
 requires_python = ">=3.8"
 summary = "Bindings to the Linux input handling subsystem"
-groups = ["pynput"]
+groups = ["default"]
 marker = "\"linux\" in sys_platform"
 files = [
     {file = "evdev-1.9.2.tar.gz", hash = "sha256:5d3278892ce1f92a74d6bf888cc8525d9f68af85dbe336c95d1c87fb8f423069"},
@@ -921,6 +921,17 @@ files = [
 ]
 
 [[package]]
+name = "mss"
+version = "10.0.0"
+requires_python = ">=3.9"
+summary = "An ultra fast cross-platform multiple screenshots module in pure python using ctypes."
+groups = ["default"]
+files = [
+    {file = "mss-10.0.0-py3-none-any.whl", hash = "sha256:82cf6460a53d09e79b7b6d871163c982e6c7e9649c426e7b7591b74956d5cb64"},
+    {file = "mss-10.0.0.tar.gz", hash = "sha256:d903e0d51262bf0f8782841cf16eaa6d7e3e1f12eae35ab41c2e318837c6637f"},
+]
+
+[[package]]
 name = "mypy"
 version = "1.15.0"
 requires_python = ">=3.9"
@@ -1445,7 +1456,7 @@ files = [
 name = "pynput"
 version = "1.8.1"
 summary = "Monitor and control user input devices"
-groups = ["pynput"]
+groups = ["default"]
 dependencies = [
     "enum34; python_version == \"2.7\"",
     "evdev>=1.3; \"linux\" in sys_platform",
@@ -1464,7 +1475,7 @@ name = "pyobjc-core"
 version = "11.0"
 requires_python = ">=3.8"
 summary = "Python<->ObjC Interoperability Module"
-groups = ["pynput"]
+groups = ["default"]
 marker = "sys_platform == \"darwin\""
 files = [
     {file = "pyobjc_core-11.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:10866b3a734d47caf48e456eea0d4815c2c9b21856157db5917b61dee06893a1"},
@@ -1480,7 +1491,7 @@ name = "pyobjc-framework-applicationservices"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework ApplicationServices on macOS"
-groups = ["pynput"]
+groups = ["default"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1502,7 +1513,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Cocoa frameworks on macOS"
-groups = ["pynput"]
+groups = ["default"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1521,7 +1532,7 @@ name = "pyobjc-framework-coretext"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework CoreText on macOS"
-groups = ["pynput"]
+groups = ["default"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1542,7 +1553,7 @@ name = "pyobjc-framework-quartz"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Quartz frameworks on macOS"
-groups = ["pynput"]
+groups = ["default"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1683,7 +1694,7 @@ files = [
 name = "python-xlib"
 version = "0.33"
 summary = "Python X Library"
-groups = ["pynput"]
+groups = ["default"]
 marker = "\"linux\" in sys_platform"
 dependencies = [
     "six>=1.10.0",
@@ -1967,7 +1978,7 @@ name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["default", "chat", "pynput"]
+groups = ["default", "chat"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
@@ -2191,6 +2202,17 @@ groups = ["test"]
 files = [
     {file = "types_protobuf-5.29.1.20250403-py3-none-any.whl", hash = "sha256:c71de04106a2d54e5b2173d0a422058fae0ef2d058d70cf369fb797bf61ffa59"},
     {file = "types_protobuf-5.29.1.20250403.tar.gz", hash = "sha256:7ff44f15022119c9d7558ce16e78b2d485bf7040b4fadced4dd069bb5faf77a2"},
+]
+
+[[package]]
+name = "types-pynput"
+version = "1.8.1.20250318"
+requires_python = ">=3.9"
+summary = "Typing stubs for pynput"
+groups = ["test"]
+files = [
+    {file = "types_pynput-1.8.1.20250318-py3-none-any.whl", hash = "sha256:0c1038aa1550941633114a2728ad85e392f67dfba970aebf755e369ab57aca70"},
+    {file = "types_pynput-1.8.1.20250318.tar.gz", hash = "sha256:13d4df97843a7d1e7cddccbf9987aca7f0d463b214a8a35b4f53275d2c5a3576"},
 ]
 
 [[package]]

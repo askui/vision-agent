@@ -427,7 +427,7 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def mouse(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int) -> None:
         """
         Moves the mouse cursor to specified screen coordinates.
 
@@ -437,7 +437,7 @@ class AskUiControllerClient(AgentOs):
         """
         self._reporter.add_message(
             "AgentOS",
-            f"mouse({x}, {y})",
+            f"mouse_move({x}, {y})",
             draw_point_on_image(self.screenshot(report=False), x, y, size=5),
         )
         self._run_recorder_action(
@@ -686,19 +686,19 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def set_display(self, displayNumber: int = 1) -> None:
+    def set_display(self, display: int = 1) -> None:
         """
         Set the active display.
 
         Args:
-            displayNumber (int, optional): The display number to set as active.
+            display (int, optional): The display ID to set as active.
                 Defaults to `1`.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
-        self._reporter.add_message("AgentOS", f"set_display({displayNumber})")
+        self._reporter.add_message("AgentOS", f"set_display({display})")
         self._stub.SetActiveDisplay(
-            controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber)
+            controller_v1_pbs.Request_SetActiveDisplay(displayID=display)
         )
-        self._display = displayNumber
+        self._display = display

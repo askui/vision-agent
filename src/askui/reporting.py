@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from importlib.metadata import distributions
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from jinja2 import Template
 from PIL import Image
@@ -25,7 +25,7 @@ class Reporter(ABC):
     def add_message(
         self,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         """Add a message to the report.
@@ -71,7 +71,7 @@ class CompositeReporter(Reporter):
     def add_message(
         self,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         """Add a message to the report."""
@@ -102,7 +102,7 @@ class SimpleHtmlReporter(Reporter):
     def __init__(self, report_dir: str = "reports") -> None:
         self.report_dir = Path(report_dir)
         self.report_dir.mkdir(exist_ok=True)
-        self.messages: List[Dict] = []
+        self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
 
     def _collect_system_info(self) -> SystemInfo:
@@ -120,7 +120,7 @@ class SimpleHtmlReporter(Reporter):
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode()
 
-    def _format_content(self, content: Union[str, dict, list]) -> str:
+    def _format_content(self, content: Union[str, dict[str, Any], list[Any]]) -> str:
         if isinstance(content, (dict, list)):
             return json.dumps(content, indent=2)
         return str(content)
@@ -129,7 +129,7 @@ class SimpleHtmlReporter(Reporter):
     def add_message(
         self,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
         """Add a message to the report."""
@@ -162,19 +162,19 @@ class SimpleHtmlReporter(Reporter):
         <html>
             <head>
                 <title>Vision Agent Report - {{ timestamp }}</title>
-                <link rel="stylesheet" 
+                <link rel="stylesheet"
                     href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
-                <script 
+                <script
                     src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js">
                 </script>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
                         margin-bottom: 20px;
                     }
-                    th, td { 
+                    th, td {
                         padding: 8px;
                         text-align: left;
                         border: 1px solid #ddd;
@@ -230,7 +230,7 @@ class SimpleHtmlReporter(Reporter):
                         const toggleButton = document.getElementById(
                             'toggleButton'
                         );
-                        
+
                         if (hiddenPackages.classList.contains('hidden-packages')) {
                             hiddenPackages.classList.remove('hidden-packages');
                             hiddenPackages.classList.add('visible-packages');
@@ -241,7 +241,7 @@ class SimpleHtmlReporter(Reporter):
                             toggleButton.textContent = 'Show more...';
                         }
                     }
-                    
+
                     document.addEventListener('DOMContentLoaded', (event) => {
                         document.querySelectorAll('pre code').forEach((block) => {
                             hljs.highlightBlock(block);
@@ -252,7 +252,7 @@ class SimpleHtmlReporter(Reporter):
             <body>
                 <h1>Vision Agent Report</h1>
                 <p>Generated: {{ timestamp }}</p>
-                
+
                 <h2>System Information</h2>
                 <table class="system-info">
                     <tr>
@@ -275,13 +275,13 @@ class SimpleHtmlReporter(Reporter):
                                     {{ package }}<br>
                                 {% endfor %}
                                 </div>
-                                <span id="toggleButton" class="show-more" 
+                                <span id="toggleButton" class="show-more"
                                     onclick="togglePackages()">Show more...</span>
                             {% endif %}
                         </td>
                     </tr>
                 </table>
-                
+
                 <h2>Conversation Log</h2>
                 <table>
                     <tr>
@@ -303,9 +303,9 @@ class SimpleHtmlReporter(Reporter):
                                 {% endif %}
                                 {% for image in msg.images %}
                                     <br>
-                                    <img src="data:image/png;base64,{{ image }}" 
-                                         class="message-image" 
-                                         alt="Message image">
+                                    <img src="data:image/png;base64,{{ image }}"
+                                        class="message-image"
+                                        alt="Message image">
                                 {% endfor %}
                             </td>
                         </tr>

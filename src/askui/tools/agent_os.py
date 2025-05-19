@@ -175,7 +175,7 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mouse(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int) -> None:
         """
         Moves the mouse cursor to specified screen coordinates.
 
@@ -293,12 +293,12 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_display(self, displayNumber: int = 1) -> None:
+    def set_display(self, display: int = 1) -> None:
         """
         Sets the active display for screen interactions.
 
         Args:
-            displayNumber (int, optional): The display number to set as active.
+            display (int, optional): The display ID to set as active.
                 Defaults to `1`.
         """
         raise NotImplementedError

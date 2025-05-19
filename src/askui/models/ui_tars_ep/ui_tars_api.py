@@ -219,7 +219,7 @@ class UiTarsApiHandler:
 
         action = message.parsed_action
         if action.action_type == "click":
-            self._agent_os.mouse(action.start_box.x, action.start_box.y)
+            self._agent_os.mouse_move(action.start_box.x, action.start_box.y)
             self._agent_os.click("left")
             time.sleep(1)
         if action.action_type == "type":

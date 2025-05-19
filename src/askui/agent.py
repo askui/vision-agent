@@ -166,7 +166,7 @@ class VisionAgent:
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
         point = self._locate(locator=locator, model=model or self.model)
-        self.tools.os.mouse(point[0], point[1])
+        self.tools.os.mouse_move(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
