@@ -27,7 +27,7 @@ class AgentToolbox:
     def __init__(self, agent_os: AgentOs):
         self.webbrowser = webbrowser
         self.clipboard = pyperclip
-        self.agent_os = agent_os
+        self.os = agent_os
         self._hub = AskUIHub()
         self.httpx = httpx
 

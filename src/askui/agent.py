@@ -17,10 +17,7 @@ from .models.router import ModelRouter, Point
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .tools import AgentToolbox, ModifierKey, PcKey
-from .tools.askui import (
-    AskUiControllerClient,
-    AskUiControllerServer,
-)
+from .tools.askui import AskUiControllerClient, AskUiControllerServer
 
 
 class VisionAgent:
@@ -118,7 +115,7 @@ class VisionAgent:
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model or self.model)
-        self.tools.agent_os.click(button, repeat)
+        self.tools.os.click(button, repeat)
 
     def _locate(
         self,
@@ -127,7 +124,7 @@ class VisionAgent:
         model: ModelComposition | str | None = None,
     ) -> Point:
         _screenshot = ImageSource(
-            self.tools.agent_os.screenshot() if screenshot is None else screenshot
+            self.tools.os.screenshot() if screenshot is None else screenshot
         )
         point = self.model_router.locate(_screenshot.root, locator, model or self.model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
@@ -169,7 +166,7 @@ class VisionAgent:
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
         point = self._locate(locator=locator, model=model or self.model)
-        self.tools.agent_os.mouse(point[0], point[1])
+        self.tools.os.mouse(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -231,7 +228,7 @@ class VisionAgent:
             ```
         """
         self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.tools.agent_os.mouse_scroll(x, y)
+        self.tools.os.mouse_scroll(x, y)
 
     @telemetry.record_call(exclude={"text"})
     @validate_call
@@ -257,7 +254,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.tools.agent_os.type(text)
+        self.tools.os.type(text)
 
     @overload
     def get(
@@ -342,9 +339,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(
-            self.tools.agent_os.screenshot() if image is None else image
-        )
+        _image = ImageSource(self.tools.os.screenshot() if image is None else image)
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
         m = model
         if not m and not isinstance(self.model, ModelComposition):
@@ -410,7 +405,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_up "{key}"')
         logger.debug("VisionAgent received in key_up '%s'", key)
-        self.tools.agent_os.keyboard_release(key)
+        self.tools.os.keyboard_release(key)
 
     @telemetry.record_call()
     @validate_call
@@ -435,7 +430,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_down "{key}"')
         logger.debug("VisionAgent received in key_down '%s'", key)
-        self.tools.agent_os.keyboard_pressed(key)
+        self.tools.os.keyboard_pressed(key)
 
     @telemetry.record_call(exclude={"goal"})
     @validate_call
@@ -510,7 +505,7 @@ class VisionAgent:
             msg += f" {repeat}x times"
         self._reporter.add_message("User", msg)
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.agent_os.keyboard_tap(key, modifier_keys, count=repeat)
+        self.tools.os.keyboard_tap(key, modifier_keys, count=repeat)
 
     @telemetry.record_call(exclude={"command"})
     @validate_call
@@ -542,12 +537,12 @@ class VisionAgent:
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
-        self.tools.agent_os.disconnect()
+        self.tools.os.disconnect()
         self._reporter.generate()
 
     @telemetry.record_call()
     def open(self) -> None:
-        self.tools.agent_os.connect()
+        self.tools.os.connect()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":

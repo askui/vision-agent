@@ -190,7 +190,7 @@ class ModelRouter:
             anthropic=self._anthropic_settings,
         )
         return ClaudeComputerAgent(
-            agent_os=self._tools.agent_os,
+            agent_os=self._tools.os,
             reporter=self._reporter,
             settings=claude_computer_agent_settings,
         )
@@ -207,7 +207,7 @@ class ModelRouter:
             return self._tars_base
         tars_settings = UiTarsApiHandlerSettings()
         return UiTarsApiHandler(
-            agent_os=self._tools.agent_os,
+            agent_os=self._tools.os,
             reporter=self._reporter,
             settings=tars_settings,
         )
