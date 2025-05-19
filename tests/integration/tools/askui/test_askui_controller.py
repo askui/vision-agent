@@ -37,5 +37,5 @@ def test_find_remote_device_controller_by_component_registry(
 def test_actions(controller_client: AskUiControllerClient) -> None:
     with controller_client:
         controller_client.screenshot()
-        controller_client.mouse(0, 0)
+        controller_client.mouse_move(0, 0)
         controller_client.click()

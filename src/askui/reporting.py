@@ -304,8 +304,8 @@ class SimpleHtmlReporter(Reporter):
                                 {% for image in msg.images %}
                                     <br>
                                     <img src="data:image/png;base64,{{ image }}"
-                                         class="message-image"
-                                         alt="Message image">
+                                        class="message-image"
+                                        alt="Message image">
                                 {% endfor %}
                             </td>
                         </tr>

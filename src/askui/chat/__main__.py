@@ -15,6 +15,8 @@ from askui.chat.click_recorder import ClickRecorder
 from askui.chat.exceptions import FunctionExecutionError, InvalidFunctionError
 from askui.models import ModelName
 from askui.reporting import Reporter
+from askui.tools.pynput.pynput_agent_os import PynputAgentOs
+from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import base64_to_image, draw_point_on_image
 
 # TODO Start backend server
@@ -24,11 +26,12 @@ st.set_page_config(
     page_icon="💬",
 )
 
+
+# TODO Tool, pynput alternatively
 BASE_DIR = Path("./chat")
 threads_api = ThreadsApi(BASE_DIR)
 messages_api = MessagesApi(BASE_DIR)
-
-click_recorder = ClickRecorder()  # TODO Tool, pynput alternatively
+click_recorder = ClickRecorder()
 
 
 def get_image(img_b64_str_or_path: str) -> Image.Image:  # TODO Image utils
@@ -151,6 +154,7 @@ def rerun() -> None:
     st.markdown("### Re-running...")
     with VisionAgent(
         log_level=logging.DEBUG,
+        tools=tools,
     ) as agent:
         screenshot: Image.Image | None = None
         for message in messages_api.list_(st.session_state.thread_id).data:
@@ -262,6 +266,9 @@ if thread_id != st.session_state.get("thread_id"):
 
 reporter = ChatHistoryAppender(thread_id)
 
+tools = AgentToolbox(agent_os=PynputAgentOs(reporter=reporter))
+
+
 st.title(f"Vision Agent Chat - {thread_id}")
 
 # Display chat history
@@ -300,15 +307,16 @@ if st.button(
     )
     reporter.add_message(
         role="User (Demonstration)",
-        content=f"mouse({coordinates[0]}, {coordinates[1]})",
+        content=f"mouse_move({coordinates[0]}, {coordinates[1]})",
         image=draw_point_on_image(image, coordinates[0], coordinates[1]),
     )
     st.rerun()
 
 if act_prompt := st.chat_input("Ask AI"):
-    with VisionAgent(
+    with VisionAgent(  # we need the vision agent
         log_level=logging.DEBUG,
         reporters=[reporter],
+        tools=tools,
     ) as agent:
         agent.act(act_prompt, model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022)
         st.rerun()

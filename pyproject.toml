@@ -22,6 +22,8 @@ dependencies = [
     "segment-analytics-python>=2.3.4",
     "py-machineid>=0.7.0",
     "httpx>=0.28.1",
+    "pynput>=1.8.1",
+    "mss>=10.0.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -35,15 +37,20 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/askui/__init__.py"
 
+
 [tool.pdm]
 distribution = true
 
 [tool.pdm.scripts]
 test = "pytest -n auto"
-"test:e2e" = "pytest -n auto tests/e2e"
-"test:integration" = "pytest -n auto tests/integration"
-"test:unit" = "pytest -n auto tests/unit"
+"test:cov" = "pytest -n auto --cov=src/askui --cov-report=html"
 "test:cov:view" = "python -m http.server --directory htmlcov"
+"test:e2e" = "pytest -n auto tests/e2e"
+"test:e2e:cov" = "pytest -n auto tests/e2e --cov=src/askui --cov-report=html"
+"test:integration" = "pytest -n auto tests/integration"
+"test:integration:cov" = "pytest -n auto tests/integration --cov=src/askui --cov-report=html"
+"test:unit" = "pytest -n auto tests/unit"
+"test:unit:cov" = "pytest -n auto tests/unit --cov=src/askui --cov-report=html"
 format = "ruff format src tests"
 lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
@@ -59,9 +66,6 @@ chat = [
 mcp = [
     "mcp[cli,rich,ws]>=1.8.1",
 ]
-pynput = [
-    "pynput>=1.8.1",
-]
 test = [
     "pytest>=8.3.4",
     "ruff>=0.9.5",
@@ -76,11 +80,11 @@ test = [
     "grpc-stubs>=1.53.0.3",
     "types-pyperclip>=1.8.2.20240311",
     "pytest-timeout>=2.4.0",
+    "types-pynput>=1.8.1.20250318",
 ]
 
 
 [tool.pytest.ini_options]
-addopts = "--cov=src/askui --cov-report=html"
 python_classes = ["Test*"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
