@@ -29,7 +29,10 @@ class AskUiSettings(BaseSettings):
 
     @cached_property
     def base_url(self) -> str:
-        return f"{self.inference_endpoint}/api/v1/workspaces/{self.workspace_id}"
+        # NOTE(OS): Pydantic parses urls with trailing slashes
+        # meaning "https://inference.askui.com" turns into -> "https://inference.askui.com/"
+        # https://github.com/pydantic/pydantic/issues/7186
+        return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
 class ClaudeSettingsBase(BaseModel):
