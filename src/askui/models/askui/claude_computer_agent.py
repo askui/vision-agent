@@ -160,7 +160,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 <IMPORTANT>
 * When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
 * If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
-</IMPORTANT>"""
+</IMPORTANT>"""  # noqa: DTZ002, E501
 
 
 class AskUiClaudeComputerAgent:
@@ -208,7 +208,7 @@ class AskUiClaudeComputerAgent:
             response.raise_for_status()
             response_data = response.json()
             beta_message = BetaMessage.model_validate(response_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(e)
             return messages
 
@@ -260,7 +260,7 @@ class AskUiClaudeComputerAgent:
         the conversation progresses, remove all but the final `images_to_keep` tool_result
         images in place, with a chunk of min_removal_threshold to reduce the amount we
         break the implicit prompt cache.
-        """
+        """  # noqa: E501
         if images_to_keep is None:
             return messages
 
