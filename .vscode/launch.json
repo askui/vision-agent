@@ -17,7 +17,8 @@
             "request": "launch",
             "module": "pytest",
             "args": ["-v", "--no-cov", "${file}"],
-            "justMyCode": false
+            "justMyCode": false,
+            "envFile": "${workspaceFolder}/.env.local"
         },
     ]
 }
