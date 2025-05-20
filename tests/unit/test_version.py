@@ -7,4 +7,5 @@ def test_version_consistency() -> None:
     module_version = askui.__version__
     assert package_version == module_version, (
         f"Version mismatch: package={package_version}, module={module_version}"
+        f"Please run: pdm sync"
     )

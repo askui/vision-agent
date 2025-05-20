@@ -340,7 +340,7 @@ class TestModelRouter:
             router = ModelRouter(
                 tools=model_router._tools, reporter=model_router._reporter
             )
-            with pytest.raises(ValidationError, match="ANTHROPIC_API_KEY"):
+            with pytest.raises(ValidationError, match="ASKUI_WORKSPACE_ID|ASKUI_TOKEN"):
                 router.act("test goal")
 
     def test_locate_with_missing_askui_credentials(

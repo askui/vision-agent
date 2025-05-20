@@ -30,11 +30,9 @@ def claude_computer_agent(
     agent_os_mock: AgentOs,
 ) -> Generator[AskUiClaudeComputerAgent, None, None]:
     """Fixture providing a AskUiClaudeComputerAgent instance."""
-    agent = (
-        AskUiClaudeComputerAgent(
-            agent_os=agent_os_mock,
-            reporter=ReporterMock(),
-            settings=AskUiClaudeComputerAgentSettings(askui=AskUiSettings()),
-        ),
+    agent = AskUiClaudeComputerAgent(
+        agent_os=agent_os_mock,
+        reporter=ReporterMock(),
+        settings=AskUiClaudeComputerAgentSettings(askui=AskUiSettings()),
     )
     yield agent
