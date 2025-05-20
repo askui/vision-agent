@@ -213,7 +213,7 @@ class AskUiClaudeComputerAgent:
             return messages
 
         response_params = self._response_to_params(beta_message)
-        new_message = {
+        new_message: BetaMessageParam = {
             "role": "assistant",
             "content": response_params,
         }
@@ -233,13 +233,18 @@ class AskUiClaudeComputerAgent:
                     self._make_api_tool_result(result, content_block["id"])
                 )
         if len(tool_result_content) > 0:
-            another_new_message = {"content": tool_result_content, "role": "user"}
-            logger.debug(truncate_long_strings(another_new_message, max_length=200))
+            another_new_message: BetaMessageParam = {
+                "content": tool_result_content,
+                "role": "user",
+            }
+            logger.debug(
+                truncate_long_strings(dict(another_new_message), max_length=200)
+            )
             messages.append(another_new_message)
         return messages
 
     def act(self, goal: str) -> None:
-        messages = [{"role": "user", "content": goal}]
+        messages: list[BetaMessageParam] = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
             messages = self.step(messages)
