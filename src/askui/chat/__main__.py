@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Union, cast
+from typing import Any, Union, cast
 
 import streamlit as st
 from PIL import Image, ImageDraw
@@ -43,7 +43,7 @@ def get_image(img_b64_str_or_path: str) -> Image.Image:  # TODO Image utils
 
 def write_message(  # TODO updating frontend
     role: str,
-    content: str | dict | list,
+    content: str | dict[str, Any] | list[Any],
     timestamp: str,
     image: Image.Image
     | str
@@ -92,7 +92,7 @@ class ChatHistoryAppender(Reporter):
     def add_message(
         self,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Image.Image | list[Image.Image] | None = None,
     ) -> None:
         message = messages_api.create(
@@ -266,7 +266,13 @@ if thread_id != st.session_state.get("thread_id"):
 
 reporter = ChatHistoryAppender(thread_id)
 
-tools = AgentToolbox(agent_os=PynputAgentOs(reporter=reporter))
+
+@st.cache_resource
+def get_tools() -> AgentToolbox:
+    return AgentToolbox(agent_os=PynputAgentOs(reporter=reporter))
+
+
+tools = get_tools()
 
 
 st.title(f"Vision Agent Chat - {thread_id}")
@@ -311,6 +317,31 @@ if st.button(
         image=draw_point_on_image(image, coordinates[0], coordinates[1]),
     )
     st.rerun()
+
+if st.session_state.get("input_event_listening"):
+    while input_event := tools.os.poll_event():
+        image = tools.os.screenshot(report=False)
+        if input_event.pressed:
+            reporter.add_message(
+                role="User (Demonstration)",
+                content=f"mouse_move({input_event.x}, {input_event.y})",
+                image=draw_point_on_image(image, input_event.x, input_event.y),
+            )
+            reporter.add_message(
+                role="User (Demonstration)",
+                content=f'click("{input_event.button}")',
+            )
+    if st.button("Refresh"):
+        st.rerun()
+    if st.button("Stop listening to input events"):
+        tools.os.stop_listening()
+        st.session_state["input_event_listening"] = False
+        st.rerun()
+else:
+    if st.button("Listen to input events"):
+        tools.os.start_listening()
+        st.session_state["input_event_listening"] = True
+        st.rerun()
 
 if act_prompt := st.chat_input("Ask AI"):
     with VisionAgent(  # we need the vision agent
