@@ -1,3 +1,6 @@
+import ctypes
+import platform
+import queue
 import time
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
@@ -8,15 +11,23 @@ from pynput.keyboard import Controller as KeyboardController
 from pynput.keyboard import Key, KeyCode
 from pynput.mouse import Button
 from pynput.mouse import Controller as MouseController
+from pynput.mouse import Listener as MouseListener
 from typing_extensions import override
 
+from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
+from askui.tools.agent_os import AgentOs, InputEvent, ModifierKey, PcKey
 from askui.utils.image_utils import draw_point_on_image
+
+if platform.system() == "Windows":
+    try:
+        PROCESS_PER_MONITOR_DPI_AWARE = 2
+        ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)  # type: ignore[attr-defined]
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Could not set DPI awareness: {e}")
 
 if TYPE_CHECKING:
     from mss.screenshot import ScreenShot
-
 
 _KEY_MAP: dict[PcKey | ModifierKey, Key | KeyCode] = {
     "backspace": Key.backspace,
@@ -53,10 +64,18 @@ _KEY_MAP: dict[PcKey | ModifierKey, Key | KeyCode] = {
 }
 
 
-_BUTTON_MAP: dict[Literal["left", "middle", "right"], Button] = {
+_BUTTON_MAP: dict[Literal["left", "middle", "right", "unknown"], Button] = {
     "left": Button.left,
     "middle": Button.middle,
     "right": Button.right,
+    "unknown": Button.unknown,
+}
+
+_BUTTON_MAP_REVERSE: dict[Button, Literal["left", "middle", "right", "unknown"]] = {
+    Button.left: "left",
+    Button.middle: "middle",
+    Button.right: "right",
+    Button.unknown: "unknown",
 }
 
 
@@ -118,6 +137,8 @@ class PynputAgentOs(AgentOs):
         self._sct = mss()
         self._display = display
         self._reporter = reporter
+        self._mouse_listener: MouseListener | None = None
+        self._input_event_queue: queue.Queue[InputEvent] = queue.Queue()
 
     @override
     def connect(self) -> None:
@@ -326,3 +347,53 @@ class PynputAgentOs(AgentOs):
             error_msg = f"Display {display} not found"
             raise ValueError(error_msg)
         self._display = display
+
+    def _on_mouse_click(
+        self, x: float, y: float, button: Button, pressed: bool, injected: bool
+    ) -> None:
+        """Handle mouse click events."""
+        self._input_event_queue.put(
+            InputEvent(
+                x=int(x),
+                y=int(y),
+                button=_BUTTON_MAP_REVERSE[button],
+                pressed=pressed,
+                injected=injected,
+                timestamp=time.time(),
+            )
+        )
+
+    @override
+    def start_listening(self) -> None:
+        """
+        Start listening for mouse and keyboard events.
+
+        Args:
+            callback (InputEventCallback): Callback function that will be called for
+                each event.
+        """
+        if self._mouse_listener:
+            self.stop_listening()
+        self._mouse_listener = MouseListener(
+            on_click=self._on_mouse_click,  # type: ignore[arg-type]
+            name="PynputAgentOsMouseListener",
+            args=(self._input_event_queue,),
+        )
+        self._mouse_listener.start()
+
+    @override
+    def poll_event(self) -> InputEvent | None:
+        """Poll for a single input event."""
+        try:
+            return self._input_event_queue.get(False)
+        except queue.Empty:
+            return None
+
+    @override
+    def stop_listening(self) -> None:
+        """Stop listening for mouse and keyboard events."""
+        if self._mouse_listener:
+            self._mouse_listener.stop()
+            self._mouse_listener = None
+        while not self._input_event_queue.empty():
+            self._input_event_queue.get()

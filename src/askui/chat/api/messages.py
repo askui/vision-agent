@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Any, Sequence, Union
 
 from PIL import Image
 from pydantic import AwareDatetime, BaseModel, Field
@@ -111,7 +111,7 @@ class MessagesApi:
         self,
         thread_id: str,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Image.Image | list[Image.Image] | None = None,
     ) -> Message:
         """Create a new message in a thread.
