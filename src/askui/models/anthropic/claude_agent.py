@@ -52,6 +52,7 @@ class ClaudeAgent:
         self.system = BetaTextBlockParam(
             type="text",
             text=f"{system_prompt}",
+            cache_control={"type": "ephemeral"}
         )
 
     def set_tool_collection(self, tools: List[BaseAnthropicTool]):
