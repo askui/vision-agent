@@ -14,7 +14,7 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
-from askui.models.askui.settings import AskUiClaudeComputerAgentSettings
+from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.tools.anthropic import ComputerTool, ToolCollection, ToolResult
@@ -163,12 +163,12 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 </IMPORTANT>"""  # noqa: DTZ002, E501
 
 
-class AskUiClaudeComputerAgent:
+class AskUiComputerAgent:
     def __init__(
         self,
         agent_os: AgentOs,
         reporter: Reporter,
-        settings: AskUiClaudeComputerAgentSettings,
+        settings: AskUiComputerAgentSettings,
     ) -> None:
         self._settings = settings
         self._reporter = reporter

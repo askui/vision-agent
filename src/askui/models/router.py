@@ -15,8 +15,8 @@ from askui.models.anthropic.settings import (
     ClaudeSettings,
 )
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.claude_computer_agent import AskUiClaudeComputerAgent
-from askui.models.askui.settings import AskUiClaudeComputerAgentSettings
+from askui.models.askui.askui_computer_agent import AskUiComputerAgent
+from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
@@ -138,7 +138,7 @@ class ModelRouter:
         claude_computer_agent: ClaudeComputerAgent | None = None,
         huggingface_spaces: HFSpacesHandler | None = None,
         tars: UiTarsApiHandler | None = None,
-        askui_claude_computer_agent: AskUiClaudeComputerAgent | None = None,
+        askui_claude_computer_agent: AskUiComputerAgent | None = None,
     ):
         self._tools = tools
         self._reporter = reporter or CompositeReporter()
@@ -200,13 +200,13 @@ class ModelRouter:
         )
 
     @cached_property
-    def _askui_claude_computer_agent(self) -> AskUiClaudeComputerAgent:
+    def _askui_claude_computer_agent(self) -> AskUiComputerAgent:
         if self._askui_claude_computer_agent_base is not None:
             return self._askui_claude_computer_agent_base
-        askui_claude_computer_agent_settings = AskUiClaudeComputerAgentSettings(
+        askui_claude_computer_agent_settings = AskUiComputerAgentSettings(
             askui=self._askui_settings,
         )
-        return AskUiClaudeComputerAgent(
+        return AskUiComputerAgent(
             agent_os=self._tools.os,
             reporter=self._reporter,
             settings=askui_claude_computer_agent_settings,
@@ -238,8 +238,8 @@ class ModelRouter:
                 f"Routing act prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
             )
             return self._claude_computer_agent.act(goal)
-        if not model:
-            logger.debug("Routing act prediction to AskUiClaudeComputerAgent (default)")
+        if model == ModelName.ASKUI or not model:
+            logger.debug(f"Routing act prediction to {ModelName.ASKUI} (default)")
             return self._askui_claude_computer_agent.act(goal)
         raise ModelNotFoundError(model, "Act")
 

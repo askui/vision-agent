@@ -35,18 +35,12 @@ class AskUiSettings(BaseSettings):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
-class ClaudeSettingsBase(BaseModel):
+class AskUiComputerAgentSettingsBase(BaseModel):
     model: str = "claude-3-5-sonnet-20241022"
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
 
 
-class ClaudeSettings(ClaudeSettingsBase):
-    resolution: tuple[int, int] = Field(default_factory=lambda: (1280, 800))
-    max_tokens: int = 1000
-    temperature: float = 0.0
-
-
-class AskUiClaudeComputerAgentSettings(ClaudeSettingsBase):
+class AskUiComputerAgentSettings(AskUiComputerAgentSettingsBase):
     max_tokens: int = 4096
     only_n_most_recent_images: int = 3
     image_truncation_threshold: int = 10

@@ -12,7 +12,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Pytest: Current File",
+            "name": "Debug Tests: Current File",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
