@@ -6,9 +6,9 @@
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
-            "args": [
-                "-vv",
-            ],
+            "args": ["-vv", "--no-cov", "${file}"],
+            "justMyCode": false,
+            "envFile": "${workspaceFolder}/.env.local",
             "console": "integratedTerminal"
         },
         {
@@ -16,9 +16,10 @@
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
-            "args": ["-v", "--no-cov", "${file}"],
+            "args": ["-vv", "--no-cov", "${file}"],
             "justMyCode": false,
-            "envFile": "${workspaceFolder}/.env.local"
+            "envFile": "${workspaceFolder}/.env.local",
+            "console": "integratedTerminal"
         },
     ]
 }
