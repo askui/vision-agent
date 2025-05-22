@@ -13,6 +13,7 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
     BetaToolUseBlockParam,
 )
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.reporting import Reporter
@@ -163,6 +164,13 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 </IMPORTANT>"""  # noqa: DTZ002, E501
 
 
+def is_retryable_error(exception: BaseException) -> bool:
+    """Check if the exception is a retryable error (status codes 429 or 529)."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in (429, 529)
+    return False
+
+
 class AskUiComputerAgent:
     def __init__(
         self,
@@ -184,6 +192,12 @@ class AskUiComputerAgent:
             },
         )
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=30, max=240),
+        retry=retry_if_exception(is_retryable_error),
+        reraise=True,
+    )
     def step(self, messages: list[BetaMessageParam]) -> list[BetaMessageParam]:
         if self._settings.only_n_most_recent_images:
             self._maybe_filter_to_n_most_recent_images(
@@ -203,14 +217,15 @@ class AskUiComputerAgent:
             }
             logger.debug(request_body)
             response = self._client.post(
-                "/act/inference", json=request_body, timeout=120.0
+                "/act/inference", json=request_body, timeout=300.0
             )
             response.raise_for_status()
             response_data = response.json()
             beta_message = BetaMessage.model_validate(response_data)
         except Exception as e:  # noqa: BLE001
-            logger.error(e)
-            return messages
+            if is_retryable_error(e):
+                logger.debug(e)
+            raise
 
         response_params = self._response_to_params(beta_message)
         new_message: BetaMessageParam = {
