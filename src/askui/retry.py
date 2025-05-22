@@ -54,7 +54,9 @@ class Retry:
         self._retry_count = retry_count
         self._on_exception_types = on_exception_types
 
-    def _get_retry_wait_strategy(self):
+    def _get_retry_wait_strategy(
+        self,
+    ) -> wait_fixed | wait_incrementing | wait_exponential:
         """Get the appropriate wait strategy based on the configured retry strategy."""
         if self._strategy == "Fixed":
             return wait_fixed(self._base_delay / 1000)
@@ -62,7 +64,7 @@ class Retry:
             return wait_incrementing(self._base_delay / 1000)
         return wait_exponential(multiplier=self._base_delay / 1000)
 
-    def my_before_sleep(self, retry_state: RetryCallState):
+    def my_before_sleep(self, retry_state: RetryCallState) -> None:
         logger.info(
             "Retrying %s: attempt %s ended with: %s",
             retry_state.fn,
