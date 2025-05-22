@@ -15,6 +15,8 @@ from askui.models.anthropic.settings import (
     ClaudeSettings,
 )
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.askui_computer_agent import AskUiComputerAgent
+from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelComposition, ModelName
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
@@ -136,6 +138,7 @@ class ModelRouter:
         claude_computer_agent: ClaudeComputerAgent | None = None,
         huggingface_spaces: HFSpacesHandler | None = None,
         tars: UiTarsApiHandler | None = None,
+        askui_computer_agent: AskUiComputerAgent | None = None,
     ):
         self._tools = tools
         self._reporter = reporter or CompositeReporter()
@@ -148,6 +151,7 @@ class ModelRouter:
         self._huggingface_spaces = huggingface_spaces or HFSpacesHandler()
         self._tars_base = tars
         self._locator_serializer = VlmLocatorSerializer()
+        self._askui_computer_agent_base = askui_computer_agent
 
     @cached_property
     def _anthropic_settings(self) -> AnthropicSettings:
@@ -196,6 +200,19 @@ class ModelRouter:
         )
 
     @cached_property
+    def _askui_claude_computer_agent(self) -> AskUiComputerAgent:
+        if self._askui_computer_agent_base is not None:
+            return self._askui_computer_agent_base
+        askui_computer_agent_settings = AskUiComputerAgentSettings(
+            askui=self._askui_settings,
+        )
+        return AskUiComputerAgent(
+            agent_os=self._tools.os,
+            reporter=self._reporter,
+            settings=askui_computer_agent_settings,
+        )
+
+    @cached_property
     def _grounding_model_routers(self) -> list[GroundingModelRouter]:
         return self._grounding_model_routers_base or [
             AskUiModelRouter(inference_api=self._askui_inference_api)
@@ -216,11 +233,14 @@ class ModelRouter:
         if model == ModelName.TARS:
             logger.debug(f"Routing act prediction to {ModelName.TARS}")
             return self._tars.act(goal)
-        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022 or model is None:
+        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
             logger.debug(
                 f"Routing act prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
             )
             return self._claude_computer_agent.act(goal)
+        if model == ModelName.ASKUI or model is None:
+            logger.debug(f"Routing act prediction to {ModelName.ASKUI} (default)")
+            return self._askui_claude_computer_agent.act(goal)
         raise ModelNotFoundError(model, "Act")
 
     def get_inference(

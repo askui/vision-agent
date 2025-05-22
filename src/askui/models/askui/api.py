@@ -1,47 +1,20 @@
-import base64
 import json as json_lib
 import pathlib
-from functools import cached_property
 from typing import Any, Type, Union
 
 import requests
 from PIL import Image
-from pydantic import UUID4, Field, HttpUrl, RootModel, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic import RootModel
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.logger import logger
+from askui.models.askui.settings import AskUiSettings
 from askui.models.models import ModelComposition
 from askui.utils.image_utils import ImageSource, image_to_base64
 
 from ..types.response_schemas import ResponseSchema, to_response_schema
 from .exceptions import AskUiApiRequestFailedError
-
-
-class AskUiSettings(BaseSettings):
-    """Settings for AskUI API."""
-
-    inference_endpoint: HttpUrl = Field(
-        default_factory=lambda: HttpUrl("https://inference.askui.com"),
-        validation_alias="ASKUI_INFERENCE_ENDPOINT",
-    )
-    workspace_id: UUID4 = Field(
-        validation_alias="ASKUI_WORKSPACE_ID",
-    )
-    token: SecretStr = Field(
-        validation_alias="ASKUI_TOKEN",
-    )
-
-    @cached_property
-    def authorization_header(self) -> str:
-        token_str = self.token.get_secret_value()
-        token_base64 = base64.b64encode(token_str.encode()).decode()
-        return f"Basic {token_base64}"
-
-    @cached_property
-    def base_url(self) -> str:
-        return f"{self.inference_endpoint}/api/v1/workspaces/{self.workspace_id}"
 
 
 class AskUiInferenceApi:
