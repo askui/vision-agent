@@ -26,7 +26,7 @@ Agent OS is a device controller that allows agents to take screenshots, move the
 
 <details>
   <summary>Windows</summary>
-  
+
   ##### AMD64
 
 [AskUI Installer for AMD64](https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Win-AMD64-Web.exe)
@@ -41,7 +41,7 @@ Agent OS is a device controller that allows agents to take screenshots, move the
   <summary>Linux</summary>
 
   **⚠️ Warning:** Agent OS currently does not work on Wayland. Switch to XOrg to use it.
-  
+
 ##### AMD64
 
 ```shell
@@ -65,7 +65,7 @@ bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Web.run
 
 <details>
   <summary>MacOS</summary>
-  
+
 ```shell
 curl -L -o /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Web.run https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Web.run
 ```
@@ -88,7 +88,7 @@ pip install askui
 |  | AskUI [INFO](https://hub.askui.com/) | Anthropic [INFO](https://console.anthropic.com/settings/keys) |
 |----------|----------|----------|
 | ENV Variables    | `ASKUI_WORKSPACE_ID`, `ASKUI_TOKEN`   | `ANTHROPIC_API_KEY`   |
-| Supported Commands    | `click()`, `get()`, `locate()`, `mouse_move()`   | `act()`, `click()`, `get()`, `locate()`, `mouse_move()`  |
+| Supported Commands    | `act()`, `click()`, `get()`, `locate()`, `mouse_move()`   | `act()`, `click()`, `get()`, `locate()`, `mouse_move()`  |
 | Description    | Faster Inference, European Server, Enterprise Ready   | Supports complex actions   |
 
 To get started, set the environment variables required to authenticate with your chosen model provider.
@@ -96,7 +96,7 @@ To get started, set the environment variables required to authenticate with your
 #### How to set an environment variable?
 <details>
   <summary>Linux & MacOS</summary>
-  
+
   Use export to set an evironment variable:
 
   ```shell
@@ -106,7 +106,7 @@ To get started, set the environment variables required to authenticate with your
 
 <details>
   <summary>Windows PowerShell</summary>
-  
+
   Set an environment variable with $env:
 
   ```shell
@@ -175,14 +175,14 @@ Instead of relying on the default model for the entire automation script, you ca
 
 |  | AskUI | Anthropic |
 |----------|----------|----------|
-| `act()`    | | `anthropic-claude-3-5-sonnet-20241022`   |
+| `act()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
 | `click()`    | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element` | `anthropic-claude-3-5-sonnet-20241022`   |
 | `get()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
 | `locate()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 | `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
 
 
-**Example:** 
+**Example:**
 
 ```python
 from askui import VisionAgent
@@ -203,8 +203,8 @@ with VisionAgent(model="askui-combo") as agent:
 <details>
   <summary>AskUI AI Models</summary>
 
-Supported commands are: `click()`, `locate()`, `mouse_move()`
-| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+Supported commands are: `act()`, `click()`, `get()`, `locate()`, `mouse_move()`
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability |
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `askui` | `AskUI` is a combination of all the following models: `askui-pta`, `askui-ocr`, `askui-combo`, `askui-ai-element` where AskUI chooses the best model for the task depending on the input. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, can be (at least partially) retrained |
 | `askui-pta` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI](https://www.askui.com/) which to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, can be retrained |
@@ -220,7 +220,7 @@ Supported commands are: `click()`, `locate()`, `mouse_move()`
   <summary>Antrophic AI Models</summary>
 
 Supported commands are: `act()`, `get()`, `click()`, `locate()`, `mouse_move()`
-| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability |
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
 > **Note:** Configure your Antrophic Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
@@ -233,7 +233,7 @@ Supported commands are: `act()`, `get()`, `click()`, `locate()`, `mouse_move()`
   <summary>Huggingface AI Models (Spaces API)</summary>
 
 Supported commands are: `click()`, `locate()`, `mouse_move()`
-| Model Name  | Info | Execution Speed | Security | Cost | Reliability | 
+| Model Name  | Info | Execution Speed | Security | Cost | Reliability |
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `AskUI/PTA-1` | [`PTA-1`](https://huggingface.co/AskUI/PTA-1) (Prompt-to-Automation) is a vision language model (VLM) trained by [AskUI](https://www.askui.com/) which to address all kinds of UI elements by a textual description e.g. "`Login button`", "`Text login`" | fast, <500ms per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production applications |
 | `OS-Copilot/OS-Atlas-Base-7B` | [`OS-Atlas-Base-7B`](https://github.com/OS-Copilot/OS-Atlas) is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Please help me modify VS Code settings to hide all folders in the explorer view"`. This model is not available in the `act()` command | Slow, >1s per step | Huggingface hosted | Prices for Huggingface hosting | Not recommended for production applications |
@@ -248,8 +248,8 @@ Supported commands are: `click()`, `locate()`, `mouse_move()`
 <details>
   <summary>Self Hosted UI Models</summary>
 
-Supported commands are: `click()`, `locate()`, `mouse_move()`, `get()`, `act()`
-| Model Name  | Info | Execution Speed |  Security | Cost | Reliability | 
+Supported commands are: `act()`, `click()`, `get()`, `locate()`, `mouse_move()`
+| Model Name  | Info | Execution Speed |  Security | Cost | Reliability |
 |-------------|--------------------|--------------|--------------|--------------|--------------|
 | `tars` | [`UI-Tars`](https://github.com/bytedance/UI-TARS) is a Large Action Model (LAM) based on Qwen2 and fine-tuned by [ByteDance](https://www.bytedance.com/) on UI data e.g. "`Book me a flight to rom`" | slow, >1s per step | Self-hosted | Depening on infrastructure | Out-of-the-box not recommended for production usage |
 
@@ -450,9 +450,9 @@ print(f"User {user_info.username} is {'online' if user_info.is_online else 'offl
 
 ## What is AskUI Vision Agent?
 
-**AskUI Vision Agent** is a versatile AI powered framework that enables you to automate computer tasks in Python. 
+**AskUI Vision Agent** is a versatile AI powered framework that enables you to automate computer tasks in Python.
 
-It connects Agent OS with powerful computer use models like Anthropic's Claude Sonnet 3.5 v2 and the AskUI Prompt-to-Action series. It is your entry point for building complex automation scenarios with detailed instructions or let the agent explore new challenges on its own. 
+It connects Agent OS with powerful computer use models like Anthropic's Claude Sonnet 3.5 v2 and the AskUI Prompt-to-Action series. It is your entry point for building complex automation scenarios with detailed instructions or let the agent explore new challenges on its own.
 
 
 ![image](docs/assets/Architecture.svg)
