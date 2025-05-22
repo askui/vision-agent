@@ -138,7 +138,7 @@ class ModelRouter:
         claude_computer_agent: ClaudeComputerAgent | None = None,
         huggingface_spaces: HFSpacesHandler | None = None,
         tars: UiTarsApiHandler | None = None,
-        askui_claude_computer_agent: AskUiComputerAgent | None = None,
+        askui_computer_agent: AskUiComputerAgent | None = None,
     ):
         self._tools = tools
         self._reporter = reporter or CompositeReporter()
@@ -151,7 +151,7 @@ class ModelRouter:
         self._huggingface_spaces = huggingface_spaces or HFSpacesHandler()
         self._tars_base = tars
         self._locator_serializer = VlmLocatorSerializer()
-        self._askui_claude_computer_agent_base = askui_claude_computer_agent
+        self._askui_computer_agent_base = askui_computer_agent
 
     @cached_property
     def _anthropic_settings(self) -> AnthropicSettings:
@@ -201,15 +201,15 @@ class ModelRouter:
 
     @cached_property
     def _askui_claude_computer_agent(self) -> AskUiComputerAgent:
-        if self._askui_claude_computer_agent_base is not None:
-            return self._askui_claude_computer_agent_base
-        askui_claude_computer_agent_settings = AskUiComputerAgentSettings(
+        if self._askui_computer_agent_base is not None:
+            return self._askui_computer_agent_base
+        askui_computer_agent_settings = AskUiComputerAgentSettings(
             askui=self._askui_settings,
         )
         return AskUiComputerAgent(
             agent_os=self._tools.os,
             reporter=self._reporter,
-            settings=askui_claude_computer_agent_settings,
+            settings=askui_computer_agent_settings,
         )
 
     @cached_property
@@ -238,7 +238,7 @@ class ModelRouter:
                 f"Routing act prediction to {ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022}"  # noqa: E501
             )
             return self._claude_computer_agent.act(goal)
-        if model == ModelName.ASKUI or not model:
+        if model == ModelName.ASKUI or model is None:
             logger.debug(f"Routing act prediction to {ModelName.ASKUI} (default)")
             return self._askui_claude_computer_agent.act(goal)
         raise ModelNotFoundError(model, "Act")
