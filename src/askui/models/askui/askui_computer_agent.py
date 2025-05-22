@@ -203,7 +203,7 @@ class AskUiComputerAgent:
             }
             logger.debug(request_body)
             response = self._client.post(
-                "/act/inference", json=request_body, timeout=10.0
+                "/act/inference", json=request_body, timeout=120.0
             )
             response.raise_for_status()
             response_data = response.json()
