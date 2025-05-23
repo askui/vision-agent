@@ -43,8 +43,8 @@ def mock_image_source(mock_image: Image.Image) -> ImageSource:
 def mock_askui_inference_api(mocker: MockerFixture) -> AskUiInferenceApi:
     """Fixture providing a mock AskUI inference API."""
     mock = cast("AskUiInferenceApi", mocker.MagicMock(spec=AskUiInferenceApi))
-    mock.predict.return_value = (50, 50)  # type: ignore[attr-defined]
-    mock.get_inference.return_value = "Mock response"  # type: ignore[attr-defined]
+    mock.locate.return_value = (50, 50)  # type: ignore[attr-defined]
+    mock.get.return_value = "Mock response"  # type: ignore[attr-defined]
     return mock
 
 
@@ -79,7 +79,7 @@ def mock_tars(mocker: MockerFixture) -> UiTarsApiHandler:
 def mock_hf_spaces(mocker: MockerFixture) -> HFSpacesHandler:
     """Fixture providing a mock HuggingFace spaces handler."""
     mock = cast("HFSpacesHandler", mocker.MagicMock(spec=HFSpacesHandler))
-    mock.predict.return_value = (50, 50)  # type: ignore[attr-defined]
+    mock.locate.return_value = (50, 50)  # type: ignore[attr-defined]
     mock.get_spaces_names.return_value = ["hf-space-1", "hf-space-2"]  # type: ignore[attr-defined]
     return mock
 
@@ -121,7 +121,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, ModelName.ASKUI)
         assert x == 50
         assert y == 50
-        mock_askui_inference_api.predict.assert_called_once()  # type: ignore
+        mock_askui_inference_api.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_askui_pta_model(
         self,
@@ -134,7 +134,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, ModelName.ASKUI__PTA)
         assert x == 50
         assert y == 50
-        mock_askui_inference_api.predict.assert_called_once()  # type: ignore
+        mock_askui_inference_api.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_askui_ocr_model(
         self,
@@ -147,7 +147,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, ModelName.ASKUI__OCR)
         assert x == 50
         assert y == 50
-        mock_askui_inference_api.predict.assert_called_once()  # type: ignore
+        mock_askui_inference_api.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_askui_combo_model(
         self,
@@ -160,7 +160,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, ModelName.ASKUI__COMBO)
         assert x == 50
         assert y == 50
-        mock_askui_inference_api.predict.assert_called_once()  # type: ignore
+        mock_askui_inference_api.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_askui_ai_element_model(
         self,
@@ -173,7 +173,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, ModelName.ASKUI__AI_ELEMENT)
         assert x == 50
         assert y == 50
-        mock_askui_inference_api.predict.assert_called_once()  # type: ignore
+        mock_askui_inference_api.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_tars_model(
         self,
@@ -214,7 +214,7 @@ class TestModelRouter:
         x, y = model_router.locate(mock_image, locator, "hf-space-1")
         assert x == 50
         assert y == 50
-        mock_hf_spaces.predict.assert_called_once()  # type: ignore
+        mock_hf_spaces.locate.assert_called_once()  # type: ignore
 
     def test_locate_with_invalid_model(
         self, model_router: ModelRouter, mock_image: Image.Image
@@ -234,7 +234,7 @@ class TestModelRouter:
             "test query", mock_image_source, model=ModelName.ASKUI
         )
         assert response == "Mock response"
-        mock_askui_inference_api.get_inference.assert_called_once()  # type: ignore
+        mock_askui_inference_api.get.assert_called_once()  # type: ignore
 
     def test_get_inference_with_tars_model(
         self,

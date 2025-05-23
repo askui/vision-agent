@@ -1,12 +1,10 @@
 from typing import Any, Literal
 
+from askui.locators.locators import Locator
 from askui.models.models import ModelComposition
 
 from .models.askui.ai_element_utils import AiElementNotFound
-from .models.askui.exceptions import (
-    AskUiApiError,
-    AskUiApiRequestFailedError,
-)
+from .models.askui.exceptions import AskUiApiError, AskUiApiRequestFailedError
 
 
 class AutomationError(Exception):
@@ -25,11 +23,14 @@ class ElementNotFoundError(AutomationError):
     """Exception raised when an element cannot be located.
 
     Args:
-        message (str): The error message.
+        locator (str | Locator): The locator that was used.
+        locator_serialized (Any): The locator serialized for the specific model
     """
 
-    def __init__(self, message: str):
-        super().__init__(message)
+    def __init__(self, locator: str | Locator, locator_serialized: Any) -> None:
+        self.locator = locator
+        self.locator_serialized = locator_serialized
+        super().__init__(f"Element not found: {self.locator}")
 
 
 class ModelNotFoundError(AutomationError):

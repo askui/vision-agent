@@ -5,14 +5,19 @@ from typing import Callable
 import httpx
 from gradio_client import Client, handle_file  # type: ignore
 from PIL import Image
+from typing_extensions import override
 
 from askui.exceptions import AutomationError
+from askui.locators.locators import Locator
+from askui.locators.serializers import VlmLocatorSerializer
+from askui.models.models import LocateModel, ModelComposition, Point
+from askui.utils.image_utils import ImageSource
 
 
-class HFSpacesHandler:
-    def __init__(self) -> None:
-        self.clients: dict[str, Client] = {}
-        self.spaces: dict[
+class HFSpacesHandler(LocateModel):
+    def __init__(self, locator_serializer: VlmLocatorSerializer) -> None:
+        self._clients: dict[str, Client] = {}
+        self._spaces: dict[
             str, Callable[[Image.Image, str, str | None], tuple[int, int]]
         ] = {
             "AskUI/PTA-1": self.predict_askui_pta1,
@@ -21,27 +26,28 @@ class HFSpacesHandler:
             "OS-Copilot/OS-Atlas-Base-7B": self.predict_os_atlas,
             "showlab/ShowUI-2B": self.predict_showui,
         }
+        self._locator_serializer = locator_serializer
 
     def get_spaces_names(self) -> list[str]:
-        return list(self.spaces.keys())
+        return list(self._spaces.keys())
 
     def get_space_client(self, space_name: str) -> Client:
-        if space_name in list(self.clients.keys()):
-            return self.clients[space_name]
-        self.clients[space_name] = Client(space_name)
-        return self.clients[space_name]
+        if space_name in list(self._clients.keys()):
+            return self._clients[space_name]
+        self._clients[space_name] = Client(space_name)
+        return self._clients[space_name]
 
     @staticmethod
-    def _rescale_bounding_boxes(  # type: ignore
-        bounding_boxes,
-        original_width,
-        original_height,
-        scaled_width=1000,
-        scaled_height=1000,
-    ):
+    def _rescale_bounding_boxes(
+        bounding_boxes: list[list[float]],
+        original_width: int,
+        original_height: int,
+        scaled_width: int = 1000,
+        scaled_height: int = 1000,
+    ) -> list[list[float]]:
         x_scale = original_width / scaled_width
         y_scale = original_height / scaled_height
-        rescaled_boxes = []
+        rescaled_boxes: list[list[float]] = []
         for box in bounding_boxes:
             xmin, ymin, xmax, ymax = box
             rescaled_box = [
@@ -53,12 +59,24 @@ class HFSpacesHandler:
             rescaled_boxes.append(rescaled_box)
         return rescaled_boxes
 
-    def predict(
-        self, screenshot: Image.Image, locator: str, model_name: str = "AskUI/PTA-1"
-    ) -> tuple[int, int]:
+    @override
+    def locate(
+        self,
+        locator: str | Locator,
+        image: ImageSource,
+        model: ModelComposition | str,
+    ) -> Point:
         """Predict element location using Hugging Face Spaces."""
+        if not isinstance(model, str):
+            error_msg = "Model composition is not supported for Hugging Face Spaces"
+            raise NotImplementedError(error_msg)
         try:
-            return self.spaces[model_name](screenshot, locator, model_name)
+            serialized_locator = (
+                self._locator_serializer.serialize(locator)
+                if isinstance(locator, Locator)
+                else locator
+            )
+            return self._spaces[model](image.root, serialized_locator, model)
         except (ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
             error_msg = f"Hugging Face Spaces Exception: {e}"
             raise AutomationError(error_msg) from e

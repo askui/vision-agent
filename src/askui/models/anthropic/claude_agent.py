@@ -3,12 +3,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, cast
 
-from anthropic import (
-    Anthropic,
-    APIError,
-    APIResponseValidationError,
-    APIStatusError,
-)
+from anthropic import Anthropic, APIError, APIResponseValidationError, APIStatusError
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam,
     BetaImageBlockParam,
@@ -19,10 +14,10 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
     BetaToolUseBlockParam,
 )
+from typing_extensions import override
 
-from askui.models.anthropic.settings import (
-    ClaudeComputerAgentSettings,
-)
+from askui.models.anthropic.settings import ClaudeComputerAgentSettings
+from askui.models.models import ActModel
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 
@@ -169,7 +164,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 </IMPORTANT>"""
 
 
-class ClaudeComputerAgent:
+class ClaudeComputerAgent(ActModel):
     def __init__(
         self,
         agent_os: AgentOs,
@@ -240,7 +235,8 @@ class ClaudeComputerAgent:
             messages.append(another_new_message)
         return messages
 
-    def act(self, goal: str) -> None:
+    @override
+    def act(self, goal: str, model: str) -> None:
         messages = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
