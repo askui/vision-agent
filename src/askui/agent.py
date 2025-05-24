@@ -11,13 +11,22 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.utils.image_utils import ImageSource, Img
 
+from .exceptions import ElementNotFoundError
 from .logger import configure_logging, logger
 from .models import ModelComposition
 from .models.router import ModelRouter, Point
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
+from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient, AskUiControllerServer
+
+DEFAULT_RETRY = Retry(
+    strategy="Exponential",
+    base_delay=1000,
+    retry_count=3,
+    on_exception_types=(ElementNotFoundError,),
+)
 
 
 class VisionAgent:
@@ -34,7 +43,7 @@ class VisionAgent:
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
         model (ModelComposition | str | None, optional): The default composition or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
-
+        retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `DEFAULT_RETRY`. Currently only supported for `locate()` method.
     Example:
         ```python
         from askui import VisionAgent
@@ -56,6 +65,7 @@ class VisionAgent:
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
         model: ModelComposition | str | None = None,
+        retry: Retry = DEFAULT_RETRY,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
@@ -73,6 +83,7 @@ class VisionAgent:
             else model_router
         )
         self.model = model
+        self._retry = retry
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -126,7 +137,12 @@ class VisionAgent:
         _screenshot = ImageSource(
             self.tools.os.screenshot() if screenshot is None else screenshot
         )
-        point = self.model_router.locate(_screenshot.root, locator, model or self.model)
+
+        point = self._retry.attempt(
+            lambda: self.model_router.locate(
+                _screenshot.root, locator, model or self.model
+            )
+        )
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         return point
 
