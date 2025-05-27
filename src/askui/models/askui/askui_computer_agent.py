@@ -235,7 +235,7 @@ class AskUiComputerAgent:
         logger.debug(new_message)
         messages.append(new_message)
         if self._reporter is not None:
-            self._reporter.add_message("Anthropic Computer Use", response_params)
+            self._reporter.add_message("AskUI Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
