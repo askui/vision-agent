@@ -128,6 +128,7 @@ class VisionAgent:
         )
         point = self.model_router.locate(_screenshot.root, locator, model or self.model)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
+        logger.debug("ModelRouter locate: (%d, %d)", point[0], point[1])
         return point
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
