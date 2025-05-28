@@ -433,6 +433,58 @@ class VisionAgent:
         logger.debug("VisionAgent received in key_down '%s'", key)
         self.tools.os.keyboard_pressed(key)
 
+    @telemetry.record_call()
+    @validate_call
+    def mouse_up(
+        self,
+        button: Literal["left", "middle", "right"] = "left",
+    ) -> None:
+        """
+        Simulates the release of a mouse button.
+
+        Args:
+            button ('left' | 'middle' | 'right', optional): The mouse button to be released. Defaults to `'left'`.
+
+        Example:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                agent.mouse_up()  # Release the left mouse button
+                agent.mouse_up('right')  # Release the right mouse button
+                agent.mouse_up('middle')  # Release the middle mouse button
+            ```
+        """
+        self._reporter.add_message("User", f'mouse_up "{button}"')
+        logger.debug("VisionAgent received instruction to mouse_up '%s'", button)
+        self.tools.os.mouse_up(button)
+
+    @telemetry.record_call()
+    @validate_call
+    def mouse_down(
+        self,
+        button: Literal["left", "middle", "right"] = "left",
+    ) -> None:
+        """
+        Simulates the pressing of a mouse button.
+
+        Args:
+            button ('left' | 'middle' | 'right', optional): The mouse button to be pressed. Defaults to `'left'`.
+
+        Example:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                agent.mouse_down()  # Press the left mouse button
+                agent.mouse_down('right')  # Press the right mouse button
+                agent.mouse_down('middle')  # Press the middle mouse button
+            ```
+        """
+        self._reporter.add_message("User", f'mouse_down "{button}"')
+        logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
+        self.tools.os.mouse_down(button)
+
     @telemetry.record_call(exclude={"goal"})
     @validate_call
     def act(
