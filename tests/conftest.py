@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from askui.models.router import ModelRouter
+from askui.models.model_router import ModelRouter
 from askui.tools.agent_os import AgentOs
 from askui.tools.toolbox import AgentToolbox
 

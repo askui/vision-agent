@@ -13,12 +13,19 @@ from askui.utils.image_utils import ImageSource, Img
 from .exceptions import ElementNotFoundError
 from .logger import configure_logging, logger
 from .models import ModelComposition
-from .models.router import ModelRouter, Point
+from .models.model_router import ModelRouter
+from .models.models import (
+    ModelChoice,
+    ModelName,
+    ModelRegistry,
+    Point,
+    TotalModelChoice,
+)
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
-from .tools.askui import AskUiControllerClient, AskUiControllerServer
+from .tools.askui import AskUiControllerClient
 
 
 class VisionAgent:
@@ -31,11 +38,12 @@ class VisionAgent:
     Args:
         log_level (int | str, optional): The logging level to use. Defaults to `logging.INFO`.
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
-        model_router (ModelRouter | None, optional): Custom model router instance. If `None`, a default one will be created.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
-        model (ModelComposition | str | None, optional): The default composition or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
+        model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
+        models (ModelRegistry | None, optional): A registry of models to make available to the `VisionAgent` so that they can be selected using the `model` parameter of `VisionAgent` or the `model` parameter of its `click()`, `get()`, `act()` etc. methods. Entries in the registry override entries in the default model registry.
+
     Example:
         ```python
         from askui import VisionAgent
@@ -53,26 +61,23 @@ class VisionAgent:
         self,
         log_level: int | str = logging.INFO,
         display: Annotated[int, Field(ge=1)] = 1,
-        model_router: ModelRouter | None = None,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
-        model: ModelComposition | str | None = None,
+        model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
+        models: ModelRegistry | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
         self._reporter = CompositeReporter(reporters=reporters)
-        self.tools = tools or AgentToolbox(
+        self._tools = tools or AgentToolbox(
             agent_os=AskUiControllerClient(
                 display=display,
                 reporter=self._reporter,
-                controller_server=AskUiControllerServer(),
             ),
         )
-        self.model_router = (
-            ModelRouter(tools=self.tools, reporter=self._reporter)
-            if model_router is None
-            else model_router
+        self._model_router = ModelRouter(
+            tools=self._tools, reporter=self._reporter, models=models
         )
         self.model = model
         self._retry = retry or ConfigurableRetry(
@@ -81,6 +86,36 @@ class VisionAgent:
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
+        self._model_choice = self._initialize_model_choice(model)
+
+    def _initialize_model_choice(
+        self, model_choice: ModelComposition | ModelChoice | str | None
+    ) -> TotalModelChoice:
+        """Initialize the model choice based on the provided model parameter.
+
+        Args:
+            model (ModelComposition | ModelChoice | str | None): The model to initialize from. Can be a ModelComposition, ModelChoice dict, string, or None.
+
+        Returns:
+            TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to model names (or a ModelComposition for "locate").
+        """
+        if isinstance(model_choice, ModelComposition):
+            return {
+                "act": ModelName.ASKUI,
+                "get": ModelName.ASKUI,
+                "locate": model_choice,
+            }
+        if isinstance(model_choice, str) or model_choice is None:
+            return {
+                "act": model_choice or ModelName.ASKUI,
+                "get": model_choice or ModelName.ASKUI,
+                "locate": model_choice or ModelName.ASKUI,
+            }
+        return {
+            "act": model_choice.get("act", ModelName.ASKUI),
+            "get": model_choice.get("get", ModelName.ASKUI),
+            "locate": model_choice.get("locate", ModelName.ASKUI),
+        }
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -122,8 +157,8 @@ class VisionAgent:
         self._reporter.add_message("User", msg)
         if locator is not None:
             logger.debug("VisionAgent received instruction to click on %s", locator)
-            self._mouse_move(locator, model or self.model)
-        self.tools.os.click(button, repeat)
+            self._mouse_move(locator, model)
+        self._tools.os.click(button, repeat)
 
     def _locate(
         self,
@@ -132,12 +167,13 @@ class VisionAgent:
         model: ModelComposition | str | None = None,
     ) -> Point:
         _screenshot = ImageSource(
-            self.tools.os.screenshot() if screenshot is None else screenshot
+            self._tools.os.screenshot() if screenshot is None else screenshot
         )
-
         point = self._retry.attempt(
-            lambda: self.model_router.locate(
-                _screenshot.root, locator, model or self.model
+            lambda: self._model_router.locate(
+                screenshot=_screenshot,
+                locator=locator,
+                model_choice=model or self._model_choice["locate"],
             )
         )
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
@@ -174,13 +210,13 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f"locate {locator}")
         logger.debug("VisionAgent received instruction to locate %s", locator)
-        return self._locate(locator, screenshot, model or self.model)
+        return self._locate(locator, screenshot, model)
 
     def _mouse_move(
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
-        point = self._locate(locator=locator, model=model or self.model)
-        self.tools.os.mouse(point[0], point[1])
+        point = self._locate(locator=locator, model=model)
+        self._tools.os.mouse(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -208,7 +244,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, model or self.model)
+        self._mouse_move(locator, model)
 
     @telemetry.record_call()
     @validate_call
@@ -242,7 +278,7 @@ class VisionAgent:
             ```
         """
         self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.tools.os.mouse_scroll(x, y)
+        self._tools.os.mouse_scroll(x, y)
 
     @telemetry.record_call(exclude={"text"})
     @validate_call
@@ -268,7 +304,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.tools.os.type(text)
+        self._tools.os.type(text)
 
     @overload
     def get(
@@ -314,10 +350,10 @@ class VisionAgent:
 
         Example:
             ```python
-            from askui import JsonSchemaBase, VisionAgent
+            from askui import ResponseSchemaBase, VisionAgent
             from PIL import Image
 
-            class UrlResponse(JsonSchemaBase):
+            class UrlResponse(ResponseSchemaBase):
                 url: str
 
             with VisionAgent() as agent:
@@ -353,24 +389,20 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.tools.os.screenshot() if image is None else image)
+        _image = ImageSource(self._tools.os.screenshot() if image is None else image)
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
-        m = model
-        if not m and not isinstance(self.model, ModelComposition):
-            m = self.model
-        response = self.model_router.get_inference(
+        response = self._model_router.get(
             image=_image,
             query=query,
-            model=m,
             response_schema=response_schema,
+            model_choice=model or self._model_choice["get"],
         )
-        if self._reporter is not None:
-            message_content = (
-                str(response)
-                if isinstance(response, (str, bool, int, float))
-                else response.model_dump()
-            )
-            self._reporter.add_message("Agent", message_content)
+        message_content = (
+            str(response)
+            if isinstance(response, (str, bool, int, float))
+            else response.model_dump()
+        )
+        self._reporter.add_message("Agent", message_content)
         return response
 
     @telemetry.record_call()
@@ -419,7 +451,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_up "{key}"')
         logger.debug("VisionAgent received in key_up '%s'", key)
-        self.tools.os.keyboard_release(key)
+        self._tools.os.keyboard_release(key)
 
     @telemetry.record_call()
     @validate_call
@@ -444,7 +476,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'key_down "{key}"')
         logger.debug("VisionAgent received in key_down '%s'", key)
-        self.tools.os.keyboard_pressed(key)
+        self._tools.os.keyboard_pressed(key)
 
     @telemetry.record_call()
     @validate_call
@@ -530,10 +562,7 @@ class VisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        m = model
-        if not m and not isinstance(self.model, ModelComposition):
-            m = self.model
-        self.model_router.act(goal, m)
+        self._model_router.act(goal, model or self._model_choice["act"])
 
     @telemetry.record_call()
     @validate_call
@@ -571,7 +600,7 @@ class VisionAgent:
             msg += f" {repeat}x times"
         self._reporter.add_message("User", msg)
         logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.os.keyboard_tap(key, modifier_keys, count=repeat)
+        self._tools.os.keyboard_tap(key, modifier_keys, count=repeat)
 
     @telemetry.record_call(exclude={"command"})
     @validate_call
@@ -603,12 +632,12 @@ class VisionAgent:
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
-        self.tools.os.disconnect()
+        self._tools.os.disconnect()
         self._reporter.generate()
 
     @telemetry.record_call()
     def open(self) -> None:
-        self.tools.os.connect()
+        self._tools.os.connect()
 
     @telemetry.record_call()
     def __enter__(self) -> "VisionAgent":

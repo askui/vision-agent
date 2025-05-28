@@ -1,7 +1,25 @@
-from .models import ModelComposition, ModelDefinition, ModelName
+from .models import (
+    ActModel,
+    GetModel,
+    LocateModel,
+    Model,
+    ModelChoice,
+    ModelComposition,
+    ModelDefinition,
+    ModelName,
+    ModelRegistry,
+    Point,
+)
 
 __all__ = [
-    "ModelName",
+    "ActModel",
+    "GetModel",
+    "LocateModel",
+    "Model",
+    "ModelChoice",
     "ModelComposition",
     "ModelDefinition",
+    "ModelName",
+    "ModelRegistry",
+    "Point",
 ]

@@ -4,6 +4,8 @@ from functools import cached_property
 from pydantic import UUID4, BaseModel, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
+from askui.models.models import ModelName
+
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 
 
@@ -36,7 +38,7 @@ class AskUiSettings(BaseSettings):
 
 
 class AskUiComputerAgentSettingsBase(BaseModel):
-    model: str = "claude-3-5-sonnet-20241022"
+    model: str = ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
 
 
