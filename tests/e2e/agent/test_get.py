@@ -5,7 +5,10 @@ from PIL import Image as PILImage
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
+from askui.models.askui.facade import AskUiFacade
 from askui.models.models import ModelComposition, ModelDefinition
+from askui.reporting import Reporter
+from askui.tools.toolbox import AgentToolbox
 
 
 class UrlResponse(ResponseSchemaBase):
@@ -38,25 +41,35 @@ def test_get(
 
 
 def test_get_with_model_composition_should_use_default_model(
-    vision_agent: VisionAgent,
+    agent_toolbox_mock: AgentToolbox,
+    askui_facade: AskUiFacade,
+    simple_html_reporter: Reporter,
     github_login_screenshot: PILImage.Image,
 ) -> None:
-    vision_agent.model = ModelComposition(
-        [
-            ModelDefinition(
-                task="e2e_ocr",
-                architecture="easy_ocr",
-                version="1",
-                interface="online_learning",
-                use_case="fb3b9a7b_3aea_41f7_ba02_e55fd66d1c1e",
-                tags=["trained"],
-            ),
-        ],
-    )
-    url = vision_agent.get(
-        "What is the current url shown in the url bar?", image=github_login_screenshot
-    )
-    assert url in ["github.com/login", "https://github.com/login"]
+    with VisionAgent(
+        reporters=[simple_html_reporter],
+        model=ModelComposition(
+            [
+                ModelDefinition(
+                    task="e2e_ocr",
+                    architecture="easy_ocr",
+                    version="1",
+                    interface="online_learning",
+                    use_case="fb3b9a7b_3aea_41f7_ba02_e55fd66d1c1e",
+                    tags=["trained"],
+                ),
+            ],
+        ),
+        models={
+            ModelName.ASKUI: askui_facade,
+        },
+        tools=agent_toolbox_mock,
+    ) as vision_agent:
+        url = vision_agent.get(
+            "What is the current url shown in the url bar?",
+            image=github_login_screenshot,
+        )
+        assert url in ["github.com/login", "https://github.com/login"]
 
 
 @pytest.mark.skip(

@@ -1,30 +1,31 @@
 import json as json_lib
-import pathlib
-from typing import Any, Type, Union
+from typing import Any, Type
 
 import requests
-from PIL import Image
 from pydantic import RootModel
+from typing_extensions import override
 
+from askui.exceptions import ElementNotFoundError
 from askui.locators.locators import Locator
-from askui.locators.serializers import AskUiLocatorSerializer
+from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
 from askui.models.askui.settings import AskUiSettings
-from askui.models.models import ModelComposition
-from askui.utils.image_utils import ImageSource, image_to_base64
+from askui.models.models import GetModel, LocateModel, ModelComposition, Point
+from askui.models.types.response_schemas import ResponseSchema
+from askui.utils.image_utils import ImageSource
 
-from ..types.response_schemas import ResponseSchema, to_response_schema
+from ..types.response_schemas import to_response_schema
 from .exceptions import AskUiApiRequestFailedError
 
 
-class AskUiInferenceApi:
+class AskUiInferenceApi(GetModel, LocateModel):
     def __init__(
         self,
-        locator_serializer: AskUiLocatorSerializer,
         settings: AskUiSettings,
+        locator_serializer: AskUiLocatorSerializer,
     ) -> None:
-        self._locator_serializer = locator_serializer
         self._settings = settings
+        self._locator_serializer = locator_serializer
 
     def _request(self, endpoint: str, json: dict[str, Any] | None = None) -> Any:
         response = requests.post(
@@ -41,22 +42,27 @@ class AskUiInferenceApi:
 
         return response.json()
 
-    def predict(
+    @override
+    def locate(
         self,
-        image: Union[pathlib.Path, Image.Image],
-        locator: Locator,
-        model: ModelComposition | None = None,
-    ) -> tuple[int | None, int | None]:
-        serialized_locator = self._locator_serializer.serialize(locator=locator)
+        locator: str | Locator,
+        image: ImageSource,
+        model_choice: ModelComposition | str,
+    ) -> Point:
+        serialized_locator = (
+            self._locator_serializer.serialize(locator=locator)
+            if isinstance(locator, Locator)
+            else AskUiSerializedLocator(customElements=[], instruction=locator)
+        )
         logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
         json: dict[str, Any] = {
-            "image": f",{image_to_base64(image)}",
+            "image": image.to_data_url(),
             "instruction": f"Click on {serialized_locator['instruction']}",
         }
         if "customElements" in serialized_locator:
             json["customElements"] = serialized_locator["customElements"]
-        if model is not None:
-            json["modelComposition"] = model.model_dump(by_alias=True)
+        if isinstance(model_choice, ModelComposition):
+            json["modelComposition"] = model_choice.model_dump(by_alias=True)
             logger.debug(
                 f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}"
             )
@@ -68,16 +74,18 @@ class AskUiInferenceApi:
             el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"
         ]
         if len(actions) == 0:
-            return None, None
+            raise ElementNotFoundError(locator, serialized_locator)
 
         position = actions[0]["position"]
         return int(position["x"]), int(position["y"])
 
-    def get_inference(
+    @override
+    def get(
         self,
-        image: ImageSource,
         query: str,
-        response_schema: Type[ResponseSchema] | None = None,
+        image: ImageSource,
+        response_schema: Type[ResponseSchema] | None,
+        model_choice: str,
     ) -> ResponseSchema | str:
         json: dict[str, Any] = {
             "image": image.to_data_url(),

@@ -1,15 +1,18 @@
 import math
-import pathlib
 import re
 import time
-from typing import Any, Union
+from typing import Any, Type
 
 from openai import OpenAI
-from PIL import Image
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
+from typing_extensions import override
 
-from askui.exceptions import QueryNoResponseError
+from askui.exceptions import ElementNotFoundError, QueryNoResponseError
+from askui.locators.locators import Locator
+from askui.locators.serializers import VlmLocatorSerializer
+from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
+from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.utils.image_utils import ImageSource, image_to_base64
@@ -85,12 +88,13 @@ class UiTarsApiHandlerSettings(BaseSettings):
     )
 
 
-class UiTarsApiHandler:
+class UiTarsApiHandler(ActModel, LocateModel, GetModel):
     def __init__(
         self,
         agent_os: AgentOs,
         reporter: Reporter,
         settings: UiTarsApiHandlerSettings,
+        locator_serializer: VlmLocatorSerializer,
     ) -> None:
         self._agent_os = agent_os
         self._reporter = reporter
@@ -99,6 +103,7 @@ class UiTarsApiHandler:
             api_key=self._settings.tars_api_key.get_secret_value(),
             base_url=str(self._settings.tars_url),
         )
+        self._locator_serializer = locator_serializer
 
     def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
         chat_completion = self._client.chat.completions.create(
@@ -128,12 +133,24 @@ class UiTarsApiHandler:
         )
         return chat_completion.choices[0].message.content
 
-    def locate_prediction(
-        self, image: Union[pathlib.Path, Image.Image], locator: str
-    ) -> tuple[int | None, int | None]:
-        askui_locator = f'Click on "{locator}"'
+    @override
+    def locate(
+        self,
+        locator: str | Locator,
+        image: ImageSource,
+        model_choice: ModelComposition | str,
+    ) -> Point:
+        if not isinstance(model_choice, str):
+            error_msg = "Model composition is not supported for UI-TARS"
+            raise NotImplementedError(error_msg)
+        locator_serialized = (
+            self._locator_serializer.serialize(locator)
+            if isinstance(locator, Locator)
+            else locator
+        )
+        askui_locator = f'Click on "{locator_serialized}"'
         prediction = self._predict(
-            image_url=f"data:image/png;base64,{image_to_base64(image)}",
+            image_url=image.to_data_url(),
             instruction=askui_locator,
             prompt=PROMPT,
         )
@@ -143,26 +160,35 @@ class UiTarsApiHandler:
         if match:
             x, y = match.group(1).strip("()").split(",")
             x, y = int(x), int(y)
-            if isinstance(image, pathlib.Path):
-                image = Image.open(image)
-            width, height = image.size
+            width, height = image.root.size
             new_height, new_width = smart_resize(height, width)
             x, y = (int(x / new_width * width), int(y / new_height * height))
             return x, y
-        return None, None
+        raise ElementNotFoundError(locator, locator_serialized)
 
-    def get_inference(self, image: ImageSource, query: str) -> str:
+    @override
+    def get(
+        self,
+        query: str,
+        image: ImageSource,
+        response_schema: Type[ResponseSchema] | None,
+        model_choice: str,
+    ) -> ResponseSchema | str:
+        if response_schema is not None:
+            error_msg = f'Response schema is not supported for model "{model_choice}"'
+            raise NotImplementedError(error_msg)
         response = self._predict(
             image_url=image.to_data_url(),
             instruction=query,
             prompt=PROMPT_QA,
         )
         if response is None:
-            error_msg = f"No response from UI-TARS to query: {query}"
+            error_msg = f'No response from model "{model_choice}" to query: "{query}"'
             raise QueryNoResponseError(error_msg, query)
         return response
 
-    def act(self, goal: str) -> None:
+    @override
+    def act(self, goal: str, model_choice: str) -> None:
         screenshot = self._agent_os.screenshot()
         self.act_history = [
             {

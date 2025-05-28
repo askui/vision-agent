@@ -4,7 +4,7 @@ import pytest
 from PIL import Image as PILImage
 from typing_extensions import override
 
-from askui.models.askui.askui_computer_agent import AskUiComputerAgent
+from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.settings import AskUiComputerAgentSettings, AskUiSettings
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs

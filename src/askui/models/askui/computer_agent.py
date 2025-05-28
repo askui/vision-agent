@@ -14,8 +14,10 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from typing_extensions import override
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
+from askui.models.models import ActModel
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.tools.anthropic import ComputerTool, ToolCollection, ToolResult
@@ -171,7 +173,7 @@ def is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class AskUiComputerAgent:
+class AskUiComputerAgent(ActModel):
     def __init__(
         self,
         agent_os: AgentOs,
@@ -258,7 +260,8 @@ class AskUiComputerAgent:
             messages.append(another_new_message)
         return messages
 
-    def act(self, goal: str) -> None:
+    @override
+    def act(self, goal: str, model_choice: str) -> None:
         messages: list[BetaMessageParam] = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
