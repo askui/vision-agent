@@ -310,17 +310,17 @@ class VisionAgent:
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
-        image: Optional[Img] = None,
         response_schema: None = None,
         model: str | None = None,
+        image: Optional[Img] = None,
     ) -> str: ...
     @overload
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
-        image: Optional[Img],
         response_schema: Type[ResponseSchema],
         model: str | None = None,
+        image: Optional[Img] = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "image", "response_schema"})
@@ -328,9 +328,9 @@ class VisionAgent:
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
-        image: Optional[Img] = None,
         response_schema: Type[ResponseSchema] | None = None,
         model: str | None = None,
+        image: Optional[Img] = None,
     ) -> ResponseSchema | str:
         """
         Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.

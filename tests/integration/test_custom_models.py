@@ -1,10 +1,8 @@
 """Integration tests for custom model registration and selection."""
 
 from typing import Optional, Type, Union
-from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockerFixture
 
 from askui import (
     ActModel,
@@ -37,7 +35,7 @@ class SimpleActModel(ActModel):
 class SimpleGetModel(GetModel):
     """Simple get model that returns a fixed response."""
 
-    def __init__(self, response: str = "test response") -> None:
+    def __init__(self, response: str | ResponseSchemaBase = "test response") -> None:
         self.queries: list[str] = []
         self.images: list[ImageSource] = []
         self.schemas: list[
@@ -61,7 +59,17 @@ class SimpleGetModel(GetModel):
         self.images.append(image)
         self.schemas.append(response_schema)
         self.model_choices.append(model_choice)
-        return self.response
+        if (
+            response_schema is not None
+            and isinstance(self.response, response_schema)
+            or isinstance(self.response, str)
+        ):
+            return self.response
+        err_msg = (
+            "Response schema does not match the response type. "
+            "Please use a response schema that matches the response type."
+        )
+        raise ValueError(err_msg)
 
 
 class SimpleLocateModel(LocateModel):
@@ -89,26 +97,6 @@ class SimpleResponseSchema(ResponseSchemaBase):
     """Simple response schema for testing."""
 
     value: str
-
-
-@pytest.fixture
-def mock_settings(mocker: MockerFixture) -> None:
-    """Fixture that mocks all required settings."""
-    # Mock AskUI settings
-    mocker.patch(
-        "askui.models.askui.settings.AskUiSettings",
-        return_value=MagicMock(workspace_id="test-workspace", token="test-token"),
-    )
-    # Mock Anthropic settings
-    mocker.patch(
-        "askui.models.anthropic.settings.AnthropicSettings",
-        return_value=MagicMock(api_key="test-api-key"),
-    )
-    # Mock UI-TARS settings
-    mocker.patch(
-        "askui.models.ui_tars_ep.ui_tars_api.UiTarsApiHandlerSettings",
-        return_value=MagicMock(tars_url="test-url", tars_api_key="test-key"),
-    )
 
 
 class TestCustomModels:
@@ -144,7 +132,6 @@ class TestCustomModels:
         model_registry: ModelRegistry,
         act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test registering and using a custom act model."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
@@ -158,7 +145,6 @@ class TestCustomModels:
         model_registry: ModelRegistry,
         get_model: SimpleGetModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test registering and using a custom get model."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
@@ -173,7 +159,6 @@ class TestCustomModels:
         model_registry: ModelRegistry,
         locate_model: SimpleLocateModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test registering and using a custom locate model."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
@@ -186,7 +171,6 @@ class TestCustomModels:
         self,
         act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test registering and using a model factory."""
 
@@ -205,7 +189,6 @@ class TestCustomModels:
         self,
         act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test registering multiple models for the same task."""
 
@@ -230,7 +213,6 @@ class TestCustomModels:
         model_registry: ModelRegistry,
         get_model: SimpleGetModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test using a response schema with a custom get model."""
         response = SimpleResponseSchema(value="test value")
@@ -251,7 +233,6 @@ class TestCustomModels:
         self,
         act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test overriding a default model with a custom one."""
         registry: ModelRegistry = {ModelName.ASKUI: act_model}
@@ -266,7 +247,6 @@ class TestCustomModels:
         self,
         locate_model: SimpleLocateModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test using model composition with a custom locate model."""
         registry: ModelRegistry = {"askui": locate_model}
@@ -301,7 +281,6 @@ class TestCustomModels:
         model_name: str,
         expected_exception: type[Exception],
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test error handling for invalid model usage."""
         with pytest.raises(expected_exception):
@@ -317,7 +296,6 @@ class TestCustomModels:
         self,
         act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
-        mock_settings: None,
     ) -> None:
         """Test that model factories are called when needed."""
         init_count = 0

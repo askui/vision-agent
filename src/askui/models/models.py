@@ -15,9 +15,10 @@ from askui.utils.image_utils import ImageSource
 class ModelName(str, Enum):
     """Enumeration of all available model names in AskUI.
 
-    This enum provides type-safe access to model identifiers used throughout the library.
-    Each model name corresponds to a specific AI model or model composition that can be used
-    for different tasks like acting, getting information, or locating elements.
+    This enum provides type-safe access to model identifiers used throughout the
+    library. Each model name corresponds to a specific AI model or model composition
+    that can be used for different tasks like acting, getting information, or locating
+    elements.
     """
 
     ANTHROPIC__CLAUDE__3_5__SONNET__20241022 = "anthropic-claude-3-5-sonnet-20241022"
@@ -225,7 +226,8 @@ class GetModel(abc.ABC):
                 support multiple configurations)
 
         Returns:
-            Either a string response or a Pydantic model instance if response_schema is provided
+            Either a string response or a Pydantic model instance if response_schema is
+            provided
         """
         raise NotImplementedError
 
