@@ -200,7 +200,7 @@ class AskUiControllerServer:
             force (bool, optional): Whether to forcefully terminate the process.
                 Defaults to `False`.
         """
-        if not hasattr(self, "_process") or self._process is None:
+        if self._process is None:
             return  # Nothing to stop
 
         try:
