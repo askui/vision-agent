@@ -364,25 +364,39 @@ with VisionAgent(models=custom_models) as agent:
 You can also use model factories if you need to create models dynamically:
 
 ```python
+class DynamicActModel(ActModel):
+    def act(self, goal: str, model_choice: str) -> None:
+        # Use api_key in implementation
+        pass
+
+
+# going to be called each time model is chosen using `model` parameter
 def create_custom_model(api_key: str) -> ActModel:
-    class DynamicActModel(ActModel):
-        def act(self, goal: str, model_choice: str) -> None:
-            # Use api_key in implementation
-            pass
     return DynamicActModel()
+
+
+# if you don't want to recreate a new model on each call but rather just initialize
+# it lazily
+@functools.cache
+def create_custom_model_cached(api_key: str) -> ActModel:
+    return DynamicActModel()
+
 
 # Register model factory
 custom_models: ModelRegistry = {
-    "dynamic-model": lambda: create_custom_model("your-api-key")
+    "dynamic-model": lambda: create_custom_model("your-api-key"),
+    "dynamic-model-cached": lambda: create_custom_model_cached("your-api-key"),
+    "askui": lambda: create_custom_model_cached("your-api-key"), # overrides default model
+    "anthropic-claude-3-5-sonnet-20241022": lambda: create_custom_model_cached("your-api-key"), # overrides model
 }
 
-with VisionAgent(models=custom_models) as agent:
-    agent.act("do something", model="dynamic-model")
+
+with VisionAgent(models=custom_models, model="dynamic-model") as agent:
+    agent.act("do something") # creates and uses instance of DynamicActModel
+    agent.act("do something") # creates and uses instance of DynamicActModel
+    agent.act("do something", model="dynamic-model-cached") # uses new instance of DynamicActModel as it is the first call
+    agent.act("do something", model="dynamic-model-cached") # reuses cached instance
 ```
-
-Models are initialized lazily, i.e., when they are first used (in the example above, when `agent.act("do something", model="dynamic-model")` is called).
-
-**Note:** Custom models registered via the `models` parameter override any default models with the same name, e.g., `askui` or `anthropic-claude-3-5-sonnet-20241022`. This allows you to replace or extend the default model functionality while maintaining the same interface.
 
 
 ### 🛠️ Direct Tool Use
