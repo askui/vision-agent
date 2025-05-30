@@ -444,7 +444,8 @@ class AskUiControllerClient(AgentOs):
             acion_class_id=controller_v1_pbs.ActionClassID_MouseMove,
             action_parameters=controller_v1_pbs.ActionParameters(
                 mouseMove=controller_v1_pbs.ActionParameters_MouseMove(
-                    position=controller_v1_pbs.Coordinate2(x=x, y=y)
+                    position=controller_v1_pbs.Coordinate2(x=x, y=y),
+                    milliseconds=500,
                 )
             ),
         )
