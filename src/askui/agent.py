@@ -17,16 +17,9 @@ from .models import ModelComposition
 from .models.router import ModelRouter, Point
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
-from .retry import Retry
+from .retry import Retry, RetryPolicy
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient, AskUiControllerServer
-
-DEFAULT_RETRY = Retry(
-    strategy="Exponential",
-    base_delay=1000,
-    retry_count=3,
-    on_exception_types=(ElementNotFoundError,),
-)
 
 
 class VisionAgent:
@@ -43,7 +36,7 @@ class VisionAgent:
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
         model (ModelComposition | str | None, optional): The default composition or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
-        retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `DEFAULT_RETRY`. Currently only supported for `locate()` method.
+        retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `RetryPolicy` with exponential backoff. Currently only supported for `locate()` method.
     Example:
         ```python
         from askui import VisionAgent
@@ -65,7 +58,7 @@ class VisionAgent:
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
         model: ModelComposition | str | None = None,
-        retry: Retry = DEFAULT_RETRY,
+        retry: Retry | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
@@ -83,7 +76,12 @@ class VisionAgent:
             else model_router
         )
         self.model = model
-        self._retry = retry
+        self._retry = retry or RetryPolicy(
+            strategy="Exponential",
+            base_delay=1000,
+            retry_count=3,
+            on_exception_types=(ElementNotFoundError,),
+        )
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

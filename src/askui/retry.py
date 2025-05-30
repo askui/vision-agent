@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Annotated, Callable, Literal, Tuple, Type, TypeVar
 
 from pydantic import Field
@@ -13,9 +14,46 @@ from tenacity import (
 
 from askui.logger import logger
 
+R = TypeVar("R")
 
-class Retry:
-    """A utility class for implementing retry mechanisms with configurable strategies.
+
+class Retry(ABC):
+    """Abstract base class for implementing retry mechanisms.
+
+    This abstract class defines the interface for retry mechanisms. Concrete
+    implementations should define how the retry logic works by implementing
+    the abstract `attempt` method.
+
+    Example:
+        ```python
+        class MyRetry(Retry):
+            def attempt(self, func: Callable[..., R]) -> R:
+                # Custom retry implementation
+                return func()
+
+        retry = MyRetry()
+        result = retry.attempt(some_function)
+        ```
+    """
+
+    @abstractmethod
+    def attempt(self, func: Callable[..., R]) -> R:
+        """Attempt to execute a function with retry logic.
+
+        Args:
+            func: The function to execute with retry logic
+
+        Returns:
+            The result of the function execution
+
+        Raises:
+            Exception: Any exception that occurs during execution after
+                      all retry attempts are exhausted
+        """
+
+
+class RetryPolicy(Retry):
+    """A configurable retry implementation with different strategies.
 
     This class provides a flexible way to retry operations that may fail temporarily,
     supporting different retry strategies (Exponential, Fixed, Linear) and configurable
@@ -24,15 +62,15 @@ class Retry:
     Args:
         on_exception_types (Tuple[Type[Exception]]): Tuple of exception types that should trigger a retry
         strategy (Literal["Exponential", "Fixed", "Linear"]): The retry strategy to use:
-            - "Exponential": Delay increases exponentially between retries
-            - "Fixed": Constant delay between retries
-            - "Linear": Delay increases linearly between retries
+            - `"Exponential"`: Delay increases exponentially between retries
+            - `"Fixed"`: Constant delay between retries
+            - `"Linear"`: Delay increases linearly between retries
         base_delay (int, optional): Base delay in milliseconds between retries.
         retry_count (int, optional): Maximum number of retry attempts.
 
     Example:
         ```python
-        retry = Retry(
+        retry = RetryPolicy(
             on_exception_types=(ConnectionError, TimeoutError),
             strategy="Exponential",
             base_delay=1000,
@@ -64,7 +102,7 @@ class Retry:
             return wait_incrementing(self._base_delay / 1000)
         return wait_exponential(multiplier=self._base_delay / 1000)
 
-    def my_before_sleep(self, retry_state: RetryCallState) -> None:
+    def _log_retry_attempt(self, retry_state: RetryCallState) -> None:
         logger.info(
             "Retrying %s: attempt %s ended with: %s",
             retry_state.fn,
@@ -72,14 +110,12 @@ class Retry:
             retry_state.outcome,
         )
 
-    R = TypeVar("R")
-
     def attempt(self, func: Callable[..., R]) -> R:
         retryer = Retrying(
             stop=stop_after_attempt(self._retry_count),
             wait=self._get_retry_wait_strategy(),
             reraise=True,
-            after=self.my_before_sleep,
+            after=self._log_retry_attempt,
             retry=retry_if_exception_type(self._on_exception_types),
         )
         return retryer(func)
