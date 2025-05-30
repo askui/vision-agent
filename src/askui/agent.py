@@ -1,5 +1,4 @@
 import logging
-import subprocess
 import time
 import types
 from typing import Annotated, Literal, Optional, Type, overload
@@ -533,7 +532,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
-        subprocess.run(command.split(" "))
+        self.tools.os.run_command(command)
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
