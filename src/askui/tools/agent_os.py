@@ -304,13 +304,13 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run_command(self, command: str, timeout_in_milliseconds: int = 30000) -> None:
+    def run_command(self, command: str, timeout_ms: int = 30000) -> None:
         """
         Executes a shell command.
 
         Args:
             command (str): The command to execute.
-            timeout_in_milliseconds (int, optional): The timeout for command
+            timeout_ms (int, optional): The timeout for command
                 execution in milliseconds. Defaults to `30000` (30 seconds).
 
         """
