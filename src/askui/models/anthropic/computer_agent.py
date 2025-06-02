@@ -3,12 +3,7 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, cast
 
-from anthropic import (
-    Anthropic,
-    APIError,
-    APIResponseValidationError,
-    APIStatusError,
-)
+from anthropic import Anthropic, APIError, APIResponseValidationError, APIStatusError
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam,
     BetaImageBlockParam,
@@ -19,10 +14,10 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
     BetaToolUseBlockParam,
 )
+from typing_extensions import override
 
-from askui.models.anthropic.settings import (
-    ClaudeComputerAgentSettings,
-)
+from askui.models.anthropic.settings import ClaudeComputerAgentSettings
+from askui.models.models import ANTHROPIC_MODEL_NAME_MAPPING, ActModel, ModelName
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 
@@ -169,7 +164,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 </IMPORTANT>"""
 
 
-class ClaudeComputerAgent:
+class ClaudeComputerAgent(ActModel):
     def __init__(
         self,
         agent_os: AgentOs,
@@ -189,7 +184,9 @@ class ClaudeComputerAgent:
             text=f"{SYSTEM_PROMPT}",
         )
 
-    def step(self, messages: list) -> list:
+    def step(
+        self, messages: list[BetaMessageParam], model: str
+    ) -> list[BetaMessageParam]:
         if self._settings.only_n_most_recent_images:
             self._maybe_filter_to_n_most_recent_images(
                 messages,
@@ -201,7 +198,7 @@ class ClaudeComputerAgent:
             raw_response = self._client.beta.messages.with_raw_response.create(
                 max_tokens=self._settings.max_tokens,
                 messages=messages,
-                model=self._settings.model,
+                model=model,
                 system=[self._system],
                 tools=self._tool_collection.to_params(),
                 betas=self._settings.betas,
@@ -215,14 +212,13 @@ class ClaudeComputerAgent:
 
         response = raw_response.parse()
         response_params = self._response_to_params(response)
-        new_message = {
+        new_message: BetaMessageParam = {
             "role": "assistant",
             "content": response_params,
         }
         logger.debug(new_message)
         messages.append(new_message)
-        if self._reporter is not None:
-            self._reporter.add_message("Anthropic Computer Use", response_params)
+        self._reporter.add_message("Anthropic Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
         for content_block in response_params:
@@ -237,14 +233,18 @@ class ClaudeComputerAgent:
         if len(tool_result_content) > 0:
             another_new_message = {"content": tool_result_content, "role": "user"}
             logger.debug(truncate_long_strings(another_new_message, max_length=200))
-            messages.append(another_new_message)
+            messages.append(cast("BetaMessageParam", another_new_message))
         return messages
 
-    def act(self, goal: str) -> None:
-        messages = [{"role": "user", "content": goal}]
+    @override
+    def act(self, goal: str, model_choice: str) -> None:
+        messages: list[BetaMessageParam] = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
-            messages = self.step(messages)
+            messages = self.step(
+                messages=messages,
+                model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
+            )
 
     @staticmethod
     def _maybe_filter_to_n_most_recent_images(
@@ -311,7 +311,8 @@ class ClaudeComputerAgent:
     ) -> None:
         """
         Set cache breakpoints for the 3 most recent turns
-        one cache breakpoint is left for tools/system prompt, to be shared across sessions
+        one cache breakpoint is left for tools/system prompt, to be shared
+        across sessions
         """
 
         breakpoints_remaining = 3

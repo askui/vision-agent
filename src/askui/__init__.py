@@ -3,17 +3,35 @@
 __version__ = "0.4.7"
 
 from .agent import VisionAgent
-from .models import ModelComposition, ModelDefinition
-from .models.router import Point
+from .locators import Locator
+from .models import (
+    ActModel,
+    GetModel,
+    LocateModel,
+    Model,
+    ModelChoice,
+    ModelComposition,
+    ModelDefinition,
+    ModelRegistry,
+    Point,
+)
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
-from .utils.image_utils import Img
+from .utils.image_utils import ImageSource, Img
 
 __all__ = [
+    "ActModel",
+    "GetModel",
+    "ImageSource",
     "Img",
+    "LocateModel",
+    "Locator",
+    "Model",
     "ModelComposition",
     "ModelDefinition",
+    "ModelChoice",
+    "ModelRegistry",
     "ModifierKey",
     "PcKey",
     "Point",

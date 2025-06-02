@@ -1,6 +1,7 @@
 import pytest
 
-from askui.models.askui.askui_computer_agent import AskUiComputerAgent
+from askui.models.askui.computer_agent import AskUiComputerAgent
+from askui.models.models import ModelName
 
 
 @pytest.mark.skip(
@@ -9,4 +10,4 @@ from askui.models.askui.askui_computer_agent import AskUiComputerAgent
 def test_act(
     claude_computer_agent: AskUiComputerAgent,
 ) -> None:
-    claude_computer_agent.act("Go to github.com/login")
+    claude_computer_agent.act("Go to github.com/login", model_choice=ModelName.ASKUI)

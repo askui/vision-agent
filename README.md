@@ -100,6 +100,8 @@ To get started, set the environment variables required to authenticate with your
   Use export to set an evironment variable:
 
   ```shell
+  export ASKUI_WORKSPACE_ID=<your-workspace-id-here>
+  export ASKUI_TOKEN=<your-token-here>
   export ANTHROPIC_API_KEY=<your-api-key-here>
   ```
 </details>
@@ -110,9 +112,25 @@ To get started, set the environment variables required to authenticate with your
   Set an environment variable with $env:
 
   ```shell
+  $env:ASKUI_WORKSPACE_ID="<your-workspace-id-here>"
+  $env:ASKUI_TOKEN="<your-token-here>"
   $env:ANTHROPIC_API_KEY="<your-api-key-here>"
   ```
 </details>
+
+
+**Example Code:**
+```python
+from askui import VisionAgent
+
+with VisionAgent() as agent:
+    # AskUI used as default model
+
+    agent.click("search field")
+
+    # Use Anthropic (Claude 3.5 Sonnet V2) as model
+    agent.click("search field", model="anthropic-claude-3-5-sonnet-20241022")
+```
 
 
 ### 3b. Test with 🤗 Hugging Face **AI Models** (Spaces API)
@@ -130,7 +148,7 @@ You can test the Vision Agent with Huggingface models via their Spaces API. Plea
 
 **Example Code:**
 ```python
-agent.click("search field", model="OS-Copilot/OS-Atlas-Base-7B")
+    agent.click("search field", model="OS-Copilot/OS-Atlas-Base-7B")
 ```
 
 ### 3c. Host your own **AI Models**
@@ -169,36 +187,36 @@ with VisionAgent() as agent:
     agent.act("search for a flight from Berlin to Paris in January")
 ```
 
-### 🎛️ Model Selection
+### 🎛️ Model Choice
 
-Instead of relying on the default model for the entire automation script, you can specify a model for each `click()` (or `act()`, `get()` etc.) command using the `model` parameter or when initializing the `VisionAgent` (overridden by the `model` parameter of individual commands).
-
-|  | AskUI | Anthropic |
-|----------|----------|----------|
-| `act()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
-| `click()`    | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element` | `anthropic-claude-3-5-sonnet-20241022`   |
-| `get()`    | | `askui`, `anthropic-claude-3-5-sonnet-20241022`   |
-| `locate()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
-| `mouse_move()` | `askui`, `askui-combo`, `askui-pta`, `askui-ocr`, `askui-ai-element`   | `anthropic-claude-3-5-sonnet-20241022` |
-
-
-**Example:**
+You can choose different models for each `click()` (`act()`, `get()`, `locate()` etc.) command using the `model` parameter.
 
 ```python
 from askui import VisionAgent
 
-with VisionAgent() as agent:
-    # Uses the default model (depending on the environment variables set, see above)
-    agent.click("Next")
-
+# Use AskUI's combo model for all commands
 with VisionAgent(model="askui-combo") as agent:
-    # Uses the "askui-combo" model because it was specified when initializing the agent
-    agent.click("Next")
-    # Uses the "anthropic-claude-3-5-sonnet-20241022" model
-    agent.click("Previous", model="anthropic-claude-3-5-sonnet-20241022")
-    # Uses the "askui-combo" model again as no model was specified
-    agent.click("Next")
+    agent.click("Next")  # Uses askui-combo
+    agent.get("What's on screen?")  # Uses askui-combo
+
+# Use different models for different tasks
+with VisionAgent(model={
+    "act": "anthropic-claude-3-5-sonnet-20241022",  # Use Claude for act()
+    "get": "askui",  # Use AskUI for get()
+    "locate": "askui-combo",  # Use AskUI combo for locate() (and click(), mouse_move())
+}) as agent:
+    agent.act("Search for flights")  # Uses Claude
+    agent.get("What's the current page?")  # Uses AskUI
+    agent.click("Submit")  # Uses AskUI combo
+
+# You can still override the default model for individual commands
+with VisionAgent(model="askui-combo") as agent:
+    agent.click("Next")  # Uses askui-combo (default)
+    agent.click("Previous", model="askui-pta")  # Override with askui-pta
+    agent.click("Submit")  # Back to askui-combo (default)
 ```
+
+The following models are available:
 
 <details>
   <summary>AskUI AI Models</summary>
@@ -257,6 +275,130 @@ Supported commands are: `act()`, `click()`, `get()`, `locate()`, `mouse_move()`
 > **Note:** These models need to been self hosted by yourself. (See [here](#3c-host-your-own-ai-models))
 
 </details>
+
+
+### 🔧 Custom Models
+
+You can create and use your own models by subclassing the `ActModel` (used for `act()`), `GetModel` (used for `get()`), or `LocateModel` (used for `click()`, `locate()`, `mouse_move()`) classes and registering them with the `VisionAgent`.
+
+Here's how to create and use custom models:
+
+```python
+from askui import (
+    ActModel,
+    GetModel,
+    LocateModel,
+    Locator,
+    ImageSource,
+    ModelComposition,
+    ModelRegistry,
+    Point,
+    ResponseSchema,
+    VisionAgent,
+)
+from typing import Type
+
+# Define custom models
+class MyActModel(ActModel):
+    def act(self, goal: str, model_choice: str) -> None:
+        # Implement custom act logic, e.g.:
+        # - Use a different AI model
+        # - Implement custom business logic
+        # - Call external services
+        print(f"Custom act model executing goal: {goal}")
+
+# Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
+# to create a model that can both get and locate elements.
+class MyGetAndLocateModel(GetModel, LocateModel):
+    def get(
+        self,
+        query: str,
+        image: ImageSource,
+        response_schema: Type[ResponseSchema] | None,
+        model_choice: str,
+    ) -> ResponseSchema | str:
+        # Implement custom get logic, e.g.:
+        # - Use a different OCR service
+        # - Implement custom text extraction
+        # - Call external vision APIs
+        return f"Custom response to query: {query}"
+
+
+    def locate(
+        self,
+        locator: str | Locator,
+        image: ImageSource,
+        model_choice: ModelComposition | str,
+    ) -> Point:
+        # Implement custom locate logic, e.g.:
+        # - Use a different object detection model
+        # - Implement custom element finding
+        # - Call external vision services
+        return (100, 100)  # Example coordinates
+
+
+# Create model registry
+custom_models: ModelRegistry = {
+    "my-act-model": MyActModel(),
+    "my-get-model": MyGetAndLocateModel(),
+    "my-locate-model": MyGetAndLocateModel(),
+}
+
+# Initialize agent with custom models
+with VisionAgent(models=custom_models) as agent:
+    # Use custom models for specific tasks
+    agent.act("search for flights", model="my-act-model")
+
+    # Get information using custom model
+    result = agent.get(
+        "what's the current page title?",
+        model="my-get-model"
+    )
+
+    # Click using custom locate model
+    agent.click("submit button", model="my-locate-model")
+
+    # Mix and match with default models
+    agent.click("next", model="askui")  # Uses default AskUI model
+```
+
+You can also use model factories if you need to create models dynamically:
+
+```python
+class DynamicActModel(ActModel):
+    def act(self, goal: str, model_choice: str) -> None:
+        # Use api_key in implementation
+        pass
+
+
+# going to be called each time model is chosen using `model` parameter
+def create_custom_model(api_key: str) -> ActModel:
+    return DynamicActModel()
+
+
+# if you don't want to recreate a new model on each call but rather just initialize
+# it lazily
+@functools.cache
+def create_custom_model_cached(api_key: str) -> ActModel:
+    return DynamicActModel()
+
+
+# Register model factory
+custom_models: ModelRegistry = {
+    "dynamic-model": lambda: create_custom_model("your-api-key"),
+    "dynamic-model-cached": lambda: create_custom_model_cached("your-api-key"),
+    "askui": lambda: create_custom_model_cached("your-api-key"), # overrides default model
+    "anthropic-claude-3-5-sonnet-20241022": lambda: create_custom_model_cached("your-api-key"), # overrides model
+}
+
+
+with VisionAgent(models=custom_models, model="dynamic-model") as agent:
+    agent.act("do something") # creates and uses instance of DynamicActModel
+    agent.act("do something") # creates and uses instance of DynamicActModel
+    agent.act("do something", model="dynamic-model-cached") # uses new instance of DynamicActModel as it is the first call
+    agent.act("do something", model="dynamic-model-cached") # reuses cached instance
+```
+
 
 ### 🛠️ Direct Tool Use
 

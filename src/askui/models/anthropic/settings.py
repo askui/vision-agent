@@ -13,7 +13,6 @@ class AnthropicSettings(BaseSettings):
 
 class ClaudeSettingsBase(BaseModel):
     anthropic: AnthropicSettings = Field(default_factory=AnthropicSettings)
-    model: str = "claude-3-5-sonnet-20241022"
 
 
 class ClaudeSettings(ClaudeSettingsBase):
