@@ -502,7 +502,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'mouse_up "{button}"')
         logger.debug("VisionAgent received instruction to mouse_up '%s'", button)
-        self.tools.os.mouse_up(button)
+        self._tools.os.mouse_up(button)
 
     @telemetry.record_call()
     @validate_call
@@ -528,7 +528,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'mouse_down "{button}"')
         logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
-        self.tools.os.mouse_down(button)
+        self._tools.os.mouse_down(button)
 
     @telemetry.record_call(exclude={"goal"})
     @validate_call
@@ -628,7 +628,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
-        self.tools.os.run_command(command)
+        self._tools.os.run_command(command)
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
