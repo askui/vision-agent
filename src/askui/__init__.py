@@ -6,7 +6,7 @@ from .agent import VisionAgent
 from .models import ModelComposition, ModelDefinition
 from .models.router import Point
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
-from .retry import Retry, RetryPolicy
+from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
 from .utils.image_utils import Img
 
@@ -20,6 +20,6 @@ __all__ = [
     "ResponseSchema",
     "ResponseSchemaBase",
     "Retry",
-    "RetryPolicy",
+    "ConfigurableRetry",
     "VisionAgent",
 ]

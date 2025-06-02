@@ -52,7 +52,7 @@ class Retry(ABC):
         """
 
 
-class RetryPolicy(Retry):
+class ConfigurableRetry(Retry):
     """A configurable retry implementation with different strategies.
 
     This class provides a flexible way to retry operations that may fail temporarily,
@@ -70,7 +70,7 @@ class RetryPolicy(Retry):
 
     Example:
         ```python
-        retry = RetryPolicy(
+        retry = ConfigurableRetry(
             on_exception_types=(ConnectionError, TimeoutError),
             strategy="Exponential",
             base_delay=1000,
