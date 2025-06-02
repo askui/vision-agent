@@ -46,7 +46,7 @@ class ClaudeAgent:
         self.only_n_most_recent_images = 3
         self.max_tokens = 4096
         self.client = Anthropic()
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-sonnet-4-20250514"
 
     def set_system_prompt(self, system_prompt: str):
         self.system = BetaTextBlockParam(
