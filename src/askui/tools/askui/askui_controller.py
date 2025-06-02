@@ -714,9 +714,7 @@ class AskUiControllerClient(AgentOs):
             timeout_ms (int, optional): The timeout for command
                 execution in milliseconds. Defaults to `30000` (30 seconds).
         """
-        self._reporter.add_message(
-            "AgentOS", f'run_command("{command}", timeout:{timeout_ms})'
-        )
+        self._reporter.add_message("AgentOS", f'run_command("{command}", {timeout_ms})')
         self._run_recorder_action(
             acion_class_id=controller_v1_pbs.ActionClassID_RunCommand,
             action_parameters=controller_v1_pbs.ActionParameters(
