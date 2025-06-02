@@ -302,3 +302,16 @@ class AgentOs(ABC):
                 Defaults to `1`.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def run_command(self, command: str, timeout_ms: int = 30000) -> None:
+        """
+        Executes a shell command.
+
+        Args:
+            command (str): The command to execute.
+            timeout_ms (int, optional): The timeout for command
+                execution in milliseconds. Defaults to `30000` (30 seconds).
+
+        """
+        raise NotImplementedError

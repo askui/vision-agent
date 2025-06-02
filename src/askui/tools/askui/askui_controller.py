@@ -703,3 +703,24 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_SetActiveDisplay(displayID=displayNumber)
         )
         self._display = displayNumber
+
+    @telemetry.record_call(exclude={"command"})
+    @override
+    def run_command(self, command: str, timeout_ms: int = 30000) -> None:
+        """
+        Execute a shell command.
+
+        Args:
+            command (str): The command to execute.
+            timeout_ms (int, optional): The timeout for command
+                execution in milliseconds. Defaults to `30000` (30 seconds).
+        """
+        self._reporter.add_message("AgentOS", f'run_command("{command}", {timeout_ms})')
+        self._run_recorder_action(
+            acion_class_id=controller_v1_pbs.ActionClassID_RunCommand,
+            action_parameters=controller_v1_pbs.ActionParameters(
+                runcommand=controller_v1_pbs.ActionParameters_RunCommand(
+                    command=command, timeoutInMilliseconds=timeout_ms
+                )
+            ),
+        )
