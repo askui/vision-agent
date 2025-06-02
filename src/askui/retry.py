@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Callable, Literal, Tuple, Type, TypeVar
 
-from pydantic import Field
+from pydantic import ConfigDict, Field, validate_call
 from tenacity import (
     RetryCallState,
     Retrying,
@@ -80,6 +80,7 @@ class RetryPolicy(Retry):
         ```
     """  # noqa: E501
 
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         on_exception_types: Tuple[Type[Exception]],
