@@ -285,18 +285,18 @@ Here's how to create and use custom models:
 
 ```python
 from askui import (
-    VisionAgent,
     ActModel,
     GetModel,
     LocateModel,
-    ModelRegistry,
-    ResponseSchema,
-    ImageSource,
     Locator,
+    ImageSource,
+    ModelComposition,
+    ModelRegistry,
     Point,
+    ResponseSchema,
+    VisionAgent,
 )
 from typing import Type
-from PIL import Image
 
 # Define custom models
 class MyActModel(ActModel):
@@ -309,7 +309,7 @@ class MyActModel(ActModel):
 
 # Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
 # to create a model that can both get and locate elements.
-class MyLocateModel(GetModel, LocateModel):
+class MyGetAndLocateModel(GetModel, LocateModel):
     def get(
         self,
         query: str,
@@ -336,11 +336,12 @@ class MyLocateModel(GetModel, LocateModel):
         # - Call external vision services
         return (100, 100)  # Example coordinates
 
+
 # Create model registry
 custom_models: ModelRegistry = {
     "my-act-model": MyActModel(),
-    "my-get-model": MyGetModel(),
-    "my-locate-model": MyLocateModel(),
+    "my-get-model": MyGetAndLocateModel(),
+    "my-locate-model": MyGetAndLocateModel(),
 }
 
 # Initialize agent with custom models
