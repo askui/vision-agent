@@ -1,6 +1,6 @@
 """AskUI Vision Agent"""
 
-__version__ = "0.4.7"
+__version__ = "0.5.0"
 
 from .agent import VisionAgent
 from .locators import Locator
