@@ -24,7 +24,7 @@ def create_thread(
 
 
 @router.get("/{thread_id}")
-def get_thread(
+def retrieve_thread(
     thread_id: str,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:

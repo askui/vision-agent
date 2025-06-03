@@ -58,7 +58,7 @@ async def create_message(
 
 
 @router.get("/{message_id}")
-def get_message(
+def retrieve_message(
     thread_id: str,
     message_id: str,
     message_service: MessageService = MessageServiceDep,

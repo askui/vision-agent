@@ -8,7 +8,7 @@ router = APIRouter(prefix="/images", tags=["images"])
 
 
 @router.get("/{image_path:path}")
-def get_image(
+def retrieve_image(
     image_path: str,
     settings: Settings = SettingsDep,
 ) -> FileResponse:
