@@ -5,7 +5,7 @@
 groups = ["default", "chat", "mcp", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:5d81bb8ca8a8b98d18f4632c5fc1dd409c44d385724e4f321922ae71ec152f33"
+content_hash = "sha256:b5a9515b199f17d34e5bc8d5ff27aee34c94424852ae29c0c5d34acce1fd1987"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -1211,6 +1211,17 @@ files = [
 ]
 
 [[package]]
+name = "pixelmatch"
+version = "0.3.0"
+requires_python = ">=3.7,<4.0"
+summary = "A pixel-level image comparison library."
+groups = ["default"]
+files = [
+    {file = "pixelmatch-0.3.0-py3-none-any.whl", hash = "sha256:1fe86c50e7d00eb4b4de7b991f8b7ebc12da841ce1e9f7304480ab0f58a2bd81"},
+    {file = "pixelmatch-0.3.0.tar.gz", hash = "sha256:d0fa36a593cfcfa2d4b225da9d72c5b5218aef8b0594bc1a91953533c2676099"},
+]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 requires_python = ">=3.8"
@@ -2004,6 +2015,31 @@ groups = ["default", "mcp"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+summary = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+groups = ["default", "test"]
+files = [
+    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
+]
+
+[[package]]
+name = "sortedcontainers-stubs"
+version = "2.4.3"
+requires_python = "<4.0,>=3.9"
+summary = "Type stubs for sortedcontainers"
+groups = ["test"]
+dependencies = [
+    "sortedcontainers<3,>=2",
+    "typing-extensions<5.0.0,>=4.1.0",
+]
+files = [
+    {file = "sortedcontainers_stubs-2.4.3-py3-none-any.whl", hash = "sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406"},
+    {file = "sortedcontainers_stubs-2.4.3.tar.gz", hash = "sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd"},
 ]
 
 [[package]]

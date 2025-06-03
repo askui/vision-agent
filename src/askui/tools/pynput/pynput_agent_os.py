@@ -6,6 +6,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
 
 from mss import mss
+from mss.models import Monitor
 from PIL import Image
 from pynput.keyboard import Controller as KeyboardController
 from pynput.keyboard import Key, KeyCode
@@ -17,6 +18,7 @@ from typing_extensions import override
 from askui.logger import logger
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs, InputEvent, ModifierKey, PcKey
+from askui.tools.pynput.screen_shooter import ScreenShooter
 from askui.utils.image_utils import draw_point_on_image
 
 if platform.system() == "Windows":
@@ -139,6 +141,7 @@ class PynputAgentOs(AgentOs):
         self._reporter = reporter
         self._mouse_listener: MouseListener | None = None
         self._input_event_queue: queue.Queue[InputEvent] = queue.Queue()
+        self._screen_shooter = ScreenShooter(monitor=self._monitor)
 
     @override
     def connect(self) -> None:
@@ -147,6 +150,15 @@ class PynputAgentOs(AgentOs):
     @override
     def disconnect(self) -> None:
         """No disconnection needed for pynput."""
+
+    @property
+    def _monitor(self) -> Monitor:
+        """Get the monitor for the current display.
+
+        Returns:
+            Monitor: The monitor object for the current display.
+        """
+        return self._sct.monitors[self._display]
 
     @override
     def screenshot(self, report: bool = True) -> Image.Image:

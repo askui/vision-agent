@@ -24,6 +24,8 @@ dependencies = [
     "httpx>=0.28.1",
     "pynput>=1.8.1",
     "mss>=10.0.0",
+    "sortedcontainers>=2.4.0",
+    "pixelmatch>=0.3.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -36,6 +38,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/askui/__init__.py"
+
 
 
 [tool.pdm]
@@ -81,6 +84,7 @@ test = [
     "types-pyperclip>=1.8.2.20240311",
     "pytest-timeout>=2.4.0",
     "types-pynput>=1.8.1.20250318",
+    "sortedcontainers-stubs>=2.4.3",
 ]
 
 
