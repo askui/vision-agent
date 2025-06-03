@@ -162,7 +162,7 @@ class PynputAgentOs(AgentOs):
         """
         monitor = self._sct.monitors[self._display]
         screenshot: ScreenShot = self._sct.grab(monitor)
-        image = Image.frombytes(  # type: ignore[arg-type]
+        image = Image.frombytes(
             "RGB",
             screenshot.size,
             screenshot.rgb,

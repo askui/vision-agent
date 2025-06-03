@@ -1,12 +1,11 @@
 import base64
 from functools import cached_property
 
-from pydantic import UUID4, BaseModel, Field, HttpUrl, SecretStr
+from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.models import ModelName
-
-COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
+from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 
 
 class AskUiSettings(BaseSettings):
@@ -37,13 +36,6 @@ class AskUiSettings(BaseSettings):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
-class AskUiComputerAgentSettingsBase(BaseModel):
+class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
     model: str = ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
-
-
-class AskUiComputerAgentSettings(AskUiComputerAgentSettingsBase):
-    max_tokens: int = 4096
-    only_n_most_recent_images: int = 3
-    image_truncation_threshold: int = 10
-    betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_BETA_FLAG])

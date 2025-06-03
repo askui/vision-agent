@@ -4,11 +4,13 @@ from collections.abc import Iterator
 from enum import Enum
 from typing import Annotated, Callable, Type
 
+from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Literal, TypedDict
 
 from askui.locators.locators import Locator
 from askui.models.types.response_schemas import ResponseSchema
+from askui.tools.anthropic.base import ToolResult
 from askui.utils.image_utils import ImageSource
 
 
@@ -154,27 +156,71 @@ class ActModel(abc.ABC):
 
     Example:
         ```python
-        from askui import ActModel, VisionAgent
+        from askui import (
+            ActModel,
+            BetaMessageParam,
+            BetaToolUseBlockParam,
+            VisionAgent,
+            ToolResult,
+        )
+        from typing_extensions import override
 
         class MyActModel(ActModel):
-            def act(self, goal: str, model_choice: str) -> None:
-                # Implement custom act logic
-                pass
+            @override
+            def act(
+                self,
+                messages: list[BetaMessageParam],
+                model_choice: str,
+                on_message: Callable[
+                    [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+                ]
+                | None = None,
+                on_tool_result: Callable[
+                    [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+                    ToolResult | None,
+                ]
+                | None = None,
+            ) -> None:
+                print(messages)  # implement custom logic here
 
         with VisionAgent(models={"my-act": MyActModel()}) as agent:
             agent.act("search for flights", model="my-act")
-        ```
     """
 
     @abc.abstractmethod
-    def act(self, goal: str, model_choice: str) -> None:
-        """Execute autonomous actions to achieve a goal.
+    def act(
+        self,
+        messages: list[BetaMessageParam],
+        model_choice: str,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
+    ) -> None:
+        """
+        Execute autonomous actions to achieve a goal, using a message history
+        and optional callbacks.
 
         Args:
-            goal (str): A description of what the model should achieve
-            model_choice (str): The name of the model being used (useful for models that
-                support multiple configurations)
-        """
+            messages (list[BetaMessageParam]): The message history to start from.
+            model_choice (str): The name of the model being used (useful for models
+                that support multiple configurations)
+            on_message (Callable[[BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None], optional): Callback for new messages.
+                If it returns `None`, stops and does not add the message.
+            on_tool_result (Callable[[ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]], ToolResult | None], optional): Callback for tool results.
+                If it returns `None`, stops and does not add the tool result.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: If the method is not implemented.
+        """  # noqa: E501
         raise NotImplementedError
 
 

@@ -1,13 +1,15 @@
 import logging
 import time
 import types
-from typing import Annotated, Literal, Optional, Type, overload
+from typing import Annotated, Callable, Literal, Optional, Type, overload
 
+from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
+from askui.tools.anthropic import ToolResult
 from askui.utils.image_utils import ImageSource, Img
 
 from .exceptions import ElementNotFoundError
@@ -216,7 +218,7 @@ class VisionAgent:
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
         point = self._locate(locator=locator, model=model)
-        self._tools.os.mouse(point[0], point[1])
+        self._tools.os.mouse_move(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -534,8 +536,17 @@ class VisionAgent:
     @validate_call
     def act(
         self,
-        goal: Annotated[str, Field(min_length=1)],
+        goal: Annotated[str | list[BetaMessageParam], Field(min_length=1)],
         model: str | None = None,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -547,6 +558,12 @@ class VisionAgent:
         Args:
             goal (str): A description of what the agent should achieve.
             model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
+            messages (list[BetaMessageParam] | None, optional): The message history to start from. If None, starts with a new message containing the goal.
+            on_message (Callable[[BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None], optional): Callback for new messages. If it returns `None`, stops and does not add the message.
+            on_tool_result (Callable[[ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]], ToolResult | None], optional): Callback for tool results. If it returns `None`, stops and does not add the tool result.
+
+        Returns:
+            None
 
         Example:
             ```python
@@ -562,7 +579,12 @@ class VisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        self._model_router.act(goal, model or self._model_choice["act"])
+        messages: list[BetaMessageParam] = (
+            [{"role": "user", "content": goal}] if isinstance(goal, str) else goal
+        )
+        self._model_router.act(
+            messages, model or self._model_choice["act"], on_message, on_tool_result
+        )
 
     @telemetry.record_call()
     @validate_call

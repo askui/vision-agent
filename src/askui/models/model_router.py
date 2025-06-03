@@ -1,12 +1,12 @@
 import functools
-from typing import Type, overload
+from typing import Callable, Type, overload
 
+from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from typing_extensions import Literal
 
 from askui.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.models.anthropic.facade import AnthropicFacade
 from askui.models.anthropic.settings import (
     AnthropicSettings,
     ClaudeComputerAgentSettings,
@@ -14,7 +14,6 @@ from askui.models.anthropic.settings import (
 )
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.computer_agent import AskUiComputerAgent
-from askui.models.askui.facade import AskUiFacade
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.huggingface.spaces_api import HFSpacesHandler
@@ -29,8 +28,10 @@ from askui.models.models import (
     ModelRegistry,
     Point,
 )
+from askui.models.shared.facade import ModelFacade
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
+from askui.tools.anthropic import ToolResult
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -70,7 +71,7 @@ def _initialize_default_model_registry(  # noqa: C901
         return VlmLocatorSerializer()
 
     @functools.cache
-    def anthropic_facade() -> AnthropicFacade:
+    def anthropic_facade() -> ModelFacade:
         settings = AnthropicSettings()
         computer_agent = ClaudeComputerAgent(
             agent_os=tools.os,
@@ -85,13 +86,14 @@ def _initialize_default_model_registry(  # noqa: C901
             ),
             locator_serializer=vlm_locator_serializer(),
         )
-        return AnthropicFacade(
-            computer_agent=computer_agent,
-            handler=handler,
+        return ModelFacade(
+            act_model=computer_agent,
+            get_model=handler,
+            locate_model=handler,
         )
 
     @functools.cache
-    def askui_facade() -> AskUiFacade:
+    def askui_facade() -> ModelFacade:
         computer_agent = AskUiComputerAgent(
             agent_os=tools.os,
             reporter=reporter,
@@ -99,10 +101,10 @@ def _initialize_default_model_registry(  # noqa: C901
                 askui=askui_settings(),
             ),
         )
-        return AskUiFacade(
-            computer_agent=computer_agent,
-            inference_api=askui_inference_api(),
-            model_router=askui_model_router(),
+        return ModelFacade(
+            act_model=computer_agent,
+            get_model=askui_inference_api(),
+            locate_model=askui_model_router(),
         )
 
     @functools.cache
@@ -180,10 +182,23 @@ class ModelRouter:
 
         return model
 
-    def act(self, goal: str, model_choice: str) -> None:
+    def act(
+        self,
+        messages: list[BetaMessageParam],
+        model_choice: str,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
+    ) -> None:
         m = self._get_model(model_choice, "act")
         logger.debug(f'Routing "act" to model "{model_choice}"')
-        return m.act(goal, model_choice)
+        return m.act(messages, model_choice, on_message, on_tool_result)
 
     def get(
         self,

@@ -1,8 +1,9 @@
 import math
 import re
 import time
-from typing import Any, Type
+from typing import Any, Callable, Type
 
+from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from openai import OpenAI
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
@@ -15,6 +16,7 @@ from askui.models.models import ActModel, GetModel, LocateModel, ModelCompositio
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
+from askui.tools.anthropic.base import ToolResult
 from askui.utils.image_utils import ImageSource, image_to_base64
 
 from .parser import UITarsEPMessage
@@ -188,7 +190,37 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         return response
 
     @override
-    def act(self, goal: str, model_choice: str) -> None:
+    def act(
+        self,
+        messages: list[BetaMessageParam],
+        model_choice: str,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
+    ) -> None:
+        if on_message is not None:
+            error_msg = "on_message is not supported for UI-TARS"
+            raise NotImplementedError(error_msg)
+        if on_tool_result is not None:
+            error_msg = "on_tool_result is not supported for UI-TARS"
+            raise NotImplementedError(error_msg)
+        if len(messages) != 1:
+            error_msg = "UI-TARS only supports one message"
+            raise ValueError(error_msg)
+        message = messages[0]
+        if message["role"] != "user":
+            error_msg = "UI-TARS only supports user messages"
+            raise ValueError(error_msg)
+        if not isinstance(message["content"], str):
+            error_msg = "UI-TARS only supports text messages"
+            raise ValueError(error_msg)  # noqa: TRY004
+        goal = message["content"]
         screenshot = self._agent_os.screenshot()
         self.act_history = [
             {

@@ -10,4 +10,7 @@ from askui.models.models import ModelName
 def test_act(
     claude_computer_agent: AskUiComputerAgent,
 ) -> None:
-    claude_computer_agent.act("Go to github.com/login", model_choice=ModelName.ASKUI)
+    claude_computer_agent.act(
+        [{"role": "user", "content": "Go to github.com/login"}],
+        model_choice=ModelName.ASKUI,
+    )

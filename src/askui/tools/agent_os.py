@@ -461,14 +461,12 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def poll_event(self) -> InputEvent | None:
         """
         Poll for a single input event.
         """
         raise NotImplementedError
 
-    @abstractmethod
     def stop_listening(self) -> None:
         """Stop listening for mouse and keyboard events."""
         raise NotImplementedError

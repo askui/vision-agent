@@ -1,8 +1,8 @@
 import pytest
 
 from askui.agent import VisionAgent
-from askui.models.askui.facade import AskUiFacade
 from askui.models.models import ModelComposition, ModelDefinition, ModelName
+from askui.models.shared.facade import ModelFacade
 from askui.reporting import Reporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -26,7 +26,7 @@ def test_act(
 def test_act_with_model_composition_should_use_default_model(
     agent_toolbox_mock: AgentToolbox,
     simple_html_reporter: Reporter,
-    askui_facade: AskUiFacade,
+    askui_facade: ModelFacade,
 ) -> None:
     with VisionAgent(
         reporters=[simple_html_reporter],

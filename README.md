@@ -284,8 +284,11 @@ You can create and use your own models by subclassing the `ActModel` (used for `
 Here's how to create and use custom models:
 
 ```python
+import functools
 from askui import (
     ActModel,
+    BetaMessageParam,
+    BetaToolUseBlockParam,
     GetModel,
     LocateModel,
     Locator,
@@ -294,22 +297,40 @@ from askui import (
     ModelRegistry,
     Point,
     ResponseSchema,
+    ToolResult,
     VisionAgent,
 )
-from typing import Type
+from typing import Callable, Type
+from typing_extensions import override
 
 # Define custom models
 class MyActModel(ActModel):
-    def act(self, goal: str, model_choice: str) -> None:
+    @override
+    def act(
+        self,
+        messages: list[BetaMessageParam],
+        model_choice: str,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
+    ) -> None:
         # Implement custom act logic, e.g.:
         # - Use a different AI model
         # - Implement custom business logic
         # - Call external services
+        goal = messages[0]["content"]
         print(f"Custom act model executing goal: {goal}")
 
 # Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
 # to create a model that can both get and locate elements.
 class MyGetAndLocateModel(GetModel, LocateModel):
+    @override
     def get(
         self,
         query: str,
@@ -324,6 +345,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         return f"Custom response to query: {query}"
 
 
+    @override
     def locate(
         self,
         locator: str | Locator,
@@ -366,10 +388,22 @@ You can also use model factories if you need to create models dynamically:
 
 ```python
 class DynamicActModel(ActModel):
-    def act(self, goal: str, model_choice: str) -> None:
-        # Use api_key in implementation
+    @override
+    def act(
+        self,
+        messages: list[BetaMessageParam],
+        model_choice: str,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None = None,
+        on_tool_result: Callable[
+            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
+            ToolResult | None,
+        ]
+        | None = None,
+    ) -> None:
         pass
-
 
 # going to be called each time model is chosen using `model` parameter
 def create_custom_model(api_key: str) -> ActModel:

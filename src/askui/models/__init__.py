@@ -1,3 +1,5 @@
+from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
+
 from .models import (
     ActModel,
     GetModel,
@@ -13,6 +15,8 @@ from .models import (
 
 __all__ = [
     "ActModel",
+    "BetaMessageParam",
+    "BetaToolUseBlockParam",
     "GetModel",
     "LocateModel",
     "Model",
