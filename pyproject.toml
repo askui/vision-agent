@@ -15,8 +15,8 @@ dependencies = [
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
     "Jinja2>=3.1.4",
-    "pydantic-settings>=2.7.0",
     "tenacity>=9.1.2",
+    "pydantic-settings>=2.9.1",
     "python-dateutil>=2.9.0.post0",
     "openai>=1.61.1",
     "segment-analytics-python>=2.3.4",
@@ -24,6 +24,8 @@ dependencies = [
     "httpx>=0.28.1",
     "pynput>=1.8.1",
     "mss>=10.0.0",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.3",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -58,6 +60,7 @@ typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
 chat = "streamlit run src/askui/chat/__main__.py"
 mcp = "mcp dev src/askui/mcp/__init__.py"
+api = "uvicorn src.askui.chat.api.fastapi:app --reload --port 8000"
 
 [dependency-groups]
 chat = [

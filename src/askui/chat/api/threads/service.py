@@ -27,11 +27,11 @@ class ThreadListResponse(BaseModel):
     has_more: bool = False
 
 
-class ThreadsApi:
-    """API for managing chat threads/sessions."""
+class ThreadService:
+    """Service for managing chat threads/sessions."""
 
     def __init__(self, base_dir: Path) -> None:
-        """Initialize threads API.
+        """Initialize thread service.
 
         Args:
             base_dir: Base directory to store thread data
@@ -129,11 +129,11 @@ class ThreadsApi:
             raise FileNotFoundError(error_msg)
 
         # Get all image paths from messages before deleting thread
-        from askui.chat.api.messages import MessagesApi
+        from askui.chat.api.messages.service import MessageService
 
-        messages_api = MessagesApi(self._base_dir)
+        message_service = MessageService(self._base_dir)
         try:
-            messages = messages_api.list_(thread_id).data
+            messages = message_service.list_(thread_id).data
             for msg in messages:
                 if msg.content and msg.content[0].image_paths:
                     for img_path in msg.content[0].image_paths:

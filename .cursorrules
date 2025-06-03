@@ -5,6 +5,11 @@
 - Use type hints for all variables, functions, methods, properties, return values, parameters etc.
 - Omit `Any` within type hints unless absolutely necessary
 - Use built-in types (e.g., `list`, `dict`, `tuple`, `set`, `str | None`) instead of types from `typing` module (e.g. `List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`) wherever possible
+- Create a `__init__.py` file in each folder
+
+## FastAPI
+- Instead of defining `response_model` within route annotation, use the model as the response type in the function signature
+- Do not assign `None` to dependencies but instead move it before arguments with default values
 
 # Testing
 - Use `pytest-mock` for mocking in tests wherever you need to mock something and pytest-mock can do the job.

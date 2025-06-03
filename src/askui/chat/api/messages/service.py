@@ -49,8 +49,8 @@ class MessageListResponse(BaseModel):
     has_more: bool = False
 
 
-class MessagesApi:
-    """API for managing messages within threads."""
+class MessageService:
+    """Service for managing messages within threads."""
 
     ROLE_MAP = {
         "user": MessageRole.USER,
@@ -60,7 +60,7 @@ class MessagesApi:
     }
 
     def __init__(self, base_dir: Path) -> None:
-        """Initialize messages API.
+        """Initialize message service.
 
         Args:
             base_dir: Base directory to store message data
