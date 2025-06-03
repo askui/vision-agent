@@ -6,7 +6,7 @@ from askui.chat.api.threads.service import Thread, ThreadListResponse, ThreadSer
 router = APIRouter(prefix="/threads", tags=["threads"])
 
 
-@router.get("", response_model=ThreadListResponse)
+@router.get("")
 def list_threads(
     limit: int | None = None,
     thread_service: ThreadService = ThreadServiceDep,
@@ -15,7 +15,7 @@ def list_threads(
     return thread_service.list_(limit=limit)
 
 
-@router.post("", response_model=Thread)
+@router.post("")
 def create_thread(
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
@@ -23,7 +23,7 @@ def create_thread(
     return thread_service.create()
 
 
-@router.get("/{thread_id}", response_model=Thread)
+@router.get("/{thread_id}")
 def get_thread(
     thread_id: str,
     thread_service: ThreadService = ThreadServiceDep,
@@ -32,7 +32,7 @@ def get_thread(
     try:
         return thread_service.retrieve(thread_id)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.delete("/{thread_id}")
@@ -44,4 +44,4 @@ def delete_thread(
     try:
         thread_service.delete(thread_id)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e

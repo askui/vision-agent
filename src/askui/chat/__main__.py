@@ -9,8 +9,8 @@ from PIL import Image, ImageDraw
 from typing_extensions import override
 
 from askui import VisionAgent
-from askui.chat.api.messages import MessageRole, MessagesApi
-from askui.chat.api.threads import ThreadsApi
+from askui.chat.api.messages.service import MessageRole, MessageService
+from askui.chat.api.threads.service import ThreadService
 from askui.chat.click_recorder import ClickRecorder
 from askui.chat.exceptions import FunctionExecutionError, InvalidFunctionError
 from askui.models import ModelName
@@ -19,29 +19,26 @@ from askui.tools.pynput.pynput_agent_os import PynputAgentOs
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import base64_to_image, draw_point_on_image
 
-# TODO Start backend server
-
 st.set_page_config(
     page_title="Vision Agent Chat",
     page_icon="💬",
 )
 
 
-# TODO Tool, pynput alternatively
 BASE_DIR = Path("./chat")
-threads_api = ThreadsApi(BASE_DIR)
-messages_api = MessagesApi(BASE_DIR)
+threads_api = ThreadService(BASE_DIR)
+messages_api = MessageService(BASE_DIR)
 click_recorder = ClickRecorder()
 
 
-def get_image(img_b64_str_or_path: str) -> Image.Image:  # TODO Image utils
+def get_image(img_b64_str_or_path: str) -> Image.Image:
     """Get image from base64 string or file path."""
     if Path(img_b64_str_or_path).is_file():
         return Image.open(img_b64_str_or_path)
     return base64_to_image(img_b64_str_or_path)
 
 
-def write_message(  # TODO updating frontend
+def write_message(
     role: str,
     content: str | dict[str, Any] | list[Any],
     timestamp: str,

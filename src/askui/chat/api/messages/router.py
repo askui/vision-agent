@@ -19,7 +19,7 @@ class CreateMessageRequest(BaseModel):
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 
 
-@router.get("", response_model=MessageListResponse)
+@router.get("")
 def list_messages(
     thread_id: str,
     limit: int | None = None,
@@ -29,14 +29,14 @@ def list_messages(
     try:
         return message_service.list_(thread_id, limit=limit)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.post("", response_model=Message)
+@router.post("")
 async def create_message(
     thread_id: str,
     request: CreateMessageRequest,
-    image: UploadFile | None = File(None),
+    image: UploadFile | None = None,
     message_service: MessageService = MessageServiceDep,
 ) -> Message:
     """Create a new message in a thread."""
@@ -54,10 +54,10 @@ async def create_message(
             image=pil_image,
         )
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.get("/{message_id}", response_model=Message)
+@router.get("/{message_id}")
 def get_message(
     thread_id: str,
     message_id: str,
@@ -67,7 +67,7 @@ def get_message(
     try:
         return message_service.retrieve(thread_id, message_id)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.delete("/{message_id}")
@@ -80,4 +80,4 @@ def delete_message(
     try:
         message_service.delete(thread_id, message_id)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e

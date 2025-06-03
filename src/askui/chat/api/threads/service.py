@@ -139,7 +139,7 @@ class ThreadService:
                     for img_path in msg.content[0].image_paths:
                         try:
                             Path(img_path).unlink()
-                        except FileNotFoundError:
+                        except FileNotFoundError:  # noqa: PERF203
                             pass  # Image might have been deleted already
         except FileNotFoundError:
             pass  # Thread might have been deleted already

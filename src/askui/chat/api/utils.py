@@ -15,7 +15,9 @@ def generate_time_ordered_id(prefix: str) -> str:
     # Get current timestamp in milliseconds
     timestamp = int(time.time() * 1000)
     # Convert to base32 for shorter string (removing padding)
-    timestamp_b32 = base64.b32encode(str(timestamp).encode()).decode().rstrip("=").lower()
+    timestamp_b32 = (
+        base64.b32encode(str(timestamp).encode()).decode().rstrip("=").lower()
+    )
     # Get 12 random bytes and convert to base32 (removing padding)
     random_bytes = os.urandom(12)
     random_b32 = base64.b32encode(random_bytes).decode().rstrip("=").lower()
