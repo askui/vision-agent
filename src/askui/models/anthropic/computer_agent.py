@@ -1,18 +1,17 @@
 import platform
 import sys
 from datetime import datetime, timezone
-from typing import Any, cast
+from typing import cast
 
-from anthropic import Anthropic, APIError, APIResponseValidationError, APIStatusError
+from anthropic import Anthropic, APIError
+from anthropic._legacy_response import LegacyAPIResponse
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam,
     BetaImageBlockParam,
     BetaMessage,
     BetaMessageParam,
-    BetaTextBlock,
     BetaTextBlockParam,
     BetaToolResultBlockParam,
-    BetaToolUseBlockParam,
 )
 from typing_extensions import override
 
@@ -23,7 +22,6 @@ from askui.tools.agent_os import AgentOs
 
 from ...logger import logger
 from ...tools.anthropic import ComputerTool, ToolCollection, ToolResult
-from ...utils.str_utils import truncate_long_strings
 
 PC_KEY = [
     "backspace",
@@ -184,6 +182,22 @@ class ClaudeComputerAgent(ActModel):
             text=f"{SYSTEM_PROMPT}",
         )
 
+    def _create_raw_response(
+        self, messages: list[BetaMessageParam], model: str
+    ) -> LegacyAPIResponse[BetaMessage] | None:
+        try:
+            return self._client.beta.messages.with_raw_response.create(
+                max_tokens=self._settings.max_tokens,
+                messages=messages,
+                model=model,
+                system=[self._system],
+                tools=self._tool_collection.to_params(),
+                betas=self._settings.betas,
+            )
+        except APIError as e:
+            logger.error(e)
+            return None
+
     def step(
         self, messages: list[BetaMessageParam], model: str
     ) -> list[BetaMessageParam]:
@@ -193,48 +207,44 @@ class ClaudeComputerAgent(ActModel):
                 self._settings.only_n_most_recent_images,
                 min_removal_threshold=self._settings.image_truncation_threshold,
             )
-
-        try:
-            raw_response = self._client.beta.messages.with_raw_response.create(
-                max_tokens=self._settings.max_tokens,
-                messages=messages,
-                model=model,
-                system=[self._system],
-                tools=self._tool_collection.to_params(),
-                betas=self._settings.betas,
-            )
-        except (APIStatusError, APIResponseValidationError) as e:
-            logger.error(e)
-            return messages
-        except APIError as e:
-            logger.error(e)
+        raw_response = self._create_raw_response(messages, model)
+        if raw_response is None:
             return messages
 
-        response = raw_response.parse()
-        response_params = self._response_to_params(response)
-        new_message: BetaMessageParam = {
-            "role": "assistant",
-            "content": response_params,
-        }
-        logger.debug(new_message)
-        messages.append(new_message)
-        self._reporter.add_message("Anthropic Computer Use", response_params)
+        response_message = raw_response.parse()
+        response_message_param: BetaMessageParam = cast(
+            "BetaMessageParam",
+            response_message.model_dump(include={"content", "role"}),
+        )
+        logger.debug(response_message_param)
+        messages.append(response_message_param)
+        self._reporter.add_message(
+            "Anthropic Computer Use", dict(response_message_param)
+        )
+        if tool_result_message := self._use_tools(response_message):
+            messages.append(tool_result_message)
+        return messages
 
+    def _use_tools(self, message: BetaMessage) -> BetaMessageParam | None:
         tool_result_content: list[BetaToolResultBlockParam] = []
-        for content_block in response_params:
-            if content_block["type"] == "tool_use":
+        for content_block in message.content:
+            if content_block.type == "tool_use":
+                tool_input = content_block.input
                 result = self._tool_collection.run(
-                    name=content_block["name"],
-                    tool_input=cast("dict[str, Any]", content_block["input"]),
+                    name=content_block.name,
+                    tool_input=tool_input,  # type: ignore[arg-type]
                 )
                 tool_result_content.append(
-                    self._make_api_tool_result(result, content_block["id"])
+                    self._make_api_tool_result(result, content_block.id)
                 )
         if len(tool_result_content) > 0:
-            another_new_message = {"content": tool_result_content, "role": "user"}
-            logger.debug(truncate_long_strings(another_new_message, max_length=200))
-            messages.append(cast("BetaMessageParam", another_new_message))
-        return messages
+            tool_result_message: BetaMessageParam = {
+                "content": tool_result_content,
+                "role": "user",
+            }
+            logger.debug(tool_result_message)
+            return tool_result_message
+        return None
 
     @override
     def act(self, goal: str, model_choice: str) -> None:
@@ -292,18 +302,6 @@ class ClaudeComputerAgent(ActModel):
                     new_content.append(content)
                 tool_result["content"] = new_content  # type: ignore
         return None
-
-    @staticmethod
-    def _response_to_params(
-        response: BetaMessage,
-    ) -> list[BetaTextBlockParam | BetaToolUseBlockParam]:
-        res: list[BetaTextBlockParam | BetaToolUseBlockParam] = []
-        for block in response.content:
-            if isinstance(block, BetaTextBlock):
-                res.append({"type": "text", "text": block.text})
-            else:
-                res.append(cast("BetaToolUseBlockParam", block.model_dump()))
-        return res
 
     @staticmethod
     def _inject_prompt_caching(
