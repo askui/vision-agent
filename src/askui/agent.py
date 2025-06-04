@@ -166,16 +166,17 @@ class VisionAgent:
         screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> Point:
-        _screenshot = ImageSource(
-            self._tools.os.screenshot() if screenshot is None else screenshot
-        )
-        point = self._retry.attempt(
-            lambda: self._model_router.locate(
+        def locate_with_screenshot() -> Point:
+            _screenshot = ImageSource(
+                self._tools.os.screenshot() if screenshot is None else screenshot
+            )
+            return self._model_router.locate(
                 screenshot=_screenshot,
                 locator=locator,
                 model_choice=model or self._model_choice["locate"],
             )
-        )
+
+        point = self._retry.attempt(locate_with_screenshot)
         self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
         logger.debug("ModelRouter locate: (%d, %d)", point[0], point[1])
         return point
