@@ -41,7 +41,6 @@ class ClaudeAgent:
             text=system_prompt,
         )
         self.enable_prompt_caching = False
-        self.betas = []
         self.image_truncation_threshold = 10
         self.only_n_most_recent_images = 3
         self.max_tokens = 16000
@@ -82,7 +81,6 @@ class ClaudeAgent:
                 model=self.model,
                 system=[self.system],
                 tools=self.tool_collection.to_params(),
-                betas=self.betas,
             )
         except (APIStatusError, APIResponseValidationError) as e:
             logger.error(e)
