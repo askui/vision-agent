@@ -259,27 +259,40 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
             "BetaMessageParam",
             response_message.model_dump(include={"content", "role"}),
         )
-        if on_message is not None:
-            response_message_param_cb = on_message(response_message_param, messages)
-            if response_message_param_cb is None:
-                return
-
-            response_message_param = response_message_param_cb
-        logger.debug(response_message_param)
-        messages.append(response_message_param)
-        self._reporter.add_message(
-            self.__class__.__name__, dict(response_message_param)
+        message_by_assistant = self._call_on_message(
+            on_message, response_message_param, messages
         )
+        if message_by_assistant is None:
+            return
+        logger.debug(message_by_assistant)
+        messages.append(message_by_assistant)
+        self._reporter.add_message(self.__class__.__name__, dict(message_by_assistant))
         if tool_result_message := self._use_tools(
             response_message, messages, on_tool_result
         ):
-            messages.append(tool_result_message)
-            self._step(
-                messages=messages,
-                model_choice=model_choice,
-                on_message=on_message,
-                on_tool_result=on_tool_result,
-            )
+            if tool_result_message := self._call_on_message(
+                on_message, tool_result_message, messages
+            ):
+                messages.append(tool_result_message)
+                self._step(
+                    messages=messages,
+                    model_choice=model_choice,
+                    on_message=on_message,
+                    on_tool_result=on_tool_result,
+                )
+
+    def _call_on_message(
+        self,
+        on_message: Callable[
+            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
+        ]
+        | None,
+        message: BetaMessageParam,
+        messages: list[BetaMessageParam],
+    ) -> BetaMessageParam | None:
+        if on_message is None:
+            return message
+        return on_message(message, messages)
 
     def act(
         self,
