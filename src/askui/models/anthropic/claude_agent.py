@@ -41,12 +41,16 @@ class ClaudeAgent:
             text=system_prompt,
         )
         self.enable_prompt_caching = False
-        self.betas = [COMPUTER_USE_BETA_FLAG]
+        self.betas = []
         self.image_truncation_threshold = 10
         self.only_n_most_recent_images = 3
-        self.max_tokens = 4096
+        self.max_tokens = 16000
         self.client = Anthropic()
         self.model = "claude-sonnet-4-20250514"
+        self.thinking_params = {
+            "type": "enabled",
+            "budget_tokens": 10000
+        }
 
     def set_system_prompt(self, system_prompt: str):
         self.system = BetaTextBlockParam(
@@ -61,6 +65,7 @@ class ClaudeAgent:
             *tools
         )
 
+
     def step(self, messages: list):
         if self.only_n_most_recent_images is not None:
             self._maybe_filter_to_n_most_recent_images(
@@ -72,6 +77,7 @@ class ClaudeAgent:
         try:
             raw_response = self.client.beta.messages.with_raw_response.create(
                 max_tokens=self.max_tokens,
+                thinking=self.thinking_params,
                 messages=messages,
                 model=self.model,
                 system=[self.system],
