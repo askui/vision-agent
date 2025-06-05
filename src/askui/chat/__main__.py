@@ -338,7 +338,6 @@ if act_prompt := st.chat_input("Ask AI"):
         )
         write_message(last_message)
     run = run_service.create(thread_id, stream=False)
-    print(run)
     time.sleep(1)
     while run := run_service.retrieve(run.id):
         new_messages = message_service.list_(
@@ -351,6 +350,33 @@ if act_prompt := st.chat_input("Ask AI"):
             break
         time.sleep(1)
 
+
+if act_prompt := st.chat_input("Ask AI (streaming)"):
+    if act_prompt != "Continue":
+        last_message = message_service.create(
+            thread_id=thread_id,
+            message=MessageParam(
+                role="user",
+                content=act_prompt,
+            ),
+        )
+        write_message(last_message)
+
+    # Use the streaming API
+    event_stream = run_service.create(thread_id, stream=True)
+    import asyncio
+
+    async def handle_stream() -> None:
+        last_msg_id = last_message.id if last_message else None
+        async for event in event_stream:
+            if event.event == "message.created":
+                msg = event.data
+                if msg and (not last_msg_id or msg.id > last_msg_id):
+                    write_message(msg)
+                    last_msg_id = msg.id
+
+    # Run the async handler in Streamlit (sync context)
+    asyncio.run(handle_stream())
 
 # if st.button("Rerun"):
 #     rerun()

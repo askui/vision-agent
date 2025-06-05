@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field
 
+from askui.chat.api.models import Event
 from askui.chat.api.utils import generate_time_ordered_id
 from askui.models.shared.computer_agent_message_param import MessageParam
 
@@ -16,6 +18,11 @@ class Message(MessageParam):
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
     object: str = "message"
+
+
+class MessageEvent(Event):
+    data: Message
+    event: Literal["message.created"]
 
 
 class MessageListResponse(BaseModel):
