@@ -46,7 +46,6 @@ class MessageService:
         """
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
-        self._images_dir = base_dir / "images"
 
     def list_(
         self, thread_id: str, limit: int | None = None, after: str | None = None
