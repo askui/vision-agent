@@ -22,10 +22,6 @@ dependencies = [
     "segment-analytics-python>=2.3.4",
     "py-machineid>=0.7.0",
     "httpx>=0.28.1",
-    "pynput>=1.8.1",
-    "mss>=10.0.0",
-    "fastapi>=0.115.12",
-    "uvicorn>=0.34.3",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -38,7 +34,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/askui/__init__.py"
-
 
 [tool.pdm]
 distribution = true
@@ -65,6 +60,12 @@ api = "uvicorn src.askui.chat.api.fastapi:app --reload --port 8000"
 [dependency-groups]
 chat = [
     "streamlit>=1.42.0",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.3",
+]
+pynput = [
+    "mss>=10.0.0",
+    "pynput>=1.8.1",
 ]
 mcp = [
     "mcp[cli,rich,ws]>=1.8.1",
