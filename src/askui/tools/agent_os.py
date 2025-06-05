@@ -458,15 +458,25 @@ class AgentOs(ABC):
     def start_listening(self) -> None:
         """
         Start listening for mouse and keyboard events.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
         """
         raise NotImplementedError
 
     def poll_event(self) -> InputEvent | None:
         """
         Poll for a single input event.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
         """
         raise NotImplementedError
 
     def stop_listening(self) -> None:
-        """Stop listening for mouse and keyboard events."""
+        """Stop listening for mouse and keyboard events.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
+        """
         raise NotImplementedError
