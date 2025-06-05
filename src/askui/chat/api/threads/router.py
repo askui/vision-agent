@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from askui.chat.api.threads.dependencies import ThreadServiceDep
 from askui.chat.api.threads.service import Thread, ThreadListResponse, ThreadService
@@ -15,7 +15,7 @@ def list_threads(
     return thread_service.list_(limit=limit)
 
 
-@router.post("")
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_thread(
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
@@ -35,7 +35,7 @@ def retrieve_thread(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.delete("/{thread_id}")
+@router.delete("/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_thread(
     thread_id: str,
     thread_service: ThreadService = ThreadServiceDep,

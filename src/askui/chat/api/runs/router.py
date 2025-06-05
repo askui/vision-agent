@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Annotated, cast
 
-from fastapi import APIRouter, Body, HTTPException, Path
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Body, HTTPException, Path, Response, status
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ def create_run(
     thread_id: Annotated[str, Path(...)],
     request: Annotated[CreateRunRequest, Body(...)],
     run_service: RunService = RunServiceDep,
-) -> Run | StreamingResponse:
+) -> Response:
     """
     Create a new run for a given thread.
     """
@@ -39,8 +39,13 @@ def create_run(
             async for event in async_generator:
                 yield f"event: {event.event}\ndata: {event.model_dump_json()}\n\n"
 
-        return StreamingResponse(sse_event_stream(), media_type="text/event-stream")
-    return cast("Run", run_or_async_generator)
+        return StreamingResponse(
+            status_code=status.HTTP_201_CREATED,
+            content=sse_event_stream(),
+            media_type="text/event-stream",
+        )
+    run = cast("Run", run_or_async_generator)
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=run.model_dump())
 
 
 @router.get("/{run_id}")

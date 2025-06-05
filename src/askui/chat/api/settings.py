@@ -12,6 +12,6 @@ class Settings(BaseSettings):
     )
 
     data_dir: Path = Field(
-        default_factory=lambda: Path.home() / ".askui" / "chat",
+        default_factory=lambda: Path.cwd() / "chat",
         description="Base directory for storing chat data",
     )

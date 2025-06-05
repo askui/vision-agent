@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 
 from askui.chat.api.messages.dependencies import MessageServiceDep
 from askui.chat.api.messages.service import Message, MessageListResponse, MessageService
@@ -20,7 +20,7 @@ def list_messages(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.post("")
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_message(
     thread_id: str,
     message: MessageParam,
@@ -49,7 +49,7 @@ def retrieve_message(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-@router.delete("/{message_id}")
+@router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_message(
     thread_id: str,
     message_id: str,

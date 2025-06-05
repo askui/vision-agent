@@ -65,7 +65,7 @@ def get_image(
             return Image.open(io.BytesIO(response.content))
 
 
-def write_message(
+def write_message(  # noqa: C901
     message: Message,
 ) -> None:
     # Create a container for the message and delete button

@@ -54,8 +54,8 @@ lint = "ruff check src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
 chat = "streamlit run src/askui/chat/__main__.py"
+"chat:api" = "uvicorn src.askui.chat.api.app:app --reload --port 8000"
 mcp = "mcp dev src/askui/mcp/__init__.py"
-api = "uvicorn src.askui.chat.api.fastapi:app --reload --port 8000"
 
 [dependency-groups]
 chat = [
