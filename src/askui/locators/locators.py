@@ -13,8 +13,8 @@ TextMatchType = Literal["similar", "exact", "contains", "regex"]
 """The type of match to use.
 
 - `"similar"` uses a similarity threshold to determine if the text is a match.
-- `"exact"` requires the text to be exactly the same (this is not the same as `"similar"` 
-  with a `similarity_threshold` of `100` as a `similarity_threshold` of `100` can still 
+- `"exact"` requires the text to be exactly the same (this is not the same as `"similar"`
+  with a `similarity_threshold` of `100` as a `similarity_threshold` of `100` can still
   allow for small differences in very long texts).
 - `"contains"` requires the text to contain (exactly) the specified text.
 - `"regex"` uses a regular expression to match the text.
@@ -70,7 +70,7 @@ class Element(Locator):
     """Locator for finding ui elements by their class.
 
     Args:
-        class_name (Literal["text", "textfield"] | None, optional): The class of the ui element, e.g., `'text'` or `'textfield'`. Defaults to `None`.
+        class_name (Literal["switch","text", "textfield"] | None, optional): The class of the ui element, e.g., `'text'` or `'textfield'`. Defaults to `None`.
 
     Examples:
         ```python
@@ -87,10 +87,7 @@ class Element(Locator):
     @validate_call
     def __init__(
         self,
-        class_name: Annotated[
-            Literal["text", "textfield"] | None,
-            Field(),
-        ] = None,
+        class_name: Literal["switch", "text", "textfield"] | None = None,
     ) -> None:
         super().__init__()
         self._class_name = class_name
