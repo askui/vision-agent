@@ -260,6 +260,8 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
             if tool_result_message := self._call_on_message(
                 on_message, tool_result_message, messages
             ):
+                tool_result_message_dict = tool_result_message.model_dump(mode="json")
+                logger.debug(tool_result_message_dict)
                 messages.append(tool_result_message)
                 self._step(
                     messages=messages,
