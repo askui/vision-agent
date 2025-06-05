@@ -420,6 +420,53 @@ with VisionAgent(models=custom_models, model="dynamic-model") as agent:
     agent.act("do something", model="dynamic-model-cached") # reuses cached instance
 ```
 
+### 🔀 OpenRouter **AI Models**
+
+You can use Vision Agent with [OpenRouter](https://openrouter.ai/) to access a wide variety of models via a unified API.
+
+**Set your OpenRouter API key:**
+
+<details>
+  <summary>Linux & MacOS</summary>
+
+  ```shell
+  export OPEN_ROUTER_API_KEY=<your-openrouter-api-key>
+  ```
+</details>
+<details>
+  <summary>Windows PowerShell</summary>
+
+  ```shell
+  $env:OPEN_ROUTER_API_KEY="<your-openrouter-api-key>"
+  ```
+</details>
+
+**Example: Using OpenRouter with a custom model registry**
+
+```python
+from askui import VisionAgent
+from askui.models import (
+    OpenRouterGetModel,
+    OpenRouterSettings,
+    ModelRegistry,
+)
+
+
+# Register OpenRouter model in the registry
+custom_models: ModelRegistry = {
+    "my-custom-model": OpenRouterGetModel(
+        OpenRouterSettings(
+            model="anthropic/claude-opus-4",
+        )
+    ),
+}
+
+with VisionAgent(model_registry=custom_registry, model={"get":"my-custom-model"}) as agent:
+    agent.click("search field")
+    result = agent.get("What is the main heading on the screen?")
+    print(result)
+```
+
 
 ### 🛠️ Direct Tool Use
 
