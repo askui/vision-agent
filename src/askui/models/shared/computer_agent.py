@@ -2,21 +2,22 @@ import platform
 import sys
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Callable, Generic, cast
+from typing import Generic
 
-from anthropic.types.beta import (
-    BetaContentBlockParam,
-    BetaImageBlockParam,
-    BetaMessage,
-    BetaMessageParam,
-    BetaTextBlockParam,
-    BetaToolResultBlockParam,
-    BetaToolUseBlockParam,
-)
+from anthropic.types.beta import BetaTextBlockParam
 from pydantic import BaseModel, Field
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar, override
 
 from askui.models.models import ActModel
+from askui.models.shared.computer_agent_cb_param import OnMessageCb, OnMessageCbParam
+from askui.models.shared.computer_agent_message_param import (
+    Base64ImageSourceParam,
+    ContentBlockParam,
+    ImageBlockParam,
+    MessageParam,
+    TextBlockParam,
+    ToolResultBlockParam,
+)
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 from askui.tools.anthropic import ComputerTool, ToolCollection, ToolResult
@@ -210,66 +211,52 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
 
     @abstractmethod
     def _create_message(
-        self, messages: list[BetaMessageParam], model_choice: str
-    ) -> BetaMessage:
+        self, messages: list[MessageParam], model_choice: str
+    ) -> MessageParam:
         """Create a message using the agent's API.
 
         Args:
-            messages (list[BetaMessageParam]): The message history.
+            messages (list[MessageParam]): The message history.
             model_choice (str): The model to use for message creation.
 
         Returns:
-            BetaMessage: The created message.
+            MessageParam: The created message.
         """
         raise NotImplementedError
 
     def _step(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         """Execute a single step in the conversation.
 
         Args:
-            messages (list[BetaMessageParam]): The message history.
+            messages (list[MessageParam]): The message history.
             model_choice (str): The model to use for message creation.
-            on_message (Callable, optional): Callback for message processing.
-            on_tool_result (Callable, optional): Callback for tool result processing.
+            on_message (OnMessageCb | None, optional): Callback on new messages
 
         Returns:
             None
         """
         if self._settings.only_n_most_recent_images:
-            self._maybe_filter_to_n_most_recent_images(
+            messages = self._maybe_filter_to_n_most_recent_images(
                 messages,
                 self._settings.only_n_most_recent_images,
-                min_removal_threshold=self._settings.image_truncation_threshold,
+                self._settings.image_truncation_threshold,
             )
         response_message = self._create_message(messages, model_choice)
-        response_message_param: BetaMessageParam = cast(
-            "BetaMessageParam",
-            response_message.model_dump(include={"content", "role"}),
-        )
         message_by_assistant = self._call_on_message(
-            on_message, response_message_param, messages
+            on_message, response_message, messages
         )
         if message_by_assistant is None:
             return
-        logger.debug(message_by_assistant)
+        message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
+        logger.debug(message_by_assistant_dict)
         messages.append(message_by_assistant)
-        self._reporter.add_message(self.__class__.__name__, dict(message_by_assistant))
-        if tool_result_message := self._use_tools(
-            response_message, messages, on_tool_result
-        ):
+        self._reporter.add_message(self.__class__.__name__, message_by_assistant_dict)
+        if tool_result_message := self._use_tools(message_by_assistant):
             if tool_result_message := self._call_on_message(
                 on_message, tool_result_message, messages
             ):
@@ -278,147 +265,124 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
                     messages=messages,
                     model_choice=model_choice,
                     on_message=on_message,
-                    on_tool_result=on_tool_result,
                 )
 
     def _call_on_message(
         self,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None,
-        message: BetaMessageParam,
-        messages: list[BetaMessageParam],
-    ) -> BetaMessageParam | None:
+        on_message: OnMessageCb | None,
+        message: MessageParam,
+        messages: list[MessageParam],
+    ) -> MessageParam | None:
         if on_message is None:
             return message
-        return on_message(message, messages)
+        return on_message(OnMessageCbParam(message=message, messages=messages))
 
+    @override
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
-        logger.debug(messages[0])
         self._step(
             messages=messages,
             model_choice=model_choice,
             on_message=on_message,
-            on_tool_result=on_tool_result,
         )
 
     def _use_tools(
         self,
-        message: BetaMessage,
-        messages: list[BetaMessageParam],
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
-    ) -> BetaMessageParam | None:
+        message: MessageParam,
+    ) -> MessageParam | None:
         """Process tool use blocks in a message.
 
         Args:
-            message (BetaMessage): The message containing tool use blocks.
-            messages (list[BetaMessageParam]): The message history.
-            on_tool_result (Callable, optional): Callback for tool result processing.
+            message (MessageParam): The message containing tool use blocks.
 
         Returns:
-            BetaMessageParam | None: A message containing tool results or `None`
+            MessageParam | None: A message containing tool results or `None`
                 if no tools were used.
         """
-        tool_result_content: list[BetaToolResultBlockParam] = []
+        tool_result_content: list[ContentBlockParam] = []
+        if isinstance(message.content, str):
+            return None
+
         for content_block in message.content:
             if content_block.type == "tool_use":
                 result = self._tool_collection.run(
                     name=content_block.name,
                     tool_input=content_block.input,  # type: ignore[arg-type]
                 )
-                if on_tool_result is not None:
-                    content_block_param = cast(
-                        "BetaToolUseBlockParam", content_block.model_dump()
-                    )
-                    result_cb = on_tool_result(result, content_block_param, messages)
-                    if result_cb is None:
-                        return None
-                    result = result_cb
                 tool_result_content.append(
                     self._make_api_tool_result(result, content_block.id)
                 )
-        if len(tool_result_content) > 0:
-            tool_result_message: BetaMessageParam = {
-                "content": tool_result_content,
-                "role": "user",
-            }
-            logger.debug(tool_result_message)
-            return tool_result_message
-        return None
+        if len(tool_result_content) == 0:
+            return None
+
+        return MessageParam(
+            content=tool_result_content,
+            role="user",
+        )
 
     @staticmethod
     def _maybe_filter_to_n_most_recent_images(
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         images_to_keep: int | None,
         min_removal_threshold: int,
-    ) -> list[BetaMessageParam] | None:
-        """Filter messages to keep only the most recent images.
+    ) -> list[MessageParam]:
+        """
+        Filter the message history in-place to keep only the most recent images,
+        according to the given chunking policy.
 
         Args:
-            messages (list[BetaMessageParam]): The message history.
+            messages (list[MessageParam]): The message history.
             images_to_keep (int | None): Number of most recent images to keep.
             min_removal_threshold (int): Minimum number of images to remove at once.
 
         Returns:
-            list[BetaMessageParam] | None: The filtered message history or `None` if no
-                filtering was done.
+            list[MessageParam]: The filtered message history.
         """
         if images_to_keep is None:
             return messages
 
-        tool_result_blocks = cast(
-            "list[BetaToolResultBlockParam]",
-            [
-                item
-                for message in messages
-                for item in (
-                    message["content"] if isinstance(message["content"], list) else []
-                )
-                if item.get("type") == "tool_result"
-            ],
-        )
+        tool_result_blocks = [
+            item
+            for message in messages
+            for item in (message.content if isinstance(message.content, list) else [])
+            if item.type == "tool_result"
+        ]
         total_images = sum(
             1
             for tool_result in tool_result_blocks
-            for content in tool_result.get("content", [])
-            if isinstance(content, dict) and content.get("type") == "image"
+            if not isinstance(tool_result.content, str)
+            for content in tool_result.content
+            if content.type == "image"
         )
         images_to_remove = total_images - images_to_keep
+        if images_to_remove < min_removal_threshold:
+            return messages
         # for better cache behavior, we want to remove in chunks
         images_to_remove -= images_to_remove % min_removal_threshold
+        if images_to_remove <= 0:
+            return messages
+
+        # Remove images from the oldest tool_result blocks first
         for tool_result in tool_result_blocks:
-            if isinstance(tool_result.get("content"), list):
-                new_content: list[BetaContentBlockParam] = []
-                for content in tool_result.get("content", []):
-                    if isinstance(content, dict) and content.get("type") == "image":
-                        if images_to_remove > 0:
-                            images_to_remove -= 1
-                            continue
-                    new_content.append(cast("BetaContentBlockParam", content))
-                tool_result["content"] = new_content  # type: ignore[typeddict-item]
-        return None
+            if images_to_remove <= 0:
+                break
+            if isinstance(tool_result.content, list):
+                new_content: list[TextBlockParam | ImageBlockParam] = []
+                for content in tool_result.content:
+                    if content.type == "image" and images_to_remove > 0:
+                        images_to_remove -= 1
+                        continue
+                    new_content.append(content)
+                tool_result.content = new_content
+        return messages
 
     def _make_api_tool_result(
         self, result: ToolResult, tool_use_id: str
-    ) -> BetaToolResultBlockParam:
+    ) -> ToolResultBlockParam:
         """Convert a tool result to an API tool result block.
 
         Args:
@@ -426,9 +390,9 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
             tool_use_id (str): The ID of the tool use block.
 
         Returns:
-            BetaToolResultBlockParam: The API tool result block.
+            ToolResultBlockParam: The API tool result block.
         """
-        tool_result_content: list[BetaTextBlockParam | BetaImageBlockParam] | str = []
+        tool_result_content: list[TextBlockParam | ImageBlockParam] | str = []
         is_error = False
         if result.error:
             is_error = True
@@ -439,30 +403,26 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
             assert isinstance(tool_result_content, list)
             if result.output:
                 tool_result_content.append(
-                    {
-                        "type": "text",
-                        "text": self._maybe_prepend_system_tool_result(
+                    TextBlockParam(
+                        text=self._maybe_prepend_system_tool_result(
                             result, result.output
                         ),
-                    }
+                    )
                 )
             if result.base64_image:
                 tool_result_content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": result.base64_image,
-                        },
-                    }
+                    ImageBlockParam(
+                        source=Base64ImageSourceParam(
+                            media_type="image/png",
+                            data=result.base64_image,
+                        ),
+                    )
                 )
-        return {
-            "type": "tool_result",
-            "content": tool_result_content,
-            "tool_use_id": tool_use_id,
-            "is_error": is_error,
-        }
+        return ToolResultBlockParam(
+            content=tool_result_content,
+            tool_use_id=tool_use_id,
+            is_error=is_error,
+        )
 
     @staticmethod
     def _maybe_prepend_system_tool_result(result: ToolResult, result_text: str) -> str:

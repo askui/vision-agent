@@ -257,6 +257,11 @@ class ComputerTool(BaseAnthropicTool):
                 error_msg = f"{coordinate} must be a tuple of non-negative ints"
                 raise ToolError(error_msg)
 
+            if self._real_screen_width is None or self._real_screen_height is None:
+                screenshot = self._agent_os.screenshot()
+                self._real_screen_width = screenshot.width
+                self._real_screen_height = screenshot.height
+
             x, y = scale_coordinates_back(
                 coordinate[0],
                 coordinate[1],

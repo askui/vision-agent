@@ -1,5 +1,3 @@
-from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
-
 from .models import (
     ActModel,
     GetModel,
@@ -10,20 +8,48 @@ from .models import (
     ModelDefinition,
     ModelName,
     ModelRegistry,
+    OnMessageCb,
     Point,
+)
+from .shared.computer_agent_message_param import (
+    Base64ImageSourceParam,
+    CacheControlEphemeralParam,
+    CitationCharLocationParam,
+    CitationContentBlockLocationParam,
+    CitationPageLocationParam,
+    ContentBlockParam,
+    ImageBlockParam,
+    MessageParam,
+    TextBlockParam,
+    TextCitationParam,
+    ToolResultBlockParam,
+    ToolUseBlockParam,
+    UrlImageSourceParam,
 )
 
 __all__ = [
     "ActModel",
-    "BetaMessageParam",
-    "BetaToolUseBlockParam",
+    "Base64ImageSourceParam",
+    "CacheControlEphemeralParam",
+    "CitationCharLocationParam",
+    "CitationContentBlockLocationParam",
+    "CitationPageLocationParam",
+    "ContentBlockParam",
     "GetModel",
+    "ImageBlockParam",
     "LocateModel",
+    "MessageParam",
     "Model",
     "ModelChoice",
     "ModelComposition",
     "ModelDefinition",
     "ModelName",
     "ModelRegistry",
+    "OnMessageCb",
     "Point",
+    "TextBlockParam",
+    "TextCitationParam",
+    "ToolResultBlockParam",
+    "ToolUseBlockParam",
+    "UrlImageSourceParam",
 ]

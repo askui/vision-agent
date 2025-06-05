@@ -12,6 +12,7 @@ from askui.exceptions import ModelNotFoundError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter
@@ -288,29 +289,31 @@ class TestModelRouter:
         self, model_router: ModelRouter, mock_tars: UiTarsApiHandler
     ) -> None:
         """Test acting using TARS model."""
-        model_router.act([{"role": "user", "content": "test goal"}], ModelName.TARS)
+        messages = [MessageParam(role="user", content="test goal")]
+        model_router.act(messages, ModelName.TARS)
         mock_tars.act.assert_called_once_with(  # type: ignore[attr-defined]
-            [{"role": "user", "content": "test goal"}], ModelName.TARS, None, None
+            messages,
+            ModelName.TARS,
+            None,
         )
 
     def test_act_with_claude_model(
         self, model_router: ModelRouter, mock_anthropic_facade: ModelFacade
     ) -> None:
         """Test acting using Claude model."""
+        messages = [MessageParam(role="user", content="test goal")]
         model_router.act(
-            [{"role": "user", "content": "test goal"}],
+            messages,
             ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         )
         mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
-            [{"role": "user", "content": "test goal"}],
+            messages,
             ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-            None,
             None,
         )
 
     def test_act_with_invalid_model(self, model_router: ModelRouter) -> None:
         """Test that acting with invalid model raises InvalidModelError."""
+        messages = [MessageParam(role="user", content="test goal")]
         with pytest.raises(ModelNotFoundError):
-            model_router.act(
-                [{"role": "user", "content": "test goal"}], "invalid-model"
-            )
+            model_router.act(messages, "invalid-model")

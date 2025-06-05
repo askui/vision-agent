@@ -52,7 +52,7 @@ class ThreadService:
             return ThreadListResponse(data=[])
 
         thread_files = list(self._threads_dir.glob("*.jsonl"))
-        threads = []
+        threads: list[Thread] = []
         for f in thread_files:
             thread_id = f.stem
             created_at = datetime.fromtimestamp(f.stat().st_ctime, tz=timezone.utc)
@@ -127,22 +127,6 @@ class ThreadService:
         if not thread_file.exists():
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
-
-        # Get all image paths from messages before deleting thread
-        from askui.chat.api.messages.service import MessageService
-
-        message_service = MessageService(self._base_dir)
-        try:
-            messages = message_service.list_(thread_id).data
-            for msg in messages:
-                if msg.content and msg.content[0].image_paths:
-                    for img_path in msg.content[0].image_paths:
-                        try:
-                            Path(img_path).unlink()
-                        except FileNotFoundError:  # noqa: PERF203
-                            pass  # Image might have been deleted already
-        except FileNotFoundError:
-            pass  # Thread might have been deleted already
 
         # Delete thread file
         thread_file.unlink()

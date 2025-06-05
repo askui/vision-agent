@@ -7,6 +7,7 @@
 - Use built-in types (e.g., `list`, `dict`, `tuple`, `set`, `str | None`) instead of types from `typing` module (e.g. `List`, `Dict`, `Tuple`, `Set`, `Optional`, `Union`) wherever possible
 - Instead of `Optional` use `| None`
 - Create a `__init__.py` file in each folder
+- Never pass literals, e.g., `error_msg`, directly to `Exceptions`, but instead assign them to variables and pass them to the exception, e.g., `raise FileNotFoundError(error_msg)` instead of `raise FileNotFoundError(f"Thread {thread_id} not found")`
 
 ## FastAPI
 - Instead of defining `response_model` within route annotation, use the model as the response type in the function signature

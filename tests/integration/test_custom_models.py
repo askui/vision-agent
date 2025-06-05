@@ -1,9 +1,8 @@
 """Integration tests for custom model registration and selection."""
 
-from typing import Callable, Optional, Type, Union
+from typing import Any, Optional, Type, Union
 
 import pytest
-from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from typing_extensions import override
 
 from askui import (
@@ -18,7 +17,8 @@ from askui import (
 )
 from askui.locators.locators import Locator
 from askui.models import ModelComposition, ModelDefinition, ModelName
-from askui.tools.anthropic.base import ToolResult
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -27,25 +27,17 @@ class SimpleActModel(ActModel):
     """Simple act model that records goals."""
 
     def __init__(self) -> None:
-        self.goals: list[list[BetaMessageParam]] = []
+        self.goals: list[list[dict[str, Any]]] = []
         self.model_choices: list[str] = []
 
     @override
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
-        self.goals.append(messages)
+        self.goals.append([message.model_dump(mode="json") for message in messages])
         self.model_choices.append(model_choice)
 
 
@@ -217,17 +209,9 @@ class TestCustomModels:
             @override
             def act(
                 self,
-                messages: list[BetaMessageParam],
+                messages: list[MessageParam],
                 model_choice: str,
-                on_message: Callable[
-                    [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-                ]
-                | None = None,
-                on_tool_result: Callable[
-                    [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-                    ToolResult | None,
-                ]
-                | None = None,
+                on_message: OnMessageCb | None = None,
             ) -> None:
                 pass
 

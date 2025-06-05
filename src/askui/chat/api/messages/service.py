@@ -1,38 +1,17 @@
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
-from typing import Any, Sequence, Union
 
-from PIL import Image
 from pydantic import AwareDatetime, BaseModel, Field
 
 from askui.chat.api.utils import generate_time_ordered_id
+from askui.models.shared.computer_agent_message_param import MessageParam
 
 
-class MessageRole(str, Enum):
-    """Valid message roles."""
-
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-    AI = "ai"
-    UNKNOWN = "unknown"
-
-
-class MessageContent(BaseModel):
-    """Message content with optional image paths."""
-
-    text: str | None = None
-    image_paths: list[str] | None = None
-
-
-class Message(BaseModel):
+class Message(MessageParam):
     """A message in a thread."""
 
     id: str = Field(default_factory=lambda: generate_time_ordered_id("msg"))
     thread_id: str
-    role: MessageRole
-    content: Sequence[MessageContent]
     created_at: AwareDatetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
@@ -43,7 +22,7 @@ class MessageListResponse(BaseModel):
     """Response model for listing messages."""
 
     object: str = "list"
-    data: Sequence[Message]
+    data: list[Message]
     first_id: str | None = None
     last_id: str | None = None
     has_more: bool = False
@@ -51,13 +30,6 @@ class MessageListResponse(BaseModel):
 
 class MessageService:
     """Service for managing messages within threads."""
-
-    ROLE_MAP = {
-        "user": MessageRole.USER,
-        "anthropic computer use": MessageRole.AI,
-        "agentos": MessageRole.ASSISTANT,
-        "user (demonstration)": MessageRole.USER,
-    }
 
     def __init__(self, base_dir: Path) -> None:
         """Initialize message service.
@@ -69,12 +41,15 @@ class MessageService:
         self._threads_dir = base_dir / "threads"
         self._images_dir = base_dir / "images"
 
-    def list_(self, thread_id: str, limit: int | None = None) -> MessageListResponse:
+    def list_(
+        self, thread_id: str, limit: int | None = None, after: str | None = None
+    ) -> MessageListResponse:
         """List all messages in a thread.
 
         Args:
             thread_id: ID of thread to list messages from
             limit: Optional maximum number of messages to return
+            after: Optional message ID after which messages are returned
 
         Returns:
             MessageListResponse containing messages sorted by creation date
@@ -87,7 +62,7 @@ class MessageService:
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
 
-        messages = []
+        messages: list[Message] = []
         with thread_file.open("r") as f:
             for line in f:
                 msg = Message.model_validate_json(line)
@@ -95,6 +70,8 @@ class MessageService:
 
         # Sort by creation date
         messages = sorted(messages, key=lambda m: m.created_at)
+        if after:
+            messages = [m for m in messages if m.id > after]
 
         # Apply limit if specified
         if limit is not None:
@@ -110,9 +87,7 @@ class MessageService:
     def create(
         self,
         thread_id: str,
-        role: str,
-        content: Union[str, dict[str, Any], list[Any]],
-        image: Image.Image | list[Image.Image] | None = None,
+        message: MessageParam,
     ) -> Message:
         """Create a new message in a thread.
 
@@ -120,7 +95,6 @@ class MessageService:
             thread_id: ID of thread to create message in
             role: Role of message sender
             content: Message content
-            image: Optional image(s) to attach
 
         Returns:
             Created message object
@@ -132,42 +106,14 @@ class MessageService:
         if not thread_file.exists():
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
-
-        # Save images if provided
-        image_paths = []
-        if image is not None:
-            if isinstance(image, list):
-                images = image
-            else:
-                images = [image]
-
-            self._images_dir.mkdir(parents=True, exist_ok=True)
-            for img in images:
-                # Generate unique image ID using same format as thread/message IDs
-                image_id = generate_time_ordered_id("img")
-                image_path = self._images_dir / f"{image_id}.png"
-                img.save(image_path)
-                image_paths.append(str(image_path))
-
-        # Create message content
-        message_content = [
-            MessageContent(
-                text=str(content), image_paths=image_paths if image_paths else None
-            )
-        ]
-
-        # Create message
-        message = Message(
+        message = Message.model_construct(
             thread_id=thread_id,
-            role=self.ROLE_MAP.get(role.lower(), MessageRole.UNKNOWN),
-            content=message_content,
+            role=message.role,
+            content=message.content,
         )
-
-        # Save message
         with thread_file.open("a") as f:
             f.write(message.model_dump_json())
             f.write("\n")
-
         return message
 
     def retrieve(self, thread_id: str, message_id: str) -> Message:
@@ -205,14 +151,8 @@ class MessageService:
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
 
-        # Get message and image paths before deletion
-        msg_to_delete = self.retrieve(thread_id, message_id)
-        image_paths = (
-            msg_to_delete.content[0].image_paths if msg_to_delete.content else None
-        )
-
         # Read all messages
-        messages = []
+        messages: list[Message] = []
         with thread_file.open("r") as f:
             for line in f:
                 msg = Message.model_validate_json(line)
@@ -224,11 +164,3 @@ class MessageService:
             for msg in messages:
                 f.write(msg.model_dump_json())
                 f.write("\n")
-
-        # Delete associated images if any
-        if image_paths:
-            for img_path in image_paths:
-                try:
-                    Path(img_path).unlink()
-                except FileNotFoundError:  # noqa: PERF203
-                    pass  # Image might have been deleted already

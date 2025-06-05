@@ -1,12 +1,12 @@
-from typing import Callable, Type
+from typing import Type
 
-from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from typing_extensions import override
 
 from askui.locators.locators import Locator
 from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.types.response_schemas import ResponseSchema
-from askui.tools.anthropic.base import ToolResult
 from askui.utils.image_utils import ImageSource
 
 
@@ -24,23 +24,14 @@ class ModelFacade(ActModel, GetModel, LocateModel):
     @override
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         self._act_model.act(
             messages=messages,
             model_choice=model_choice,
             on_message=on_message,
-            on_tool_result=on_tool_result,
         )
 
     @override

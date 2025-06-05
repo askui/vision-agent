@@ -1,10 +1,15 @@
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Literal, Sequence
+from typing import Literal, Sequence, cast
 
 from pydantic import AwareDatetime, BaseModel, Field, computed_field
 
+from askui.agent import VisionAgent
+from askui.chat.api.messages.service import MessageService
 from askui.chat.api.utils import generate_time_ordered_id
+from askui.models.shared.computer_agent_cb_param import OnMessageCbParam
+from askui.models.shared.computer_agent_message_param import MessageParam
 
 RunStatus = Literal[
     "queued",
@@ -32,7 +37,9 @@ class Run(BaseModel):
     completed_at: AwareDatetime | None = None
     tried_cancelling_at: AwareDatetime | None = None
     cancelled_at: AwareDatetime | None = None
-    expires_at: AwareDatetime | None = None
+    expires_at: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc) + timedelta(minutes=10)
+    )
     failed_at: AwareDatetime | None = None
     last_error: RunError | None = None
     object: Literal["run"] = "run"
@@ -63,10 +70,69 @@ class RunListResponse(BaseModel):
     has_more: bool = False
 
 
+class Runner:
+    def __init__(self, run: Run, base_dir: Path) -> None:
+        self._run = run
+        self._base_dir = base_dir
+        self._runs_dir = base_dir / "runs"
+        self._msg_service = MessageService(self._base_dir)
+
+    def run_task(self) -> None:
+        self._mark_started()
+        messages: list[MessageParam] = [
+            cast("MessageParam", msg)
+            for msg in self._msg_service.list_(self._run.thread_id).data
+        ]
+
+        def on_message(
+            on_message_cb_param: OnMessageCbParam,
+        ) -> MessageParam | None:
+            self._msg_service.create(
+                thread_id=self._run.thread_id,
+                message=on_message_cb_param.message,
+            )
+            updated_run = self._retrieve_run()
+            if self._should_abort(updated_run):
+                updated_run.cancelled_at = datetime.now(tz=timezone.utc)
+                self._update_run_file(updated_run)
+                return None
+            return on_message_cb_param.message
+
+        try:
+            with VisionAgent() as agent:
+                agent.act(messages, on_message=on_message)
+            self._run.completed_at = datetime.now(tz=timezone.utc)
+            self._update_run_file(self._run)
+        except Exception as e:  # noqa: BLE001
+            self._run.failed_at = datetime.now(tz=timezone.utc)
+            self._run.last_error = RunError(message=str(e), code="server_error")
+            self._update_run_file(self._run)
+            raise
+
+    def _mark_started(self) -> None:
+        self._run.started_at = datetime.now(tz=timezone.utc)
+        self._update_run_file(self._run)
+
+    def _should_abort(self, run: Run) -> bool:
+        return run.status in ("cancelled", "cancelling", "expired")
+
+    def _update_run_file(self, run: Run) -> None:
+        run_file = self._runs_dir / f"{run.thread_id}__{run.id}.json"
+        with run_file.open("w") as f:
+            f.write(run.model_dump_json())
+
+    def _retrieve_run(self) -> Run:
+        run_file = self._runs_dir / f"{self._run.thread_id}__{self._run.id}.json"
+        with run_file.open("r") as f:
+            return Run.model_validate_json(f.read())
+
+
 class RunService:
     """
     Service for managing runs. Handles creation, retrieval, listing, and cancellation of runs.
     """
+
+    _executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=4)
 
     def __init__(self, base_dir: Path) -> None:
         self._base_dir = base_dir
@@ -78,10 +144,22 @@ class RunService:
     def create(self, thread_id: str, stream: bool) -> Run:
         run = Run(thread_id=thread_id)
         self._runs_dir.mkdir(parents=True, exist_ok=True)
-        run_file = self._run_path(thread_id, run.id)
+        self._update_run_file(run)
+        runner = Runner(run, self._base_dir)
+        # TODO(adi-wan-askui): Run differently depending on `stream` parameter
+        runner.run_task()
+        # if not stream:
+        #     self._start_run_background(run)
+        return run
+
+    def _start_run_background(self, run: Run) -> None:
+        runner = Runner(run, self._base_dir)
+        self._executor.submit(runner.run_task)
+
+    def _update_run_file(self, run: Run) -> None:
+        run_file = self._run_path(run.thread_id, run.id)
         with run_file.open("w") as f:
             f.write(run.model_dump_json())
-        return run
 
     def retrieve(self, run_id: str) -> Run:
         # Find the file by run_id

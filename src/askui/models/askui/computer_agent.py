@@ -1,9 +1,10 @@
 import httpx
-from anthropic.types.beta import BetaMessage, BetaMessageParam
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from typing_extensions import override
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.shared.computer_agent import ComputerAgent
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
 
@@ -39,27 +40,27 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
         retry=retry_if_exception(is_retryable_error),
         reraise=True,
     )
+    @override
     def _create_message(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,  # noqa: ARG002
-    ) -> BetaMessage:
+    ) -> MessageParam:
         try:
             request_body = {
                 "max_tokens": self._settings.max_tokens,
-                "messages": messages,
+                "messages": [msg.model_dump(mode="json") for msg in messages],
                 "model": self._settings.model,
                 "tools": self._tool_collection.to_params(),
                 "betas": self._settings.betas,
                 "system": [self._system],
             }
-            logger.debug(request_body)
             response = self._client.post(
                 "/act/inference", json=request_body, timeout=300.0
             )
             response.raise_for_status()
             response_data = response.json()
-            return BetaMessage.model_validate(response_data)
+            return MessageParam.model_validate(response_data)
         except Exception as e:  # noqa: BLE001
             if is_retryable_error(e):
                 logger.debug(e)

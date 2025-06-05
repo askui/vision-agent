@@ -287,20 +287,19 @@ Here's how to create and use custom models:
 import functools
 from askui import (
     ActModel,
-    BetaMessageParam,
-    BetaToolUseBlockParam,
     GetModel,
     LocateModel,
     Locator,
     ImageSource,
+    MessageParam,
     ModelComposition,
     ModelRegistry,
+    OnMessageCb,
     Point,
     ResponseSchema,
-    ToolResult,
     VisionAgent,
 )
-from typing import Callable, Type
+from typing import Type
 from typing_extensions import override
 
 # Define custom models
@@ -308,24 +307,20 @@ class MyActModel(ActModel):
     @override
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         # Implement custom act logic, e.g.:
         # - Use a different AI model
         # - Implement custom business logic
         # - Call external services
-        goal = messages[0]["content"]
-        print(f"Custom act model executing goal: {goal}")
+        if len(messages) > 0:
+            goal = messages[0].content
+            print(f"Custom act model executing goal: {goal}")
+        else:
+            error_msg = "No messages provided"
+            raise ValueError(error_msg)
 
 # Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
 # to create a model that can both get and locate elements.
@@ -391,17 +386,9 @@ class DynamicActModel(ActModel):
     @override
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         pass
 

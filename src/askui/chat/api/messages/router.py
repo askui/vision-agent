@@ -1,20 +1,8 @@
-from io import BytesIO
-from typing import Any
-
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from PIL import Image
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
 
 from askui.chat.api.messages.dependencies import MessageServiceDep
 from askui.chat.api.messages.service import Message, MessageListResponse, MessageService
-
-
-class CreateMessageRequest(BaseModel):
-    """Request model for creating a message."""
-
-    role: str
-    content: str | dict[str, Any] | list[Any]
-
+from askui.models.shared.computer_agent_message_param import MessageParam
 
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 
@@ -35,23 +23,14 @@ def list_messages(
 @router.post("")
 async def create_message(
     thread_id: str,
-    request: CreateMessageRequest,
-    image: UploadFile | None = None,
+    message: MessageParam,
     message_service: MessageService = MessageServiceDep,
 ) -> Message:
     """Create a new message in a thread."""
     try:
-        # Handle image upload if provided
-        pil_image = None
-        if image:
-            img_data = await image.read()
-            pil_image = Image.open(BytesIO(img_data))
-
         return message_service.create(
             thread_id=thread_id,
-            role=request.role,
-            content=request.content,
-            image=pil_image,
+            message=message,
         )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e

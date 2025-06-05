@@ -1,7 +1,6 @@
 import functools
-from typing import Callable, Type, overload
+from typing import Type, overload
 
-from anthropic.types.beta import BetaMessageParam, BetaToolUseBlockParam
 from typing_extensions import Literal
 
 from askui.exceptions import ModelNotFoundError, ModelTypeMismatchError
@@ -28,10 +27,11 @@ from askui.models.models import (
     ModelRegistry,
     Point,
 )
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
-from askui.tools.anthropic import ToolResult
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -184,21 +184,13 @@ class ModelRouter:
 
     def act(
         self,
-        messages: list[BetaMessageParam],
+        messages: list[MessageParam],
         model_choice: str,
-        on_message: Callable[
-            [BetaMessageParam, list[BetaMessageParam]], BetaMessageParam | None
-        ]
-        | None = None,
-        on_tool_result: Callable[
-            [ToolResult, BetaToolUseBlockParam, list[BetaMessageParam]],
-            ToolResult | None,
-        ]
-        | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         m = self._get_model(model_choice, "act")
         logger.debug(f'Routing "act" to model "{model_choice}"')
-        return m.act(messages, model_choice, on_message, on_tool_result)
+        return m.act(messages, model_choice, on_message)
 
     def get(
         self,
