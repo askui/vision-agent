@@ -7,12 +7,7 @@ from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.exceptions import ElementNotFoundError
-from askui.locators import (
-    AiElement,
-    Element,
-    Prompt,
-    Text,
-)
+from askui.locators import AiElement, Element, Prompt, Text
 from askui.locators.locators import Image
 from askui.models import ModelName
 
@@ -38,6 +33,20 @@ class TestVisionAgentLocate:
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
+
+    def test_locate_with_switch_class_locator(
+        self,
+        vision_agent: VisionAgent,
+        path_fixtures: pathlib.Path,
+        model: str,
+    ) -> None:
+        """Test locating elements using a class locator."""
+        locator = Element("switch")
+        x, y = vision_agent.locate(
+            locator, path_fixtures / "images" / "switch.png", model=model
+        )
+        assert 340 <= x <= 360
+        assert 420 <= y <= 460
 
     def test_locate_with_textfield_class_locator(
         self,
