@@ -5,11 +5,11 @@ import requests
 from pydantic import RootModel
 from typing_extensions import override
 
-from askui.exceptions import ElementNotFoundError
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
 from askui.models.askui.settings import AskUiSettings
+from askui.models.exceptions import ElementNotFoundError
 from askui.models.models import GetModel, LocateModel, ModelComposition, Point
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource

@@ -8,9 +8,9 @@ from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 from typing_extensions import override
 
-from askui.exceptions import ElementNotFoundError, QueryNoResponseError
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
+from askui.models.exceptions import ElementNotFoundError, QueryNoResponseError
 from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam

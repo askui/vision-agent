@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from askui.exceptions import ModelNotFoundError
+from askui.models.exceptions import ModelNotFoundError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName

@@ -3,9 +3,9 @@ from typing import Optional, Tuple, Union
 import pytest
 
 from askui import ConfigurableRetry, LocateModel, VisionAgent
-from askui.exceptions import ElementNotFoundError
 from askui.locators.locators import Locator
 from askui.models import ModelComposition
+from askui.models.exceptions import ElementNotFoundError
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 

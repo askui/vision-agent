@@ -6,10 +6,10 @@ import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
-from askui.exceptions import ElementNotFoundError
 from askui.locators import AiElement, Element, Prompt, Text
 from askui.locators.locators import Image
 from askui.models import ModelName
+from askui.models.exceptions import ElementNotFoundError
 
 
 @pytest.mark.parametrize(
