@@ -72,9 +72,10 @@ def test_exactly_images_to_keep() -> None:
     ):
         assert len(first_block.content) == 4
     else:
-        raise AssertionError(
+        error_msg = (
             "filtered[0].content[0] is not a ToolResultBlockParam with list content"
         )
+        raise AssertionError(error_msg)  # noqa: TRY004
     all_tool_result_contents = [
         c
         for m in filtered

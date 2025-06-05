@@ -565,9 +565,14 @@ class VisionAgent:
                 agent.act("Log in with username 'admin' and password '1234'")
             ```
         """
-        self._reporter.add_message("User", f'act: "{goal}"')
+        goal_str = (
+            goal
+            if isinstance(goal, str)
+            else "\n".join(msg.model_dump_json() for msg in goal)
+        )
+        self._reporter.add_message("User", f'act: "{goal_str}"')
         logger.debug(
-            "VisionAgent received instruction to act towards the goal '%s'", goal
+            "VisionAgent received instruction to act towards the goal '%s'", goal_str
         )
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
