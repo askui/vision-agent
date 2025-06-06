@@ -284,32 +284,48 @@ You can create and use your own models by subclassing the `ActModel` (used for `
 Here's how to create and use custom models:
 
 ```python
+import functools
 from askui import (
     ActModel,
     GetModel,
     LocateModel,
     Locator,
     ImageSource,
+    MessageParam,
     ModelComposition,
     ModelRegistry,
+    OnMessageCb,
     Point,
     ResponseSchema,
     VisionAgent,
 )
 from typing import Type
+from typing_extensions import override
 
 # Define custom models
 class MyActModel(ActModel):
-    def act(self, goal: str, model_choice: str) -> None:
+    @override
+    def act(
+        self,
+        messages: list[MessageParam],
+        model_choice: str,
+        on_message: OnMessageCb | None = None,
+    ) -> None:
         # Implement custom act logic, e.g.:
         # - Use a different AI model
         # - Implement custom business logic
         # - Call external services
-        print(f"Custom act model executing goal: {goal}")
+        if len(messages) > 0:
+            goal = messages[0].content
+            print(f"Custom act model executing goal: {goal}")
+        else:
+            error_msg = "No messages provided"
+            raise ValueError(error_msg)
 
 # Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
 # to create a model that can both get and locate elements.
 class MyGetAndLocateModel(GetModel, LocateModel):
+    @override
     def get(
         self,
         query: str,
@@ -324,6 +340,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         return f"Custom response to query: {query}"
 
 
+    @override
     def locate(
         self,
         locator: str | Locator,
@@ -366,10 +383,14 @@ You can also use model factories if you need to create models dynamically:
 
 ```python
 class DynamicActModel(ActModel):
-    def act(self, goal: str, model_choice: str) -> None:
-        # Use api_key in implementation
+    @override
+    def act(
+        self,
+        messages: list[MessageParam],
+        model_choice: str,
+        on_message: OnMessageCb | None = None,
+    ) -> None:
         pass
-
 
 # going to be called each time model is chosen using `model` parameter
 def create_custom_model(api_key: str) -> ActModel:
@@ -410,7 +431,7 @@ The controller for the operating system.
 
 ```python
 agent.tools.os.click("left", 2) # clicking
-agent.tools.os.mouse(100, 100) # mouse movement
+agent.tools.os.mouse_move(100, 100) # mouse movement
 agent.tools.os.keyboard_tap("v", modifier_keys=["control"]) # Paste
 # and many more
 ```

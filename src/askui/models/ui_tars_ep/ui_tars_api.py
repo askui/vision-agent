@@ -12,6 +12,8 @@ from askui.exceptions import ElementNotFoundError, QueryNoResponseError
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
@@ -188,7 +190,26 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         return response
 
     @override
-    def act(self, goal: str, model_choice: str) -> None:
+    def act(
+        self,
+        messages: list[MessageParam],
+        model_choice: str,
+        on_message: OnMessageCb | None = None,
+    ) -> None:
+        if on_message is not None:
+            error_msg = "on_message is not supported for UI-TARS"
+            raise NotImplementedError(error_msg)
+        if len(messages) != 1:
+            error_msg = "UI-TARS only supports one message"
+            raise ValueError(error_msg)
+        message = messages[0]
+        if message.role != "user":
+            error_msg = "UI-TARS only supports user messages"
+            raise ValueError(error_msg)
+        if not isinstance(message.content, str):
+            error_msg = "UI-TARS only supports text messages"
+            raise ValueError(error_msg)  # noqa: TRY004
+        goal = message.content
         screenshot = self._agent_os.screenshot()
         self.act_history = [
             {
@@ -301,7 +322,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
 
         action = message.parsed_action
         if action.action_type == "click":
-            self._agent_os.mouse(action.start_box.x, action.start_box.y)
+            self._agent_os.mouse_move(action.start_box.x, action.start_box.y)
             self._agent_os.click("left")
             time.sleep(1)
         if action.action_type == "type":

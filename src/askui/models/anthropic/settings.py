@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings
 
+from askui.models.shared.computer_agent import ComputerAgentSettingsBase
+
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 
 
@@ -21,8 +23,5 @@ class ClaudeSettings(ClaudeSettingsBase):
     temperature: float = 0.0
 
 
-class ClaudeComputerAgentSettings(ClaudeSettingsBase):
-    max_tokens: int = 4096
-    only_n_most_recent_images: int = 3
-    image_truncation_threshold: int = 10
-    betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_BETA_FLAG])
+class ClaudeComputerAgentSettings(ComputerAgentSettingsBase, ClaudeSettingsBase):
+    pass

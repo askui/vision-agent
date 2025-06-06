@@ -9,11 +9,11 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from askui.exceptions import ModelNotFoundError
-from askui.models.anthropic.facade import AnthropicFacade
-from askui.models.askui.facade import AskUiFacade
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
+from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.facade import ModelFacade
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter
 from askui.tools.toolbox import AgentToolbox
@@ -55,9 +55,9 @@ def mock_hf_spaces(mocker: MockerFixture) -> HFSpacesHandler:
 
 
 @pytest.fixture
-def mock_anthropic_facade(mocker: MockerFixture) -> AnthropicFacade:
+def mock_anthropic_facade(mocker: MockerFixture) -> ModelFacade:
     """Fixture providing a mock Anthropic facade."""
-    mock = cast("AnthropicFacade", mocker.MagicMock(spec=AnthropicFacade))
+    mock = cast("ModelFacade", mocker.MagicMock(spec=ModelFacade))
     mock.act.return_value = None  # type: ignore[attr-defined]
     mock.get.return_value = "Mock response"  # type: ignore[attr-defined]
     mock.locate.return_value = (50, 50)  # type: ignore[attr-defined]
@@ -65,9 +65,9 @@ def mock_anthropic_facade(mocker: MockerFixture) -> AnthropicFacade:
 
 
 @pytest.fixture
-def mock_askui_facade(mocker: MockerFixture) -> AskUiFacade:
+def mock_askui_facade(mocker: MockerFixture) -> ModelFacade:
     """Fixture providing a mock AskUI facade."""
-    mock = cast("AskUiFacade", mocker.MagicMock(spec=AskUiFacade))
+    mock = cast("ModelFacade", mocker.MagicMock(spec=ModelFacade))
     mock.act.return_value = None  # type: ignore[attr-defined]
     mock.get.return_value = "Mock response"  # type: ignore[attr-defined]
     mock.locate.return_value = (50, 50)  # type: ignore[attr-defined]
@@ -77,8 +77,8 @@ def mock_askui_facade(mocker: MockerFixture) -> AskUiFacade:
 @pytest.fixture
 def model_router(
     agent_toolbox_mock: AgentToolbox,
-    mock_anthropic_facade: AnthropicFacade,
-    mock_askui_facade: AskUiFacade,
+    mock_anthropic_facade: ModelFacade,
+    mock_askui_facade: ModelFacade,
     mock_tars: UiTarsApiHandler,
     mock_hf_spaces: HFSpacesHandler,
 ) -> ModelRouter:
@@ -110,7 +110,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test locating elements using AskUI model."""
         locator = "test locator"
@@ -123,7 +123,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test locating elements using AskUI PTA model."""
         locator = "test locator"
@@ -138,7 +138,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test locating elements using AskUI OCR model."""
         locator = "test locator"
@@ -153,7 +153,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test locating elements using AskUI combo model."""
         locator = "test locator"
@@ -168,7 +168,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test locating elements using AskUI AI element model."""
         locator = "test locator"
@@ -196,7 +196,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image: Image.Image,
-        mock_anthropic_facade: AnthropicFacade,
+        mock_anthropic_facade: ModelFacade,
     ) -> None:
         """Test locating elements using Claude model."""
         locator = "test locator"
@@ -239,7 +239,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image_source: ImageSource,
-        mock_askui_facade: AskUiFacade,
+        mock_askui_facade: ModelFacade,
     ) -> None:
         """Test getting inference using AskUI model."""
         response = model_router.get(
@@ -265,7 +265,7 @@ class TestModelRouter:
         self,
         model_router: ModelRouter,
         mock_image_source: ImageSource,
-        mock_anthropic_facade: AnthropicFacade,
+        mock_anthropic_facade: ModelFacade,
     ) -> None:
         """Test getting inference using Claude model."""
         response = model_router.get(
@@ -289,21 +289,31 @@ class TestModelRouter:
         self, model_router: ModelRouter, mock_tars: UiTarsApiHandler
     ) -> None:
         """Test acting using TARS model."""
-        model_router.act("test goal", ModelName.TARS)
-        mock_tars.act.assert_called_once_with("test goal", ModelName.TARS)  # type: ignore
+        messages = [MessageParam(role="user", content="test goal")]
+        model_router.act(messages, ModelName.TARS)
+        mock_tars.act.assert_called_once_with(  # type: ignore[attr-defined]
+            messages,
+            ModelName.TARS,
+            None,
+        )
 
     def test_act_with_claude_model(
-        self, model_router: ModelRouter, mock_anthropic_facade: AnthropicFacade
+        self, model_router: ModelRouter, mock_anthropic_facade: ModelFacade
     ) -> None:
         """Test acting using Claude model."""
+        messages = [MessageParam(role="user", content="test goal")]
         model_router.act(
-            "test goal", ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
+            messages,
+            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         )
         mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
-            "test goal", ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
+            messages,
+            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            None,
         )
 
     def test_act_with_invalid_model(self, model_router: ModelRouter) -> None:
         """Test that acting with invalid model raises InvalidModelError."""
+        messages = [MessageParam(role="user", content="test goal")]
         with pytest.raises(ModelNotFoundError):
-            model_router.act("test goal", "invalid-model")
+            model_router.act(messages, "invalid-model")

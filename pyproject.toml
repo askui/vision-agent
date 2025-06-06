@@ -15,8 +15,8 @@ dependencies = [
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
     "Jinja2>=3.1.4",
-    "pydantic-settings>=2.7.0",
     "tenacity>=9.1.2",
+    "pydantic-settings>=2.9.1",
     "python-dateutil>=2.9.0.post0",
     "openai>=1.61.1",
     "segment-analytics-python>=2.3.4",
@@ -40,18 +40,36 @@ distribution = true
 
 [tool.pdm.scripts]
 test = "pytest -n auto"
-"test:e2e" = "pytest -n auto tests/e2e"
-"test:integration" = "pytest -n auto tests/integration"
-"test:unit" = "pytest -n auto tests/unit"
+"test:cov" = "pytest -n auto --cov=src/askui --cov-report=html"
 "test:cov:view" = "python -m http.server --directory htmlcov"
+"test:e2e" = "pytest -n auto tests/e2e"
+"test:e2e:cov" = "pytest -n auto tests/e2e --cov=src/askui --cov-report=html"
+"test:integration" = "pytest -n auto tests/integration"
+"test:integration:cov" = "pytest -n auto tests/integration --cov=src/askui --cov-report=html"
+"test:unit" = "pytest -n auto tests/unit"
+"test:unit:cov" = "pytest -n auto tests/unit --cov=src/askui --cov-report=html"
 format = "ruff format src tests"
 lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
 chat = "streamlit run src/askui/chat/__main__.py"
+"chat:api" = "uvicorn src.askui.chat.api.app:app --reload --port 8000"
+mcp = "mcp dev src/askui/mcp/__init__.py"
 
 [dependency-groups]
+chat = [
+    "streamlit>=1.42.0",
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.3",
+]
+pynput = [
+    "mss>=10.0.0",
+    "pynput>=1.8.1",
+]
+mcp = [
+    "mcp[cli,rich,ws]>=1.8.1",
+]
 test = [
     "pytest>=8.3.4",
     "ruff>=0.9.5",
@@ -66,13 +84,11 @@ test = [
     "grpc-stubs>=1.53.0.3",
     "types-pyperclip>=1.8.2.20240311",
     "pytest-timeout>=2.4.0",
-]
-chat = [
-    "streamlit>=1.42.0",
+    "types-pynput>=1.8.1.20250318",
 ]
 
+
 [tool.pytest.ini_options]
-addopts = "--cov=src/askui --cov-report=html"
 python_classes = ["Test*"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]

@@ -8,6 +8,8 @@ from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.utils.image_utils import ImageSource, Img
 
 from .exceptions import ElementNotFoundError
@@ -217,7 +219,7 @@ class VisionAgent:
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
         point = self._locate(locator=locator, model=model)
-        self._tools.os.mouse(point[0], point[1])
+        self._tools.os.mouse_move(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -535,8 +537,9 @@ class VisionAgent:
     @validate_call
     def act(
         self,
-        goal: Annotated[str, Field(min_length=1)],
+        goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         model: str | None = None,
+        on_message: OnMessageCb | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -548,6 +551,10 @@ class VisionAgent:
         Args:
             goal (str): A description of what the agent should achieve.
             model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
+            on_message (OnMessageCb | None, optional): Callback for new messages. If it returns `None`, stops and does not add the message.
+
+        Returns:
+            None
 
         Example:
             ```python
@@ -559,11 +566,19 @@ class VisionAgent:
                 agent.act("Log in with username 'admin' and password '1234'")
             ```
         """
-        self._reporter.add_message("User", f'act: "{goal}"')
-        logger.debug(
-            "VisionAgent received instruction to act towards the goal '%s'", goal
+        goal_str = (
+            goal
+            if isinstance(goal, str)
+            else "\n".join(msg.model_dump_json() for msg in goal)
         )
-        self._model_router.act(goal, model or self._model_choice["act"])
+        self._reporter.add_message("User", f'act: "{goal_str}"')
+        logger.debug(
+            "VisionAgent received instruction to act towards the goal '%s'", goal_str
+        )
+        messages: list[MessageParam] = (
+            [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
+        )
+        self._model_router.act(messages, model or self._model_choice["act"], on_message)
 
     @telemetry.record_call()
     @validate_call

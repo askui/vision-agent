@@ -208,8 +208,6 @@ class ComputerTool(BaseAnthropicTool):
 
     name: Literal["computer"] = "computer"
     api_type: Literal["computer_20241022"] = "computer_20241022"
-    width: int
-    height: int
 
     _screenshot_delay = 2.0
     _scaling_enabled = True
@@ -217,22 +215,20 @@ class ComputerTool(BaseAnthropicTool):
     @property
     def options(self) -> ComputerToolOptions:
         return {
-            "display_width_px": self.width,
-            "display_height_px": self.height,
+            "display_width_px": self._width,
+            "display_height_px": self._height,
         }
 
     def to_params(self) -> BetaToolComputerUse20241022Param:
         return {"name": self.name, "type": self.api_type, **self.options}
 
-    def __init__(self, controller_client: AgentOs) -> None:
+    def __init__(self, agent_os: AgentOs) -> None:
         super().__init__()
-        self.controller_client = controller_client
-
-        self.width = 1280
-        self.height = 800
-
-        self.real_screen_width = None
-        self.real_screen_height = None
+        self._agent_os = agent_os
+        self._width = 1280
+        self._height = 800
+        self._real_screen_width: int | None = None
+        self._real_screen_height: int | None = None
 
     def __call__(  # noqa: C901
         self,
@@ -261,23 +257,28 @@ class ComputerTool(BaseAnthropicTool):
                 error_msg = f"{coordinate} must be a tuple of non-negative ints"
                 raise ToolError(error_msg)
 
+            if self._real_screen_width is None or self._real_screen_height is None:
+                screenshot = self._agent_os.screenshot()
+                self._real_screen_width = screenshot.width
+                self._real_screen_height = screenshot.height
+
             x, y = scale_coordinates_back(
                 coordinate[0],
                 coordinate[1],
-                self.real_screen_width,
-                self.real_screen_height,
-                self.width,
-                self.height,
+                self._real_screen_width,
+                self._real_screen_height,
+                self._width,
+                self._height,
             )
             x, y = int(x), int(y)
 
             if action == "mouse_move":
-                self.controller_client.mouse(x, y)
+                self._agent_os.mouse_move(x, y)
                 return ToolResult()
             if action == "left_click_drag":
-                self.controller_client.mouse_down("left")
-                self.controller_client.mouse(x, y)
-                self.controller_client.mouse_up("left")
+                self._agent_os.mouse_down("left")
+                self._agent_os.mouse_move(x, y)
+                self._agent_os.mouse_up("left")
                 return ToolResult()
 
         if action in ("key", "type"):
@@ -300,11 +301,11 @@ class ComputerTool(BaseAnthropicTool):
                         f"Key {text} is not a valid PC_KEY from {', '.join(PC_KEY)}"
                     )
                     raise ToolError(error_msg)
-                self.controller_client.keyboard_pressed(text)
-                self.controller_client.keyboard_release(text)
+                self._agent_os.keyboard_pressed(text)
+                self._agent_os.keyboard_release(text)
                 return ToolResult()
             if action == "type":
-                self.controller_client.type(text)
+                self._agent_os.type(text)
                 return ToolResult()
 
         if action in (
@@ -328,16 +329,16 @@ class ComputerTool(BaseAnthropicTool):
                 error_msg = "cursor_position is not implemented by this agent"
                 raise ToolError(error_msg)
             if action == "left_click":
-                self.controller_client.click("left")
+                self._agent_os.click("left")
                 return ToolResult()
             if action == "right_click":
-                self.controller_client.click("right")
+                self._agent_os.click("right")
                 return ToolResult()
             if action == "middle_click":
-                self.controller_client.click("middle")
+                self._agent_os.click("middle")
                 return ToolResult()
             if action == "double_click":
-                self.controller_client.click("left", 2)
+                self._agent_os.click("left", 2)
                 return ToolResult()
 
         error_msg = f"Invalid action: {action}"
@@ -348,9 +349,11 @@ class ComputerTool(BaseAnthropicTool):
         Take a screenshot of the current screen, scale it and return the base64
         encoded image.
         """
-        screenshot = self.controller_client.screenshot()
-        self.real_screen_width = screenshot.width
-        self.real_screen_height = screenshot.height
-        scaled_screenshot = scale_image_with_padding(screenshot, 1280, 800)
+        screenshot = self._agent_os.screenshot()
+        self._real_screen_width = screenshot.width
+        self._real_screen_height = screenshot.height
+        scaled_screenshot = scale_image_with_padding(
+            screenshot, self._width, self._height
+        )
         base64_image = image_to_base64(scaled_screenshot)
         return ToolResult(base64_image=base64_image)

@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Literal, TypedDict
 
 from askui.locators.locators import Locator
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
@@ -147,34 +149,74 @@ A tuple of two integers representing the coordinates of a point on the screen.
 class ActModel(abc.ABC):
     """Abstract base class for models that can execute autonomous actions.
 
-    Models implementing this interface can be used with the `act()` method of
-    `VisionAgent`
-    to achieve goals through autonomous actions. These models analyze the screen and
-    determine necessary steps to accomplish a given goal.
+    Models implementing this interface can be used with the `VisionAgent.act()`.
 
     Example:
         ```python
-        from askui import ActModel, VisionAgent
+        from askui import (
+            ActModel,
+            MessageParam,
+            OnMessageCb,
+            VisionAgent,
+        )
+        from typing_extensions import override
 
         class MyActModel(ActModel):
-            def act(self, goal: str, model_choice: str) -> None:
-                # Implement custom act logic
-                pass
+            @override
+            def act(
+                self,
+                messages: list[MessageParam],
+                model_choice: str,
+                on_message: OnMessageCb | None = None,
+            ) -> None:
+                pass  # implement action logic here
 
         with VisionAgent(models={"my-act": MyActModel()}) as agent:
             agent.act("search for flights", model="my-act")
-        ```
     """
 
     @abc.abstractmethod
-    def act(self, goal: str, model_choice: str) -> None:
-        """Execute autonomous actions to achieve a goal.
+    def act(
+        self,
+        messages: list[MessageParam],
+        model_choice: str,
+        on_message: OnMessageCb | None = None,
+    ) -> None:
+        """
+        Execute autonomous actions to achieve a goal, using a message history
+        and optional callbacks, encoded in the messages. In the simplest case,
+        it can be found in the first message `messages[0].content` as a `str`.
+
+        The `messages` usually start with a `"user"` (role) message which is followed by
+        alternating `"assistant"` (AI agent) and `"user"` messages (which can be
+        automatic tool use, e.g., taking a screenshot) similar how you would
+        expect it from a conversation whereby the `"assistant"` determines the next
+        actions which are then automatically taking by the `"user"` programmatically
+        until it eventually returns, usually with an `"assistant"` message that either
+        says that the goal has been achieved or that it failed to achieve the goal.
 
         Args:
-            goal (str): A description of what the model should achieve
-            model_choice (str): The name of the model being used (useful for models that
-                support multiple configurations)
-        """
+            messages (list[MessageParam]): The message history to start that
+                determines the actions and following messages.
+            model_choice (str): The name of the model being used, e.g., useful for
+                models registered under multiple keys, e.g., `"my-act-1"` and
+                `"my-act-2"` that depending on the key (passed as `model_choice`)
+                behave differently.
+            on_message (OnMessageCb | None, optional): Callback for new messages
+                from either an assistant/agent or a user (including
+                automatic/programmatic tool use, e.g., taking a screenshot).
+                If it returns `None`, the acting is canceled and `act()` returns
+                immediately. If it returns a `MessageParam`, this `MessageParma` is
+                added to the message history and the acting continues based on the
+                message. The message may be modified by the callback to allow for
+                directing the assistant/agent or tool use.
+
+        Returns:
+            None
+
+        Raises:
+            NotImplementedError: If the method is not implemented.
+        """  # noqa: E501
         raise NotImplementedError
 
 

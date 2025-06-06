@@ -5,8 +5,8 @@ from PIL import Image as PILImage
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
-from askui.models.askui.facade import AskUiFacade
 from askui.models.models import ModelComposition, ModelDefinition
+from askui.models.shared.facade import ModelFacade
 from askui.reporting import Reporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -42,7 +42,7 @@ def test_get(
 
 def test_get_with_model_composition_should_use_default_model(
     agent_toolbox_mock: AgentToolbox,
-    askui_facade: AskUiFacade,
+    askui_facade: ModelFacade,
     simple_html_reporter: Reporter,
     github_login_screenshot: PILImage.Image,
 ) -> None:

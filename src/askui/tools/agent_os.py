@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 from typing import Literal
 
 from PIL import Image
+from pydantic import BaseModel
 
 ModifierKey = Literal["command", "alt", "control", "shift", "right_shift"]
 """Modifier keys for keyboard actions."""
+
+ModifierKeys: list[ModifierKey] = ["command", "alt", "control", "shift", "right_shift"]
 
 PcKey = Literal[
     "backspace",
@@ -130,6 +133,142 @@ PcKey = Literal[
 ]
 """PC keys for keyboard actions."""
 
+PcKeys: list[PcKey] = [
+    "backspace",
+    "delete",
+    "enter",
+    "tab",
+    "escape",
+    "up",
+    "down",
+    "right",
+    "left",
+    "home",
+    "end",
+    "pageup",
+    "pagedown",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11",
+    "f12",
+    "space",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "!",
+    '"',
+    "#",
+    "$",
+    "%",
+    "&",
+    "'",
+    "(",
+    ")",
+    "*",
+    "+",
+    ",",
+    "-",
+    ".",
+    "/",
+    ":",
+    ";",
+    "<",
+    "=",
+    ">",
+    "?",
+    "@",
+    "[",
+    "\\",
+    "]",
+    "^",
+    "_",
+    "`",
+    "{",
+    "|",
+    "}",
+    "~",
+]
+
+
+class ClickEvent(BaseModel):
+    type: Literal["click"] = "click"
+    x: int
+    y: int
+    button: Literal["left", "middle", "right", "unknown"]
+    pressed: bool
+    injected: bool = False
+    timestamp: float
+
+
+InputEvent = ClickEvent
+
 
 class AgentOs(ABC):
     """
@@ -175,7 +314,7 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mouse(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int) -> None:
         """
         Moves the mouse cursor to specified screen coordinates.
 
@@ -293,12 +432,12 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_display(self, displayNumber: int = 1) -> None:
+    def set_display(self, display: int = 1) -> None:
         """
         Sets the active display for screen interactions.
 
         Args:
-            displayNumber (int, optional): The display number to set as active.
+            display (int, optional): The display ID to set as active.
                 Defaults to `1`.
         """
         raise NotImplementedError
@@ -313,5 +452,31 @@ class AgentOs(ABC):
             timeout_ms (int, optional): The timeout for command
                 execution in milliseconds. Defaults to `30000` (30 seconds).
 
+        """
+        raise NotImplementedError
+
+    def start_listening(self) -> None:
+        """
+        Start listening for mouse and keyboard events.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
+        """
+        raise NotImplementedError
+
+    def poll_event(self) -> InputEvent | None:
+        """
+        Poll for a single input event.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
+        """
+        raise NotImplementedError
+
+    def stop_listening(self) -> None:
+        """Stop listening for mouse and keyboard events.
+
+        IMPORTANT: This method is still experimental and may not work at all and may
+        change in the future.
         """
         raise NotImplementedError

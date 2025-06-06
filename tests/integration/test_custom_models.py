@@ -1,8 +1,9 @@
 """Integration tests for custom model registration and selection."""
 
-from typing import Optional, Type, Union
+from typing import Any, Optional, Type, Union
 
 import pytest
+from typing_extensions import override
 
 from askui import (
     ActModel,
@@ -16,6 +17,8 @@ from askui import (
 )
 from askui.locators.locators import Locator
 from askui.models import ModelComposition, ModelDefinition, ModelName
+from askui.models.shared.computer_agent_cb_param import OnMessageCb
+from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -24,11 +27,17 @@ class SimpleActModel(ActModel):
     """Simple act model that records goals."""
 
     def __init__(self) -> None:
-        self.goals: list[str] = []
+        self.goals: list[list[dict[str, Any]]] = []
         self.model_choices: list[str] = []
 
-    def act(self, goal: str, model_choice: str) -> None:
-        self.goals.append(goal)
+    @override
+    def act(
+        self,
+        messages: list[MessageParam],
+        model_choice: str,
+        on_message: OnMessageCb | None = None,
+    ) -> None:
+        self.goals.append([message.model_dump(mode="json") for message in messages])
         self.model_choices.append(model_choice)
 
 
@@ -137,7 +146,9 @@ class TestCustomModels:
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
             agent.act("test goal", model="custom-act")
 
-        assert act_model.goals == ["test goal"]
+        assert act_model.goals == [
+            [{"role": "user", "content": "test goal"}],
+        ]
         assert act_model.model_choices == ["custom-act"]
 
     def test_register_and_use_custom_get_model(
@@ -182,7 +193,9 @@ class TestCustomModels:
         with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
             agent.act("test goal", model="factory-model")
 
-        assert act_model.goals == ["test goal"]
+        assert act_model.goals == [
+            [{"role": "user", "content": "test goal"}],
+        ]
         assert act_model.model_choices == ["factory-model"]
 
     def test_register_multiple_models_for_same_task(
@@ -193,7 +206,13 @@ class TestCustomModels:
         """Test registering multiple models for the same task."""
 
         class AnotherActModel(ActModel):
-            def act(self, goal: str, model_choice: str) -> None:
+            @override
+            def act(
+                self,
+                messages: list[MessageParam],
+                model_choice: str,
+                on_message: OnMessageCb | None = None,
+            ) -> None:
                 pass
 
         registry: ModelRegistry = {
@@ -205,7 +224,9 @@ class TestCustomModels:
             agent.act("test goal", model="act-1")
             agent.act("another goal", model="act-2")
 
-        assert act_model.goals == ["test goal"]
+        assert act_model.goals == [
+            [{"role": "user", "content": "test goal"}],
+        ]
         assert act_model.model_choices == ["act-1"]
 
     def test_use_response_schema_with_custom_get_model(
@@ -240,7 +261,9 @@ class TestCustomModels:
         with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
             agent.act("test goal")  # Should use custom model since it overrides "askui"
 
-        assert act_model.goals == ["test goal"]
+        assert act_model.goals == [
+            [{"role": "user", "content": "test goal"}],
+        ]
         assert act_model.model_choices == [ModelName.ASKUI]
 
     def test_model_composition(
@@ -319,4 +342,7 @@ class TestCustomModels:
             agent.act("another goal", model="lazy-model")
             assert init_count == 2
 
-        assert act_model.goals == ["test goal", "another goal"]
+        assert act_model.goals == [
+            [{"role": "user", "content": "test goal"}],
+            [{"role": "user", "content": "another goal"}],
+        ]

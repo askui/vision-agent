@@ -2,6 +2,7 @@ import pytest
 
 from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.models import ModelName
+from askui.models.shared.computer_agent_message_param import MessageParam
 
 
 @pytest.mark.skip(
@@ -10,4 +11,7 @@ from askui.models.models import ModelName
 def test_act(
     claude_computer_agent: AskUiComputerAgent,
 ) -> None:
-    claude_computer_agent.act("Go to github.com/login", model_choice=ModelName.ASKUI)
+    claude_computer_agent.act(
+        [MessageParam(role="user", content="Go to github.com/login")],
+        model_choice=ModelName.ASKUI,
+    )

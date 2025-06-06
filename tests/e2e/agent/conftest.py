@@ -11,11 +11,11 @@ from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.computer_agent import AskUiComputerAgent
-from askui.models.askui.facade import AskUiFacade
 from askui.models.askui.inference_api import AskUiInferenceApi, AskUiSettings
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelName
+from askui.models.shared.facade import ModelFacade
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -82,11 +82,11 @@ def askui_computer_agent(
 def askui_facade(
     askui_computer_agent: AskUiComputerAgent,
     askui_inference_api: AskUiInferenceApi,
-) -> AskUiFacade:
-    return AskUiFacade(
-        computer_agent=askui_computer_agent,
-        inference_api=askui_inference_api,
-        model_router=AskUiModelRouter(inference_api=askui_inference_api),
+) -> ModelFacade:
+    return ModelFacade(
+        act_model=askui_computer_agent,
+        get_model=askui_inference_api,
+        locate_model=AskUiModelRouter(inference_api=askui_inference_api),
     )
 
 
@@ -94,7 +94,7 @@ def askui_facade(
 def vision_agent(
     agent_toolbox_mock: AgentToolbox,
     simple_html_reporter: Reporter,
-    askui_facade: AskUiFacade,
+    askui_facade: ModelFacade,
 ) -> Generator[VisionAgent, None, None]:
     """Fixture providing a VisionAgent instance."""
     with VisionAgent(
