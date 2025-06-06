@@ -12,9 +12,9 @@ from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.utils.image_utils import ImageSource, Img
 
-from .exceptions import ElementNotFoundError
 from .logger import configure_logging, logger
 from .models import ModelComposition
+from .models.exceptions import ElementNotFoundError
 from .models.model_router import ModelRouter
 from .models.models import (
     ModelChoice,

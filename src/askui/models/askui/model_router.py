@@ -1,9 +1,13 @@
 from typing_extensions import override
 
-from askui.exceptions import AutomationError, ElementNotFoundError, ModelNotFoundError
 from askui.locators.locators import AiElement, Locator, Prompt, Text
 from askui.logger import logger
 from askui.models.askui.inference_api import AskUiInferenceApi
+from askui.models.exceptions import (
+    AutomationError,
+    ElementNotFoundError,
+    ModelNotFoundError,
+)
 from askui.models.models import LocateModel, ModelComposition, ModelName, Point
 from askui.utils.image_utils import ImageSource
 

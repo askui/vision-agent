@@ -11,6 +11,8 @@ from .models import (
     OnMessageCb,
     Point,
 )
+from .openrouter.handler import OpenRouterGetModel
+from .openrouter.settings import OpenRouterSettings
 from .shared.computer_agent_message_param import (
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
@@ -52,4 +54,6 @@ __all__ = [
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
+    "OpenRouterGetModel",
+    "OpenRouterSettings",
 ]

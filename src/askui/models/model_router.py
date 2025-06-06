@@ -3,7 +3,6 @@ from typing import Type, overload
 
 from typing_extensions import Literal
 
-from askui.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
 from askui.models.anthropic.settings import (
@@ -15,6 +14,7 @@ from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.askui.settings import AskUiComputerAgentSettings
+from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
     MODEL_TYPES,
