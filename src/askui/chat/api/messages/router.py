@@ -1,8 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 
 from askui.chat.api.messages.dependencies import MessageServiceDep
-from askui.chat.api.messages.service import Message, MessageListResponse, MessageService
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.chat.api.messages.service import (
+    Message,
+    MessageCreateRequest,
+    MessageListResponse,
+    MessageService,
+)
 
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 
@@ -23,14 +27,14 @@ def list_messages(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_message(
     thread_id: str,
-    message: MessageParam,
+    request: MessageCreateRequest,
     message_service: MessageService = MessageServiceDep,
 ) -> Message:
     """Create a new message in a thread."""
     try:
         return message_service.create(
             thread_id=thread_id,
-            message=message,
+            request=request,
         )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e

@@ -9,8 +9,27 @@ from typing import Literal, Sequence, cast, overload
 from pydantic import AwareDatetime, BaseModel, Field, computed_field
 
 from askui.agent import VisionAgent
-from askui.chat.api.messages.service import MessageEvent, MessageService
-from askui.chat.api.models import Event
+from askui.chat.api.messages.service import (
+    Message,
+    MessageContentImageUrl,
+    MessageContentImageUrlImageUrl,
+    MessageContentTextText,
+    MessageCreateRequest,
+    MessageCreateRequestContentText,
+    MessageDelta,
+    MessageDeltaContent,
+    MessageDeltaContentImageUrl,
+    MessageDeltaContentText,
+    MessageDeltaEvent,
+    MessageDeltaEventData,
+    MessageEvent,
+    MessagePatch,
+    MessageService,
+    map_message_content_to_message_create_request_content,
+    map_message_content_to_message_delta_content,
+    map_message_param_content_to_message_content,
+)
+from askui.chat.api.models import DoneEvent, ErrorEvent, Event
 from askui.chat.api.utils import generate_time_ordered_id
 from askui.models.shared.computer_agent_cb_param import OnMessageCbParam
 from askui.models.shared.computer_agent_message_param import MessageParam
@@ -46,7 +65,7 @@ class Run(BaseModel):
     )
     failed_at: AwareDatetime | None = None
     last_error: RunError | None = None
-    object: Literal["run"] = "run"
+    object: Literal["thread.run"] = "thread.run"
 
     @computed_field
     @property
@@ -77,12 +96,15 @@ class RunListResponse(BaseModel):
 class RunEvent(Event):
     data: Run
     event: Literal[
-        "run.created",
-        "run.started",
-        "run.completed",
-        "run.failed",
-        "run.cancelled",
-        "run.expired",
+        "thread.run.created",
+        "thread.run.queued",
+        "thread.run.in_progress",
+        "thread.run.requires_action",
+        "thread.run.completed",
+        "thread.run.failed",
+        "thread.run.cancelling",
+        "thread.run.cancelled",
+        "thread.run.expired",
     ]
 
 
@@ -93,40 +115,97 @@ class Runner:
         self._runs_dir = base_dir / "runs"
         self._msg_service = MessageService(self._base_dir)
 
-    def run(self, event_queue: queue.Queue[RunEvent | MessageEvent | None]) -> None:
+    def run(
+        self,
+        event_queue: queue.Queue[
+            ErrorEvent | RunEvent | MessageEvent | MessageDeltaEvent | None
+        ],
+    ) -> None:
         self._mark_started()
         event_queue.put(
             RunEvent(
                 data=self._run,
-                event="run.started",
+                event="thread.run.in_progress",
             )
         )
         messages: list[MessageParam] = [
-            cast("MessageParam", msg)
-            for msg in self._msg_service.list_(self._run.thread_id).data
+            MessageParam(
+                role=msg.role,
+                content=msg.content,
+            )
+            for msg in self._msg_service.list_messages_persisted(self._run.thread_id)
         ]
+
+        index = 0
+        message: Message | None = None
 
         def on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._msg_service.create(
-                thread_id=self._run.thread_id,
-                message=on_message_cb_param.message,
-            )
-            event_queue.put(
-                MessageEvent(
-                    data=message,
-                    event="message.created",
+            nonlocal index
+            nonlocal message
+            content = map_message_content_to_message_create_request_content(
+                map_message_param_content_to_message_content(
+                    on_message_cb_param.message.content
                 )
             )
+            message = self._msg_service.create(
+                thread_id=self._run.thread_id,
+                request=MessageCreateRequest(
+                    role=on_message_cb_param.message.role,
+                    content=content,
+                ),
+            )
+            if index == 0:
+                event_queue.put(
+                    MessageEvent(
+                        data=message,
+                        event="thread.message.created",
+                    )
+                )
+                event_queue.put(
+                    MessageEvent(
+                        data=message,
+                        event="thread.message.in_progress",
+                    )
+                )
+                index += 1
+            delta_content = map_message_content_to_message_delta_content(
+                message.content,
+            )
+            event_queue.put(
+                MessageDeltaEvent(
+                    data=MessageDeltaEventData(
+                        id=message.id,
+                        delta=MessageDelta(
+                            role=message.role,
+                            content=delta_content,
+                        ),
+                    )
+                )
+            )
+            message = self._msg_service.patch(
+                thread_id=self._run.thread_id,
+                message_id=message.id,
+                patch=MessagePatch(
+                    completed_at=datetime.now(tz=timezone.utc),
+                ),
+            )
             updated_run = self._retrieve_run()
+            # TODO incomplete message
             if updated_run.status == "cancelling":
+                event_queue.put(
+                    RunEvent(
+                        data=updated_run,
+                        event="thread.run.cancelling",
+                    )
+                )
                 updated_run.cancelled_at = datetime.now(tz=timezone.utc)
                 self._update_run_file(updated_run)
                 event_queue.put(
                     RunEvent(
                         data=updated_run,
-                        event="run.cancelled",
+                        event="thread.run.cancelled",
                     )
                 )
                 return None
@@ -134,7 +213,7 @@ class Runner:
                 event_queue.put(
                     RunEvent(
                         data=updated_run,
-                        event="run.expired",
+                        event="thread.run.expired",
                     )
                 )
                 return None
@@ -143,6 +222,13 @@ class Runner:
         try:
             with VisionAgent() as agent:
                 agent.act(messages, on_message=on_message)
+            if message:
+                event_queue.put(
+                    MessageEvent(
+                        data=message,
+                        event="thread.message.completed",
+                    )
+                )
             updated_run = self._retrieve_run()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)
@@ -150,7 +236,7 @@ class Runner:
                 event_queue.put(
                     RunEvent(
                         data=updated_run,
-                        event="run.completed",
+                        event="thread.run.completed",
                     )
                 )
         except Exception as e:  # noqa: BLE001
@@ -161,9 +247,10 @@ class Runner:
             event_queue.put(
                 RunEvent(
                     data=updated_run,
-                    event="run.failed",
+                    event="thread.run.failed",
                 )
             )
+            event_queue.put(ErrorEvent(data=str(e)))
         finally:
             event_queue.put(None)
 
@@ -218,7 +305,7 @@ class RunService:
 
     def create(
         self, thread_id: str, stream: bool
-    ) -> Run | AsyncGenerator[RunEvent | MessageEvent, None]:
+    ) -> Run | AsyncGenerator[DoneEvent | ErrorEvent | RunEvent | MessageEvent, None]:
         run = self._create_run(thread_id)
         event_queue: queue.Queue[RunEvent | MessageEvent | None] = queue.Queue()
         runner = Runner(run, self._base_dir)
@@ -226,10 +313,16 @@ class RunService:
         thread.start()
         if stream:
 
-            async def event_stream() -> AsyncGenerator[RunEvent | MessageEvent, None]:
+            async def event_stream() -> AsyncGenerator[
+                DoneEvent | ErrorEvent | RunEvent | MessageEvent, None
+            ]:
                 yield RunEvent(
                     data=run,
-                    event="run.created",
+                    event="thread.run.created",
+                )
+                yield RunEvent(
+                    data=run,
+                    event="thread.run.queued",
                 )
                 loop = asyncio.get_event_loop()
                 while True:
@@ -237,6 +330,8 @@ class RunService:
                     if event is None:
                         break
                     yield event
+
+                yield DoneEvent()
 
             return event_stream()
         return run

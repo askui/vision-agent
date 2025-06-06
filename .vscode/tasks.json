@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create .env.tmp file",
+            "type": "shell",
+            "command": "op run --env-file=.env --no-masking -- printenv > ${workspaceFolder}/.env.tmp",
+            "problemMatcher": []
+        },
+        {
+            "label": "Delete .env.tmp file",
+            "type": "shell",
+            "command": "rm -f ${workspaceFolder}/.env.tmp",
+            "problemMatcher": []
+        }
+    ]
+}

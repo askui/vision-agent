@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 
 from askui.chat.api.threads.dependencies import ThreadServiceDep
-from askui.chat.api.threads.service import Thread, ThreadListResponse, ThreadService
+from askui.chat.api.threads.service import (
+    Thread,
+    ThreadCreateRequest,
+    ThreadListResponse,
+    ThreadService,
+)
 
 router = APIRouter(prefix="/threads", tags=["threads"])
 
@@ -17,10 +22,11 @@ def list_threads(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_thread(
+    request: ThreadCreateRequest,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
     """Create a new thread."""
-    return thread_service.create()
+    return thread_service.create(request=request)
 
 
 @router.get("/{thread_id}")

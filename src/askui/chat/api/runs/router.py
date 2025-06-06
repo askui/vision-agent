@@ -7,9 +7,11 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from askui.chat.api.messages.service import MessageEvent
+    from askui.chat.api.models import DoneEvent, ErrorEvent
 
 from .dependencies import RunServiceDep
 from .service import Run, RunEvent, RunListResponse, RunService
+from .steps import router as steps_router
 
 
 class CreateRunRequest(BaseModel):
@@ -17,6 +19,7 @@ class CreateRunRequest(BaseModel):
 
 
 router = APIRouter(prefix="/threads/{thread_id}/runs", tags=["runs"])
+router.include_router(steps_router)
 
 
 @router.post("")
@@ -32,12 +35,19 @@ def create_run(
     run_or_async_generator = run_service.create(thread_id, stream)
     if stream:
         async_generator = cast(
-            "AsyncGenerator[RunEvent | MessageEvent, None]", run_or_async_generator
+            "AsyncGenerator[DoneEvent | ErrorEvent | RunEvent | MessageEvent, None]",
+            run_or_async_generator,
         )
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
             async for event in async_generator:
-                yield f"event: {event.event}\ndata: {event.model_dump_json()}\n\n"
+                data = (
+                    event.data.model_dump_json()
+                    if isinstance(event.data, BaseModel)
+                    else event.data
+                )
+                print(f"event: {event.event}\ndata: {data}\n\n")
+                yield f"event: {event.event}\ndata: {data}\n\n"
 
         return StreamingResponse(
             status_code=status.HTTP_201_CREATED,

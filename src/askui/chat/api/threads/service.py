@@ -4,6 +4,7 @@ from typing import Sequence
 
 from pydantic import AwareDatetime, BaseModel, Field
 
+from askui.chat.api.messages.service import MessageCreateRequest, MessageService
 from askui.chat.api.utils import generate_time_ordered_id
 
 
@@ -15,6 +16,10 @@ class Thread(BaseModel):
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
     object: str = "thread"
+
+
+class ThreadCreateRequest(BaseModel):
+    messages: list[MessageCreateRequest] | None = None
 
 
 class ThreadListResponse(BaseModel):
@@ -30,7 +35,11 @@ class ThreadListResponse(BaseModel):
 class ThreadService:
     """Service for managing chat threads/sessions."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        message_service: MessageService,
+    ) -> None:
         """Initialize thread service.
 
         Args:
@@ -38,6 +47,7 @@ class ThreadService:
         """
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
+        self._message_service = message_service
 
     def list_(self, limit: int | None = None) -> ThreadListResponse:
         """List all available threads.
@@ -77,7 +87,7 @@ class ThreadService:
             has_more=len(thread_files) > (limit or len(thread_files)),
         )
 
-    def create(self) -> Thread:
+    def create(self, request: ThreadCreateRequest) -> Thread:
         """Create a new thread.
 
         Returns:
@@ -87,6 +97,12 @@ class ThreadService:
         thread_file = self._threads_dir / f"{thread.id}.jsonl"
         self._threads_dir.mkdir(parents=True, exist_ok=True)
         thread_file.touch()
+        if request.messages:
+            for message_create_request in request.messages:
+                self._message_service.create(
+                    thread_id=thread.id,
+                    request=message_create_request,
+                )
         return thread
 
     def retrieve(self, thread_id: str) -> Thread:
