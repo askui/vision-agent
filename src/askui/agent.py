@@ -533,7 +533,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
         self._tools.os.mouse_down(button)
 
-    @telemetry.record_call(exclude={"goal"})
+    @telemetry.record_call(exclude={"goal", "on_message"})
     @validate_call
     def act(
         self,
