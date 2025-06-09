@@ -638,9 +638,13 @@ class VisionAgent:
             from askui import VisionAgent
 
             with VisionAgent() as agent:
+                # Mac/Linux
                 agent.cli("echo Hello World")  # Prints "Hello World"
                 agent.cli("ls -la")  # Lists files in current directory with details
                 agent.cli("python --version")  # Displays Python version
+
+                # Use for Windows
+                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Ensure double quote and fr-string for spaces in name
             ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
