@@ -638,13 +638,15 @@ class VisionAgent:
             from askui import VisionAgent
 
             with VisionAgent() as agent:
+                # Use for Windows
+                agent.cli(fr'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC Non-Blocking
+                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC Blocking
+
                 # Mac/Linux
                 agent.cli("echo Hello World")  # Prints "Hello World"
                 agent.cli("ls -la")  # Lists files in current directory with details
                 agent.cli("python --version")  # Displays Python version
-
-                # Use for Windows
-                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Ensure double quote and fr-string for spaces in name
+                agent.cli("open -a chrome")  # Open Chrome Non-Blocking
             ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
