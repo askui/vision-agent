@@ -1,6 +1,8 @@
 import ctypes
 import platform
 import queue
+import shlex
+import subprocess
 import time
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
@@ -347,6 +349,10 @@ class PynputAgentOs(AgentOs):
             error_msg = f"Display {display} not found"
             raise ValueError(error_msg)
         self._display = display
+
+    @override
+    def run_command(self, command, timeout_ms=30000):
+        subprocess.run(shlex.split(command))
 
     def _on_mouse_click(
         self, x: float, y: float, button: Button, pressed: bool, injected: bool
