@@ -453,7 +453,7 @@ from askui.models import (
 
 
 # Register OpenRouter model in the registry
-custom_models: ModelRegistry = {
+custom_registry: ModelRegistry = {
     "my-custom-model": OpenRouterGetModel(
         OpenRouterSettings(
             model="anthropic/claude-opus-4",
