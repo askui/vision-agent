@@ -2,6 +2,7 @@ from typing import Literal
 
 import pytest
 from PIL import Image as PILImage
+from pydantic import BaseModel
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
@@ -72,10 +73,28 @@ def test_get_with_model_composition_should_use_default_model(
         assert url in ["github.com/login", "https://github.com/login"]
 
 
-@pytest.mark.skip(
-    "Skip for now as this pops up in our observability systems as a false positive"
-)
+class UrlResponseBaseModel(BaseModel):
+    url: str
+
+
 def test_get_with_response_schema_without_additional_properties_with_askui_model_raises(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+) -> None:
+    with pytest.raises(Exception):  # noqa: B017
+        vision_agent.get(  # type: ignore[type-var]
+            "What is the current url shown in the url bar?",
+            image=github_login_screenshot,
+            response_schema=UrlResponseBaseModel,
+            model=ModelName.ASKUI,
+        )
+
+
+class OptionalUrlResponse(ResponseSchemaBase):
+    url: str = "github.com"
+
+
+def test_get_with_response_schema_with_default_value_with_askui_model_raises(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
 ) -> None:
@@ -83,7 +102,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
         vision_agent.get(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,
-            response_schema=UrlResponse,
+            response_schema=OptionalUrlResponse,
             model=ModelName.ASKUI,
         )
 
@@ -134,9 +153,6 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
 
 
 @pytest.mark.parametrize("model", [ModelName.ASKUI])
-@pytest.mark.skip(
-    "Skip as there is currently a bug on the api side not supporting definitions used for nested schemas"
-)
 def test_get_with_nested_and_inherited_response_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -150,8 +166,33 @@ def test_get_with_nested_and_inherited_response_schema(
     )
     assert isinstance(response, BrowserContextResponse)
     assert response.page_context.url in ["https://github.com/login", "github.com/login"]
-    assert "Github" in response.page_context.title
+    assert "GitHub" in response.page_context.title
     assert response.browser_type in ["chrome", "firefox", "edge", "safari"]
+
+
+class LinkedListNode(ResponseSchemaBase):
+    value: str
+    next: "LinkedListNode | None"
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_recursive_response_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "Can you extract all segments (domain, path etc.) from the url as a linked list, "
+        "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
+        image=github_login_screenshot,
+        response_schema=LinkedListNode,
+        model=model,
+    )
+    assert isinstance(response, LinkedListNode)
+    assert response.value == "github.com"
+    assert response.next is not None
+    assert response.next.value == "login"
+    assert response.next.next is None
 
 
 @pytest.mark.parametrize("model", [ModelName.ASKUI])
