@@ -351,8 +351,20 @@ class PynputAgentOs(AgentOs):
         self._display = display
 
     @override
-    def run_command(self, command, timeout_ms=30000):
-        subprocess.run(shlex.split(command))
+    def run_command(self, command: str, timeout_ms: int = 30000) -> None:
+        """
+        Run a shell command.
+
+        Args:
+            command (str): The command to run.
+            timeout_ms (int, optional): Timeout in milliseconds. Defaults to 30000.
+
+        Raises:
+            subprocess.TimeoutExpired: If the command takes longer than the timeout.
+            subprocess.CalledProcessError: If the command returns a non-zero exit code.
+        """
+
+        subprocess.run(shlex.split(command), timeout=timeout_ms / 1000)
 
     def _on_mouse_click(
         self, x: float, y: float, button: Button, pressed: bool, injected: bool
