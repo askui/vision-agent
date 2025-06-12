@@ -461,7 +461,7 @@ custom_models: ModelRegistry = {
     ),
 }
 
-with VisionAgent(models=custom_registry, model={"get":"my-custom-model"}) as agent:
+with VisionAgent(models=custom_models, model={"get":"my-custom-model"}) as agent:
     result = agent.get("What is the main heading on the screen?")
     print(result)
 ```
