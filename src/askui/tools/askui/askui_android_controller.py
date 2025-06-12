@@ -102,7 +102,7 @@ class AskUiAndroidControllerClient:
     def set_display_by_index(self, displayNumber: int = 0) -> None:
         self._displays = self.get_connected_displays()
         if not self._displays:
-            raise RuntimeError("No displays connected")
+            self._displays = [AndroidDisplay(0, "Default", 0)]
         if displayNumber >= len(self._displays):
             raise RuntimeError(
                 f"Display number {displayNumber} out of range it must be less than {len(self._displays)}"
