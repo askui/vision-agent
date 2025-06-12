@@ -642,6 +642,7 @@ For structured data extraction, use Pydantic models extending `ResponseSchemaBas
 ```python
 from askui import ResponseSchemaBase, VisionAgent
 from PIL import Image
+import json
 
 class UserInfo(ResponseSchemaBase):
     username: str
@@ -675,7 +676,15 @@ with VisionAgent() as agent:
         response_schema=UrlResponse,
         image="screenshot.png",
     )
-    print(response.url)
+
+    # Dump whole model
+    print(response.model_dump_json(indent=2))
+    # or
+    response_json_dict = response.model_dump(mode="json")
+    print(json.dumps(response_json_dict, indent=2))
+    # or for regular dict
+    response_dict = response.model_dump()
+    print(response_dict["url"])
 
     # Get boolean response from PIL Image
     is_login_page = agent.get(
