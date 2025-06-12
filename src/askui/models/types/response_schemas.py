@@ -44,13 +44,10 @@ class ResponseSchemaBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-String = RootModel[str]
-Boolean = RootModel[bool]
-Integer = RootModel[int]
-Float = RootModel[float]
-
-
-ResponseSchema = TypeVar("ResponseSchema", ResponseSchemaBase, str, bool, int, float)
+ResponseSchema = TypeVar(
+    "ResponseSchema",
+    bound=ResponseSchemaBase | str | bool | int | float,
+)
 """Type of the responses of data extracted, e.g., using `askui.VisionAgent.get()`.
 
 The following types are allowed:
@@ -67,44 +64,14 @@ data extraction.
 
 
 @overload
-def to_response_schema(response_schema: None) -> Type[String]: ...
-@overload
-def to_response_schema(response_schema: Type[str]) -> Type[String]: ...
-@overload
-def to_response_schema(response_schema: Type[bool]) -> Type[Boolean]: ...
-@overload
-def to_response_schema(response_schema: Type[int]) -> Type[Integer]: ...
-@overload
-def to_response_schema(response_schema: Type[float]) -> Type[Float]: ...
+def to_response_schema(response_schema: None) -> Type[RootModel[str]]: ...
 @overload
 def to_response_schema(
-    response_schema: Type[ResponseSchemaBase],
-) -> Type[ResponseSchemaBase]: ...
+    response_schema: Type[ResponseSchema],
+) -> Type[RootModel[ResponseSchema]]: ...
 def to_response_schema(
-    response_schema: Type[ResponseSchemaBase]
-    | Type[str]
-    | Type[bool]
-    | Type[int]
-    | Type[float]
-    | None = None,
-) -> (
-    Type[ResponseSchemaBase]
-    | Type[String]
-    | Type[Boolean]
-    | Type[Integer]
-    | Type[Float]
-):
+    response_schema: Type[ResponseSchema] | None,
+) -> Type[RootModel[str]] | Type[RootModel[ResponseSchema]]:
     if response_schema is None:
-        return String
-    if response_schema is str:
-        return String
-    if response_schema is bool:
-        return Boolean
-    if response_schema is int:
-        return Integer
-    if response_schema is float:
-        return Float
-    if issubclass(response_schema, ResponseSchemaBase):
-        return response_schema
-    error_msg = f"Invalid response schema type: {response_schema}"
-    raise ValueError(error_msg)
+        return RootModel[str]
+    return RootModel[response_schema]  # type: ignore[valid-type]

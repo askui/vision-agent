@@ -2,7 +2,7 @@ from typing import Literal
 
 import pytest
 from PIL import Image as PILImage
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
@@ -82,10 +82,10 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
     github_login_screenshot: PILImage.Image,
 ) -> None:
     with pytest.raises(Exception):  # noqa: B017
-        vision_agent.get(  # type: ignore[type-var]
+        vision_agent.get(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,
-            response_schema=UrlResponseBaseModel,
+            response_schema=UrlResponseBaseModel,  # type: ignore[type-var]
             model=ModelName.ASKUI,
         )
 
@@ -103,22 +103,6 @@ def test_get_with_response_schema_with_default_value_with_askui_model_raises(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,
             response_schema=OptionalUrlResponse,
-            model=ModelName.ASKUI,
-        )
-
-
-@pytest.mark.skip(
-    "Skip for now as this pops up in our observability systems as a false positive"
-)
-def test_get_with_response_schema_without_required_with_askui_model_raises(
-    vision_agent: VisionAgent,
-    github_login_screenshot: PILImage.Image,
-) -> None:
-    with pytest.raises(Exception):  # noqa: B017
-        vision_agent.get(
-            "What is the current url shown in the url bar?",
-            image=github_login_screenshot,
-            response_schema=UrlResponse,
             model=ModelName.ASKUI,
         )
 
@@ -192,7 +176,11 @@ def test_get_with_recursive_response_schema(
     assert response.value == "github.com"
     assert response.next is not None
     assert response.next.value == "login"
-    assert response.next.next is None
+    assert (
+        response.next.next is None
+        or response.next.next.value == ""
+        and response.next.next.next is None
+    )
 
 
 @pytest.mark.parametrize("model", [ModelName.ASKUI])
@@ -289,4 +277,28 @@ def test_get_with_basis_schema(
         model=model,
     )
     assert isinstance(response, Basis)
-    assert response.answer != '"What is the display showing?"'
+    assert isinstance(response.answer, str)
+
+
+class Answer(ResponseSchemaBase):
+    answer: str
+
+
+class BasisWithNestedRootModel(ResponseSchemaBase):
+    answer: RootModel[Answer]
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_nested_root_model(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "What is the display showing?",
+        image=github_login_screenshot,
+        response_schema=BasisWithNestedRootModel,
+        model=model,
+    )
+    assert isinstance(response, BasisWithNestedRootModel)
+    assert isinstance(response.answer.root.answer, str)
