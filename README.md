@@ -639,23 +639,97 @@ with VisionAgent() as agent:
 For structured data extraction, use Pydantic models extending `ResponseSchemaBase`:
 
 ```python
-from askui import ResponseSchemaBase
+from askui import ResponseSchemaBase, VisionAgent
+from PIL import Image
+import json
 
 class UserInfo(ResponseSchemaBase):
     username: str
     is_online: bool
 
-# Get structured data
-user_info = agent.get(
-    "What is the username and online status?",
-    response_schema=UserInfo
-)
-print(f"User {user_info.username} is {'online' if user_info.is_online else 'offline'}")
+class UrlResponse(ResponseSchemaBase):
+    url: str
+
+class NestedResponse(ResponseSchemaBase):
+    nested: UrlResponse
+
+class LinkedListNode(ResponseSchemaBase):
+    value: str
+    next: "LinkedListNode | None"
+
+with VisionAgent() as agent:
+    # Get structured data
+    user_info = agent.get(
+        "What is the username and online status?",
+        response_schema=UserInfo
+    )
+    print(f"User {user_info.username} is {'online' if user_info.is_online else 'offline'}")
+
+    # Get URL as string
+    url = agent.get("What is the current url shown in the url bar?")
+    print(url)  # e.g., "github.com/login"
+
+    # Get URL as Pydantic model from image at (relative) path
+    response = agent.get(
+        "What is the current url shown in the url bar?",
+        response_schema=UrlResponse,
+        image="screenshot.png",
+    )
+
+    # Dump whole model
+    print(response.model_dump_json(indent=2))
+    # or
+    response_json_dict = response.model_dump(mode="json")
+    print(json.dumps(response_json_dict, indent=2))
+    # or for regular dict
+    response_dict = response.model_dump()
+    print(response_dict["url"])
+
+    # Get boolean response from PIL Image
+    is_login_page = agent.get(
+        "Is this a login page?",
+        response_schema=bool,
+        image=Image.open("screenshot.png"),
+    )
+    print(is_login_page)
+
+    # Get integer response
+    input_count = agent.get(
+        "How many input fields are visible on this page?",
+        response_schema=int,
+    )
+    print(input_count)
+
+    # Get float response
+    design_rating = agent.get(
+        "Rate the page design quality from 0 to 1",
+        response_schema=float,
+    )
+    print(design_rating)
+
+    # Get nested response
+    nested = agent.get(
+        "Extract the URL and its metadata from the page",
+        response_schema=NestedResponse,
+    )
+    print(nested.nested.url)
+
+    # Get recursive response
+    linked_list = agent.get(
+        "Extract the breadcrumb navigation as a linked list",
+        response_schema=LinkedListNode,
+    )
+    current = linked_list
+    while current:
+        print(current.value)
+        current = current.next
 ```
 
 **⚠️ Limitations:**
-- Nested Pydantic schemas are not currently supported
-- Response schema is currently only supported by "askui" model (default model if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` are set)
+- Not all models support response schemas or all kinds of properties that a response schema can have at the moment
+- Default values are not supported, e.g., `url: str = "github.com"` or `url: str | None = None`. This includes `default_factory`
+  and `default` args of `pydantic.Field` as well, e.g., `url: str = Field(default="github.com")` or
+  `url: str = Field(default_factory=lambda: "github.com")`.
 
 ## What is AskUI Vision Agent?
 

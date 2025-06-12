@@ -2,7 +2,6 @@ import json as json_lib
 from typing import Any, Type
 
 import requests
-from pydantic import RootModel
 from typing_extensions import override
 
 from askui.locators.locators import Locator
@@ -92,11 +91,10 @@ class AskUiInferenceApi(GetModel, LocateModel):
             "prompt": query,
         }
         _response_schema = to_response_schema(response_schema)
-        json["config"] = {"json_schema": _response_schema.model_json_schema()}
+        json_schema = _response_schema.model_json_schema()
+        json["config"] = {"json_schema": json_schema}
         logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
         content = self._request(endpoint="vqa/inference", json=json)
         response = content["data"]["response"]
         validated_response = _response_schema.model_validate(response)
-        if isinstance(validated_response, RootModel):
-            return validated_response.root
-        return validated_response
+        return validated_response.root

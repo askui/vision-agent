@@ -47,13 +47,7 @@ class SimpleGetModel(GetModel):
     def __init__(self, response: str | ResponseSchemaBase = "test response") -> None:
         self.queries: list[str] = []
         self.images: list[ImageSource] = []
-        self.schemas: list[
-            Optional[type[ResponseSchemaBase]]
-            | Optional[type[str]]
-            | Optional[type[bool]]
-            | Optional[type[int]]
-            | Optional[type[float]]
-        ] = []
+        self.schemas: list[Any] = []
         self.model_choices: list[str] = []
         self.response = response
 

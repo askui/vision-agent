@@ -347,17 +347,21 @@ class VisionAgent:
         Returns:
             ResponseSchema | str: The extracted information, `str` if no `response_schema` is provided.
 
-        Limitations:
-            - Nested Pydantic schemas are not currently supported
-            - Schema support is only available with "askui" model (default model if `ASKUI_WORKSPACE_ID` and `ASKUI_TOKEN` are set) at the moment
-
         Example:
             ```python
             from askui import ResponseSchemaBase, VisionAgent
             from PIL import Image
+            import json
 
             class UrlResponse(ResponseSchemaBase):
                 url: str
+
+            class NestedResponse(ResponseSchemaBase):
+                nested: UrlResponse
+
+            class LinkedListNode(ResponseSchemaBase):
+                value: str
+                next: "LinkedListNode | None"
 
             with VisionAgent() as agent:
                 # Get URL as string
@@ -369,7 +373,14 @@ class VisionAgent:
                     response_schema=UrlResponse,
                     image="screenshot.png",
                 )
-                print(response.url)
+                # Dump whole model
+                print(response.model_dump_json(indent=2))
+                # or
+                response_json_dict = response.model_dump(mode="json")
+                print(json.dumps(response_json_dict, indent=2))
+                # or for regular dict
+                response_dict = response.model_dump()
+                print(response_dict["url"])
 
                 # Get boolean response from PIL Image
                 is_login_page = agent.get(
@@ -377,18 +388,38 @@ class VisionAgent:
                     response_schema=bool,
                     image=Image.open("screenshot.png"),
                 )
+                print(is_login_page)
 
                 # Get integer response
                 input_count = agent.get(
                     "How many input fields are visible on this page?",
                     response_schema=int,
                 )
+                print(input_count)
 
                 # Get float response
                 design_rating = agent.get(
                     "Rate the page design quality from 0 to 1",
                     response_schema=float,
                 )
+                print(design_rating)
+
+                # Get nested response
+                nested = agent.get(
+                    "Extract the URL and its metadata from the page",
+                    response_schema=NestedResponse,
+                )
+                print(nested.nested.url)
+
+                # Get recursive response
+                linked_list = agent.get(
+                    "Extract the breadcrumb navigation as a linked list",
+                    response_schema=LinkedListNode,
+                )
+                current = linked_list
+                while current:
+                    print(current.value)
+                    current = current.next
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
