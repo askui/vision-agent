@@ -549,7 +549,7 @@ class VisionAgent:
         interface interactions.
 
         Args:
-            goal (str): A description of what the agent should achieve.
+            goal (str | list[MessageParam]): A description of what the agent should achieve.
             model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If it returns `None`, stops and does not add the message.
 
