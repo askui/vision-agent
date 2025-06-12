@@ -669,9 +669,22 @@ class VisionAgent:
             from askui import VisionAgent
 
             with VisionAgent() as agent:
+                # Use for Windows
+                agent.cli(fr'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
+                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
+
+                # Mac
+                agent.cli("open -a chrome")  # Open Chrome non-blocking for mac
+                agent.cli("chrome")  # Open Chrome blocking for linux
                 agent.cli("echo Hello World")  # Prints "Hello World"
-                agent.cli("ls -la")  # Lists files in current directory with details
                 agent.cli("python --version")  # Displays Python version
+
+                # Linux
+                agent.cli("nohub chrome")  # Open Chrome non-blocking for linux
+                agent.cli("chrome")  # Open Chrome blocking for linux
+                agent.cli("echo Hello World")  # Prints "Hello World"
+                agent.cli("python --version")  # Displays Python version
+
             ```
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
