@@ -327,7 +327,7 @@ if act_prompt := st.chat_input("Ask AI"):
         enable_report=True,
         report_callback=report_callback,
     ) as agent:
-        agent.act(act_prompt, model_name="claude")
+        agent.act(act_prompt)
         st.rerun()
 
 if st.button("Rerun"):

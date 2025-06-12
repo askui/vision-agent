@@ -65,10 +65,6 @@ class AndroidVisionAgent:
         logger.debug(
             "VisionAgent received instruction to act towards the goal '%s'", goal
         )
-        if os.getenv("ANTHROPIC_API_KEY") is None:
-            raise Exception(
-                '"ANTHROPIC_API_KEY" not set. Please set it in your environment variables.'
-            )
         return self.claudeAgent.run(goal)
 
     def close(self):

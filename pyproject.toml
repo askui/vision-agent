@@ -1,6 +1,6 @@
 [project]
 name = "askui"
-version = "0.2.4"
+version = "0.2.4b2"
 description = "Automate computer tasks in Python"
 authors = [
     {name = "askui GmbH", email = "info@askui.com"},
@@ -9,18 +9,19 @@ dependencies = [
     "grpcio>=1.67.0",
     "grpcio-tools>=1.67.0",
     "pillow>=11.0.0",
-    "pydantic>=2.9.2",
-    "anthropic>=0.37.1",
+    "pydantic>=2.11.0",
+    "anthropic>=0.49.0",
     "rich>=13.9.4",
     "pyperclip>=1.9.0",
     "gradio-client>=1.4.3",
     "requests>=2.32.3",
     "Jinja2>=3.1.4",
-    "pydantic-settings>=2.7.0",
-    "tenacity>=9.0.0",
+    "tenacity>=9.1.2",
+    "pydantic-settings>=2.9.1",
     "python-dateutil>=2.9.0.post0",
     "openai>=1.61.1",
     "pure-python-adb>=0.3.0.dev0",
+    "httpx>=0.28.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

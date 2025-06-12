@@ -1,11 +1,12 @@
 from typing import Any, List, cast
+import httpx
+import base64
+from functools import cached_property
 
-from anthropic import (
-    Anthropic,
-    APIError,
-    APIResponseValidationError,
-    APIStatusError,
-)
+from pydantic import UUID4, Field, HttpUrl, SecretStr
+from pydantic_settings import BaseSettings
+
+
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam,
     BetaImageBlockParam,
@@ -24,17 +25,52 @@ from ...logging import logger
 from ...utils import truncate_long_strings
 from askui.reporting.report import SimpleReportGenerator
 
-
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
 
 
+class AskUiSettings(BaseSettings):
+    inference_endpoint: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("https://inference.askui.com"),  # noqa: F821
+        validation_alias="ASKUI_INFERENCE_ENDPOINT",
+    )
+    workspace_id: UUID4 = Field(
+        validation_alias="ASKUI_WORKSPACE_ID",
+    )
+    token: SecretStr = Field(
+        validation_alias="ASKUI_TOKEN",
+    )
+
+    @cached_property
+    def authorization_header(self) -> str:
+        token_str = self.token.get_secret_value()
+        token_base64 = base64.b64encode(token_str.encode()).decode()
+        return f"Basic {token_base64}"
+
+    @cached_property
+    def base_url(self) -> str:
+        # NOTE(OS): Pydantic parses urls with trailing slashes
+        # meaning "https://inference.askui.com" turns into -> "https://inference.askui.com/"
+        # https://github.com/pydantic/pydantic/issues/7186
+        return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
+
+
 class ClaudeAgent:
-    def __init__(self, tools: List[BaseAnthropicTool], system_prompt:str, report: SimpleReportGenerator | None = None) -> None:
+    def __init__(
+        self,
+        tools: List[BaseAnthropicTool],
+        system_prompt: str,
+        report: SimpleReportGenerator | None = None,
+    ) -> None:
+        self._settings = AskUiSettings()
         self.report = report
-        self.tool_collection = ToolCollection(
-            ExceptionTool(),
-            *tools
+        self.tool_collection = ToolCollection(ExceptionTool(), *tools)
+        self._client = httpx.Client(
+            base_url=f"{self._settings.base_url}",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": self._settings.authorization_header,
+            },
         )
         self.system = BetaTextBlockParam(
             type="text",
@@ -43,27 +79,18 @@ class ClaudeAgent:
         self.enable_prompt_caching = False
         self.image_truncation_threshold = 10
         self.only_n_most_recent_images = 3
-        self.max_tokens = 16000
-        self.client = Anthropic()
+        self.max_tokens = 8192
         self.model = "claude-sonnet-4-20250514"
-        self.thinking_params = {
-            "type": "enabled",
-            "budget_tokens": 10000
-        }
+        self.thinking_params = {"type": "enabled", "budget_tokens": 5000}
+        self.betas = [COMPUTER_USE_BETA_FLAG]
 
     def set_system_prompt(self, system_prompt: str):
         self.system = BetaTextBlockParam(
-            type="text",
-            text=f"{system_prompt}",
-            cache_control={"type": "ephemeral"}
+            type="text", text=f"{system_prompt}", cache_control={"type": "ephemeral"}
         )
 
     def set_tool_collection(self, tools: List[BaseAnthropicTool]):
-        self.tool_collection = ToolCollection(
-            ExceptionTool(),
-            *tools
-        )
-
+        self.tool_collection = ToolCollection(ExceptionTool(), *tools)
 
     def step(self, messages: list):
         if self.only_n_most_recent_images is not None:
@@ -73,23 +100,20 @@ class ClaudeAgent:
                 min_removal_threshold=self.image_truncation_threshold,
             )
 
-        try:
-            raw_response = self.client.beta.messages.with_raw_response.create(
-                max_tokens=self.max_tokens,
-                thinking=self.thinking_params,
-                messages=messages,
-                model=self.model,
-                system=[self.system],
-                tools=self.tool_collection.to_params(),
-            )
-        except (APIStatusError, APIResponseValidationError) as e:
-            logger.error(e)
-            return messages
-        except APIError as e:
-            logger.error(e)
-            return messages
-        
-        response = raw_response.parse()
+        request_body = {
+            "max_tokens": self.max_tokens,
+            "messages": messages,
+            "model": self.model,
+            "tools": self.tool_collection.to_params(),
+            "betas": self.betas,
+            "system": [self.system],
+            "thinking": self.thinking_params,
+        }
+        response = self._client.post("/act/inference", json=request_body, timeout=300.0)
+        response.raise_for_status()
+        response_data = response.json()
+        response = BetaMessage.model_validate(response_data)
+
         response_params = self._response_to_params(response)
         new_message = {
             "role": "assistant",
@@ -97,7 +121,7 @@ class ClaudeAgent:
         }
         logger.debug(new_message)
         messages.append(new_message)
-        if self.report is not None: 
+        if self.report is not None:
             self.report.add_message("Anthropic Computer Use", response_params)
 
         tool_result_content: list[BetaToolResultBlockParam] = []
@@ -116,13 +140,11 @@ class ClaudeAgent:
             messages.append(new_message)
         return messages
 
-    
     def run(self, goal: str):
         messages = [{"role": "user", "content": goal}]
         logger.debug(messages[0])
         while messages[-1]["role"] == "user":
             messages = self.step(messages)
-
 
     @staticmethod
     def _maybe_filter_to_n_most_recent_images(
@@ -217,13 +239,17 @@ class ClaudeAgent:
         is_error = False
         if result.error:
             is_error = True
-            tool_result_content = self._maybe_prepend_system_tool_result(result, result.error)
+            tool_result_content = self._maybe_prepend_system_tool_result(
+                result, result.error
+            )
         else:
             if result.output:
                 tool_result_content.append(
                     {
                         "type": "text",
-                        "text": self._maybe_prepend_system_tool_result(result, result.output),
+                        "text": self._maybe_prepend_system_tool_result(
+                            result, result.output
+                        ),
                     }
                 )
             if result.base64_images and len(result.base64_images) > 0:
