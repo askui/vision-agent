@@ -7,7 +7,8 @@ import httpx
 import streamlit as st
 from PIL import Image
 
-from askui.chat.api.messages.service import Message, MessageService
+from askui.chat.api.messages.models import Message
+from askui.chat.api.messages.service import MessageService
 from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.service import ThreadService
 
@@ -331,7 +332,7 @@ if act_prompt := st.chat_input("Ask AI"):
     if act_prompt != "Continue":
         last_message = message_service.create(
             thread_id=thread_id,
-            message=MessageParam(
+            request=MessageParam(
                 role="user",
                 content=act_prompt,
             ),
@@ -355,7 +356,7 @@ if act_prompt := st.chat_input("Ask AI (streaming)"):
     if act_prompt != "Continue":
         last_message = message_service.create(
             thread_id=thread_id,
-            message=MessageParam(
+            request=MessageParam(
                 role="user",
                 content=act_prompt,
             ),
@@ -369,7 +370,7 @@ if act_prompt := st.chat_input("Ask AI (streaming)"):
     async def handle_stream() -> None:
         last_msg_id = last_message.id if last_message else None
         async for event in event_stream:
-            if event.event == "message.created":
+            if event.event == "thread.message.completed":
                 msg = event.data
                 if msg and (not last_msg_id or msg.id > last_msg_id):
                     write_message(msg)

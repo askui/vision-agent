@@ -1,36 +1,36 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import BaseModel, Field
 
+from askui.chat.api.messages.service import MessageCreateRequest, MessageService
+from askui.chat.api.models import ListQuery, ListResponse, ThreadId, UnixDatetime
 from askui.chat.api.utils import generate_time_ordered_id
 
 
 class Thread(BaseModel):
     """A chat thread/session."""
 
-    id: str = Field(default_factory=lambda: generate_time_ordered_id("thread"))
-    created_at: AwareDatetime = Field(
+    id: ThreadId = Field(default_factory=lambda: generate_time_ordered_id("thread"))
+    created_at: UnixDatetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
-    object: str = "thread"
+    object: Literal["thread"] = "thread"
 
 
-class ThreadListResponse(BaseModel):
-    """Response model for listing threads."""
-
-    object: str = "list"
-    data: Sequence[Thread]
-    first_id: str | None = None
-    last_id: str | None = None
-    has_more: bool = False
+class ThreadCreateRequest(BaseModel):
+    messages: list[MessageCreateRequest] | None = None
 
 
 class ThreadService:
     """Service for managing chat threads/sessions."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        message_service: MessageService,
+    ) -> None:
         """Initialize thread service.
 
         Args:
@@ -38,24 +38,27 @@ class ThreadService:
         """
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
+        self._message_service = message_service
 
-    def list_(self, limit: int | None = None) -> ThreadListResponse:
+    def list_(self, query: ListQuery) -> ListResponse[Thread]:
         """List all available threads.
 
         Args:
-            limit: Optional maximum number of threads to return
+            query (ListQuery): Query parameters for listing threads
 
         Returns:
-            ThreadListResponse containing threads sorted by creation date (newest first)
+            ListResponse[Thread]: ListResponse containing threads sorted by creation date
         """
         if not self._threads_dir.exists():
-            return ThreadListResponse(data=[])
+            return ListResponse(data=[])
 
         thread_files = list(self._threads_dir.glob("*.jsonl"))
         threads: list[Thread] = []
         for f in thread_files:
             thread_id = f.stem
-            created_at = datetime.fromtimestamp(f.stat().st_ctime, tz=timezone.utc)
+            created_at = datetime.fromtimestamp(
+                f.stat().st_ctime, tz=timezone.utc
+            )  # TODO Check how we save the created time and that it is consistent and correct
             threads.append(
                 Thread(
                     id=thread_id,
@@ -63,21 +66,28 @@ class ThreadService:
                 )
             )
 
-        # Sort by creation date, newest first
-        threads = sorted(threads, key=lambda t: t.created_at, reverse=True)
+        # Sort by creation date
+        threads = sorted(
+            threads, key=lambda t: t.created_at, reverse=(query.order == "desc")
+        )
 
-        # Apply limit if specified
-        if limit is not None:
-            threads = threads[:limit]
+        # Apply before/after filters
+        if query.after:
+            threads = [t for t in threads if t.id > query.after]
+        if query.before:
+            threads = [t for t in threads if t.id < query.before]
 
-        return ThreadListResponse(
+        # Apply limit
+        threads = threads[: query.limit]
+
+        return ListResponse(
             data=threads,
             first_id=threads[0].id if threads else None,
             last_id=threads[-1].id if threads else None,
-            has_more=len(thread_files) > (limit or len(thread_files)),
+            has_more=len(thread_files) > query.limit,
         )
 
-    def create(self) -> Thread:
+    def create(self, request: ThreadCreateRequest) -> Thread:
         """Create a new thread.
 
         Returns:
@@ -87,9 +97,15 @@ class ThreadService:
         thread_file = self._threads_dir / f"{thread.id}.jsonl"
         self._threads_dir.mkdir(parents=True, exist_ok=True)
         thread_file.touch()
+        if request.messages:
+            for message_create_request in request.messages:
+                self._message_service.create(
+                    thread_id=thread.id,
+                    request=message_create_request,
+                )
         return thread
 
-    def retrieve(self, thread_id: str) -> Thread:
+    def retrieve(self, thread_id: ThreadId) -> Thread:
         """Retrieve a thread by ID.
 
         Args:
@@ -114,11 +130,11 @@ class ThreadService:
             created_at=created_at,
         )
 
-    def delete(self, thread_id: str) -> None:
+    def delete(self, thread_id: ThreadId) -> None:
         """Delete a thread and all its associated files.
 
         Args:
-            thread_id: ID of thread to delete
+            thread_id (ThreadId): ID of thread to delete
 
         Raises:
             FileNotFoundError: If thread doesn't exist

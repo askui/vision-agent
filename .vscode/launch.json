@@ -21,5 +21,21 @@
             "envFile": "${workspaceFolder}/.env.local",
             "console": "integratedTerminal"
         },
+        {
+            "name": "Debug Chat API",
+            "type": "debugpy",
+            "request": "launch",
+            "preLaunchTask": "Create .env.tmp file",
+            "postDebugTask": "Delete .env.tmp file",
+            "module": "uvicorn",
+            "args": ["src.askui.chat.api.app:app","--reload","--port","8000"],
+            "envFile": "${workspaceFolder}/.env.tmp",
+            "env": {
+                "ASKUI_WORKSPACES__LOG__FORMAT": "logfmt",
+            },
+            "justMyCode": false,
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "pythonArgs": ["-Xfrozen_modules=off"]
+        }
     ]
 }

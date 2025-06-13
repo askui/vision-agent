@@ -1,106 +1,156 @@
+import io
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, Field
+import httpx
+from PIL import Image
+from pydantic import BaseModel, Field
 
-from askui.chat.api.models import Event
-from askui.chat.api.utils import generate_time_ordered_id
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.chat.api.messages.message_persisted_service import (
+    MessagePersisted,
+    MessagePersistedService,
+    Metadata,
+)
+from askui.chat.api.messages.models import (
+    Message,
+    MessageContentImageFile,
+    MessageContentImageUrl,
+)
+from askui.chat.api.models import (
+    ListQuery,
+    ListResponse,
+    MessageId,
+    ThreadId,
+    UnixDatetime,
+)
+from askui.models.shared.computer_agent_message_param import (
+    Base64ImageSourceParam,
+    ContentBlockParam,
+    ImageBlockParam,
+    TextBlockParam,
+    UrlImageSourceParam,
+)
+from askui.utils.image_utils import ImageSource
 
 
-class Message(MessageParam):
-    """A message in a thread."""
-
-    id: str = Field(default_factory=lambda: generate_time_ordered_id("msg"))
-    thread_id: str
-    created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc)
-    )
-    object: str = "message"
+class DoNotPatch(BaseModel):
+    pass
 
 
-class MessageEvent(Event):
-    data: Message
-    event: Literal["message.created"]
+DO_NOT_PATCH = DoNotPatch()
 
 
-class MessageListResponse(BaseModel):
-    """Response model for listing messages."""
+class MessagePatch(BaseModel):
+    completed_at: UnixDatetime | None | DoNotPatch = Field(default=DO_NOT_PATCH)
+    metadata: Metadata | None | DoNotPatch = Field(default=DO_NOT_PATCH)
 
-    object: str = "list"
-    data: list[Message]
-    first_id: str | None = None
-    last_id: str | None = None
-    has_more: bool = False
+
+class MessageCreateRequestContentText(BaseModel):
+    type: Literal["text"] = "text"
+    text: str
+
+
+MessageCreateRequestContent = (
+    str
+    | list[
+        MessageContentImageFile
+        | MessageContentImageUrl
+        | MessageCreateRequestContentText
+    ]
+)
+
+
+class MessageCreateRequest(BaseModel):
+    content: MessageCreateRequestContent
+    role: Literal["user", "assistant"]
+
+    def to_message_persisted(self, thread_id: ThreadId) -> MessagePersisted:
+        match self.content:
+            case str():
+                content: str | list[ContentBlockParam] = self.content
+            case list():
+                content = []
+                for block in self.content:
+                    match block.type:
+                        case "image_file":
+                            # TODO
+                            content.append(
+                                ImageBlockParam(
+                                    source=UrlImageSourceParam(
+                                        # TODO
+                                        url="https://test.com",
+                                    ),
+                                )
+                            )
+                        case "image_url":
+                            if block.image_url.url.startswith(
+                                "data:"
+                            ):  # TODO Make more stable
+                                image_source = ImageSource(block.image_url.url)
+                            else:
+                                image_content = httpx.get(block.image_url.url).content
+                                image = Image.open(io.BytesIO(image_content))
+                                image_source = ImageSource(image)
+                            content.append(
+                                ImageBlockParam(
+                                    source=Base64ImageSourceParam(
+                                        data=image_source.to_base64(),
+                                        media_type="image/png",
+                                    ),
+                                )
+                            )
+                        case "text":
+                            content.append(
+                                TextBlockParam(
+                                    text=block.text,
+                                )
+                            )
+        return MessagePersisted(  # type: ignore[call-arg]
+            role=self.role,
+            content=content,
+            completed_at=datetime.now(tz=timezone.utc),
+            thread_id=thread_id,
+        )
 
 
 class MessageService:
-    """Service for managing messages within threads."""
+    def __init__(self, service: MessagePersistedService) -> None:
+        self._service = service
 
-    def __init__(self, base_dir: Path) -> None:
-        """Initialize message service.
-
-        Args:
-            base_dir: Base directory to store message data
-        """
-        self._base_dir = base_dir
-        self._threads_dir = base_dir / "threads"
-
-    def list_(
-        self, thread_id: str, limit: int | None = None, after: str | None = None
-    ) -> MessageListResponse:
+    def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
         """List all messages in a thread.
 
         Args:
-            thread_id: ID of thread to list messages from
-            limit: Optional maximum number of messages to return
-            after: Optional message ID after which messages are returned
+            thread_id (str): ID of thread to list messages from
+            query (ListQuery): Query parameters for listing messages
 
         Returns:
-            MessageListResponse containing messages sorted by creation date
+            ListResponse[Message]: ListResponse containing messages sorted by creation date
 
         Raises:
             FileNotFoundError: If thread doesn't exist
         """
-        thread_file = self._threads_dir / f"{thread_id}.jsonl"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-
-        messages: list[Message] = []
-        with thread_file.open("r") as f:
-            for line in f:
-                msg = Message.model_validate_json(line)
-                messages.append(msg)
-
-        # Sort by creation date
-        messages = sorted(messages, key=lambda m: m.created_at)
-        if after:
-            messages = [m for m in messages if m.id > after]
-
-        # Apply limit if specified
-        if limit is not None:
-            messages = messages[:limit]
-
-        return MessageListResponse(
-            data=messages,
+        messages = self._service.list_(
+            thread_id=thread_id,
+            query=query,
+        )
+        return ListResponse(
+            data=[Message.from_message_persisted(m) for m in messages],
             first_id=messages[0].id if messages else None,
             last_id=messages[-1].id if messages else None,
-            has_more=len(messages) > (limit or len(messages)),
+            has_more=len(messages) > query.limit,
         )
 
     def create(
         self,
-        thread_id: str,
-        message: MessageParam,
+        thread_id: ThreadId,
+        request: MessageCreateRequest,
     ) -> Message:
         """Create a new message in a thread.
 
         Args:
             thread_id: ID of thread to create message in
-            role: Role of message sender
-            content: Message content
+            request: Message create request
 
         Returns:
             Created message object
@@ -108,21 +158,11 @@ class MessageService:
         Raises:
             FileNotFoundError: If thread doesn't exist
         """
-        thread_file = self._threads_dir / f"{thread_id}.jsonl"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-        message = Message.model_construct(
-            thread_id=thread_id,
-            role=message.role,
-            content=message.content,
-        )
-        with thread_file.open("a") as f:
-            f.write(message.model_dump_json())
-            f.write("\n")
-        return message
+        message = request.to_message_persisted(thread_id=thread_id)
+        self._service.create(thread_id=thread_id, message=message)
+        return Message.from_message_persisted(message)
 
-    def retrieve(self, thread_id: str, message_id: str) -> Message:
+    def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
         """Retrieve a specific message from a thread.
 
         Args:
@@ -135,38 +175,47 @@ class MessageService:
         Raises:
             FileNotFoundError: If thread or message doesn't exist
         """
-        messages = self.list_(thread_id).data
+        messages = self._service.list_(thread_id=thread_id, query=ListQuery(limit=1))
         for msg in messages:
             if msg.id == message_id:
-                return msg
+                return Message.from_message_persisted(msg)
         error_msg = f"Message {message_id} not found in thread {thread_id}"
         raise FileNotFoundError(error_msg)
 
-    def delete(self, thread_id: str, message_id: str) -> None:
+    def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
         """Delete a message from a thread.
 
         Args:
-            thread_id: ID of thread containing message
-            message_id: ID of message to delete
+            thread_id (ThreadId): ID of thread containing message
+            message_id (MessageId): ID of message to delete
 
         Raises:
             FileNotFoundError: If thread or message doesn't exist
         """
-        thread_file = self._threads_dir / f"{thread_id}.jsonl"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
+        self._service.delete(thread_id=thread_id, message_id=message_id)
+
+    def patch(  # TODO move to service underneath
+        self, thread_id: ThreadId, message_id: MessageId, patch: MessagePatch
+    ) -> Message:
+        """Complete a message in a thread.
+
+        Args:
+            thread_id (ThreadId): ID of thread containing message
+            message_id (MessageId): ID of message to complete
+            patch (MessagePatch): Patch to apply to message
+        """
+        messages = self._service.list_(thread_id=thread_id, query=ListQuery(limit=100))
+        patched_message: MessagePersisted | None = None
+        for msg in messages:
+            if msg.id == message_id:
+                if not isinstance(patch.completed_at, DoNotPatch):
+                    msg.completed_at = patch.completed_at
+                if not isinstance(patch.metadata, DoNotPatch):
+                    msg.metadata = patch.metadata
+                patched_message = msg
+                break
+        if patched_message is None:
+            error_msg = f"Message {message_id} not found in thread {thread_id}"
             raise FileNotFoundError(error_msg)
-
-        # Read all messages
-        messages: list[Message] = []
-        with thread_file.open("r") as f:
-            for line in f:
-                msg = Message.model_validate_json(line)
-                if msg.id != message_id:
-                    messages.append(msg)
-
-        # Write back all messages except the deleted one
-        with thread_file.open("w") as f:
-            for msg in messages:
-                f.write(msg.model_dump_json())
-                f.write("\n")
+        self._service.save(thread_id=thread_id, messages=messages)
+        return Message.from_message_persisted(patched_message)

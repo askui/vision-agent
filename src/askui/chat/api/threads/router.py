@@ -1,31 +1,33 @@
 from fastapi import APIRouter, HTTPException, status
 
+from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse, ThreadId
 from askui.chat.api.threads.dependencies import ThreadServiceDep
-from askui.chat.api.threads.service import Thread, ThreadListResponse, ThreadService
+from askui.chat.api.threads.service import Thread, ThreadCreateRequest, ThreadService
 
 router = APIRouter(prefix="/threads", tags=["threads"])
 
 
 @router.get("")
 def list_threads(
-    limit: int | None = None,
+    query: ListQuery = ListQueryDep,
     thread_service: ThreadService = ThreadServiceDep,
-) -> ThreadListResponse:
+) -> ListResponse[Thread]:
     """List all threads."""
-    return thread_service.list_(limit=limit)
+    return thread_service.list_(query=query)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_thread(
+    request: ThreadCreateRequest,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
     """Create a new thread."""
-    return thread_service.create()
+    return thread_service.create(request=request)
 
 
 @router.get("/{thread_id}")
 def retrieve_thread(
-    thread_id: str,
+    thread_id: ThreadId,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
     """Get a thread by ID."""
@@ -37,7 +39,7 @@ def retrieve_thread(
 
 @router.delete("/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_thread(
-    thread_id: str,
+    thread_id: ThreadId,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> None:
     """Delete a thread."""
