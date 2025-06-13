@@ -1,7 +1,10 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from askui.chat.api.assistants.router import router as assistants_router
+from askui.chat.api.files.router import router as files_router
 from askui.chat.api.messages.router import router as messages_router
+from askui.chat.api.run_steps.router import router as run_steps_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
 
@@ -21,7 +24,10 @@ app.add_middleware(
 
 # Include routers
 v1_router = APIRouter(prefix="/v1")
+v1_router.include_router(assistants_router)
+v1_router.include_router(files_router)
 v1_router.include_router(threads_router)
 v1_router.include_router(messages_router)
 v1_router.include_router(runs_router)
+v1_router.include_router(run_steps_router)
 app.include_router(v1_router)
