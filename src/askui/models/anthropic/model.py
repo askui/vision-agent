@@ -21,6 +21,7 @@ from askui.models.models import (
     ModelName,
     Point,
 )
+from askui.models.shared.prompts import SYSTEM_PROMPT_GET, build_system_prompt_locate
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import (
     ImageSource,
@@ -47,8 +48,8 @@ class ClaudeHandler(LocateModel, GetModel):
     ) -> list[anthropic.types.ContentBlock]:
         message = self._client.messages.create(
             model=model,
-            max_tokens=self._settings.max_tokens,
-            temperature=self._settings.temperature,
+            max_tokens=self._settings.chat_completions_create_settings.max_tokens,
+            temperature=self._settings.chat_completions_create_settings.temperature,
             system=system_prompt,
             messages=[
                 {
@@ -87,12 +88,11 @@ class ClaudeHandler(LocateModel, GetModel):
         prompt = f"Click on {locator_serialized}"
         screen_width = self._settings.resolution[0]
         screen_height = self._settings.resolution[1]
-        system_prompt = f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"  # noqa: E501
         scaled_image = scale_image_with_padding(image.root, screen_width, screen_height)
         response = self._inference(
             image_to_base64(scaled_image),
             prompt,
-            system_prompt,
+            build_system_prompt_locate(str(screen_width), str(screen_height)),
             model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
         )
         assert len(response) > 0
@@ -129,11 +129,10 @@ class ClaudeHandler(LocateModel, GetModel):
             max_width=self._settings.resolution[0],
             max_height=self._settings.resolution[1],
         )
-        system_prompt = "You are an agent to process screenshots and answer questions about things on the screen or extract information from it. Answer only with the response to the question and keep it short and precise."  # noqa: E501
         response = self._inference(
             base64_image=image_to_base64(scaled_image),
             prompt=query,
-            system_prompt=system_prompt,
+            system_prompt=SYSTEM_PROMPT_GET,
             model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
         )
         if len(response) == 0:
