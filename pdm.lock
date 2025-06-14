@@ -5,7 +5,7 @@
 groups = ["default", "chat", "mcp", "pynput", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:21d28e90c53b9d7f3439e469fe2125b83225d66dd3f6d182bedd1ae774544485"
+content_hash = "sha256:77f3e9a0e1341ed58fc95d18d23407f70b7aedd679722d250a307f3ca19f12a3"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -415,6 +415,39 @@ files = [
 ]
 
 [[package]]
+name = "fastapi-proxy-lib"
+version = "0.3.0"
+requires_python = ">=3.9"
+summary = "HTTP/WebSocket proxy for starlette/FastAPI."
+groups = ["chat"]
+dependencies = [
+    "httpx",
+    "httpx-ws>=0.7.1",
+    "starlette",
+    "typing-extensions>=4.5.0",
+]
+files = [
+    {file = "fastapi_proxy_lib-0.3.0-py3-none-any.whl", hash = "sha256:7b757f7ad08630c7422574fa0d1c650bd1899b77798187438b4b1fe38ee143ca"},
+    {file = "fastapi_proxy_lib-0.3.0.tar.gz", hash = "sha256:c311b64f335624babc4ca61551f9468b9cfe49adeb7a752ce798e5090e466232"},
+]
+
+[[package]]
+name = "fastapi-proxy-lib"
+version = "0.3.0"
+extras = ["standard"]
+requires_python = ">=3.9"
+summary = "HTTP/WebSocket proxy for starlette/FastAPI."
+groups = ["chat"]
+dependencies = [
+    "fastapi",
+    "fastapi-proxy-lib==0.3.0",
+]
+files = [
+    {file = "fastapi_proxy_lib-0.3.0-py3-none-any.whl", hash = "sha256:7b757f7ad08630c7422574fa0d1c650bd1899b77798187438b4b1fe38ee143ca"},
+    {file = "fastapi_proxy_lib-0.3.0.tar.gz", hash = "sha256:c311b64f335624babc4ca61551f9468b9cfe49adeb7a752ce798e5090e466232"},
+]
+
+[[package]]
 name = "filelock"
 version = "3.18.0"
 requires_python = ">=3.9"
@@ -622,7 +655,7 @@ name = "httpcore"
 version = "1.0.7"
 requires_python = ">=3.8"
 summary = "A minimal low-level HTTP client."
-groups = ["default", "mcp"]
+groups = ["default", "chat", "mcp"]
 dependencies = [
     "certifi",
     "h11<0.15,>=0.13",
@@ -637,7 +670,7 @@ name = "httpx"
 version = "0.28.1"
 requires_python = ">=3.8"
 summary = "The next generation HTTP client."
-groups = ["default", "mcp"]
+groups = ["default", "chat", "mcp"]
 dependencies = [
     "anyio",
     "certifi",
@@ -658,6 +691,23 @@ groups = ["mcp"]
 files = [
     {file = "httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721"},
     {file = "httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f"},
+]
+
+[[package]]
+name = "httpx-ws"
+version = "0.7.2"
+requires_python = ">=3.9"
+summary = "WebSockets support for HTTPX"
+groups = ["chat"]
+dependencies = [
+    "anyio>=4",
+    "httpcore>=1.0.4",
+    "httpx>=0.23.1",
+    "wsproto",
+]
+files = [
+    {file = "httpx_ws-0.7.2-py3-none-any.whl", hash = "sha256:dd7bf9dbaa96dcd5cef1af3a7e1130cfac068bebecce25a74145022f5a8427a3"},
+    {file = "httpx_ws-0.7.2.tar.gz", hash = "sha256:93edea6c8fc313464fc287bff7d2ad20e6196b7754c76f946f73b4af79886d4e"},
 ]
 
 [[package]]
@@ -2437,4 +2487,18 @@ marker = "sys_platform == \"win32\""
 files = [
     {file = "winregistry-2.1.0-py3-none-any.whl", hash = "sha256:7591bc93ba5513b389a0234dfa665ac0752e964bddf44757c266a3b754c941e1"},
     {file = "winregistry-2.1.0.tar.gz", hash = "sha256:370c2872f9cf9a512ed344039efae2a2943eb36355bc867336ff049e0f9d1db4"},
+]
+
+[[package]]
+name = "wsproto"
+version = "1.2.0"
+requires_python = ">=3.7.0"
+summary = "WebSockets state-machine based protocol implementation"
+groups = ["chat"]
+dependencies = [
+    "h11<1,>=0.9.0",
+]
+files = [
+    {file = "wsproto-1.2.0-py3-none-any.whl", hash = "sha256:b9acddd652b585d75b20477888c56642fdade28bdfd3579aa24a4d2c037dd736"},
+    {file = "wsproto-1.2.0.tar.gz", hash = "sha256:ad565f26ecb92588a3e43bc3d96164de84cd9902482b130d0ddbaa9664a85065"},
 ]

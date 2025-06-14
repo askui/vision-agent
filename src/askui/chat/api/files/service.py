@@ -18,12 +18,8 @@ class File(BaseModel):
     created_at: UnixDatetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
-    expires_at: UnixDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc) + timedelta(days=7)
-    )
     filename: str
     object: Literal["file"] = "file"
-    purpose: FilePurpose = "assistants"
 
 
 class FileService:
@@ -97,14 +93,11 @@ class FileService:
         with file_file.open("r") as f:
             return File.model_validate_json(f.read())
 
-    def create(
-        self, file_path: Path, purpose: FilePurpose, filename: str | None = None
-    ) -> File:
+    def create(self, file_path: Path, filename: str | None = None) -> File:
         """Create a new file.
 
         Args:
             file_path (Path): Path to the file to upload
-            purpose (FilePurpose): Purpose of the file
             filename (str | None, optional): Original filename. If None, uses file_path.name
 
         Returns:
@@ -127,7 +120,6 @@ class FileService:
         file = File(
             bytes=file_size,
             filename=filename or file_path.name,
-            purpose=purpose,
         )
 
         # Create files directory if it doesn't exist

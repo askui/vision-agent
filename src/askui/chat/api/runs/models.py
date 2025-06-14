@@ -1,15 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
-from askui.chat.api.models import (
-    MODEL_DEFAULT,
-    AssistantId,
-    RunId,
-    ThreadId,
-    UnixDatetime,
-)
+from askui.chat.api.models import AssistantId, RunId, ThreadId, UnixDatetime
 from askui.chat.api.utils import generate_time_ordered_id
 
 RunStatus = Literal[
@@ -40,16 +34,10 @@ class Run(BaseModel):
     )
     failed_at: UnixDatetime | None = None
     id: RunId = Field(default_factory=lambda: generate_time_ordered_id("run"))
-    instructions: str = ""
     last_error: RunError | None = None
-    model: str = MODEL_DEFAULT
     object: Literal["thread.run"] = "thread.run"
-    parallel_tool_calls: bool = False  # different from OpenAI
-    response_format: Literal["auto"] = "auto"
     started_at: UnixDatetime | None = None
     thread_id: ThreadId
-    tool_choice: Literal["auto"] = "auto"
-    tools: list[Any] = Field(default_factory=list)
     tried_cancelling_at: UnixDatetime | None = None
 
     @computed_field

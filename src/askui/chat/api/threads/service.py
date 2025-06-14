@@ -4,6 +4,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from askui.chat.api.messages.message_persisted_service import (
+    MessagePersisted,
+    MessagePersistedService,
+)
 from askui.chat.api.messages.service import MessageCreateRequest, MessageService
 from askui.chat.api.models import ListQuery, ListResponse, ThreadId, UnixDatetime
 from askui.chat.api.utils import generate_time_ordered_id
@@ -20,7 +24,7 @@ class Thread(BaseModel):
 
 
 class ThreadCreateRequest(BaseModel):
-    messages: list[MessageCreateRequest] | None = None
+    messages: list[MessagePersisted] | None = None
 
 
 class ThreadService:
@@ -29,7 +33,7 @@ class ThreadService:
     def __init__(
         self,
         base_dir: Path,
-        message_service: MessageService,
+        message_service: MessagePersistedService,
     ) -> None:
         """Initialize thread service.
 
@@ -98,10 +102,10 @@ class ThreadService:
         self._threads_dir.mkdir(parents=True, exist_ok=True)
         thread_file.touch()
         if request.messages:
-            for message_create_request in request.messages:
+            for message in request.messages:
                 self._message_service.create(
                     thread_id=thread.id,
-                    request=message_create_request,
+                    message=message,
                 )
         return thread
 

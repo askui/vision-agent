@@ -35,6 +35,7 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/askui/__init__.py"
 
+
 [tool.pdm]
 distribution = true
 
@@ -55,6 +56,7 @@ typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
 chat = "streamlit run src/askui/chat/__main__.py"
 "chat:api" = "uvicorn src.askui.chat.api.app:app --reload --port 8000"
+"chat:proxy" = "uvicorn src.askui.chat.api.proxy:app --reload --port 8000"
 mcp = "mcp dev src/askui/mcp/__init__.py"
 
 [dependency-groups]
@@ -62,6 +64,7 @@ chat = [
     "streamlit>=1.42.0",
     "fastapi>=0.115.12",
     "uvicorn>=0.34.3",
+    "fastapi-proxy-lib[standard]>=0.3.0",
 ]
 pynput = [
     "mss>=10.0.0",

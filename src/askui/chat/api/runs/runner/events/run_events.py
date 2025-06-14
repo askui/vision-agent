@@ -10,7 +10,6 @@ class RunEvent(EventBase):
         "thread.run.created",
         "thread.run.queued",
         "thread.run.in_progress",
-        "thread.run.requires_action",
         "thread.run.completed",
         "thread.run.failed",
         "thread.run.cancelling",

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
 
 from askui.chat.api.models import (
     MAX_MESSAGES_PER_THREAD,
@@ -21,13 +21,6 @@ from askui.models.shared.computer_agent_message_param import (
 )
 
 
-class IncompleteDetails(BaseModel):
-    reason: str
-
-
-Metadata = dict[str, str]
-
-
 class MessageBase(BaseModel):
     id: MessageId = Field(default_factory=lambda: generate_time_ordered_id("msg"))
     assistant_id: AssistantId | None = None
@@ -36,21 +29,8 @@ class MessageBase(BaseModel):
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
     object: Literal["thread.message"] = "thread.message"
-    completed_at: UnixDatetime | None = None
     role: Literal["user", "assistant"]
     run_id: RunId | None = None
-    incomplete_at: UnixDatetime | None = None
-    incomplete_details: IncompleteDetails | None = None
-    metadata: Metadata | None = None
-
-    @computed_field
-    @property
-    def status(self) -> Literal["in_progress", "completed", "incomplete"]:
-        if self.incomplete_at:
-            return "incomplete"
-        if self.completed_at:
-            return "completed"
-        return "in_progress"
 
 
 class MessagePersisted(MessageBase, MessageParam):

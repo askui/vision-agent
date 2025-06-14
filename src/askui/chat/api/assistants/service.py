@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import MODEL_DEFAULT, ListQuery, ListResponse, UnixDatetime
+from askui.chat.api.models import ListQuery, ListResponse, UnixDatetime
 from askui.chat.api.utils import generate_time_ordered_id
 
 
@@ -16,12 +16,8 @@ class Assistant(BaseModel):
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
     name: str | None = None
-    model: str = MODEL_DEFAULT
     description: str | None = None
     object: Literal["assistant"] = "assistant"
-    response_format: Literal["auto"] = "auto"
-    tools: list[Any] = Field(default_factory=list)
-    instructions: str | None = None
 
 
 class CreateAssistantRequest(BaseModel):
@@ -29,11 +25,9 @@ class CreateAssistantRequest(BaseModel):
 
     name: str | None = None
     description: str | None = None
-    model: str = MODEL_DEFAULT
-    instructions: str | None = None
 
 
-class UpdateAssistantRequest(BaseModel):
+class AssistantModifyRequest(BaseModel):
     """Request model for updating an assistant."""
 
     name: str | None = None
@@ -130,12 +124,12 @@ class AssistantService:
             f.write(assistant.model_dump_json())
         return assistant
 
-    def update(self, assistant_id: str, request: UpdateAssistantRequest) -> Assistant:
+    def modify(self, assistant_id: str, request: AssistantModifyRequest) -> Assistant:
         """Update an existing assistant.
 
         Args:
-            assistant_id: ID of assistant to update
-            request: Assistant update request
+            assistant_id: ID of assistant to modify
+            request: Assistant modify request
 
         Returns:
             Updated assistant object

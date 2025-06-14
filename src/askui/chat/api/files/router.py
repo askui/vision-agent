@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi import File as FastAPIFile
 from fastapi.responses import StreamingResponse
 
 from askui.chat.api.files.dependencies import FileServiceDep
-from askui.chat.api.files.service import File, FilePurpose, FileService
+from askui.chat.api.files.service import File, FileService
 from askui.chat.api.models import FileId, ListQuery, ListQueryDep, ListResponse
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -26,7 +26,6 @@ def list_files(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def upload_file(
     file: Annotated[UploadFile, FastAPIFile(...)],
-    purpose: Annotated[FilePurpose, Form(...)],
     file_service: FileService = FileServiceDep,
 ) -> File:
     """Upload a file.
@@ -54,7 +53,6 @@ async def upload_file(
             # Create file using the temp file and original filename if available
             return file_service.create(
                 temp_path,
-                purpose=purpose,
                 filename=file.filename,
             )
         finally:
