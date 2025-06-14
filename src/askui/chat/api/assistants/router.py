@@ -3,9 +3,9 @@ from fastapi import APIRouter, HTTPException, status
 from askui.chat.api.assistants.dependencies import AssistantServiceDep
 from askui.chat.api.assistants.service import (
     Assistant,
+    AssistantModifyRequest,
     AssistantService,
     CreateAssistantRequest,
-    UpdateAssistantRequest,
 )
 from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse
 
@@ -43,14 +43,14 @@ def retrieve_assistant(
 
 
 @router.post("/{assistant_id}")
-def update_assistant(
+def modify_assistant(
     assistant_id: str,
-    request: UpdateAssistantRequest,
+    request: AssistantModifyRequest,
     assistant_service: AssistantService = AssistantServiceDep,
 ) -> Assistant:
     """Update an assistant."""
     try:
-        return assistant_service.update(assistant_id, request)
+        return assistant_service.modify(assistant_id, request)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 

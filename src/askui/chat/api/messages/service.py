@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 from askui.chat.api.messages.message_persisted_service import (
     MessagePersisted,
     MessagePersistedService,
-    Metadata,
 )
 from askui.chat.api.messages.models import (
     Message,
@@ -42,7 +41,6 @@ DO_NOT_PATCH = DoNotPatch()
 
 class MessagePatch(BaseModel):
     completed_at: UnixDatetime | None | DoNotPatch = Field(default=DO_NOT_PATCH)
-    metadata: Metadata | None | DoNotPatch = Field(default=DO_NOT_PATCH)
 
 
 class MessageCreateRequestContentText(BaseModel):

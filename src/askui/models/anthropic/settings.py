@@ -8,13 +8,14 @@ COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 
 class AnthropicSettings(BaseSettings):
     api_key: SecretStr = Field(
+        default=...,
         min_length=1,
         validation_alias="ANTHROPIC_API_KEY",
     )
 
 
 class ClaudeSettingsBase(BaseModel):
-    anthropic: AnthropicSettings = Field(default_factory=AnthropicSettings)
+    anthropic: AnthropicSettings = Field(default_factory=lambda: AnthropicSettings())
 
 
 class ClaudeSettings(ClaudeSettingsBase):
