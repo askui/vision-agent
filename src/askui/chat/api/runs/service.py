@@ -12,6 +12,7 @@ from askui.chat.api.models import AssistantId, ListQuery, ListResponse, RunId, T
 from askui.chat.api.runs.models import Run
 from askui.chat.api.runs.runner.events import Events
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
+from askui.chat.api.runs.runner.events.error_events import ErrorEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
 from askui.chat.api.runs.runner.runner import Runner
 
@@ -76,11 +77,9 @@ class RunService:
                 loop = asyncio.get_event_loop()
                 while True:
                     event = await loop.run_in_executor(None, event_queue.get)
-                    if isinstance(event, DoneEvent):
-                        break
                     yield event
-
-                yield event
+                    if isinstance(event, DoneEvent) or isinstance(event, ErrorEvent):
+                        break
 
             return event_stream()
         return run

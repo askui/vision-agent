@@ -2,7 +2,12 @@ from fastapi import APIRouter, HTTPException, status
 
 from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse, ThreadId
 from askui.chat.api.threads.dependencies import ThreadServiceDep
-from askui.chat.api.threads.service import Thread, ThreadCreateRequest, ThreadService
+from askui.chat.api.threads.service import (
+    Thread,
+    ThreadCreateRequest,
+    ThreadModifyRequest,
+    ThreadService,
+)
 
 router = APIRouter(prefix="/threads", tags=["threads"])
 
@@ -47,3 +52,13 @@ def delete_thread(
         thread_service.delete(thread_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.post("/{thread_id}")
+def modify_thread(
+    thread_id: ThreadId,
+    request: ThreadModifyRequest,
+    thread_service: ThreadService = ThreadServiceDep,
+) -> Thread:
+    """Modify a thread."""
+    return thread_service.modify(thread_id, request)

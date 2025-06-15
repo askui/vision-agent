@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, status
 
-from askui.chat.api.messages.dependencies import MessagePersistedServiceDep
-from askui.chat.api.messages.message_persisted_service import (
-    MessagePersisted,
-    MessagePersistedService,
+from askui.chat.api.messages.dependencies import MessageServiceDep
+from askui.chat.api.messages.service import (
+    Message,
+    MessageCreateRequest,
+    MessageService,
 )
 from askui.chat.api.models import (
     ListQuery,
@@ -20,8 +21,8 @@ router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 def list_messages(
     thread_id: ThreadId,
     query: ListQuery = ListQueryDep,
-    message_service: MessagePersistedService = MessagePersistedServiceDep,
-) -> ListResponse[MessagePersisted]:
+    message_service: MessageService = MessageServiceDep,
+) -> ListResponse[Message]:
     """List all messages in a thread."""
     try:
         messages = message_service.list_(thread_id, query=query)
@@ -38,12 +39,12 @@ def list_messages(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_message(
     thread_id: ThreadId,
-    message: MessagePersisted,
-    message_service: MessagePersistedService = MessagePersistedServiceDep,
-) -> MessagePersisted:
+    request: MessageCreateRequest,
+    message_service: MessageService = MessageServiceDep,
+) -> Message:
     """Create a new message in a thread."""
     try:
-        return message_service.create(thread_id=thread_id, message=message)
+        return message_service.create(thread_id=thread_id, request=request)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
@@ -52,8 +53,8 @@ async def create_message(
 def retrieve_message(
     thread_id: ThreadId,
     message_id: MessageId,
-    message_service: MessagePersistedService = MessagePersistedServiceDep,
-) -> MessagePersisted:
+    message_service: MessageService = MessageServiceDep,
+) -> Message:
     """Get a specific message from a thread."""
     try:
         messages = message_service.list_(thread_id=thread_id, query=ListQuery(limit=1))
@@ -70,7 +71,7 @@ def retrieve_message(
 def delete_message(
     thread_id: ThreadId,
     message_id: MessageId,
-    message_service: MessagePersistedService = MessagePersistedServiceDep,
+    message_service: MessageService = MessageServiceDep,
 ) -> None:
     """Delete a message from a thread."""
     try:

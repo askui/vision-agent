@@ -4,12 +4,18 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.messages.message_persisted_service import (
-    MessagePersisted,
-    MessagePersistedService,
+from askui.chat.api.messages.service import (
+    Message,
+    MessageCreateRequest,
+    MessageService,
 )
-from askui.chat.api.messages.service import MessageCreateRequest, MessageService
-from askui.chat.api.models import ListQuery, ListResponse, ThreadId, UnixDatetime
+from askui.chat.api.models import (
+    DoNotPatch,
+    ListQuery,
+    ListResponse,
+    ThreadId,
+    UnixDatetime,
+)
 from askui.chat.api.utils import generate_time_ordered_id
 
 
@@ -20,11 +26,17 @@ class Thread(BaseModel):
     created_at: UnixDatetime = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
+    name: str | None = None
     object: Literal["thread"] = "thread"
 
 
 class ThreadCreateRequest(BaseModel):
-    messages: list[MessagePersisted] | None = None
+    name: str | None = None
+    messages: list[MessageCreateRequest] | None = None
+
+
+class ThreadModifyRequest(BaseModel):
+    name: str | None | DoNotPatch = DoNotPatch()
 
 
 class ThreadService:
@@ -33,7 +45,7 @@ class ThreadService:
     def __init__(
         self,
         base_dir: Path,
-        message_service: MessagePersistedService,
+        message_service: MessageService,
     ) -> None:
         """Initialize thread service.
 
@@ -43,6 +55,26 @@ class ThreadService:
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
         self._message_service = message_service
+
+    def create(self, request: ThreadCreateRequest) -> Thread:
+        """Create a new thread.
+
+        Returns:
+            Created thread object
+        """
+        thread = Thread(name=request.name)
+        self._threads_dir.mkdir(parents=True, exist_ok=True)
+        thread_file = self._threads_dir / f"{thread.id}.json"
+        thread_file.write_text(thread.model_dump_json())
+        thread_messages_file = self._threads_dir / f"{thread.id}.jsonl"
+        thread_messages_file.touch()
+        if request.messages:
+            for message in request.messages:
+                self._message_service.create(
+                    thread_id=thread.id,
+                    request=message,
+                )
+        return thread
 
     def list_(self, query: ListQuery) -> ListResponse[Thread]:
         """List all available threads.
@@ -56,19 +88,11 @@ class ThreadService:
         if not self._threads_dir.exists():
             return ListResponse(data=[])
 
-        thread_files = list(self._threads_dir.glob("*.jsonl"))
+        thread_files = list(self._threads_dir.glob("*.json"))
         threads: list[Thread] = []
         for f in thread_files:
-            thread_id = f.stem
-            created_at = datetime.fromtimestamp(
-                f.stat().st_ctime, tz=timezone.utc
-            )  # TODO Check how we save the created time and that it is consistent and correct
-            threads.append(
-                Thread(
-                    id=thread_id,
-                    created_at=created_at,
-                )
-            )
+            thread = Thread.model_validate_json(f.read_text())
+            threads.append(thread)
 
         # Sort by creation date
         threads = sorted(
@@ -91,24 +115,6 @@ class ThreadService:
             has_more=len(thread_files) > query.limit,
         )
 
-    def create(self, request: ThreadCreateRequest) -> Thread:
-        """Create a new thread.
-
-        Returns:
-            Created thread object
-        """
-        thread = Thread()
-        thread_file = self._threads_dir / f"{thread.id}.jsonl"
-        self._threads_dir.mkdir(parents=True, exist_ok=True)
-        thread_file.touch()
-        if request.messages:
-            for message in request.messages:
-                self._message_service.create(
-                    thread_id=thread.id,
-                    message=message,
-                )
-        return thread
-
     def retrieve(self, thread_id: ThreadId) -> Thread:
         """Retrieve a thread by ID.
 
@@ -121,18 +127,11 @@ class ThreadService:
         Raises:
             FileNotFoundError: If thread doesn't exist
         """
-        thread_file = self._threads_dir / f"{thread_id}.jsonl"
+        thread_file = self._threads_dir / f"{thread_id}.json"
         if not thread_file.exists():
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
-
-        created_at = datetime.fromtimestamp(
-            thread_file.stat().st_ctime, tz=timezone.utc
-        )
-        return Thread(
-            id=thread_id,
-            created_at=created_at,
-        )
+        return Thread.model_validate_json(thread_file.read_text())
 
     def delete(self, thread_id: ThreadId) -> None:
         """Delete a thread and all its associated files.
@@ -143,10 +142,25 @@ class ThreadService:
         Raises:
             FileNotFoundError: If thread doesn't exist
         """
-        thread_file = self._threads_dir / f"{thread_id}.jsonl"
+        thread_file = self._threads_dir / f"{thread_id}.json"
         if not thread_file.exists():
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
-
-        # Delete thread file
+        thread_messages_file = self._threads_dir / f"{thread_id}.jsonl"
+        if thread_messages_file.exists():
+            thread_messages_file.unlink()
         thread_file.unlink()
+
+    def modify(self, thread_id: ThreadId, request: ThreadModifyRequest) -> Thread:
+        """Modify a thread.
+
+        Args:
+            thread_id (ThreadId): ID of thread to modify
+            request (ThreadModifyRequest): Request containing the new name
+        """
+        thread = self.retrieve(thread_id)
+        if not isinstance(request.name, DoNotPatch):
+            thread.name = request.name
+        thread_file = self._threads_dir / f"{thread_id}.json"
+        thread_file.write_text(thread.model_dump_json())
+        return thread

@@ -4,13 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from askui.agent import VisionAgent
-from askui.chat.api.messages.message_persisted_service import (
-    MessagePersisted,
-    MessagePersistedService,
-)
-from askui.chat.api.messages.service import MessageService
+from askui.chat.api.messages.service import MessageCreateRequest, MessageService
 from askui.chat.api.models import MAX_MESSAGES_PER_THREAD, ListQuery
-from askui.chat.api.run_steps.service import RunStepService
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import (
@@ -33,11 +28,9 @@ class Runner:
         self._run = run
         self._base_dir = base_dir
         self._runs_dir = base_dir / "runs"
-        self._msg_persisted_service = MessagePersistedService(self._base_dir)
-        self._msg_service = MessageService(service=self._msg_persisted_service)
-        self._run_step_service = RunStepService(self._base_dir)
+        self._msg_service = MessageService(self._base_dir)
 
-    def run(  # TODO Do in other process
+    def run(
         self,
         event_queue: queue.Queue[Events],
     ) -> None:
@@ -53,7 +46,7 @@ class Runner:
                 role=msg.role,
                 content=msg.content,
             )
-            for msg in self._msg_persisted_service.list_(
+            for msg in self._msg_service.list_(
                 thread_id=self._run.thread_id,
                 query=ListQuery(limit=MAX_MESSAGES_PER_THREAD, order="asc"),
             )
@@ -62,14 +55,15 @@ class Runner:
         def on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._msg_persisted_service.create(
+            message = self._msg_service.create(
                 thread_id=self._run.thread_id,
-                message=MessagePersisted(
-                    assistant_id=self._run.assistant_id,
+                request=MessageCreateRequest(
+                    assistant_id=self._run.assistant_id
+                    if on_message_cb_param.message.role == "assistant"
+                    else None,
                     role=on_message_cb_param.message.role,
                     content=on_message_cb_param.message.content,
                     run_id=self._run.id,
-                    thread_id=self._run.thread_id,
                 ),
             )
             event_queue.put(
@@ -79,7 +73,7 @@ class Runner:
                 )
             )
             updated_run = self._retrieve_run()
-            if updated_run.status in ("cancelling", "expired"):
+            if self._should_abort(updated_run):
                 return None
             return on_message_cb_param.message
 
@@ -88,7 +82,7 @@ class Runner:
                 agent.act(
                     messages,
                     on_message=on_message,
-                    model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,  # TODO Use selected model
+                    model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
                 )
             updated_run = self._retrieve_run()
             if updated_run.status == "in_progress":
@@ -148,12 +142,12 @@ class Runner:
     def _should_abort(self, run: Run) -> bool:
         return run.status in ("cancelled", "cancelling", "expired")
 
-    def _update_run_file(self, run: Run) -> None:  # TODO Do in run service
+    def _update_run_file(self, run: Run) -> None:
         run_file = self._runs_dir / f"{run.thread_id}__{run.id}.json"
         with run_file.open("w") as f:
             f.write(run.model_dump_json())
 
-    def _retrieve_run(self) -> Run:  # TODO Do in run service
+    def _retrieve_run(self) -> Run:
         run_file = self._runs_dir / f"{self._run.thread_id}__{self._run.id}.json"
         with run_file.open("r") as f:
             return Run.model_validate_json(f.read())

@@ -15,9 +15,13 @@ UnixDatetime = Annotated[
 
 
 AssistantId = str
+FileId = str
+MessageId = str
+RunId = str
+ThreadId = str
+
+
 ListOrder = Literal["asc", "desc"]
-
-
 MAX_MESSAGES_PER_THREAD = 100
 
 
@@ -43,9 +47,8 @@ class ListResponse(BaseModel, Generic[ObjectType]):
     has_more: bool = False
 
 
-RunId = str
-ThreadId = str
-MODEL_DEFAULT = "gpt-4o"
-ASSISTANT_ID_DEFAULT = "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmca"
-MessageId = str
-FileId = str
+class DoNotPatch(BaseModel):
+    pass
+
+
+DO_NOT_PATCH = DoNotPatch()

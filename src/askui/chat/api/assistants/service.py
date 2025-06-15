@@ -4,7 +4,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import ListQuery, ListResponse, UnixDatetime
+from askui.chat.api.models import (
+    DO_NOT_PATCH,
+    DoNotPatch,
+    ListQuery,
+    ListResponse,
+    UnixDatetime,
+)
 from askui.chat.api.utils import generate_time_ordered_id
 
 
@@ -18,6 +24,7 @@ class Assistant(BaseModel):
     name: str | None = None
     description: str | None = None
     object: Literal["assistant"] = "assistant"
+    avatar: str | None = Field(default=None, description="URL of the avatar image")
 
 
 class CreateAssistantRequest(BaseModel):
@@ -25,13 +32,17 @@ class CreateAssistantRequest(BaseModel):
 
     name: str | None = None
     description: str | None = None
+    avatar: str | None = Field(default=None, description="URL of the avatar image")
 
 
 class AssistantModifyRequest(BaseModel):
     """Request model for updating an assistant."""
 
-    name: str | None = None
-    description: str | None = None
+    name: str | None | DoNotPatch = DO_NOT_PATCH
+    description: str | None | DoNotPatch = DO_NOT_PATCH
+    avatar: str | None | DoNotPatch = Field(
+        default=DO_NOT_PATCH, description="URL of the avatar image"
+    )
 
 
 class AssistantService:
@@ -138,10 +149,12 @@ class AssistantService:
             FileNotFoundError: If assistant doesn't exist
         """
         assistant = self.retrieve(assistant_id)
-        if request.name is not None:
+        if not isinstance(request.name, DoNotPatch):
             assistant.name = request.name
-        if request.description is not None:
+        if not isinstance(request.description, DoNotPatch):
             assistant.description = request.description
+        if not isinstance(request.avatar, DoNotPatch):
+            assistant.avatar = request.avatar
         assistant_file = self._assistants_dir / f"{assistant_id}.json"
         with assistant_file.open("w") as f:
             f.write(assistant.model_dump_json())
