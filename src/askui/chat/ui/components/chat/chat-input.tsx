@@ -116,6 +116,9 @@ export function ChatInput() {
         queryKey: ["messages", selectedThread?.id],
       });
     },
+    onError: (error) => {
+      toast.error(`Failed to send message: ${error}`);
+    },
   });
 
   const createRunMutation = useMutation({
@@ -165,9 +168,11 @@ export function ChatInput() {
           case "thread.run.cancelling":
           case "thread.run.cancelled":
           case "thread.run.failed":
-          case "thread.run.expired":
             setCurrentRun(event.data);
             break;
+          case "thread.run.expired":
+            setCurrentRun(event.data);
+            throw new Error("Run expired");
           case "thread.message.created":
             appendMessage(event.data);
             break;
@@ -226,32 +231,28 @@ export function ChatInput() {
       return;
     }
 
-    if (!message.trim() && attachedFiles.length === 0) {
-      return;
-    }
+    if (message.trim() || attachedFiles.length > 0) {
+      const content: any[] = [];
 
-    const content: any[] = [];
+      if (message.trim()) {
+        content.push({
+          type: "text",
+          text: message.trim(),
+        });
+      }
 
-    if (message.trim()) {
-      content.push({
-        type: "text",
-        text: message.trim(),
+      attachedFiles.forEach((file) => {
+        const base64Data = file.preview.split(",")[1];
+        content.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: file.file.type,
+            data: base64Data,
+          },
+        });
       });
-    }
 
-    attachedFiles.forEach((file) => {
-      const base64Data = file.preview.split(",")[1];
-      content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: file.file.type,
-          data: base64Data,
-        },
-      });
-    });
-
-    try {
       await createMessageMutation.mutateAsync({
         content:
           content.length === 1 && content[0].type === "text"
@@ -260,15 +261,11 @@ export function ChatInput() {
         role: "user",
       });
 
-      // Start the run
-      await createRunMutation.mutateAsync();
-
-      // Clear input
       setMessage("");
       setAttachedFiles([]);
-    } catch (error) {
-      console.error("Error sending message:", error);
     }
+
+    await createRunMutation.mutateAsync();
   };
 
   const handleCancel = () => {
@@ -424,11 +421,7 @@ export function ChatInput() {
                       type="submit"
                       size="icon"
                       className="h-8 w-8"
-                      disabled={
-                        isLoading ||
-                        (!message.trim() && attachedFiles.length === 0) ||
-                        !selectedAssistant
-                      }
+                      disabled={isLoading || !selectedAssistant}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
