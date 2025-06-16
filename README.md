@@ -765,38 +765,64 @@ By default, we record usage data to detect and fix bugs inside the package and i
 If you would like to disable the recording of usage data, set the `ASKUI__VA__TELEMETRY__ENABLED` environment variable to `False`.
 
 
-## Experimental Features
+## Experimental
 
-### Chat
+### AskUI Chat
 
-The chat is a streamlit app that allows you to give an agent instructions and observe via messages by the agent given as a response the reasoning and actions taken by the action in return. The actions can be replayed afterwards.
+AskUI Chat is a web application that allows interacting with an AskUI Vision Agent similar how it can be
+done with `VisionAgent.act()` but in a more interactive manner that involves less code. Aside from
+telling the AskUI Vision Agent what to do, the user can also demonstrate what to do (currently, only
+clicking is supported).
 
-Instead of giving an agent instructions about what to do, it also allows demonstrating/simulating certain actions (left clicking, typing, mouse moving) directly and replay those actions.
+**⚠️ Warning:** AskUI Chat is currently in an experimental stage and has several limitations (see below).
 
-Configure the chat by setting the following environment variables:
+#### Configuration
 
-- `ANTHROPIC_API_KEY`
-- `ASKUI_WORKSPACE_ID`
-- `ASKUI_TOKEN`
+To use the chat, configure the following environment variables:
 
-Start the chat with:
+- `ASKUI_TOKEN`: AskUI Vision Agent behind chat uses currently the AskUI API
+- `ASKUI_WORKSPACE_ID`: AskUI Vision Agent behind chat uses currently the AskUI API
+- `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores its data in a directory locally. You can change the default directory by setting this environment variable.
+
+#### Installation
 
 ```bash
-pdm run chat
+pdm install # is going to install the dependencies of the api
+pdm run chat:ui:install # is going to install the dependencies of the ui
 ```
 
-This should open the streamlit app in your default browser.
+You may need to give permissions on the fast run of the Chat UI to demonstrate actions (aka record clicks).
 
-Currently, the chat is in the experimental stage and has a lot of issues, for example:
+#### Usage
 
-- You cannot cancel/stop the agent while it is running except by terminating/killing streamlit or hitting "stop" within the streamlit app.
-- There is no option to retry a failed prompt.
-- A chat/thread cannot be deleted.
-- The agent often responds with that it cannot solve an issue because it does not see what to do.
-- No option to edit message in a thread or start a new thread from an existing thread by editing a message within it or retrying a certain message.
-- You have to rerun all actions taken by the agent even though they may have not lead to the goal and are, in fact, redundant.
-- Often the agent does not get which window has focus --> You can tell it in the prompt and tell it to click on the window to interact with first to make sure it has focus.
-- Often the agent goes into crazy loops.
-- Display id cannot be configured but instead display 1 is taken by default.
-- Connection issues with controller, e.g., if there are multiple chat sessions open at the same time, or if the agent was killed/terminated --> Restart controller, restart streamlit app, make sure it is the only controller and streamlit app session running.
-- The chat sessions are identified by timestamp of when they were created.
+```bash
+pdm run chat:api # is going to start the api at port 8000
+pdm run chat:ui # is going to start the ui at port 3000
+```
+
+You can use the chat to record a workflow and redo it later. For that, just tell the agent to redo all previous steps.
+
+- *Not efficient enought?* If some of the steps can be omitted in the rerun, you can just delete them or tell the agent to skip unnecessary steps.
+- *Agent not doing what you want it to?*
+    - The agent may get confused with the coordinates of clicks demonstrated by the user as it seems to use other coordinates. To omit this just tell the agent that the coordinates may have changed in the meanwhile and that it should take screenshots along the way to determine where to click.
+    - It may also be helpful to tell the agent to first explain its understanding of the user's goal after having demonstrated some actions or before trying to get it to redo what has been done so that the agent can focus on the overarching goal instead of being reliant on specific actions.
+
+#### Limitations
+
+- A lot of errors are not handled properly and we allow the user to do a lot of actions that can lead to errors instead of properly guiding the user.
+- The chat currently only allows rerunning actions through `VisionAgent.act()` which can be expensive, slow and is not necessary the most reliable way to do it.
+- A lot quirks in UI and API.
+- Currently, api and ui need to be run in dev mode.
+- When demonstrating actions, the corresponding screenshot may not reflect the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
+- Currently, we only allow a maximum of 100 messages per conversation.
+- When demonstrating actions, actions may be recorded that you did not want to record, e.g., stopping the demonstration. Just delete these messages afterwards.
+- The agent is going to fail if there are no messages in the conversation, there is no tool use result message following the tool use message somewhere in the conversation, a message is too long etc.
+  Just adding or deleting the message in this case should fix the issue.
+- You should not switch the conversation while waiting for an agent's answers or demonstrating actions.
+
+
+
+#### Architecture
+
+- The chat api/backend is a [FastAPI](https://fastapi.tiangolo.com/) application that provides a REST API similar to [OpenAI's Assistants API](https://platform.openai.com/docs/assistants/overview).
+- The chat ui/frontend is a [Next.js](https://nextjs.org/) application that provides a web interface to the chat api.

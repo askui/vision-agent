@@ -232,8 +232,13 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
     ) -> None:
         """Execute a single step in the conversation.
 
+        If the last message is an assistant's message and does not contain tool use
+        blocks, this method is going to return immediately, as there is nothing to act
+        upon.
+
         Args:
             messages (list[MessageParam]): The message history.
+                Contains at least one message.
             model_choice (str): The model to use for message creation.
             on_message (OnMessageCb | None, optional): Callback on new messages
 
@@ -246,16 +251,21 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
                 self._settings.only_n_most_recent_images,
                 self._settings.image_truncation_threshold,
             )
-        response_message = self._create_message(messages, model_choice)
-        message_by_assistant = self._call_on_message(
-            on_message, response_message, messages
-        )
-        if message_by_assistant is None:
-            return
-        message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
-        logger.debug(message_by_assistant_dict)
-        messages.append(message_by_assistant)
-        self._reporter.add_message(self.__class__.__name__, message_by_assistant_dict)
+        if messages[-1].role == "user":
+            response_message = self._create_message(messages, model_choice)
+            message_by_assistant = self._call_on_message(
+                on_message, response_message, messages
+            )
+            if message_by_assistant is None:
+                return
+            message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
+            logger.debug(message_by_assistant_dict)
+            messages.append(message_by_assistant)
+            self._reporter.add_message(
+                self.__class__.__name__, message_by_assistant_dict
+            )
+        else:
+            message_by_assistant = messages[-1]
         if tool_result_message := self._use_tools(message_by_assistant):
             if tool_result_message := self._call_on_message(
                 on_message, tool_result_message, messages

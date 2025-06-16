@@ -17,7 +17,7 @@ from pynput.mouse import Listener as MouseListener
 from typing_extensions import override
 
 from askui.logger import logger
-from askui.reporting import Reporter
+from askui.reporting import CompositeReporter, Reporter
 from askui.tools.agent_os import AgentOs, InputEvent, ModifierKey, PcKey
 from askui.utils.image_utils import draw_point_on_image
 
@@ -131,14 +131,14 @@ class PynputAgentOs(AgentOs):
 
     def __init__(
         self,
-        reporter: Reporter,
+        reporter: Reporter | None = None,
         display: int = 1,
     ) -> None:
         self._mouse = MouseController()
         self._keyboard = KeyboardController()
         self._sct = mss()
         self._display = display
-        self._reporter = reporter
+        self._reporter = reporter or CompositeReporter()
         self._mouse_listener: MouseListener | None = None
         self._input_event_queue: queue.Queue[InputEvent] = queue.Queue()
 

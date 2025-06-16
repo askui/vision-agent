@@ -690,7 +690,7 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         self.tools.os.run_command(command)
 
-    @telemetry.record_call(flush=True)
+    @telemetry.record_call()
     def close(self) -> None:
         self.tools.os.disconnect()
         self._reporter.generate()
