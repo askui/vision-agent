@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Annotated, Literal, TypedDict
 
 from anthropic.types.beta import (
@@ -12,7 +13,7 @@ from askui.tools.agent_os import AgentOs, PcKey
 from askui.utils.dict_utils import IdentityDefaultDict
 from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
 
-from ..models.shared.tools import Tool
+from ..models.shared.tools import InputSchema, Tool
 
 Action20241022 = Literal[
     "key",
@@ -119,13 +120,17 @@ class BetaToolComputerUseParamBase(TypedDict):
     display_height_px: int
 
 
-class ComputerToolBase(Tool):
-    name: Literal["computer"] = "computer"
-
+class ComputerToolBase(Tool, ABC):
     def __init__(
         self,
         agent_os: AgentOs,
+        input_schema: InputSchema,
     ) -> None:
+        super().__init__(
+            name="computer",
+            description="A tool for interacting with the computer",
+            input_schema={},
+        )
         self._agent_os = agent_os
         self._width = 1280
         self._height = 800
@@ -137,7 +142,7 @@ class ComputerToolBase(Tool):
         self,
     ) -> BetaToolComputerUseParamBase:
         return {
-            "name": self.name,
+            "name": self.name,  # type: ignore[typeddict-item]
             "display_width_px": self._width,
             "display_height_px": self._height,
         }
@@ -248,6 +253,34 @@ class ComputerToolBase(Tool):
 class Computer20241022Tool(ComputerToolBase):
     type: Literal["computer_20241022"] = "computer_20241022"
 
+    def __init__(
+        self,
+        agent_os: AgentOs,
+    ) -> None:
+        super().__init__(
+            agent_os=agent_os,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": list(Action20241022.__args__),
+                    },
+                    "text": {
+                        "type": "string",
+                    },
+                    "coordinate": {
+                        "type": "object",
+                        "properties": {
+                            "x": {"type": "integer", "minimum": 0},
+                            "y": {"type": "integer", "minimum": 0},
+                        },
+                    },
+                },
+                "required": ["action"],
+            },
+        )
+
     @override
     def to_params(
         self,
@@ -260,6 +293,41 @@ class Computer20241022Tool(ComputerToolBase):
 
 class Computer20250124Tool(ComputerToolBase):
     type: Literal["computer_20250124"] = "computer_20250124"
+
+    def __init__(
+        self,
+        agent_os: AgentOs,
+    ) -> None:
+        super().__init__(
+            agent_os=agent_os,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": list(Action20250124.__args__),
+                    },
+                    "text": {
+                        "type": "string",
+                    },
+                    "coordinate": {
+                        "type": "object",
+                        "properties": {
+                            "x": {"type": "integer", "minimum": 0},
+                            "y": {"type": "integer", "minimum": 0},
+                        },
+                    },
+                    "scroll_direction": {
+                        "type": "string",
+                        "enum": list(ScrollDirection.__args__),
+                    },
+                    "scroll_amount": {"type": "integer", "minimum": 0},
+                    "duration": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+                    "key": {"type": "string"},
+                },
+                "required": ["action"],
+            },
+        )
 
     @override
     def to_params(
@@ -279,8 +347,8 @@ class Computer20250124Tool(ComputerToolBase):
         coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
         | None = None,
         scroll_direction: ScrollDirection | None = None,
-        scroll_amount: int | None = None,
-        duration: float | None = None,
+        scroll_amount: Annotated[int, Field(ge=0)] | None = None,
+        duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
         key: str | None = None,  # maybe not all keys supported
     ) -> Image.Image | None:
         match action:

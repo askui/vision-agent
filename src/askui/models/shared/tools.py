@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
-from anthropic.types.beta import BetaToolUnionParam
+from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
+from anthropic.types.beta.beta_tool_param import InputSchema
 from PIL import Image
+from pydantic import BaseModel, Field
 
 from askui.models.shared.computer_agent_message_param import (
     Base64ImageSourceParam,
@@ -33,19 +35,33 @@ def _convert_to_content(
     ]
 
 
-class Tool(ABC):
-    """Abstract base class for tools."""
+def _default_input_schema() -> InputSchema:
+    return {"type": "object", "properties": {}, "required": []}
+
+
+class Tool(BaseModel, ABC):
+    name: str = Field(description="Name of the tool")
+    description: str = Field(description="Description of what the tool does")
+    input_schema: InputSchema = Field(
+        default_factory=_default_input_schema,
+        description="JSON schema for tool parameters",
+    )
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
         """Executes the tool with the given arguments."""
-        raise NotImplementedError
+        error_msg = "Tool subclasses must implement __call__ method"
+        raise NotImplementedError(error_msg)
 
     @abstractmethod
     def to_params(
         self,
     ) -> BetaToolUnionParam:
-        raise NotImplementedError
+        return BetaToolParam(
+            name=self.name,
+            description=self.description,
+            input_schema=self.input_schema,
+        )
 
 
 class ToolCollection:
