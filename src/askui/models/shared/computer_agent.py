@@ -411,15 +411,16 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
                         ),
                     )
                 )
-            if result.base64_image:
-                tool_result_content.append(
-                    ImageBlockParam(
-                        source=Base64ImageSourceParam(
-                            media_type="image/png",
-                            data=result.base64_image,
-                        ),
+            if result.base64_images:
+                for base64_image in result.base64_images:
+                    tool_result_content.append(
+                        ImageBlockParam(
+                            source=Base64ImageSourceParam(
+                                media_type="image/png",
+                                data=base64_image,
+                            ),
+                        )
                     )
-                )
         return ToolResultBlockParam(
             content=tool_result_content,
             tool_use_id=tool_use_id,

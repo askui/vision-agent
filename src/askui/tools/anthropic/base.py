@@ -27,13 +27,13 @@ class ToolResult:
     Args:
         output (str | None, optional): The output of the tool.
         error (str | None, optional): The error message of the tool.
-        base64_image (str | None, optional): The base64 image of the tool.
+        base64_images (list[str], optional): The base64 images of the tool.
         system (str | None, optional): The system message of the tool.
     """
 
     output: str | None = None
     error: str | None = None
-    base64_image: str | None = None
+    base64_images: list[str] = []
     system: str | None = None
 
     def __bool__(self) -> bool:
@@ -53,7 +53,7 @@ class ToolResult:
         return ToolResult(
             output=combine_fields(self.output, other.output),
             error=combine_fields(self.error, other.error),
-            base64_image=combine_fields(self.base64_image, other.base64_image, False),
+            base64_images=self.base64_images + other.base64_images,
             system=combine_fields(self.system, other.system),
         )
 

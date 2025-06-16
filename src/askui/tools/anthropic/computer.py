@@ -356,4 +356,4 @@ class ComputerTool(BaseAnthropicTool):
             screenshot, self._width, self._height
         )
         base64_image = image_to_base64(scaled_screenshot)
-        return ToolResult(base64_image=base64_image)
+        return ToolResult(base64_images=[base64_image])
