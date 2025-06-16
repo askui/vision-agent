@@ -59,10 +59,6 @@ export function MessageList() {
       return;
     }
     const lastMessage = allMessages[allMessages.length - 1];
-    console.log(
-      `prevLastMessageIdRef.current: ${prevLastMessageIdRef.current}`
-    );
-    console.log(`lastMessage.id:               ${lastMessage.id}`);
     if (
       lastMessage &&
       lastMessage.id !== prevLastMessageIdRef.current &&

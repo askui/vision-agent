@@ -35,9 +35,6 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/askui/__init__.py"
 
-
-
-
 [tool.pdm]
 distribution = true
 
