@@ -43,7 +43,6 @@ def create_run(
                     if isinstance(event.data, BaseModel)
                     else event.data
                 )
-                print(f"event: {event.event}\ndata: {data}\n\n")
                 yield f"event: {event.event}\ndata: {data}\n\n"
 
         return StreamingResponse(

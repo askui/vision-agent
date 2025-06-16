@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Send, Plus, X, Paperclip, Square } from "lucide-react";
+import {
+  Send,
+  Plus,
+  X,
+  Paperclip,
+  Square,
+  MousePointerClick,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -16,6 +23,7 @@ import {
 import { useChatStore } from "@/lib/store";
 import { apiClient } from "@/lib/api";
 import { Event } from "@/lib/types";
+import { HUMAN_DEMONSTRATION_AGENT_ID } from "@/lib/constants";
 
 interface AttachedFile {
   id: string;
@@ -93,6 +101,9 @@ export function ChatInput() {
   const [message, setMessage] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [runningAction, setRunningAction] = useState<"send" | "demo" | null>(
+    null
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -122,11 +133,12 @@ export function ChatInput() {
   });
 
   const createRunMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedThread || !selectedAssistant) {
+    mutationFn: async (assistantId: string) => {
+      if (!selectedThread || !assistantId) {
         throw new Error("Thread and assistant required");
       }
 
+      clearMessages();
       const response = await fetch(
         `${
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -137,7 +149,7 @@ export function ChatInput() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            assistant_id: selectedAssistant.id,
+            assistant_id: assistantId,
             stream: true,
           }),
         }
@@ -189,7 +201,7 @@ export function ChatInput() {
         queryKey: ["messages", selectedThread?.id],
       });
       setCurrentRun(null);
-      clearMessages();
+      setRunningAction(null);
     },
     onError: (error) => {
       toast.error(`Run failed: ${error.message}`);
@@ -197,7 +209,7 @@ export function ChatInput() {
         queryKey: ["messages", selectedThread?.id],
       });
       setCurrentRun(null);
-      clearMessages();
+      setRunningAction(null);
     },
   });
 
@@ -265,7 +277,15 @@ export function ChatInput() {
       setAttachedFiles([]);
     }
 
-    await createRunMutation.mutateAsync();
+    if (!selectedAssistant.id) {
+      toast.warning(
+        "Select an assistant and hit the send button again if you want to receive an answer"
+      );
+      return;
+    }
+
+    setRunningAction("send");
+    await createRunMutation.mutateAsync(selectedAssistant.id);
   };
 
   const handleCancel = () => {
@@ -280,6 +300,11 @@ export function ChatInput() {
           toast.error("Failed to send request to cancel run");
         });
     }
+  };
+
+  const handleDemo = async () => {
+    setRunningAction("demo");
+    await createRunMutation.mutateAsync(HUMAN_DEMONSTRATION_AGENT_ID);
   };
 
   const removeFile = (fileId: string) => {
@@ -304,7 +329,6 @@ export function ChatInput() {
 
   const isLoading =
     createMessageMutation.isPending || createRunMutation.isPending;
-  const isRunning = !!currentRun;
 
   return (
     <TooltipProvider>
@@ -399,7 +423,8 @@ export function ChatInput() {
                 <TooltipContent>Attach Image</TooltipContent>
               </Tooltip>
 
-              {isRunning ? (
+              {/* Demo Actions Button or Cancel for Demo */}
+              {runningAction === "demo" ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -412,7 +437,41 @@ export function ChatInput() {
                       <Square className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Cancel</TooltipContent>
+                  <TooltipContent>Cancel Demo</TooltipContent>
+                </Tooltip>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleDemo}
+                      disabled={isLoading || runningAction === "send"}
+                    >
+                      <MousePointerClick className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Demo Actions</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Send Button or Cancel for Send */}
+              {runningAction === "send" ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleCancel}
+                    >
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Cancel Send</TooltipContent>
                 </Tooltip>
               ) : (
                 <Tooltip>
@@ -421,7 +480,11 @@ export function ChatInput() {
                       type="submit"
                       size="icon"
                       className="h-8 w-8"
-                      disabled={isLoading || !selectedAssistant}
+                      disabled={
+                        isLoading ||
+                        !selectedAssistant ||
+                        runningAction === "demo"
+                      }
                     >
                       <Send className="h-4 w-4" />
                     </Button>

@@ -69,77 +69,72 @@ class Runner:
         )
         self._agent_os.start_listening()
         screenshot = self._agent_os.screenshot()
-        image_src = ImageSource(screenshot)
+        time.sleep(0.1)
         recorded_events: list[InputEvent] = []
         while True:
             updated_run = self._retrieve_run()
             if self._should_abort(updated_run):
                 break
-            event = self._agent_os.poll_event()
-            if event and not event.pressed:
-                recorded_events.append(event)
-                button = (
-                    f'the "{event.button}" mouse button'
-                    if event.button != "unknown"
-                    else "a mouse button"
-                )
-                message = self._msg_service.create(
-                    thread_id=self._run.thread_id,
-                    request=MessageCreateRequest(
-                        role="user",
-                        content=[
-                            ImageBlockParam(
-                                type="image",
-                                source=Base64ImageSourceParam(
-                                    data=image_src.to_base64(),
-                                    media_type="image/png",
-                                ),
-                            ),
-                            TextBlockParam(
-                                type="text",
-                                text=f"I moved the mouse to x={event.x}, y={event.y} and clicked {button}.",
-                            ),
-                        ],
-                        run_id=self._run.id,
-                    ),
-                )
-                event_queue.put(
-                    MessageEvent(
-                        data=message,
-                        event="thread.message.created",
+            while event := self._agent_os.poll_event():
+                if self._should_abort(updated_run):
+                    break
+                if not event.pressed:
+                    recorded_events.append(event)
+                    button = (
+                        f'the "{event.button}" mouse button'
+                        if event.button != "unknown"
+                        else "a mouse button"
                     )
-                )
+                    message = self._msg_service.create(
+                        thread_id=self._run.thread_id,
+                        request=MessageCreateRequest(
+                            role="user",
+                            content=[
+                                ImageBlockParam(
+                                    type="image",
+                                    source=Base64ImageSourceParam(
+                                        data=ImageSource(screenshot).to_base64(),
+                                        media_type="image/png",
+                                    ),
+                                ),
+                                TextBlockParam(
+                                    type="text",
+                                    text=f"I moved the mouse to x={event.x}, y={event.y} and clicked {button}.",
+                                ),
+                            ],
+                            run_id=self._run.id,
+                        ),
+                    )
+                    event_queue.put(
+                        MessageEvent(
+                            data=message,
+                            event="thread.message.created",
+                        )
+                    )
             screenshot = self._agent_os.screenshot()
-            image_src = ImageSource(screenshot)
-            time.sleep(0.25)
+            time.sleep(0.1)
         self._agent_os.stop_listening()
         if len(recorded_events) == 0:
             text = "Nevermind, I didn't do anything."
-        else:
-            text = (
-                "Can you describe what I did so that I know "
-                "you understand what to do next time when I ask you to do it? "
-                "Feel free to ask me questions if you don't understand what I did."
+            message = self._msg_service.create(
+                thread_id=self._run.thread_id,
+                request=MessageCreateRequest(
+                    role="user",
+                    content=[
+                        TextBlockParam(
+                            type="text",
+                            text=text,
+                        )
+                    ],
+                    run_id=self._run.id,
+                ),
             )
-        message = self._msg_service.create(
-            thread_id=self._run.thread_id,
-            request=MessageCreateRequest(
-                role="user",
-                content=[
-                    TextBlockParam(
-                        type="text",
-                        text=text,
-                    )
-                ],
-                run_id=self._run.id,
-            ),
-        )
-        event_queue.put(
-            MessageEvent(
-                data=message,
-                event="thread.message.created",
+            event_queue.put(
+                MessageEvent(
+                    data=message,
+                    event="thread.message.created",
+                )
             )
-        )
 
     def _run_askui_vision_agent(self, event_queue: queue.Queue[Events]) -> None:
         messages: list[MessageParam] = [

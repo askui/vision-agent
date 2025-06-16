@@ -11,6 +11,7 @@ import { apiClient } from "@/lib/api";
 import { MessageItem } from "./message-item";
 import { Message } from "@/lib/types";
 import { uniqBy } from "lodash-es";
+import { MAX_MESSAGES_PER_THREAD } from "@/lib/constants";
 
 export function MessageList() {
   const {
@@ -18,7 +19,8 @@ export function MessageList() {
     currentRun,
     messages: storeMessages,
   } = useChatStore();
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
+  const prevLastMessageIdRef = useRef<string | undefined>(undefined);
 
   const {
     data,
@@ -33,7 +35,7 @@ export function MessageList() {
     queryKey: ["messages", selectedThread?.id],
     queryFn: ({ pageParam }) =>
       apiClient.listMessages(selectedThread!.id, {
-        limit: 100, // TODO Endless loading
+        limit: MAX_MESSAGES_PER_THREAD,
         before: pageParam,
         order: "asc",
       }),
@@ -51,12 +53,30 @@ export function MessageList() {
     (message) => message.id
   );
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (allMessages.length === 0) {
+      prevLastMessageIdRef.current = undefined;
+      return;
     }
-  }, [allMessages.length]);
+    const lastMessage = allMessages[allMessages.length - 1];
+    console.log(
+      `prevLastMessageIdRef.current: ${prevLastMessageIdRef.current}`
+    );
+    console.log(`lastMessage.id:               ${lastMessage.id}`);
+    if (
+      lastMessage &&
+      lastMessage.id !== prevLastMessageIdRef.current &&
+      lastMessageRef.current
+    ) {
+      setTimeout(() => {
+        lastMessageRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      });
+    }
+    prevLastMessageIdRef.current = lastMessage?.id;
+  }, [allMessages]);
 
   const handleLoadMore = () => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -109,8 +129,8 @@ export function MessageList() {
   }
 
   return (
-    <ScrollArea className="flex-1" ref={scrollRef}>
-      <div className="p-4 space-y-6">
+    <ScrollArea className="flex-1">
+      <div className="p-4 space-y-2">
         {/* Load More Button */}
         {hasNextPage && (
           <div className="text-center">
@@ -132,6 +152,7 @@ export function MessageList() {
             message={message}
             isFirst={index === 0}
             isLast={index === allMessages.length - 1}
+            ref={index === allMessages.length - 1 ? lastMessageRef : undefined}
           />
         ))}
       </div>

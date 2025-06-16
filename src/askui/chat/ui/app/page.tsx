@@ -27,7 +27,7 @@ export default function Home() {
   return (
     <QueryClientProvider client={queryClient}>
       <ChatApp />
-      <Toaster position="bottom-right" richColors />
+      <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );
 }

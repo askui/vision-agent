@@ -1,34 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, Bot, Zap } from "lucide-react";
+import { Bot, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChatStore } from "@/lib/store";
 import { apiClient } from "@/lib/api";
-import { Assistant } from "@/lib/types";
+import { HUMAN_DEMONSTRATION_AGENT_ID } from "@/lib/constants";
 
 export function ChatHeader() {
   const { selectedAssistant, setSelectedAssistant, currentRun } =
     useChatStore();
 
-  const { data: assistants, isLoading } = useQuery({
+  const { data: assistantsListResponse, isLoading } = useQuery({
     queryKey: ["assistants"],
-    queryFn: () => apiClient.listAssistants({ limit: 100 }),
+    queryFn: () =>
+      apiClient.listAssistants().then((response) => {
+        return {
+          ...response,
+          data: response.data.filter(
+            (a) => a.id !== HUMAN_DEMONSTRATION_AGENT_ID
+          ),
+        };
+      }),
   });
 
   const handleAssistantChange = (assistantId: string) => {
-    const assistant = assistants?.data.find((a) => a.id === assistantId);
+    const assistant = assistantsListResponse?.data.find(
+      (a) => a.id === assistantId
+    );
     if (assistant) {
       setSelectedAssistant(assistant);
     }
@@ -47,7 +54,7 @@ export function ChatHeader() {
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border-b border-border">
+    <div className="flex items-center justify-between p-4">
       <div className="flex items-center gap-3">
         <Select
           value={selectedAssistant?.id || ""}
@@ -74,7 +81,7 @@ export function ChatHeader() {
             </div>
           </SelectTrigger>
           <SelectContent>
-            {assistants?.data.map((assistant) => (
+            {assistantsListResponse?.data.map((assistant) => (
               <SelectItem key={assistant.id} value={assistant.id}>
                 <div className="flex items-center gap-3">
                   <Avatar className="h-6 w-6">
