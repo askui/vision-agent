@@ -1,14 +1,28 @@
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
+from askui.chat.api.dependencies import get_settings
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
+    assistant_service = get_assistant_service(settings=get_settings())
+    assistant_service.seed()
+    yield
+
+
 app = FastAPI(
     title="AskUI Chat API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware

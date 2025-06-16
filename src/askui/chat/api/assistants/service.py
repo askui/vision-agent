@@ -1,30 +1,13 @@
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import (
-    DO_NOT_PATCH,
-    DoNotPatch,
-    ListQuery,
-    ListResponse,
-    UnixDatetime,
+from askui.chat.api.assistants.models import Assistant
+from askui.chat.api.assistants.seeds import (
+    ASKUI_VISION_AGENT,
+    HUMAN_DEMONSTRATION_AGENT,
 )
-from askui.chat.api.utils import generate_time_ordered_id
-
-
-class Assistant(BaseModel):
-    """An assistant that can be used in a thread."""
-
-    id: str = Field(default_factory=lambda: generate_time_ordered_id("asst"))
-    created_at: UnixDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc)
-    )
-    name: str | None = None
-    description: str | None = None
-    object: Literal["assistant"] = "assistant"
-    avatar: str | None = Field(default=None, description="URL of the avatar image")
+from askui.chat.api.models import DO_NOT_PATCH, DoNotPatch, ListQuery, ListResponse
 
 
 class CreateAssistantRequest(BaseModel):
@@ -129,11 +112,15 @@ class AssistantService:
             name=request.name,
             description=request.description,
         )
+        self._save(assistant)
+        return assistant
+
+    def _save(self, assistant: Assistant) -> None:
+        """Save an assistant to the file system."""
         self._assistants_dir.mkdir(parents=True, exist_ok=True)
         assistant_file = self._assistants_dir / f"{assistant.id}.json"
         with assistant_file.open("w") as f:
             f.write(assistant.model_dump_json())
-        return assistant
 
     def modify(self, assistant_id: str, request: AssistantModifyRequest) -> Assistant:
         """Update an existing assistant.
@@ -174,3 +161,8 @@ class AssistantService:
             error_msg = f"Assistant {assistant_id} not found"
             raise FileNotFoundError(error_msg)
         assistant_file.unlink()
+
+    def seed(self) -> None:
+        """Seed the assistant service with default assistants."""
+        self._save(ASKUI_VISION_AGENT)
+        self._save(HUMAN_DEMONSTRATION_AGENT)
