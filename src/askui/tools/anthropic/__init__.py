@@ -1,4 +1,4 @@
-from .base import BaseAnthropicTool, CLIResult, ToolResult
+from .base import BaseAnthropicTool, CLIResult, Tool, ToolResult
 from .collection import ToolCollection
 from .computer import ComputerTool
 
@@ -8,4 +8,5 @@ __ALL__ = [
     ToolCollection,
     ToolResult,
     BaseAnthropicTool,
+    Tool,
 ]

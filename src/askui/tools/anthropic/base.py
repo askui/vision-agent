@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, fields, replace
 from typing import Any, Optional
 
-from anthropic.types.beta import BetaToolUnionParam
+from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
 from pydantic import Field
 
 
@@ -83,3 +83,31 @@ class ToolError(Exception):
         self.message = message
         self.result = result
         super().__init__(self.message)
+
+
+class Tool(BaseAnthropicTool):
+    """A tool that can be used in an agent."""
+
+    def __init__(self, name: str, description: str, input_schema: dict[str, Any]):
+        if not name:
+            error_msg = "Tool name is required"
+            raise ValueError(error_msg)
+        if not description:
+            error_msg = "Tool description is required"
+            raise ValueError(error_msg)
+        if not input_schema:
+            input_schema = {"type": "object", "properties": {}, "required": []}
+        self.name = name
+        self.description = description
+        self.input_schema = input_schema
+
+    def to_params(self) -> BetaToolParam:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "input_schema": self.input_schema,
+        }
+
+    def __call__(self, **kwargs: Any) -> ToolResult:
+        error_msg = "Tool subclasses must implement __call__ method"
+        raise NotImplementedError(error_msg)
