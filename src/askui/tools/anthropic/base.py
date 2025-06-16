@@ -3,6 +3,7 @@ from dataclasses import dataclass, fields, replace
 from typing import Any, Optional
 
 from anthropic.types.beta import BetaToolUnionParam
+from pydantic import Field
 
 
 class BaseAnthropicTool(metaclass=ABCMeta):
@@ -33,7 +34,7 @@ class ToolResult:
 
     output: str | None = None
     error: str | None = None
-    base64_images: list[str] = []
+    base64_images: list[str] = Field(default_factory=list)
     system: str | None = None
 
     def __bool__(self) -> bool:
