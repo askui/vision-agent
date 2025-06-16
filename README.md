@@ -809,26 +809,18 @@ You can use the chat to record a workflow and redo it later. For that, just tell
 
 #### Limitations
 
-A lot of errors are not handled properly and we allow the user to do a lot of actions that can lead to errors instead of properly guiding the user.
+- A lot of errors are not handled properly and we allow the user to do a lot of actions that can lead to errors instead of properly guiding the user.
+- The chat currently only allows rerunning actions through `VisionAgent.act()` which can be expensive, slow and is not necessary the most reliable way to do it.
+- A lot quirks in UI and API.
+- Currently, api and ui need to be run in dev mode.
+- When demonstrating actions, the corresponding screenshot may not reflect the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
+- Currently, we only allow a maximum of 100 messages per conversation.
+- When demonstrating actions, actions may be recorded that you did not want to record, e.g., stopping the demonstration. Just delete these messages afterwards.
+- The agent is going to fail if there are no messages in the conversation, there is no tool use result message following the tool use message somewhere in the conversation, a message is too long etc.
+  Just adding or deleting the message in this case should fix the issue.
+- You should not switch the conversation while waiting for an agent's answers or demonstrating actions.
 
-The chat currently only allows rerunning actions through `VisionAgent.act()` which can be expensive, slow and is not necessary the most reliable way to do it.
 
-A lot quirks in UI and API.
-
-Currently, api and ui need to be run in dev mode.
-
-When demonstrating actions, the corresponding screenshot may not reflect the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
-
-Currently, we only allow a maximum of 100 messages per conversation.
-
-When demonstrating actions, actions may be recorded that you did not want to record, e.g., stopping the demonstration. Just delete these messages afterwards.
-
-The agent is going to fail if
-- there are no messages in the conversation
-- there is no tool use result message following the tool use message somewhere in the conversation
-- a message is too long
-
-Just delete the message in this case.
 
 #### Architecture
 
