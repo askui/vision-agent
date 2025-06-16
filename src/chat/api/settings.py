@@ -15,7 +15,3 @@ class Settings(BaseSettings):
         default_factory=lambda: Path.cwd() / "chat",
         description="Base directory for storing chat data",
     )
-    anthropic_api_key: str = Field(
-        description="API key for Anthropic",
-        alias="ANTHROPIC_API_KEY",
-    )

@@ -237,7 +237,8 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
         upon.
 
         Args:
-            messages (list[MessageParam]): The message history. Contains at least one message.
+            messages (list[MessageParam]): The message history.
+                Contains at least one message.
             model_choice (str): The model to use for message creation.
             on_message (OnMessageCb | None, optional): Callback on new messages
 

@@ -24,7 +24,8 @@ class CreateRunRequest(BaseModel):
 
 class RunService:
     """
-    Service for managing runs. Handles creation, retrieval, listing, and cancellation of runs.
+    Service for managing runs. Handles creation, retrieval, listing, and
+    cancellation of runs.
     """
 
     def __init__(self, base_dir: Path) -> None:
@@ -67,11 +68,15 @@ class RunService:
 
             async def event_stream() -> AsyncGenerator[Events, None]:
                 yield RunEvent(
-                    data=run,  # run already in progress instead of queued which is different from OpenAI
+                    # run already in progress instead of queued which is
+                    # different from OpenAI
+                    data=run,
                     event="thread.run.created",
                 )
                 yield RunEvent(
-                    data=run,  # run already in progress instead of queued which is different from OpenAI
+                    # run already in progress instead of queued which is
+                    # different from OpenAI
+                    data=run,
                     event="thread.run.queued",
                 )
                 loop = asyncio.get_event_loop()

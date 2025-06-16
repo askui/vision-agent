@@ -44,7 +44,8 @@ class AssistantService:
             query (ListQuery): Query parameters for listing assistants
 
         Returns:
-            ListResponse[Assistant]: ListResponse containing assistants sorted by creation date
+            ListResponse[Assistant]: ListResponse containing assistants sorted by
+                creation date
         """
         if not self._assistants_dir.exists():
             return ListResponse(data=[])

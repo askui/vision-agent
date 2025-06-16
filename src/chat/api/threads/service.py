@@ -73,7 +73,8 @@ class ThreadService:
             query (ListQuery): Query parameters for listing threads
 
         Returns:
-            ListResponse[Thread]: ListResponse containing threads sorted by creation date
+            ListResponse[Thread]: ListResponse containing threads sorted by creation
+                date
         """
         if not self._threads_dir.exists():
             return ListResponse(data=[])

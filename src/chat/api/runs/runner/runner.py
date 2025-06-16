@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from askui.agent import VisionAgent
-from askui.models.models import ModelName
 from askui.models.shared.computer_agent_cb_param import OnMessageCbParam
 from askui.models.shared.computer_agent_message_param import (
     Base64ImageSourceParam,
@@ -99,7 +98,10 @@ class Runner:
                                 ),
                                 TextBlockParam(
                                     type="text",
-                                    text=f"I moved the mouse to x={event.x}, y={event.y} and clicked {button}.",
+                                    text=(
+                                        f"I moved the mouse to x={event.x}, "
+                                        f"y={event.y} and clicked {button}."
+                                    ),
                                 ),
                             ],
                             run_id=self._run.id,
@@ -177,7 +179,6 @@ class Runner:
             agent.act(
                 messages,
                 on_message=on_message,
-                model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             )
 
     def run(
@@ -230,7 +231,7 @@ class Runner:
                 )
             event_queue.put(DoneEvent())
         except Exception as e:  # noqa: BLE001
-            logger.exception("Exception in runner: %s", e)
+            logger.exception("Exception in runner")
             updated_run = self._retrieve_run()
             updated_run.failed_at = datetime.now(tz=timezone.utc)
             updated_run.last_error = RunError(message=str(e), code="server_error")

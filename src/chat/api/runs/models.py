@@ -40,7 +40,7 @@ class Run(BaseModel):
     thread_id: ThreadId
     tried_cancelling_at: UnixDatetime | None = None
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def status(self) -> RunStatus:
         if self.cancelled_at:

@@ -780,7 +780,8 @@ clicking is supported).
 
 To use the chat, configure the following environment variables:
 
-- `ANTHROPIC_API_KEY`: AskUI Vision Agent behind chat uses currently the Anthropic API so you need an API key from Anthropic.
+- `ASKUI_TOKEN`: AskUI Vision Agent behind chat uses currently the AskUI API
+- `ASKUI_WORKSPACE_ID`: AskUI Vision Agent behind chat uses currently the AskUI API
 - `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores its data in a directory locally. You can change the default directory by setting this environment variable.
 
 #### Installation
@@ -804,7 +805,7 @@ You can use the chat to record a workflow and redo it later. For that, just tell
 - *Not efficient enought?* If some of the steps can be omitted in the rerun, you can just delete them or tell the agent to skip unnecessary steps.
 - *Agent not doing what you want it to?*
     - The agent may get confused with the coordinates of clicks demonstrated by the user as it seems to use other coordinates. To omit this just tell the agent that the coordinates may have changed in the meanwhile and that it should take screenshots along the way to determine where to click.
-    - It may also be helpful to tell the agent to first explain what it think the user did so it is not reliant on specific actions but thinks more about the overarching goal.
+    - It may also be helpful to tell the agent to first explain its understanding of the user's goal after having demonstrated some actions or before trying to get it to redo what has been done so that the agent can focus on the overarching goal instead of being reliant on specific actions.
 
 #### Limitations
 
@@ -816,7 +817,7 @@ A lot quirks in UI and API.
 
 Currently, api and ui need to be run in dev mode.
 
-When demonstrating actions, the corresponding screenshot may reflect not the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
+When demonstrating actions, the corresponding screenshot may not reflect the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
 
 Currently, we only allow a maximum of 100 messages per conversation.
 
