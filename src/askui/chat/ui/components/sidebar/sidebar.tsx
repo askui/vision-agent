@@ -73,7 +73,7 @@ export function Sidebar() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>New Thread</TooltipContent>
+                <TooltipContent>New Conversation</TooltipContent>
               </Tooltip>
             )}
 
@@ -128,7 +128,7 @@ export function Sidebar() {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">New Thread</TooltipContent>
+                <TooltipContent side="right">New Conversation</TooltipContent>
               </Tooltip>
             </div>
           )}

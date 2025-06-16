@@ -54,7 +54,7 @@ export function EmptyState() {
         </Button>
 
         <div className="text-sm text-muted-foreground">
-          Or select an existing thread from the sidebar
+          Or select an existing conversation from the sidebar
         </div>
       </div>
     </div>

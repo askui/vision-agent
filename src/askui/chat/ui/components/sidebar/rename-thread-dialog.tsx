@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Thread } from '@/lib/types';
-import { apiClient } from '@/lib/api';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Thread } from "@/lib/types";
+import { apiClient } from "@/lib/api";
 
 interface RenameThreadDialogProps {
   thread: Thread;
@@ -22,20 +22,24 @@ interface RenameThreadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function RenameThreadDialog({ thread, open, onOpenChange }: RenameThreadDialogProps) {
-  const [name, setName] = useState(thread.name || '');
+export function RenameThreadDialog({
+  thread,
+  open,
+  onOpenChange,
+}: RenameThreadDialogProps) {
+  const [name, setName] = useState(thread.name || "");
   const queryClient = useQueryClient();
 
   const renameThreadMutation = useMutation({
-    mutationFn: (newName: string) => 
+    mutationFn: (newName: string) =>
       apiClient.modifyThread(thread.id, { name: newName }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['threads'] });
-      toast.success('Thread renamed');
+      queryClient.invalidateQueries({ queryKey: ["threads"] });
+      toast.success("Thread renamed");
       onOpenChange(false);
     },
     onError: () => {
-      toast.error('Failed to rename thread');
+      toast.error("Failed to rename thread");
     },
   });
 
@@ -50,7 +54,7 @@ export function RenameThreadDialog({ thread, open, onOpenChange }: RenameThreadD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Thread</DialogTitle>
+          <DialogTitle>Rename Conversation</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -60,20 +64,24 @@ export function RenameThreadDialog({ thread, open, onOpenChange }: RenameThreadD
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter thread name..."
+                placeholder="Enter new name..."
                 autoFocus
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!name.trim() || renameThreadMutation.isPending}
             >
-              {renameThreadMutation.isPending ? 'Renaming...' : 'Rename'}
+              {renameThreadMutation.isPending ? "Renaming..." : "Rename"}
             </Button>
           </DialogFooter>
         </form>

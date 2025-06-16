@@ -108,9 +108,9 @@ export function ThreadList() {
                 <div className="flex-1 min-w-0 max-w-[180px]">
                   <h3
                     className="font-medium text-sm truncate"
-                    title={thread.name ?? "New Thread"}
+                    title={thread.name ?? "New Conversation"}
                   >
-                    {thread.name ?? "New Thread"}
+                    {thread.name ?? "New Conversation"}
                   </h3>
                   <p
                     className="text-xs text-muted-foreground mt-1 truncate"

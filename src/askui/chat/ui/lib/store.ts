@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ChatState } from "./types";
+import { DEFAULT_ASSISTANT } from "./constants";
 
 export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
-      selectedAssistant: null,
+      selectedAssistant: DEFAULT_ASSISTANT,
       selectedThread: null,
       isCollapsed: false,
       currentRun: null,
@@ -25,8 +26,8 @@ export const useChatStore = create<ChatState>()(
     {
       name: "chat-store",
       partialize: (state) => ({
-        selectedAssistant: state.selectedAssistant,
-        isCollapsed: state.isCollapsed,
+        selectedAssistant: state.selectedAssistant ?? DEFAULT_ASSISTANT,
+        isCollapsed: state.isCollapsed ?? false,
       }),
     }
   )
