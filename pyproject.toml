@@ -53,7 +53,7 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
-"chat:api" = "uvicorn src.chat.api.app:app --reload --port 8000"
+"chat:api" = "uvicorn chat.api.app:app --reload --port 8000"
 "chat:ui:install" = {shell = "cd src/chat/ui && npm ci"}
 "chat:ui" = {shell = "cd src/chat/ui && npm run dev"}
 mcp = "mcp dev src/askui/mcp/__init__.py"
