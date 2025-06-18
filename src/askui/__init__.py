@@ -33,7 +33,6 @@ from .models import (
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
-from .tools.anthropic import ToolResult
 from .utils.image_utils import ImageSource, Img
 
 __all__ = [
@@ -67,7 +66,6 @@ __all__ = [
     "Retry",
     "TextBlockParam",
     "TextCitationParam",
-    "ToolResult",
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",

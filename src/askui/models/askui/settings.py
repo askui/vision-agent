@@ -16,9 +16,11 @@ class AskUiSettings(BaseSettings):
         validation_alias="ASKUI_INFERENCE_ENDPOINT",
     )
     workspace_id: UUID4 = Field(
+        default=...,
         validation_alias="ASKUI_WORKSPACE_ID",
     )
     token: SecretStr = Field(
+        default=...,
         validation_alias="ASKUI_TOKEN",
     )
 

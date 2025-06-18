@@ -6,7 +6,9 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from askui.models.model_router import ModelRouter
+from askui.models.shared.tools import ToolCollection
 from askui.tools.agent_os import AgentOs
+from askui.tools.computer import Computer20241022Tool
 from askui.tools.toolbox import AgentToolbox
 
 
@@ -49,6 +51,12 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
 def agent_toolbox_mock(agent_os_mock: AgentOs) -> AgentToolbox:
     """Fixture providing a mock agent toolbox."""
     return AgentToolbox(agent_os=agent_os_mock)
+
+
+@pytest.fixture
+def tool_collection_mock(agent_os_mock: AgentOs) -> ToolCollection:
+    """Fixture providing a mock tool collection."""
+    return ToolCollection(tools=[Computer20241022Tool(agent_os_mock)])
 
 
 @pytest.fixture

@@ -30,20 +30,19 @@ from askui.models.models import (
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
+from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
-from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
 from ..logger import logger
 from .anthropic.computer_agent import ClaudeComputerAgent
 from .anthropic.handler import ClaudeHandler
 from .askui.inference_api import AskUiInferenceApi, AskUiSettings
-from .ui_tars_ep.ui_tars_api import UiTarsApiHandler, UiTarsApiHandlerSettings
 
 
 def _initialize_default_model_registry(  # noqa: C901
-    tools: AgentToolbox,
+    tool_collection: ToolCollection,
     reporter: Reporter,
 ) -> ModelRegistry:
     @functools.cache
@@ -74,7 +73,7 @@ def _initialize_default_model_registry(  # noqa: C901
     def anthropic_facade() -> ModelFacade:
         settings = AnthropicSettings()
         computer_agent = ClaudeComputerAgent(
-            agent_os=tools.os,
+            tool_collection=tool_collection,
             reporter=reporter,
             settings=ClaudeComputerAgentSettings(
                 anthropic=settings,
@@ -95,7 +94,7 @@ def _initialize_default_model_registry(  # noqa: C901
     @functools.cache
     def askui_facade() -> ModelFacade:
         computer_agent = AskUiComputerAgent(
-            agent_os=tools.os,
+            tool_collection=tool_collection,
             reporter=reporter,
             settings=AskUiComputerAgentSettings(
                 askui=askui_settings(),
@@ -113,15 +112,6 @@ def _initialize_default_model_registry(  # noqa: C901
             locator_serializer=vlm_locator_serializer(),
         )
 
-    @functools.cache
-    def ui_tars_api_handler() -> UiTarsApiHandler:
-        return UiTarsApiHandler(
-            locator_serializer=vlm_locator_serializer(),
-            agent_os=tools.os,
-            reporter=reporter,
-            settings=UiTarsApiHandlerSettings(),
-        )
-
     return {
         ModelName.ASKUI: askui_facade,
         ModelName.ASKUI__AI_ELEMENT: askui_model_router,
@@ -134,20 +124,20 @@ def _initialize_default_model_registry(  # noqa: C901
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: hf_spaces_handler,
         ModelName.HF__SPACES__SHOWUI__2B: hf_spaces_handler,
-        ModelName.TARS: ui_tars_api_handler,
     }
 
 
 class ModelRouter:
     def __init__(
         self,
-        tools: AgentToolbox,
+        tool_collection: ToolCollection,
         reporter: Reporter | None = None,
         models: ModelRegistry | None = None,
     ):
-        self._tools = tools
         self._reporter = reporter or CompositeReporter()
-        self._models = _initialize_default_model_registry(tools, self._reporter)
+        self._models = _initialize_default_model_registry(
+            tool_collection, self._reporter
+        )
         self._models.update(models or {})
 
     @overload

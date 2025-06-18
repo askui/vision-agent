@@ -16,6 +16,7 @@ from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelName
 from askui.models.shared.facade import ModelFacade
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -65,12 +66,12 @@ def askui_inference_api(
 
 @pytest.fixture
 def askui_computer_agent(
-    agent_toolbox_mock: AgentToolbox,
+    tool_collection_mock: ToolCollection,
     askui_settings: AskUiSettings,
     simple_html_reporter: Reporter,
 ) -> AskUiComputerAgent:
     return AskUiComputerAgent(
-        agent_os=agent_toolbox_mock.os,
+        tool_collection=tool_collection_mock,
         reporter=simple_html_reporter,
         settings=AskUiComputerAgentSettings(
             askui=askui_settings,
