@@ -14,7 +14,6 @@ from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.tools import ToolCollection
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter
 from askui.utils.image_utils import ImageSource
@@ -76,7 +75,6 @@ def mock_askui_facade(mocker: MockerFixture) -> ModelFacade:
 
 @pytest.fixture
 def model_router(
-    tool_collection_mock: ToolCollection,
     mock_anthropic_facade: ModelFacade,
     mock_askui_facade: ModelFacade,
     mock_tars: UiTarsApiHandler,
@@ -84,7 +82,6 @@ def model_router(
 ) -> ModelRouter:
     """Fixture providing a ModelRouter instance with mocked dependencies."""
     return ModelRouter(
-        tool_collection=tool_collection_mock,
         reporter=CompositeReporter(),
         models={
             ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: mock_anthropic_facade,

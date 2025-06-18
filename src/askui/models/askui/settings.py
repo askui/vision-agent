@@ -5,6 +5,7 @@ from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.models import ModelName
+from askui.models.shared.base_agent import AgentSettingsBase
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 
 
@@ -39,5 +40,12 @@ class AskUiSettings(BaseSettings):
 
 
 class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
+    model: str = ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
+    askui: AskUiSettings = Field(default_factory=AskUiSettings)
+
+
+class AskUiAndroidAgentSettings(AgentSettingsBase):
+    """Settings for AskUI Android agent."""
+
     model: str = ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022
     askui: AskUiSettings = Field(default_factory=AskUiSettings)

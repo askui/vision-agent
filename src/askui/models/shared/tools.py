@@ -16,7 +16,13 @@ from askui.models.shared.computer_agent_message_param import (
 )
 from askui.utils.image_utils import ImageSource
 
-ToolCallResult = Image.Image | None
+PrimitiveToolCallResult = Image.Image | None | str
+
+ToolCallResult = (
+    PrimitiveToolCallResult
+    | list[PrimitiveToolCallResult]
+    | tuple[PrimitiveToolCallResult, ...]
+)
 
 
 def _convert_to_content(
@@ -24,6 +30,16 @@ def _convert_to_content(
 ) -> list[TextBlockParam | ImageBlockParam]:
     if result is None:
         return []
+
+    if isinstance(result, str):
+        return [TextBlockParam(text=result)]
+
+    if isinstance(result, list | tuple):
+        return [
+            item
+            for sublist in [_convert_to_content(item) for item in result]
+            for item in sublist
+        ]
 
     return [
         ImageBlockParam(
@@ -53,7 +69,6 @@ class Tool(BaseModel, ABC):
         error_msg = "Tool subclasses must implement __call__ method"
         raise NotImplementedError(error_msg)
 
-    @abstractmethod
     def to_params(
         self,
     ) -> BetaToolUnionParam:

@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, TypedDict, get_args
 
 from anthropic.types.beta import (
     BetaToolComputerUse20241022Param,
@@ -129,7 +129,7 @@ class ComputerToolBase(Tool, ABC):
         super().__init__(
             name="computer",
             description="A tool for interacting with the computer",
-            input_schema={},
+            input_schema=input_schema,
         )
         self._agent_os = agent_os
         self._width = 1280
@@ -264,7 +264,7 @@ class Computer20241022Tool(ComputerToolBase):
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": list(Action20241022.__args__),
+                        "enum": list(get_args(Action20241022)),
                     },
                     "text": {
                         "type": "string",
@@ -305,7 +305,7 @@ class Computer20250124Tool(ComputerToolBase):
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": list(Action20250124.__args__),
+                        "enum": list(get_args(Action20250124)),
                     },
                     "text": {
                         "type": "string",
@@ -319,7 +319,7 @@ class Computer20250124Tool(ComputerToolBase):
                     },
                     "scroll_direction": {
                         "type": "string",
-                        "enum": list(ScrollDirection.__args__),
+                        "enum": list(get_args(ScrollDirection)),
                     },
                     "scroll_amount": {"type": "integer", "minimum": 0},
                     "duration": {"type": "number", "minimum": 0.0, "maximum": 100.0},
