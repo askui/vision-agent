@@ -12,6 +12,7 @@ from askui.tools.anthropic import (
     AndroidTypeTool,
     BaseAnthropicTool,
 )
+from askui.tools.anthropic.exception_tool import ExceptionTool
 from askui.tools.askui.askui_android_controller import AndroidAgentOSHandler
 
 ANDROID_SYSTEM_PROMPT = """
@@ -110,6 +111,7 @@ class AndroidAgent(BaseAgent[AgentSettings]):
             AndroidSwipeTool(android_os_handler),
             AndroidKeyCombinationTool(android_os_handler),
             AndroidShellTool(android_os_handler),
+            ExceptionTool(),
         ]
 
         super().__init__(settings, tool_list, ANDROID_SYSTEM_PROMPT, reporter)

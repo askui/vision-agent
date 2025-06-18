@@ -116,3 +116,13 @@ class Tool(BaseAnthropicTool):
     def __call__(self, *_args: Any, **_kwargs: Any) -> ToolResult:
         error_msg = "Tool subclasses must implement __call__ method"
         raise NotImplementedError(error_msg)
+
+
+class AgentException(Exception):
+    """
+    Exception raised by the agent.
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)

@@ -59,7 +59,7 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         self._settings: AgentSettings = settings
         self._reporter = reporter
         self._tool_collection = ToolCollection(
-            *tools,
+            tools,
         )
         self._system = BetaTextBlockParam(
             type="text",
@@ -82,10 +82,16 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         raise NotImplementedError
 
     def set_system_prompt(self, system_prompt: str) -> None:
+        """Set the system prompt for the agent."""
         self._system = BetaTextBlockParam(type="text", text=f"{system_prompt}")
 
     def set_tool_collection(self, tools: list[BaseAnthropicTool]) -> None:
-        self._tool_collection = ToolCollection(*tools)
+        """Set the tool collection for the agent."""
+        self._tool_collection = ToolCollection(tools)
+
+    def add_tool(self, tool: BaseAnthropicTool) -> None:
+        """Add a tool to the agent."""
+        self._tool_collection.add_tool(tool)
 
     def _step(
         self,

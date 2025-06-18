@@ -11,6 +11,7 @@ from .android_tools import (
 from .base import BaseAnthropicTool, CLIResult, Tool, ToolResult
 from .collection import ToolCollection
 from .computer import ComputerTool
+from .exception_tool import ExceptionTool
 
 __ALL__ = [
     CLIResult,
@@ -27,4 +28,5 @@ __ALL__ = [
     AndroidSwipeTool,
     AndroidKeyCombinationTool,
     AndroidShellTool,
+    ExceptionTool,
 ]
