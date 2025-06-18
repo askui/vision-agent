@@ -1,8 +1,12 @@
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypedDict
 
-from anthropic.types.beta import BetaToolComputerUse20241022Param
+from anthropic.types.beta import (
+    BetaToolComputerUse20241022Param,
+    BetaToolComputerUse20250124Param,
+)
 from PIL import Image
 from pydantic import Field, validate_call
+from typing_extensions import override
 
 from askui.tools.agent_os import AgentOs, PcKey
 from askui.utils.dict_utils import IdentityDefaultDict
@@ -22,6 +26,20 @@ Action20241022 = Literal[
     "screenshot",
     "cursor_position",
 ]
+
+Action20250124 = (
+    Action20241022
+    | Literal[
+        "left_mouse_down",
+        "left_mouse_up",
+        "scroll",
+        "hold_key",
+        "wait",
+        "triple_click",
+    ]
+)
+
+ScrollDirection = Literal["up", "down", "left", "right"]
 
 KeysToMap = Literal[
     "BackSpace",
@@ -87,7 +105,7 @@ KEYS_MAPPING: IdentityDefaultDict[Key, PcKey] = IdentityDefaultDict(
 
 
 class ActionNotImplementedError(NotImplementedError):
-    def __init__(self, action: Action20241022, tool_name: str) -> None:
+    def __init__(self, action: Action20250124, tool_name: str) -> None:
         self.action = action
         self.tool_name = tool_name
         super().__init__(
@@ -95,29 +113,40 @@ class ActionNotImplementedError(NotImplementedError):
         )
 
 
-class Computer20241022Tool(Tool):
+class BetaToolComputerUseParamBase(TypedDict):
+    name: Literal["computer"]
+    display_width_px: int
+    display_height_px: int
+
+
+class ComputerToolBase(Tool):
     name: Literal["computer"] = "computer"
-    api_type: Literal["computer_20241022"] = "computer_20241022"
 
-    def to_params(self) -> BetaToolComputerUse20241022Param:
-        return {
-            "name": self.name,
-            "type": self.api_type,
-            "display_width_px": self._width,
-            "display_height_px": self._height,
-        }
-
-    def __init__(self, agent_os: AgentOs) -> None:
+    def __init__(
+        self,
+        agent_os: AgentOs,
+    ) -> None:
         self._agent_os = agent_os
         self._width = 1280
         self._height = 800
         self._real_screen_width: int | None = None
         self._real_screen_height: int | None = None
 
+    @property
+    def params_base(
+        self,
+    ) -> BetaToolComputerUseParamBase:
+        return {
+            "name": self.name,
+            "display_width_px": self._width,
+            "display_height_px": self._height,
+        }
+
+    @override
     @validate_call
     def __call__(
         self,
-        action: Action20241022,
+        action: Action20250124,
         text: str | None = None,
         coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
         | None = None,
@@ -141,7 +170,8 @@ class Computer20241022Tool(Tool):
             case "type":
                 self._type(text)  # type: ignore[arg-type]
             case "key":
-                # we do not seem to support all kinds of key nor modifier keys + key combinations
+                # we do not seem to support all kinds of key nor modifier keys
+                # + key combinations
                 self._key(text)  # type: ignore[arg-type]
             case _:
                 raise ActionNotImplementedError(action, self.name)
@@ -155,6 +185,16 @@ class Computer20241022Tool(Tool):
     def _key(self, key: Key) -> None:
         _key = KEYS_MAPPING[key]
         self._agent_os.keyboard_pressed(_key)
+        self._agent_os.keyboard_release(_key)
+
+    @validate_call
+    def _keyboard_pressed(self, key: Key) -> None:
+        _key = KEYS_MAPPING[key]
+        self._agent_os.keyboard_pressed(_key)
+
+    @validate_call
+    def _keyboard_released(self, key: Key) -> None:
+        _key = KEYS_MAPPING[key]
         self._agent_os.keyboard_release(_key)
 
     def _scale_coordinates_back(
@@ -203,3 +243,77 @@ class Computer20241022Tool(Tool):
         self._real_screen_width = screenshot.width
         self._real_screen_height = screenshot.height
         return scale_image_with_padding(screenshot, self._width, self._height)
+
+
+class Computer20241022Tool(ComputerToolBase):
+    type: Literal["computer_20241022"] = "computer_20241022"
+
+    @override
+    def to_params(
+        self,
+    ) -> BetaToolComputerUse20241022Param:
+        return {
+            **self.params_base,
+            "type": self.type,
+        }
+
+
+class Computer20250124Tool(ComputerToolBase):
+    type: Literal["computer_20250124"] = "computer_20250124"
+
+    @override
+    def to_params(
+        self,
+    ) -> BetaToolComputerUse20250124Param:
+        return {
+            **self.params_base,
+            "type": self.type,
+        }
+
+    @override
+    @validate_call
+    def __call__(
+        self,
+        action: Action20250124,
+        text: str | None = None,
+        coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
+        | None = None,
+        scroll_direction: ScrollDirection | None = None,
+        scroll_amount: int | None = None,
+        duration: float | None = None,
+        key: str | None = None,  # maybe not all keys supported
+    ) -> Image.Image | None:
+        match action:
+            case "left_mouse_down":
+                self._agent_os.mouse_down("left")
+            case "left_mouse_up":
+                self._agent_os.mouse_up("left")
+            case "left_click":
+                self._click("left", coordinate=coordinate, key=key)
+            case "right_click":
+                self._click("right", coordinate=coordinate, key=key)
+            case "middle_click":
+                self._click("middle", coordinate=coordinate, key=key)
+            case "double_click":
+                self._click("left", count=2, coordinate=coordinate, key=key)
+            case "triple_click":
+                self._click("left", count=3, coordinate=coordinate, key=key)
+            case _:
+                return super().__call__(action, text, coordinate)
+        return None
+
+    def _click(
+        self,
+        button: Literal["left", "right", "middle"],
+        count: int = 1,
+        coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
+        | None = None,
+        key: str | None = None,
+    ) -> None:
+        if coordinate is not None:
+            self._mouse_move(coordinate)
+        if key is not None:
+            self._keyboard_pressed(key)  # type: ignore[arg-type]
+        self._agent_os.click(button, count)
+        if key is not None:
+            self._keyboard_released(key)  # type: ignore[arg-type]
