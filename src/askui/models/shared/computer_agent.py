@@ -11,16 +11,12 @@ from typing_extensions import TypeVar, override
 from askui.models.models import ActModel
 from askui.models.shared.computer_agent_cb_param import OnMessageCb, OnMessageCbParam
 from askui.models.shared.computer_agent_message_param import (
-    Base64ImageSourceParam,
-    ContentBlockParam,
     ImageBlockParam,
     MessageParam,
     TextBlockParam,
-    ToolResultBlockParam,
 )
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs
-from askui.tools.anthropic import ComputerTool, ToolCollection, ToolResult
 
 from ...logger import logger
 
@@ -189,21 +185,19 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
     def __init__(
         self,
         settings: ComputerAgentSettings,
-        agent_os: AgentOs,
+        tool_collection: ToolCollection,
         reporter: Reporter,
     ) -> None:
         """Initialize the computer agent.
 
         Args:
             settings (ComputerAgentSettings): The settings for the computer agent.
-            agent_os (AgentOs): The operating system agent for executing commands.
+            tool_collection (ToolCollection): Collection of tools to be used
             reporter (Reporter): The reporter for logging messages and actions.
         """
         self._settings = settings
         self._reporter = reporter
-        self._tool_collection = ToolCollection(
-            ComputerTool(agent_os),
-        )
+        self._tool_collection = tool_collection
         self._system = BetaTextBlockParam(
             type="text",
             text=f"{SYSTEM_PROMPT}",
@@ -315,24 +309,20 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
             MessageParam | None: A message containing tool results or `None`
                 if no tools were used.
         """
-        tool_result_content: list[ContentBlockParam] = []
         if isinstance(message.content, str):
             return None
 
-        for content_block in message.content:
-            if content_block.type == "tool_use":
-                result = self._tool_collection.run(
-                    name=content_block.name,
-                    tool_input=content_block.input,  # type: ignore[arg-type]
-                )
-                tool_result_content.append(
-                    self._make_api_tool_result(result, content_block.id)
-                )
-        if len(tool_result_content) == 0:
+        tool_use_content_blocks = [
+            content_block
+            for content_block in message.content
+            if content_block.type == "tool_use"
+        ]
+        content = self._tool_collection.run(tool_use_content_blocks)
+        if len(content) == 0:
             return None
 
         return MessageParam(
-            content=tool_result_content,
+            content=content,
             role="user",
         )
 
@@ -391,62 +381,3 @@ class ComputerAgent(ActModel, ABC, Generic[ComputerAgentSettings]):
                     new_content.append(content)
                 tool_result.content = new_content
         return messages
-
-    def _make_api_tool_result(
-        self, result: ToolResult, tool_use_id: str
-    ) -> ToolResultBlockParam:
-        """Convert a tool result to an API tool result block.
-
-        Args:
-            result (ToolResult): The tool result to convert.
-            tool_use_id (str): The ID of the tool use block.
-
-        Returns:
-            ToolResultBlockParam: The API tool result block.
-        """
-        tool_result_content: list[TextBlockParam | ImageBlockParam] | str = []
-        is_error = False
-        if result.error:
-            is_error = True
-            tool_result_content = self._maybe_prepend_system_tool_result(
-                result, result.error
-            )
-        else:
-            assert isinstance(tool_result_content, list)
-            if result.output:
-                tool_result_content.append(
-                    TextBlockParam(
-                        text=self._maybe_prepend_system_tool_result(
-                            result, result.output
-                        ),
-                    )
-                )
-            if result.base64_image:
-                tool_result_content.append(
-                    ImageBlockParam(
-                        source=Base64ImageSourceParam(
-                            media_type="image/png",
-                            data=result.base64_image,
-                        ),
-                    )
-                )
-        return ToolResultBlockParam(
-            content=tool_result_content,
-            tool_use_id=tool_use_id,
-            is_error=is_error,
-        )
-
-    @staticmethod
-    def _maybe_prepend_system_tool_result(result: ToolResult, result_text: str) -> str:
-        """Prepend system message to tool result text if available.
-
-        Args:
-            result (ToolResult): The tool result.
-            result_text (str): The result text.
-
-        Returns:
-            str: The result text with optional system message prepended.
-        """
-        if result.system:
-            result_text = f"<system>{result.system}</system>\n{result_text}"
-        return result_text

@@ -5,8 +5,8 @@ from typing_extensions import override
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.shared.computer_agent import ComputerAgent
 from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs
 
 from ...logger import logger
 
@@ -21,11 +21,11 @@ def is_retryable_error(exception: BaseException) -> bool:
 class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
     def __init__(
         self,
-        agent_os: AgentOs,
+        tool_collection: ToolCollection,
         reporter: Reporter,
         settings: AskUiComputerAgentSettings,
     ) -> None:
-        super().__init__(settings, agent_os, reporter)
+        super().__init__(settings, tool_collection, reporter)
         self._client = httpx.Client(
             base_url=f"{self._settings.askui.base_url}",
             headers={

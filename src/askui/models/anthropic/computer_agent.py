@@ -7,8 +7,8 @@ from askui.models.anthropic.settings import ClaudeComputerAgentSettings
 from askui.models.models import ANTHROPIC_MODEL_NAME_MAPPING, ModelName
 from askui.models.shared.computer_agent import ComputerAgent
 from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs
 
 if TYPE_CHECKING:
     from anthropic.types.beta import BetaMessageParam
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
     def __init__(
         self,
-        agent_os: AgentOs,
+        tool_collection: ToolCollection,
         reporter: Reporter,
         settings: ClaudeComputerAgentSettings,
     ) -> None:
-        super().__init__(settings, agent_os, reporter)
+        super().__init__(settings, tool_collection, reporter)
         self._client = Anthropic(
             api_key=self._settings.anthropic.api_key.get_secret_value()
         )

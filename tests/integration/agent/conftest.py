@@ -1,4 +1,4 @@
-from typing import Generator, Optional, Union
+from typing import Any, Generator, Optional, Union
 
 import pytest
 from PIL import Image as PILImage
@@ -6,8 +6,10 @@ from typing_extensions import override
 
 from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.settings import AskUiComputerAgentSettings, AskUiSettings
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
+from askui.tools.computer import Computer20241022Tool
 
 
 class ReporterMock(Reporter):
@@ -15,7 +17,7 @@ class ReporterMock(Reporter):
     def add_message(
         self,
         role: str,
-        content: Union[str, dict, list],
+        content: Union[str, dict[str, Any], list[Any]],
         image: Optional[PILImage.Image | list[PILImage.Image]] = None,
     ) -> None:
         pass
@@ -31,7 +33,7 @@ def claude_computer_agent(
 ) -> Generator[AskUiComputerAgent, None, None]:
     """Fixture providing a AskUiClaudeComputerAgent instance."""
     agent = AskUiComputerAgent(
-        agent_os=agent_os_mock,
+        tool_collection=ToolCollection(tools=[Computer20241022Tool(agent_os_mock)]),
         reporter=ReporterMock(),
         settings=AskUiComputerAgentSettings(askui=AskUiSettings()),
     )
