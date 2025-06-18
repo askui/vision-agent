@@ -24,6 +24,7 @@ from askui.tools.android.tools import (
     AndroidTapTool,
     AndroidTypeTool,
 )
+from askui.tools.exception_tool import ExceptionTool
 from askui.utils.image_utils import ImageSource, Img
 
 from .logger import configure_logging, logger
@@ -71,6 +72,7 @@ class AndroidVisionAgent:
                     AndroidSwipeTool(android_os_handler),
                     AndroidKeyCombinationTool(android_os_handler),
                     AndroidShellTool(android_os_handler),
+                    ExceptionTool(),
                 ]
             ),
             reporter=self._reporter,

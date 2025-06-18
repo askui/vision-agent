@@ -79,6 +79,16 @@ class Tool(BaseModel, ABC):
         )
 
 
+class AgentException(Exception):
+    """
+    Exception raised by the agent.
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
 class ToolCollection:
     """A collection of tools.
 
@@ -127,6 +137,8 @@ class ToolCollection:
                 content=_convert_to_content(tool_result),
                 tool_use_id=tool_use_block_param.id,
             )
+        except AgentException:
+            raise
         except Exception as e:  # noqa: BLE001
             return ToolResultBlockParam(
                 content=f"Tool {tool_use_block_param.name} failed: {e}",

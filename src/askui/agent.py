@@ -12,6 +12,7 @@ from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.computer import Computer20241022Tool
+from askui.tools.exception_tool import ExceptionTool
 from askui.utils.image_utils import ImageSource, Img
 
 from .logger import configure_logging, logger
@@ -81,7 +82,9 @@ class VisionAgent:
             ),
         )
         _models = initialize_default_model_registry(
-            tool_collection=ToolCollection(tools=[Computer20241022Tool(self.tools.os)]),
+            tool_collection=ToolCollection(
+                tools=[Computer20241022Tool(self.tools.os), ExceptionTool()]
+            ),
             reporter=self._reporter,
         )
         _models.update(models or {})
