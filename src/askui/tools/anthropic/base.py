@@ -10,9 +10,9 @@ class BaseAnthropicTool(metaclass=ABCMeta):
     """Abstract base class for Anthropic-defined tools."""
 
     @abstractmethod
-    def __call__(self, **kwargs: Any) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Executes the tool with the given arguments."""
-        ...
+        raise NotImplementedError
 
     @abstractmethod
     def to_params(
@@ -88,7 +88,12 @@ class ToolError(Exception):
 class Tool(BaseAnthropicTool):
     """A tool that can be used in an agent."""
 
-    def __init__(self, name: str, description: str, input_schema: dict[str, Any]):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        input_schema: dict[str, Any] | None = None,
+    ) -> None:
         if not name:
             error_msg = "Tool name is required"
             raise ValueError(error_msg)
@@ -108,6 +113,6 @@ class Tool(BaseAnthropicTool):
             "input_schema": self.input_schema,
         }
 
-    def __call__(self, **kwargs: Any) -> ToolResult:
+    def __call__(self, *_args: Any, **_kwargs: Any) -> ToolResult:
         error_msg = "Tool subclasses must implement __call__ method"
         raise NotImplementedError(error_msg)

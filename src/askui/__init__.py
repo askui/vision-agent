@@ -3,6 +3,7 @@
 __version__ = "0.6.0"
 
 from .agent import VisionAgent
+from .android_agent import AndroidVisionAgent
 from .locators import Locator
 from .models import (
     ActModel,
@@ -72,4 +73,5 @@ __all__ = [
     "ToolUseBlockParam",
     "UrlImageSourceParam",
     "VisionAgent",
+    "AndroidVisionAgent",
 ]

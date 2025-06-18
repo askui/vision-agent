@@ -195,6 +195,9 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
 "src/askui/agent.py" = ["E501"]
+"src/askui/android_agent.py" = ["E501"]
+"src/askui/tools/anthropic/android_tools.py" = ["E501"]
+"src/askui/models/shared/android_agent.py" = ["E501"]
 "src/askui/chat/*" = ["E501", "F401", "F403"]
 "src/askui/tools/askui/askui_workspaces/*" = ["ALL"]
 "src/askui/tools/askui/askui_ui_controller_grpc/*" = ["ALL"]

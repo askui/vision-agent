@@ -1,23 +1,28 @@
 import io
 import re
 import string
-from typing import List, Optional, get_args
+from typing import List, Optional, Tuple, get_args
 
 from PIL import Image
 from ppadb.client import Client as AdbClient
 from ppadb.device import Device as AndroidDevice
 
+from askui.reporting import Reporter
 from askui.tools.android_agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
+from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
 
 
 class AskUiAndroidController(AndroidAgentOs):
-    def __init__(self, report: bool = True) -> None:
+    """
+    This class is used to control the Android device.
+    """
+
+    def __init__(self) -> None:
         self._client: Optional[AdbClient] = None
         self._device: Optional[AndroidDevice] = None
         self._mouse_position: tuple[int, int] = (0, 0)
         self._displays: list[AndroidDisplay] = []
         self._selected_display: Optional[AndroidDisplay] = None
-        self.report = report
 
     def connect(self) -> None:
         self._client = AdbClient()
@@ -225,3 +230,143 @@ class AskUiAndroidController(AndroidAgentOs):
             msg = "No devices connected"
             raise RuntimeError(msg)
         return devices
+
+
+class AndroidAgentOSHandler(AndroidAgentOs):
+    """
+    This class is used to handle the AndroidAgentOs class.
+    It is used to scale the coordinates to the target resolution
+    and back to the real screen resolution.
+    """
+
+    def __init__(self, os_agent: AndroidAgentOs, reporter: Reporter) -> None:
+        self._os_agent: AndroidAgentOs = os_agent
+        self._reporter: Reporter = reporter
+        self._target_resolution: Tuple[int, int] = (1280, 800)
+        self._real_screen_resolution: Optional[Tuple[int, int]] = None
+
+    def connect(self) -> None:
+        self._os_agent.connect()
+        self._reporter.add_message("AndroidAgentOS", "Connected to device")
+        self._real_screen_resolution = self._os_agent.screenshot().size
+
+    def disconnect(self) -> None:
+        self._os_agent.disconnect()
+        self._real_screen_resolution = None
+
+    def screenshot(self) -> Image.Image:
+        screenshot = self._os_agent.screenshot()
+        self._real_screen_resolution = screenshot.size
+        scaled_image = scale_image_with_padding(
+            screenshot,
+            self._target_resolution[0],
+            self._target_resolution[1],
+        )
+
+        self._reporter.add_message("AndroidAgentOS", "Screenshot taken", screenshot)
+        return scaled_image
+
+    def _scale_coordinates_back(self, x: int, y: int) -> Tuple[int, int]:
+        if self._real_screen_resolution is None:
+            self._real_screen_resolution = self._os_agent.screenshot().size
+
+        scaled_x, scaled_y = scale_coordinates_back(
+            x,
+            y,
+            self._real_screen_resolution[0],
+            self._real_screen_resolution[1],
+            self._target_resolution[0],
+            self._target_resolution[1],
+        )
+        return int(scaled_x), int(scaled_y)
+
+    def tap(self, x: int, y: int) -> None:
+        scaled_x, scaled_y = self._scale_coordinates_back(x, y)
+        self._os_agent.tap(scaled_x, scaled_y)
+        self._reporter.add_message("AndroidAgentOS", f"Tapped on {x}, {y}")
+
+    def swipe(
+        self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
+    ) -> None:
+        scaled_x1, scaled_y1 = self._scale_coordinates_back(x1, y1)
+        scaled_x2, scaled_y2 = self._scale_coordinates_back(x2, y2)
+        self._os_agent.swipe(scaled_x1, scaled_y1, scaled_x2, scaled_y2, duration_in_ms)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Swiped from {x1}, {y1} to {x2}, {y2}"
+        )
+
+    def drag_and_drop(
+        self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
+    ) -> None:
+        scaled_x1, scaled_y1 = self._scale_coordinates_back(x1, y1)
+        scaled_x2, scaled_y2 = self._scale_coordinates_back(x2, y2)
+        self._os_agent.drag_and_drop(
+            scaled_x1, scaled_y1, scaled_x2, scaled_y2, duration_in_ms
+        )
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            f"Dragged and dropped from {x1}, {y1} to {x2}, {y2}",
+        )
+
+    def type(self, text: str) -> None:
+        self._os_agent.type(text)
+        self._reporter.add_message("AndroidAgentOS", f"Typed {text}")
+
+    def key_tap(self, key: ANDROID_KEY) -> None:
+        self._os_agent.key_tap(key)
+        self._reporter.add_message("AndroidAgentOS", f"Tapped on {key}")
+
+    def key_combination(
+        self, keys: List[ANDROID_KEY], duration_in_ms: int = 100
+    ) -> None:
+        self._os_agent.key_combination(keys, duration_in_ms)
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            f"Tapped on {keys}",
+        )
+
+    def shell(self, command: str) -> str:
+        shell_output = self._os_agent.shell(command)
+        self._reporter.add_message("AndroidAgentOS", f"Ran shell command: {command}")
+        return shell_output
+
+    def get_connected_displays(self) -> list[AndroidDisplay]:
+        displays = self._os_agent.get_connected_displays()
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            f"Retrieved connected displays, length: {len(displays)}",
+        )
+        return displays
+
+    def set_display_by_index(self, display_index: int = 0) -> None:
+        self._os_agent.set_display_by_index(display_index)
+        self._real_screen_resolution = None
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Set display by index: {display_index}"
+        )
+
+    def set_display_by_id(self, display_id: int) -> None:
+        self._os_agent.set_display_by_id(display_id)
+        self._real_screen_resolution = None
+        self._reporter.add_message("AndroidAgentOS", f"Set display by id: {display_id}")
+
+    def set_display_by_name(self, display_name: str) -> None:
+        self._os_agent.set_display_by_name(display_name)
+        self._real_screen_resolution = None
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Set display by name: {display_name}"
+        )
+
+    def set_device_by_index(self, device_index: int = 0) -> None:
+        self._os_agent.set_device_by_index(device_index)
+        self._real_screen_resolution = None
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Set device by index: {device_index}"
+        )
+
+    def set_device_by_name(self, device_name: str) -> None:
+        self._os_agent.set_device_by_name(device_name)
+        self._real_screen_resolution = None
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Set device by name: {device_name}"
+        )

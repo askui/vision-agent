@@ -1,3 +1,13 @@
+from .android_tools import (
+    AndroidDragAndDropTool,
+    AndroidKeyCombinationTool,
+    AndroidKeyTapEventTool,
+    AndroidScreenshotTool,
+    AndroidShellTool,
+    AndroidSwipeTool,
+    AndroidTapTool,
+    AndroidTypeTool,
+)
 from .base import BaseAnthropicTool, CLIResult, Tool, ToolResult
 from .collection import ToolCollection
 from .computer import ComputerTool
@@ -9,4 +19,12 @@ __ALL__ = [
     ToolResult,
     BaseAnthropicTool,
     Tool,
+    AndroidScreenshotTool,
+    AndroidTapTool,
+    AndroidTypeTool,
+    AndroidDragAndDropTool,
+    AndroidKeyTapEventTool,
+    AndroidSwipeTool,
+    AndroidKeyCombinationTool,
+    AndroidShellTool,
 ]

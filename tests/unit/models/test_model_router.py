@@ -83,7 +83,7 @@ def model_router(
     mock_hf_spaces: HFSpacesHandler,
 ) -> ModelRouter:
     """Fixture providing a ModelRouter instance with mocked dependencies."""
-    return ModelRouter(
+    return ModelRouter.build_default_computer_router(
         tools=agent_toolbox_mock,
         reporter=CompositeReporter(),
         models={

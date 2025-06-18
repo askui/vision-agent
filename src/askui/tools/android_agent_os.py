@@ -253,17 +253,6 @@ class AndroidAgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mouse_move(self, x: int, y: int) -> None:
-        """
-        Moves the mouse cursor to specified screen coordinates.
-
-        Args:
-            x (int): The horizontal coordinate (in pixels) to move to.
-            y (int): The vertical coordinate (in pixels) to move to.
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def type(self, text: str) -> None:
         """
         Simulates typing text as if entered on a keyboard.
@@ -308,7 +297,14 @@ class AndroidAgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def drag_and_drop(self, x1: int, y1: int, x2: int, y2: int) -> None:
+    def drag_and_drop(
+        self,
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        duration_in_ms: int = 1000,
+    ) -> None:
         """
         Simulates dragging and dropping an object from one point to another.
 
@@ -330,7 +326,7 @@ class AndroidAgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def key_event(self, key: ANDROID_KEY) -> None:
+    def key_tap(self, key: ANDROID_KEY) -> None:
         """
         Simulates a key event on the Android device.
         """
