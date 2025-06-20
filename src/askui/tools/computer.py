@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Annotated, Literal, TypedDict, get_args
+from typing import Annotated, Literal, TypedDict
 
 from anthropic.types.beta import (
     BetaToolComputerUse20241022Param,
@@ -13,7 +13,7 @@ from askui.tools.agent_os import AgentOs, PcKey
 from askui.utils.dict_utils import IdentityDefaultDict
 from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
 
-from ..models.shared.tools import InputSchema, Tool
+from ..models.shared.tools import Tool
 
 Action20241022 = Literal[
     "key",
@@ -124,12 +124,10 @@ class ComputerToolBase(Tool, ABC):
     def __init__(
         self,
         agent_os: AgentOs,
-        input_schema: InputSchema,
     ) -> None:
         super().__init__(
             name="computer",
             description="A tool for interacting with the computer",
-            input_schema=input_schema,
         )
         self._agent_os = agent_os
         self._width = 1280
@@ -257,29 +255,7 @@ class Computer20241022Tool(ComputerToolBase):
         self,
         agent_os: AgentOs,
     ) -> None:
-        super().__init__(
-            agent_os=agent_os,
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": list(get_args(Action20241022)),
-                    },
-                    "text": {
-                        "type": "string",
-                    },
-                    "coordinate": {
-                        "type": "object",
-                        "properties": {
-                            "x": {"type": "integer", "minimum": 0},
-                            "y": {"type": "integer", "minimum": 0},
-                        },
-                    },
-                },
-                "required": ["action"],
-            },
-        )
+        super().__init__(agent_os=agent_os)
 
     @override
     def to_params(
@@ -298,36 +274,7 @@ class Computer20250124Tool(ComputerToolBase):
         self,
         agent_os: AgentOs,
     ) -> None:
-        super().__init__(
-            agent_os=agent_os,
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": list(get_args(Action20250124)),
-                    },
-                    "text": {
-                        "type": "string",
-                    },
-                    "coordinate": {
-                        "type": "object",
-                        "properties": {
-                            "x": {"type": "integer", "minimum": 0},
-                            "y": {"type": "integer", "minimum": 0},
-                        },
-                    },
-                    "scroll_direction": {
-                        "type": "string",
-                        "enum": list(get_args(ScrollDirection)),
-                    },
-                    "scroll_amount": {"type": "integer", "minimum": 0},
-                    "duration": {"type": "number", "minimum": 0.0, "maximum": 100.0},
-                    "key": {"type": "string"},
-                },
-                "required": ["action"],
-            },
-        )
+        super().__init__(agent_os=agent_os)
 
     @override
     def to_params(

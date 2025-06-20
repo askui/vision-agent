@@ -3,9 +3,10 @@ import queue
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from askui.agent import VisionAgent
+from askui.android_agent import AndroidVisionAgent
 from askui.models.shared.computer_agent_cb_param import OnMessageCbParam
 from askui.models.shared.computer_agent_message_param import (
     Base64ImageSourceParam,
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 ASKUI_VISION_AGENT_ID = "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmca"
+ASKUI_ANDROID_AGENT_ID = "asst_78da09fbf1ed43c7826fb1686f89f541"
 HUMAN_AGENT_ID = "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmcb"
 
 
@@ -138,7 +140,21 @@ class Runner:
                 )
             )
 
+    def _run_askui_android_agent(self, event_queue: queue.Queue[Events]) -> None:
+        self._run_agent(
+            agent_type="android",
+            event_queue=event_queue,
+        )
+
     def _run_askui_vision_agent(self, event_queue: queue.Queue[Events]) -> None:
+        self._run_agent(
+            agent_type="vision",
+            event_queue=event_queue,
+        )
+
+    def _run_agent(
+        self, agent_type: Literal["android", "vision"], event_queue: queue.Queue[Events]
+    ) -> None:
         messages: list[MessageParam] = [
             MessageParam(
                 role=msg.role,
@@ -175,6 +191,14 @@ class Runner:
                 return None
             return on_message_cb_param.message
 
+        if agent_type == "android":
+            with AndroidVisionAgent() as android_agent:
+                android_agent.act(
+                    messages,
+                    on_message=on_message,
+                )
+            return
+
         with VisionAgent() as agent:
             agent.act(
                 messages,
@@ -197,6 +221,8 @@ class Runner:
                 self._run_human_agent(event_queue)
             elif self._run.assistant_id == ASKUI_VISION_AGENT_ID:
                 self._run_askui_vision_agent(event_queue)
+            elif self._run.assistant_id == ASKUI_ANDROID_AGENT_ID:
+                self._run_askui_android_agent(event_queue)
             updated_run = self._retrieve_run()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)

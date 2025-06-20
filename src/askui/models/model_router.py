@@ -34,7 +34,7 @@ from askui.models.models import (
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
 from askui.utils.image_utils import ImageSource
@@ -259,3 +259,11 @@ class ModelRouter:
         m = self._get_model(_model_choice, "locate")
         logger.debug(f"Routing locate prediction to {_model_choice}")
         return m.locate(locator, screenshot, _model_composition or _model_choice)
+
+    def set_act_model_tools(self, model_choice: str, tools: list[Tool]) -> None:
+        act_model = self._get_model(model_choice, "act")
+        act_model.set_tools(tools)
+
+    def add_tool_to_act_model(self, model_choice: str, tool: Tool) -> None:
+        act_model = self._get_model(model_choice, "act")
+        act_model.add_tool(tool)

@@ -7,7 +7,7 @@ from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDis
 from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
 
 
-class PpadbAgentOSHandler(AndroidAgentOs):
+class AndroidAgentOSHandler(AndroidAgentOs):
     """
     This class is used to handle the AndroidAgentOs class.
     It is used to scale the coordinates to the target resolution
@@ -97,7 +97,7 @@ class PpadbAgentOSHandler(AndroidAgentOs):
         self._os_agent.key_combination(keys, duration_in_ms)
         self._reporter.add_message(
             "AndroidAgentOS",
-            f"Tapped on {keys}",
+            f"Tapped on Keys: {keys}",
         )
 
     def shell(self, command: str) -> str:

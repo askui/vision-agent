@@ -12,7 +12,7 @@ from askui.models.shared.computer_agent_message_param import (
     MessageParam,
     TextBlockParam,
 )
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.reporting import Reporter
 
 from ...logger import logger
@@ -59,6 +59,24 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
             type="text",
             text=system_prompt,
         )
+
+    @override
+    def set_tools(self, tools: list[Tool]) -> None:
+        """Set the tools that the model can use.
+
+        Args:
+            tools (list[Tool]): The tools that the model can use.
+        """
+        self._tool_collection.set_tools(tools)
+
+    @override
+    def add_tool(self, tool: Tool) -> None:
+        """Add a tool to the model.
+
+        Args:
+            tool (Tool): The tool to add.
+        """
+        self._tool_collection.add_tool(tool)
 
     @abstractmethod
     def _create_message(
