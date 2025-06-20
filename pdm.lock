@@ -5,7 +5,7 @@
 groups = ["default", "chat", "pynput", "test"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:a520273efe45333a1e8449f9c90dec81be9f9a526656398207266b8d91f83134"
+content_hash = "sha256:9d38242005523af1ed152c8b64eaf12264152a0ce121ca05efb3a21014c5798d"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -1026,6 +1026,15 @@ files = [
     {file = "protobuf-5.29.4-cp38-abi3-manylinux2014_x86_64.whl", hash = "sha256:d7d3f7d1d5a66ed4942d4fefb12ac4b14a29028b209d4bfb25c68ae172059922"},
     {file = "protobuf-5.29.4-py3-none-any.whl", hash = "sha256:3fde11b505e1597f71b875ef2fc52062b6a9740e5f7c8997ce878b6009145862"},
     {file = "protobuf-5.29.4.tar.gz", hash = "sha256:4f1dfcd7997b31ef8f53ec82781ff434a28bf71d9102ddde14d076adcfc78c99"},
+]
+
+[[package]]
+name = "pure-python-adb"
+version = "0.3.0.dev0"
+summary = "Pure python implementation of the adb client"
+groups = ["default"]
+files = [
+    {file = "pure-python-adb-0.3.0.dev0.tar.gz", hash = "sha256:0ecc89d780160cfe03260ba26df2c471a05263b2cad0318363573ee8043fb94d"},
 ]
 
 [[package]]

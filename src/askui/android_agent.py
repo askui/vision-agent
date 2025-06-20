@@ -1,7 +1,7 @@
 import logging
 import time
 import types
-from typing import Annotated, Literal, Optional, Type, overload
+from typing import Annotated, Optional, Type, overload
 
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
@@ -11,14 +11,26 @@ from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
-from askui.tools.computer import Computer20241022Tool
+from askui.tools.android.agent_os import ANDROID_KEY
+from askui.tools.android.ppadb_agent_os import PpadbAgentOs
+from askui.tools.android.ppadb_agent_os_handler import PpadbAgentOSHandler
+from askui.tools.android.tools import (
+    AndroidDragAndDropTool,
+    AndroidKeyCombinationTool,
+    AndroidKeyTapEventTool,
+    AndroidScreenshotTool,
+    AndroidShellTool,
+    AndroidSwipeTool,
+    AndroidTapTool,
+    AndroidTypeTool,
+)
 from askui.tools.exception_tool import ExceptionTool
 from askui.utils.image_utils import ImageSource, Img
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
 from .models.exceptions import ElementNotFoundError
-from .models.model_router import ModelRouter, initialize_default_model_registry
+from .models.model_router import ModelRouter, initialize_default_android_model_registry
 from .models.models import (
     ModelChoice,
     ModelName,
@@ -29,61 +41,39 @@ from .models.models import (
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
-from .tools import AgentToolbox, ModifierKey, PcKey
-from .tools.askui import AskUiControllerClient
 
 
-class VisionAgent:
-    """
-    A vision-based agent that can interact with user interfaces through computer vision and AI.
-
-    This agent can perform various UI interactions like clicking, typing, scrolling, and more.
-    It uses computer vision models to locate UI elements and execute actions on them.
-
-    Args:
-        log_level (int | str, optional): The logging level to use. Defaults to `logging.INFO`.
-        display (int, optional): The display number to use for screen interactions. Defaults to `1`.
-        reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
-        model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
-        retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
-        models (ModelRegistry | None, optional): A registry of models to make available to the `VisionAgent` so that they can be selected using the `model` parameter of `VisionAgent` or the `model` parameter of its `click()`, `get()`, `act()` etc. methods. Entries in the registry override entries in the default model registry.
-
-    Example:
-        ```python
-        from askui import VisionAgent
-
-        with VisionAgent() as agent:
-            agent.click("Submit button")
-            agent.type("Hello World")
-            agent.act("Open settings menu")
-        ```
-    """
+class AndroidVisionAgent:
+    """ """
 
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         log_level: int | str = logging.INFO,
-        display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
-        tools: AgentToolbox | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
     ) -> None:
         load_dotenv()
         configure_logging(level=log_level)
+        self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        self.tools = tools or AgentToolbox(
-            agent_os=AskUiControllerClient(
-                display=display,
-                reporter=self._reporter,
-            ),
-        )
-        _models = initialize_default_model_registry(
+        android_os_handler = PpadbAgentOSHandler(self.os, self._reporter)
+        _models = initialize_default_android_model_registry(
             tool_collection=ToolCollection(
-                tools=[Computer20241022Tool(self.tools.os), ExceptionTool()]
+                tools=[
+                    AndroidScreenshotTool(android_os_handler),
+                    AndroidTapTool(android_os_handler),
+                    AndroidTypeTool(android_os_handler),
+                    AndroidDragAndDropTool(android_os_handler),
+                    AndroidKeyTapEventTool(android_os_handler),
+                    AndroidSwipeTool(android_os_handler),
+                    AndroidKeyCombinationTool(android_os_handler),
+                    AndroidShellTool(android_os_handler),
+                    ExceptionTool(),
+                ]
             ),
             reporter=self._reporter,
         )
@@ -107,10 +97,13 @@ class VisionAgent:
         """Initialize the model choice based on the provided model parameter.
 
         Args:
-            model (ModelComposition | ModelChoice | str | None): The model to initialize from. Can be a ModelComposition, ModelChoice dict, string, or None.
+            model (ModelComposition | ModelChoice | str | None):
+            The model to initialize from. Can be a ModelComposition,
+            ModelChoice dict, string, or None.
 
         Returns:
-            TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to model names (or a ModelComposition for "locate").
+            TotalModelChoice: A dict with keys "act", "get", and "locate"
+            mapping to model names (or a ModelComposition for "locate").
         """
         if isinstance(model_choice, ModelComposition):
             return {
@@ -130,48 +123,53 @@ class VisionAgent:
             "locate": model_choice.get("locate", ModelName.ASKUI),
         }
 
+    @overload
+    def tap(
+        self,
+        target: str | Locator,
+        model: ModelComposition | str | None = None,
+    ) -> None: ...
+
+    @overload
+    def tap(
+        self,
+        target: Point,
+        model: ModelComposition | str | None = None,
+    ) -> None: ...
+
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def click(
+    def tap(
         self,
-        locator: Optional[str | Locator] = None,
-        button: Literal["left", "middle", "right"] = "left",
-        repeat: Annotated[int, Field(gt=0)] = 1,
+        target: str | Locator | tuple[int, int],
         model: ModelComposition | str | None = None,
     ) -> None:
         """
-        Simulates a mouse click on the user interface element identified by the provided locator.
+        Taps on the specified target.
 
         Args:
-            locator (str | Locator | None, optional): The identifier or description of the element to click. If `None`, clicks at current position.
-            button ('left' | 'middle' | 'right', optional): Specifies which mouse button to click. Defaults to `'left'`.
-            repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
+            target (str | Locator | Point): The target to tap on. Can be a locator, a point, or a string.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for tapping on the target.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
-                agent.click()              # Left click on current position
-                agent.click("Edit")        # Left click on text "Edit"
-                agent.click("Edit", button="right")  # Right click on text "Edit"
-                agent.click(repeat=2)      # Double left click on current position
-                agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
-            ```
+            with AndroidVisionAgent() as agent:
+                agent.tap("Submit button")
+                agent.tap((100, 100))
         """
-        msg = "click"
-        if button != "left":
-            msg = f"{button} " + msg
-        if repeat > 1:
-            msg += f" {repeat}x times"
-        if locator is not None:
-            msg += f" on {locator}"
-        self._reporter.add_message("User", msg)
-        if locator is not None:
-            logger.debug("VisionAgent received instruction to click on %s", locator)
-            self._mouse_move(locator, model)
-        self.tools.os.click(button, repeat)
+        msg = "tap"
+        if isinstance(target, tuple):
+            msg += f" at ({target[0]}, {target[1]})"
+            self._reporter.add_message("User", msg)
+            self.os.tap(target[0], target[1])
+        else:
+            msg += f" on {target}"
+            self._reporter.add_message("User", msg)
+            logger.debug("VisionAgent received instruction to click on %s", target)
+            point = self._locate(locator=target, model=model)
+            self.os.tap(point[0], point[1])
 
     def _locate(
         self,
@@ -181,7 +179,7 @@ class VisionAgent:
     ) -> Point:
         def locate_with_screenshot() -> Point:
             _screenshot = ImageSource(
-                self.tools.os.screenshot() if screenshot is None else screenshot
+                self.os.screenshot() if screenshot is None else screenshot
             )
             return self._model_router.locate(
                 screenshot=_screenshot,
@@ -215,9 +213,9 @@ class VisionAgent:
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
+            with AndroidVisionAgent() as agent:
                 point = agent.locate("Submit button")
                 print(f"Element found at coordinates: {point}")
             ```
@@ -225,74 +223,6 @@ class VisionAgent:
         self._reporter.add_message("User", f"locate {locator}")
         logger.debug("VisionAgent received instruction to locate %s", locator)
         return self._locate(locator, screenshot, model)
-
-    def _mouse_move(
-        self, locator: str | Locator, model: ModelComposition | str | None = None
-    ) -> None:
-        point = self._locate(locator=locator, model=model)
-        self.tools.os.mouse_move(point[0], point[1])
-
-    @telemetry.record_call(exclude={"locator"})
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def mouse_move(
-        self,
-        locator: str | Locator,
-        model: ModelComposition | str | None = None,
-    ) -> None:
-        """
-        Moves the mouse cursor to the UI element identified by the provided locator.
-
-        Args:
-            locator (str | Locator): The identifier or description of the element to move to.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                agent.mouse_move("Submit button")  # Moves cursor to submit button
-                agent.mouse_move("Close")  # Moves cursor to close element
-                agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
-            ```
-        """
-        self._reporter.add_message("User", f"mouse_move: {locator}")
-        logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, model)
-
-    @telemetry.record_call()
-    @validate_call
-    def mouse_scroll(
-        self,
-        x: int,
-        y: int,
-    ) -> None:
-        """
-        Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
-
-        Args:
-            x (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
-            y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
-
-        Note:
-            The actual scroll direction depends on the operating system's configuration.
-            Some systems may have "natural scrolling" enabled, which reverses the traditional direction.
-
-            The meaning of scroll units varies across operating systems and applications.
-            A scroll value of `10` might result in different distances depending on the application and system settings.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
-                agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
-                agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
-            ```
-        """
-        self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.tools.os.mouse_scroll(x, y)
 
     @telemetry.record_call(exclude={"text"})
     @validate_call
@@ -305,12 +235,13 @@ class VisionAgent:
 
         Args:
             text (str): The text to be typed. Must be at least `1` character long.
+            Only ASCII printable characters are supported. other characters will raise an error.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
+            with AndroidVisionAgent() as agent:
                 agent.type("Hello, world!")  # Types "Hello, world!"
                 agent.type("user@example.com")  # Types an email address
                 agent.type("password123")  # Types a password
@@ -318,7 +249,7 @@ class VisionAgent:
         """
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
-        self.tools.os.type(text)
+        self.os.type(text)
 
     @overload
     def get(
@@ -374,7 +305,7 @@ class VisionAgent:
                 value: str
                 next: "LinkedListNode | None"
 
-            with VisionAgent() as agent:
+            with AndroidVisionAgent() as agent:
                 # Get URL as string
                 url = agent.get("What is the current url shown in the url bar?")
 
@@ -434,7 +365,7 @@ class VisionAgent:
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.tools.os.screenshot() if image is None else image)
+        _image = ImageSource(self.os.screenshot() if image is None else image)
         self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
         response = self._model_router.get(
             image=_image,
@@ -464,9 +395,9 @@ class VisionAgent:
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
+            with AndroidVisionAgent() as agent:
                 agent.wait(5)  # Pauses execution for 5 seconds
                 agent.wait(0.5)  # Pauses execution for 500 milliseconds
             ```
@@ -475,105 +406,157 @@ class VisionAgent:
 
     @telemetry.record_call()
     @validate_call
-    def key_up(
+    def key_tap(
         self,
-        key: PcKey | ModifierKey,
+        key: ANDROID_KEY,
     ) -> None:
         """
-        Simulates the release of a key.
+        Taps the specified key on the Android device.
 
         Args:
-            key (PcKey | ModifierKey): The key to be released.
+            key (ANDROID_KEY): The key to tap.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
-                agent.key_up('a')  # Release the 'a' key
-                agent.key_up('shift')  # Release the 'Shift' key
+            with AndroidVisionAgent() as agent:
+                agent.key_tap("KEYCODE_HOME")  # Taps the home key
+                agent.key_tap("KEYCODE_BACK")  # Taps the back key
             ```
         """
-        self._reporter.add_message("User", f'key_up "{key}"')
-        logger.debug("VisionAgent received in key_up '%s'", key)
-        self.tools.os.keyboard_release(key)
+        self.os.key_tap(key)
 
     @telemetry.record_call()
     @validate_call
-    def key_down(
+    def key_combination(
         self,
-        key: PcKey | ModifierKey,
+        keys: Annotated[list[ANDROID_KEY], Field(min_length=1)],
+        duration_in_ms: int = 100,
     ) -> None:
         """
-        Simulates the pressing of a key.
+        Taps the specified keys on the Android device.
 
         Args:
-            key (PcKey | ModifierKey): The key to be pressed.
+            keys (list[ANDROID_KEY]): The keys to tap.
+            duration_in_ms (int, optional): The duration in milliseconds to hold the key combination. Default is 100ms.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
-                agent.key_down('a')  # Press the 'a' key
-                agent.key_down('shift')  # Press the 'Shift' key
+            with AndroidVisionAgent() as agent:
+                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"])  # Taps the home key and then the back key
+                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"], duration_in_ms=200)  # Taps the home key and then the back key with a 200ms delay
             ```
         """
-        self._reporter.add_message("User", f'key_down "{key}"')
-        logger.debug("VisionAgent received in key_down '%s'", key)
-        self.tools.os.keyboard_pressed(key)
+        self.os.key_combination(keys, duration_in_ms)
 
     @telemetry.record_call()
     @validate_call
-    def mouse_up(
+    def shell(
         self,
-        button: Literal["left", "middle", "right"] = "left",
-    ) -> None:
+        command: str,
+    ) -> str:
         """
-        Simulates the release of a mouse button.
+        Executes a shell command on the Android device.
 
         Args:
-            button ('left' | 'middle' | 'right', optional): The mouse button to be released. Defaults to `'left'`.
+            command (str): The shell command to execute.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
-                agent.mouse_up()  # Release the left mouse button
-                agent.mouse_up('right')  # Release the right mouse button
-                agent.mouse_up('middle')  # Release the middle mouse button
+            with AndroidVisionAgent() as agent:
+                agent.shell("pm list packages")  # Lists all installed packages
+                agent.shell("dumpsys battery")  # Displays battery information
             ```
         """
-        self._reporter.add_message("User", f'mouse_up "{button}"')
-        logger.debug("VisionAgent received instruction to mouse_up '%s'", button)
-        self.tools.os.mouse_up(button)
+        return self.os.shell(command)
 
     @telemetry.record_call()
     @validate_call
-    def mouse_down(
+    def drag_and_drop(
         self,
-        button: Literal["left", "middle", "right"] = "left",
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        duration_in_ms: int = 1000,
     ) -> None:
         """
-        Simulates the pressing of a mouse button.
+        Drags and drops the specified target.
 
         Args:
-            button ('left' | 'middle' | 'right', optional): The mouse button to be pressed. Defaults to `'left'`.
+            x1 (int): The x-coordinate of the starting point.
+            y1 (int): The y-coordinate of the starting point.
+            x2 (int): The x-coordinate of the ending point.
+            y2 (int): The y-coordinate of the ending point.
+            duration_in_ms (int, optional): The duration in milliseconds to hold the drag and drop. Default is 1000ms.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
-                agent.mouse_down()  # Press the left mouse button
-                agent.mouse_down('right')  # Press the right mouse button
-                agent.mouse_down('middle')  # Press the middle mouse button
-            ```
+            with AndroidVisionAgent() as agent:
+                agent.drag_and_drop(100, 100, 200, 200)  # Drags and drops from (100, 100) to (200, 200)
+                agent.drag_and_drop(100, 100, 200, 200, duration_in_ms=2000)  # Drags and drops from (100, 100) to (200, 200) with a 2000ms duration
         """
-        self._reporter.add_message("User", f'mouse_down "{button}"')
-        logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
-        self.tools.os.mouse_down(button)
+        self.os.drag_and_drop(x1, y1, x2, y2, duration_in_ms)
+
+    @telemetry.record_call()
+    @validate_call
+    def swipe(
+        self,
+        x1: int,
+        y1: int,
+        x2: int,
+        y2: int,
+        duration_in_ms: int = 1000,
+    ) -> None:
+        """
+        Swipes the specified target.
+
+        Args:
+            x1 (int): The x-coordinate of the starting point.
+            y1 (int): The y-coordinate of the starting point.
+            x2 (int): The x-coordinate of the ending point.
+            y2 (int): The y-coordinate of the ending point.
+            duration_in_ms (int, optional): The duration in milliseconds to hold the swipe. Default is 1000ms.
+
+        Example:
+            ```python
+            from askui import AndroidVisionAgent
+
+            with AndroidVisionAgent() as agent:
+                agent.swipe(100, 100, 200, 200)  # Swipes from (100, 100) to (200, 200)
+                agent.swipe(100, 100, 200, 200, duration_in_ms=2000)  # Swipes from (100, 100) to (200, 200) with a 2000ms duration
+        """
+        self.os.swipe(x1, y1, x2, y2, duration_in_ms)
+
+    @telemetry.record_call(
+        exclude={"device_name"},
+    )
+    @validate_call
+    def set_device_by_name(
+        self,
+        device_name: str,
+    ) -> None:
+        """
+        Sets the active device for screen interactions by name.
+
+        Args:
+            device_name (str): The name of the device to set as active.
+
+        Example:
+            ```python
+            from askui import AndroidVisionAgent
+
+            with AndroidVisionAgent() as agent:
+                agent.set_device_by_name("Pixel 6")  # Sets the active device to the Pixel 6
+        """
+        self.os.set_device_by_name(device_name)
 
     @telemetry.record_call(exclude={"goal", "on_message"})
     @validate_call
@@ -600,11 +583,10 @@ class VisionAgent:
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import AndroidVisionAgent
 
-            with VisionAgent() as agent:
+            with AndroidVisionAgent() as agent:
                 agent.act("Open the settings menu")
-                agent.act("Search for 'printer' in the search box")
                 agent.act("Log in with username 'admin' and password '1234'")
             ```
         """
@@ -622,96 +604,19 @@ class VisionAgent:
         )
         self._model_router.act(messages, model or self._model_choice["act"], on_message)
 
-    @telemetry.record_call()
-    @validate_call
-    def keyboard(
-        self,
-        key: PcKey | ModifierKey,
-        modifier_keys: Optional[list[ModifierKey]] = None,
-        repeat: Annotated[int, Field(gt=0)] = 1,
-    ) -> None:
-        """
-        Simulates pressing (and releasing) a key or key combination on the keyboard.
-
-        Args:
-            key (PcKey | ModifierKey): The main key to press. This can be a letter, number, special character, or function key.
-            modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to press along with the main key. Common modifier keys include `'ctrl'`, `'alt'`, `'shift'`.
-            repeat (int, optional): The number of times to press (and release) the key. Must be greater than `0`. Defaults to `1`.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                agent.keyboard('a')  # Press 'a' key
-                agent.keyboard('enter')  # Press 'Enter' key
-                agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
-                agent.keyboard('s', ['control', 'shift'])  # Press Ctrl+Shift+S
-                agent.keyboard('a', repeat=2)  # Press 'a' key twice
-            ```
-        """
-        msg = f"press and release key '{key}'"
-        if modifier_keys is not None:
-            modifier_keys_str = " + ".join(f"'{key}'" for key in modifier_keys)
-            msg += f" with modifiers key{'s' if len(modifier_keys) > 1 else ''} {modifier_keys_str}"
-        if repeat > 1:
-            msg += f" {repeat}x times"
-        self._reporter.add_message("User", msg)
-        logger.debug("VisionAgent received instruction to press '%s'", key)
-        self.tools.os.keyboard_tap(key, modifier_keys, count=repeat)
-
-    @telemetry.record_call(exclude={"command"})
-    @validate_call
-    def cli(
-        self,
-        command: Annotated[str, Field(min_length=1)],
-    ) -> None:
-        """
-        Executes a command on the command line interface.
-
-        This method allows running shell commands directly from the agent. The command
-        is split on spaces and executed as a subprocess.
-
-        Args:
-            command (str): The command to execute on the command line.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                # Use for Windows
-                agent.cli(fr'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
-                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
-
-                # Mac
-                agent.cli("open -a chrome")  # Open Chrome non-blocking for mac
-                agent.cli("chrome")  # Open Chrome blocking for linux
-                agent.cli("echo Hello World")  # Prints "Hello World"
-                agent.cli("python --version")  # Displays Python version
-
-                # Linux
-                agent.cli("nohub chrome")  # Open Chrome non-blocking for linux
-                agent.cli("chrome")  # Open Chrome blocking for linux
-                agent.cli("echo Hello World")  # Prints "Hello World"
-                agent.cli("python --version")  # Displays Python version
-
-            ```
-        """
-        logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
-        self.tools.os.run_command(command)
-
-    @telemetry.record_call()
+    @telemetry.record_call(flush=True)
     def close(self) -> None:
-        self.tools.os.disconnect()
+        """Disconnects from the Android device."""
+        self.os.disconnect()
         self._reporter.generate()
 
     @telemetry.record_call()
     def open(self) -> None:
-        self.tools.os.connect()
+        """Connects to the Android device."""
+        self.os.connect()
 
     @telemetry.record_call()
-    def __enter__(self) -> "VisionAgent":
+    def __enter__(self) -> "AndroidVisionAgent":
         self.open()
         return self
 

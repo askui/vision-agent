@@ -13,7 +13,7 @@ from askui.models.shared.computer_agent_message_param import (
     MessageParam,
     TextBlockParam,
 )
-from askui.tools.pynput.pynput_agent_os import PynputAgentOs
+from askui.tools.pynput_agent_os import PynputAgentOs
 from askui.utils.image_utils import ImageSource
 from chat.api.messages.service import MessageCreateRequest, MessageService
 from chat.api.models import MAX_MESSAGES_PER_THREAD, ListQuery

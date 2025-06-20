@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, cast
 
-from anthropic.types.beta import BetaToolUnionParam
+from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
+from anthropic.types.beta.beta_tool_param import InputSchema
 from PIL import Image
+from pydantic import BaseModel, Field
 
 from askui.models.shared.computer_agent_message_param import (
     Base64ImageSourceParam,
@@ -14,7 +16,13 @@ from askui.models.shared.computer_agent_message_param import (
 )
 from askui.utils.image_utils import ImageSource
 
-ToolCallResult = Image.Image | None
+PrimitiveToolCallResult = Image.Image | None | str
+
+ToolCallResult = (
+    PrimitiveToolCallResult
+    | list[PrimitiveToolCallResult]
+    | tuple[PrimitiveToolCallResult, ...]
+)
 
 
 def _convert_to_content(
@@ -22,6 +30,16 @@ def _convert_to_content(
 ) -> list[TextBlockParam | ImageBlockParam]:
     if result is None:
         return []
+
+    if isinstance(result, str):
+        return [TextBlockParam(text=result)]
+
+    if isinstance(result, list | tuple):
+        return [
+            item
+            for sublist in [_convert_to_content(item) for item in result]
+            for item in sublist
+        ]
 
     return [
         ImageBlockParam(
@@ -33,19 +51,42 @@ def _convert_to_content(
     ]
 
 
-class Tool(ABC):
-    """Abstract base class for tools."""
+def _default_input_schema() -> InputSchema:
+    return {"type": "object", "properties": {}, "required": []}
+
+
+class Tool(BaseModel, ABC):
+    name: str = Field(description="Name of the tool")
+    description: str = Field(description="Description of what the tool does")
+    input_schema: InputSchema = Field(
+        default_factory=_default_input_schema,
+        description="JSON schema for tool parameters",
+    )
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
         """Executes the tool with the given arguments."""
-        raise NotImplementedError
+        error_msg = "Tool subclasses must implement __call__ method"
+        raise NotImplementedError(error_msg)
 
-    @abstractmethod
     def to_params(
         self,
     ) -> BetaToolUnionParam:
-        raise NotImplementedError
+        return BetaToolParam(
+            name=self.name,
+            description=self.description,
+            input_schema=self.input_schema,
+        )
+
+
+class AgentException(Exception):
+    """
+    Exception raised by the agent.
+    """
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
 
 
 class ToolCollection:
@@ -96,6 +137,8 @@ class ToolCollection:
                 content=_convert_to_content(tool_result),
                 tool_use_id=tool_use_block_param.id,
             )
+        except AgentException:
+            raise
         except Exception as e:  # noqa: BLE001
             return ToolResultBlockParam(
                 content=f"Tool {tool_use_block_param.name} failed: {e}",

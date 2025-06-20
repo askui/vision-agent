@@ -11,9 +11,13 @@ from askui.models.anthropic.settings import (
     ClaudeSettings,
 )
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.android_agent import AskUiAndroidAgent
 from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.model_router import AskUiModelRouter
-from askui.models.askui.settings import AskUiComputerAgentSettings
+from askui.models.askui.settings import (
+    AskUiAndroidAgentSettings,
+    AskUiComputerAgentSettings,
+)
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
@@ -41,7 +45,7 @@ from .anthropic.handler import ClaudeHandler
 from .askui.inference_api import AskUiInferenceApi, AskUiSettings
 
 
-def _initialize_default_model_registry(  # noqa: C901
+def initialize_default_model_registry(  # noqa: C901
     tool_collection: ToolCollection,
     reporter: Reporter,
 ) -> ModelRegistry:
@@ -127,18 +131,63 @@ def _initialize_default_model_registry(  # noqa: C901
     }
 
 
+def initialize_default_android_model_registry(  # noqa: C901
+    tool_collection: ToolCollection,
+    reporter: Reporter,
+) -> ModelRegistry:
+    @functools.cache
+    @functools.cache
+    def askui_settings() -> AskUiSettings:
+        return AskUiSettings()
+
+    @functools.cache
+    def askui_inference_api() -> AskUiInferenceApi:
+        return AskUiInferenceApi(
+            locator_serializer=AskUiLocatorSerializer(
+                ai_element_collection=AiElementCollection(),
+                reporter=reporter,
+            ),
+            settings=askui_settings(),
+        )
+
+    @functools.cache
+    def askui_model_router() -> AskUiModelRouter:
+        return AskUiModelRouter(
+            inference_api=askui_inference_api(),
+        )
+
+    @functools.cache
+    def askui_facade() -> ModelFacade:
+        android_agent = AskUiAndroidAgent(
+            tool_collection=tool_collection,
+            reporter=reporter,
+            settings=AskUiAndroidAgentSettings(
+                askui=askui_settings(),
+            ),
+        )
+        return ModelFacade(
+            act_model=android_agent,
+            get_model=askui_inference_api(),
+            locate_model=askui_model_router(),
+        )
+
+    return {
+        ModelName.ASKUI: askui_facade,
+        ModelName.ASKUI__AI_ELEMENT: askui_model_router,
+        ModelName.ASKUI__COMBO: askui_model_router,
+        ModelName.ASKUI__OCR: askui_model_router,
+        ModelName.ASKUI__PTA: askui_model_router,
+    }
+
+
 class ModelRouter:
     def __init__(
         self,
-        tool_collection: ToolCollection,
         reporter: Reporter | None = None,
         models: ModelRegistry | None = None,
     ):
         self._reporter = reporter or CompositeReporter()
-        self._models = _initialize_default_model_registry(
-            tool_collection, self._reporter
-        )
-        self._models.update(models or {})
+        self._models = models or {}
 
     @overload
     def _get_model(self, model_choice: str, model_type: Literal["act"]) -> ActModel: ...
