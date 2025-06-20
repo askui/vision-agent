@@ -6,6 +6,7 @@ from askui.locators.locators import Locator
 from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
@@ -33,6 +34,16 @@ class ModelFacade(ActModel, GetModel, LocateModel):
             model_choice=model_choice,
             on_message=on_message,
         )
+
+    @override
+    def set_tools(self, tools: list[Tool]) -> None:
+        """Set the tools for the act model."""
+        self._act_model.set_tools(tools)
+
+    @override
+    def add_tool(self, tool: Tool) -> None:
+        """Add a tool to the act model."""
+        self._act_model.add_tool(tool)
 
     @override
     def get(

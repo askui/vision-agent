@@ -10,10 +10,10 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.android.agent_os import ANDROID_KEY
+from askui.tools.android.agent_os_handler import AndroidAgentOSHandler
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
-from askui.tools.android.ppadb_agent_os_handler import PpadbAgentOSHandler
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
     AndroidKeyCombinationTool,
@@ -60,7 +60,7 @@ class AndroidVisionAgent:
         configure_logging(level=log_level)
         self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        android_os_handler = PpadbAgentOSHandler(self.os, self._reporter)
+        android_os_handler = AndroidAgentOSHandler(self.os, self._reporter)
         _models = initialize_default_android_model_registry(
             tool_collection=ToolCollection(
                 tools=[
@@ -603,6 +603,22 @@ class AndroidVisionAgent:
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
         self._model_router.act(messages, model or self._model_choice["act"], on_message)
+
+    def set_act_model_tools(self, tools: list[Tool], model: str | None = None) -> None:
+        """
+        Sets the tools for the act model.
+        """
+        self._model_router.set_act_model_tools(
+            model or self._model_choice["act"], tools
+        )
+
+    def add_tool_to_act_model(self, tool: Tool, model: str | None = None) -> None:
+        """
+        Adds a tool to the act model.
+        """
+        self._model_router.add_tool_to_act_model(
+            model or self._model_choice["act"], tool
+        )
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:
