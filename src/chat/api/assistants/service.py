@@ -3,7 +3,11 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from chat.api.assistants.models import Assistant
-from chat.api.assistants.seeds import ASKUI_VISION_AGENT, HUMAN_DEMONSTRATION_AGENT
+from chat.api.assistants.seeds import (
+    ANDROID_VISION_AGENT,
+    ASKUI_VISION_AGENT,
+    HUMAN_DEMONSTRATION_AGENT,
+)
 from chat.api.models import DO_NOT_PATCH, DoNotPatch, ListQuery, ListResponse
 
 
@@ -162,5 +166,6 @@ class AssistantService:
 
     def seed(self) -> None:
         """Seed the assistant service with default assistants."""
+        self._save(ANDROID_VISION_AGENT)
         self._save(ASKUI_VISION_AGENT)
         self._save(HUMAN_DEMONSTRATION_AGENT)
