@@ -41,7 +41,7 @@ from askui.utils.image_utils import ImageSource
 
 from ..logger import logger
 from .anthropic.computer_agent import ClaudeComputerAgent
-from .anthropic.handler import ClaudeHandler
+from .anthropic.model import ClaudeHandler
 from .askui.inference_api import AskUiInferenceApi, AskUiSettings
 
 

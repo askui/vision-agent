@@ -446,7 +446,7 @@ You can use Vision Agent with [OpenRouter](https://openrouter.ai/) to access a w
 ```python
 from askui import VisionAgent
 from askui.models import (
-    OpenRouterGetModel,
+    OpenRouterModel,
     OpenRouterSettings,
     ModelRegistry,
 )
@@ -454,7 +454,7 @@ from askui.models import (
 
 # Register OpenRouter model in the registry
 custom_models: ModelRegistry = {
-    "my-custom-model": OpenRouterGetModel(
+    "my-custom-model": OpenRouterModel(
         OpenRouterSettings(
             model="anthropic/claude-opus-4",
         )

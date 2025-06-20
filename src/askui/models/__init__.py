@@ -11,7 +11,7 @@ from .models import (
     OnMessageCb,
     Point,
 )
-from .openrouter.handler import OpenRouterGetModel
+from .openrouter.model import OpenRouterModel
 from .openrouter.settings import OpenRouterSettings
 from .shared.computer_agent_message_param import (
     Base64ImageSourceParam,
@@ -28,6 +28,7 @@ from .shared.computer_agent_message_param import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
+from .shared.settings import ChatCompletionsCreateSettings
 
 __all__ = [
     "ActModel",
@@ -54,6 +55,7 @@ __all__ = [
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
-    "OpenRouterGetModel",
+    "OpenRouterModel",
     "OpenRouterSettings",
+    "ChatCompletionsCreateSettings",
 ]
