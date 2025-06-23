@@ -53,8 +53,10 @@ def test_query_with_response_schema_returns_validated_object(
     image_source_github_login_screenshot: ImageSource,
 ) -> None:
     mock_response = {
-        "text": "Test text",
-        "number": 42,
+        "response": {
+            "text": "Test text",
+            "number": 42,
+        }
     }
     mock_openai_client.chat.completions.create.return_value = _create_mock_completion(
         json.dumps(mock_response)
