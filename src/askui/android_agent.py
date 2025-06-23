@@ -60,17 +60,17 @@ class AndroidVisionAgent:
         configure_logging(level=log_level)
         self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        self._act_agent_os_handler = AndroidAgentOsFacade(self.os, self._reporter)
+        self._act_agent_os_facade = AndroidAgentOsFacade(self.os, self._reporter)
         self.act_tool_collection = ToolCollection(
             tools=[
-                AndroidScreenshotTool(self._act_agent_os_handler),
-                AndroidTapTool(self._act_agent_os_handler),
-                AndroidTypeTool(self._act_agent_os_handler),
-                AndroidDragAndDropTool(self._act_agent_os_handler),
-                AndroidKeyTapEventTool(self._act_agent_os_handler),
-                AndroidSwipeTool(self._act_agent_os_handler),
-                AndroidKeyCombinationTool(self._act_agent_os_handler),
-                AndroidShellTool(self._act_agent_os_handler),
+                AndroidScreenshotTool(self._act_agent_os_facade),
+                AndroidTapTool(self._act_agent_os_facade),
+                AndroidTypeTool(self._act_agent_os_facade),
+                AndroidDragAndDropTool(self._act_agent_os_facade),
+                AndroidKeyTapEventTool(self._act_agent_os_facade),
+                AndroidSwipeTool(self._act_agent_os_facade),
+                AndroidKeyCombinationTool(self._act_agent_os_facade),
+                AndroidShellTool(self._act_agent_os_facade),
                 ExceptionTool(),
             ]
         )
