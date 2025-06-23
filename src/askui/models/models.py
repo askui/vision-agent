@@ -35,6 +35,7 @@ class ModelName(str, Enum):
     HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT = "Qwen/Qwen2-VL-7B-Instruct"
     HF__SPACES__SHOWUI__2B = "showlab/ShowUI-2B"
     TARS = "tars"
+    HF__HOLO_1 = "holo-1"
 
 
 ANTHROPIC_MODEL_NAME_MAPPING = {
