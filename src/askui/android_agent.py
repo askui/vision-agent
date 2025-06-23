@@ -10,9 +10,9 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.tools import ToolCollection
 from askui.tools.android.agent_os import ANDROID_KEY
-from askui.tools.android.agent_os_handler import AndroidAgentOSHandler
+from askui.tools.android.agent_os_handler import AndroidAgentOsHandler
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
@@ -60,21 +60,22 @@ class AndroidVisionAgent:
         configure_logging(level=log_level)
         self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        android_os_handler = AndroidAgentOSHandler(self.os, self._reporter)
+        self.act_agent_os_handler = AndroidAgentOsHandler(self.os, self._reporter)
+        self.act_tool_collection = ToolCollection(
+            tools=[
+                AndroidScreenshotTool(self.act_agent_os_handler),
+                AndroidTapTool(self.act_agent_os_handler),
+                AndroidTypeTool(self.act_agent_os_handler),
+                AndroidDragAndDropTool(self.act_agent_os_handler),
+                AndroidKeyTapEventTool(self.act_agent_os_handler),
+                AndroidSwipeTool(self.act_agent_os_handler),
+                AndroidKeyCombinationTool(self.act_agent_os_handler),
+                AndroidShellTool(self.act_agent_os_handler),
+                ExceptionTool(),
+            ]
+        )
         _models = initialize_default_android_model_registry(
-            tool_collection=ToolCollection(
-                tools=[
-                    AndroidScreenshotTool(android_os_handler),
-                    AndroidTapTool(android_os_handler),
-                    AndroidTypeTool(android_os_handler),
-                    AndroidDragAndDropTool(android_os_handler),
-                    AndroidKeyTapEventTool(android_os_handler),
-                    AndroidSwipeTool(android_os_handler),
-                    AndroidKeyCombinationTool(android_os_handler),
-                    AndroidShellTool(android_os_handler),
-                    ExceptionTool(),
-                ]
-            ),
+            tool_collection=self.act_tool_collection,
             reporter=self._reporter,
         )
         _models.update(models or {})
@@ -421,8 +422,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_tap("home")  # Taps the home key
-                agent.key_tap("back")  # Taps the back key
+                agent.key_tap("HOME")  # Taps the home key
+                agent.key_tap("BACK")  # Taps the back key
             ```
         """
         self.os.key_tap(key)
@@ -431,7 +432,7 @@ class AndroidVisionAgent:
     @validate_call
     def key_combination(
         self,
-        keys: Annotated[list[ANDROID_KEY], Field(min_length=1)],
+        keys: Annotated[list[ANDROID_KEY], Field(min_length=2)],
         duration_in_ms: int = 100,
     ) -> None:
         """
@@ -446,8 +447,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_combination(["home", "back"])  # Taps the home key and then the back key
-                agent.key_combination(["home", "back"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
+                agent.key_combination(["HOME", "BACK"])  # Taps the home key and then the back key
+                agent.key_combination(["HOME", "BACK"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
             ```
         """
         self.os.key_combination(keys, duration_in_ms)
@@ -603,22 +604,6 @@ class AndroidVisionAgent:
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
         self._model_router.act(messages, model or self._model_choice["act"], on_message)
-
-    def set_act_model_tools(self, tools: list[Tool], model: str | None = None) -> None:
-        """
-        Sets the tools for the act model.
-        """
-        self._model_router.set_act_model_tools(
-            model or self._model_choice["act"], tools
-        )
-
-    def add_tool_to_act_model(self, tool: Tool, model: str | None = None) -> None:
-        """
-        Adds a tool to the act model.
-        """
-        self._model_router.add_tool_to_act_model(
-            model or self._model_choice["act"], tool
-        )
 
     @telemetry.record_call(flush=True)
     def close(self) -> None:

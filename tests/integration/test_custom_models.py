@@ -19,7 +19,6 @@ from askui.locators.locators import Locator
 from askui.models import ModelComposition, ModelDefinition, ModelName
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import Tool
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -40,14 +39,6 @@ class SimpleActModel(ActModel):
     ) -> None:
         self.goals.append([message.model_dump(mode="json") for message in messages])
         self.model_choices.append(model_choice)
-
-    @override
-    def add_tool(self, tool: Tool) -> None:
-        pass
-
-    @override
-    def set_tools(self, tools: list[Tool]) -> None:
-        pass
 
 
 class SimpleGetModel(GetModel):
@@ -216,14 +207,6 @@ class TestCustomModels:
                 model_choice: str,
                 on_message: OnMessageCb | None = None,
             ) -> None:
-                pass
-
-            @override
-            def add_tool(self, tool: Tool) -> None:
-                pass
-
-            @override
-            def set_tools(self, tools: list[Tool]) -> None:
                 pass
 
         registry: ModelRegistry = {

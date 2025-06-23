@@ -10,7 +10,6 @@ from typing_extensions import Literal, TypedDict
 from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
@@ -218,24 +217,6 @@ class ActModel(abc.ABC):
         Raises:
             NotImplementedError: If the method is not implemented.
         """  # noqa: E501
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def set_tools(self, tools: list[Tool]) -> None:
-        """Set the tools that the model can use.
-
-        Args:
-            tools (list[Tool]): The tools that the model can use.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def add_tool(self, tool: Tool) -> None:
-        """Add a tool to the model.
-
-        Args:
-            tool (Tool): The tool to add.
-        """
         raise NotImplementedError
 
 

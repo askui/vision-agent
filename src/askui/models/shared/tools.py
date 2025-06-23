@@ -110,13 +110,13 @@ class ToolCollection:
     ) -> list[BetaToolUnionParam]:
         return [tool.to_params() for tool in self._tools]
 
-    def add_tool(self, tool: Tool) -> None:
-        """Add a tool to the collection."""
+    def append_tool(self, tool: Tool) -> None:
+        """Append a tool to the collection."""
         self._tools.append(tool)
         self._tool_map[tool.to_params()["name"]] = tool
 
-    def set_tools(self, tools: list[Tool]) -> None:
-        """Set the tools in the collection."""
+    def reset_tools(self, tools: list[Tool]) -> None:
+        """Reset the tools in the collection with new tools."""
         self._tools = tools
         self._tool_map = {tool.to_params()["name"]: tool for tool in tools}
 

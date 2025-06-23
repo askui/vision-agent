@@ -200,7 +200,7 @@ class PpadbAgentOs(AndroidAgentOs):
             raise RuntimeError(error_msg_invalid_key)
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(f"input -d {display_index} keyevent {key.upper()}")
+        self.shell(f"input -d {display_index} keyevent {key}")
 
     def key_combination(
         self, keys: List[ANDROID_KEY], duration_in_ms: int = 100
@@ -213,7 +213,7 @@ class PpadbAgentOs(AndroidAgentOs):
             error_msg_too_few: str = "Key combination must contain at least 2 keys"
             raise RuntimeError(error_msg_too_few)
 
-        keys_string = " ".join(key.upper() for key in keys)
+        keys_string = " ".join(keys)
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
         self.shell(
