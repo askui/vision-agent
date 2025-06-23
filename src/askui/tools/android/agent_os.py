@@ -375,9 +375,9 @@ class AndroidAgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def set_device_by_name(self, device_name: str) -> None:
+    def set_device_by_serial_number(self, device_serial_number: str) -> None:
         """
-        Sets the active device for screen interactions by name.
+        Sets the active device for screen interactions by serial number.
         """
         raise NotImplementedError
 

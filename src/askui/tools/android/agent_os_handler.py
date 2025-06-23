@@ -139,9 +139,9 @@ class AndroidAgentOSHandler(AndroidAgentOs):
             "AndroidAgentOS", f"Set device by index: {device_index}"
         )
 
-    def set_device_by_name(self, device_name: str) -> None:
-        self._os_agent.set_device_by_name(device_name)
+    def set_device_by_serial_number(self, device_serial_number: str) -> None:
+        self._os_agent.set_device_by_serial_number(device_serial_number)
         self._real_screen_resolution = None
         self._reporter.add_message(
-            "AndroidAgentOS", f"Set device by name: {device_name}"
+            "AndroidAgentOS", f"Set device by serial number: {device_serial_number}"
         )

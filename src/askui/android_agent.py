@@ -421,8 +421,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_tap("KEYCODE_HOME")  # Taps the home key
-                agent.key_tap("KEYCODE_BACK")  # Taps the back key
+                agent.key_tap("home")  # Taps the home key
+                agent.key_tap("back")  # Taps the back key
             ```
         """
         self.os.key_tap(key)
@@ -446,8 +446,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"])  # Taps the home key and then the back key
-                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"], duration_in_ms=200)  # Taps the home key and then the back key with a 200ms delay
+                agent.key_combination(["home", "back"])  # Taps the home key and then the back key
+                agent.key_combination(["home", "back"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
             ```
         """
         self.os.key_combination(keys, duration_in_ms)
@@ -536,27 +536,27 @@ class AndroidVisionAgent:
         self.os.swipe(x1, y1, x2, y2, duration_in_ms)
 
     @telemetry.record_call(
-        exclude={"device_name"},
+        exclude={"device_serial_number"},
     )
     @validate_call
-    def set_device_by_name(
+    def set_device_by_serial_number(
         self,
-        device_name: str,
+        device_serial_number: str,
     ) -> None:
         """
         Sets the active device for screen interactions by name.
 
         Args:
-            device_name (str): The name of the device to set as active.
+            device_serial_number (str): The serial number of the device to set as active.
 
         Example:
             ```python
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.set_device_by_name("Pixel 6")  # Sets the active device to the Pixel 6
+                agent.set_device_by_serial_number("Pixel 6")  # Sets the active device to the Pixel 6
         """
-        self.os.set_device_by_name(device_name)
+        self.os.set_device_by_serial_number(device_serial_number)
 
     @telemetry.record_call(exclude={"goal", "on_message"})
     @validate_call
