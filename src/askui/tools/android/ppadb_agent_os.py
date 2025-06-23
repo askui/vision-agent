@@ -187,7 +187,6 @@ class PpadbAgentOs(AndroidAgentOs):
             raise RuntimeError(error_msg_nonprintable)
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-
         escaped_text = shlex.quote(text)
         shell_safe_text = escaped_text.replace(" ", "%s")
         self.shell(f"input -d {display_index} text {shell_safe_text}")
