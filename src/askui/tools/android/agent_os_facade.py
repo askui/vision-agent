@@ -7,9 +7,9 @@ from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDis
 from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
 
 
-class AndroidAgentOsHandler(AndroidAgentOs):
+class AndroidAgentOsFacade(AndroidAgentOs):
     """
-    This class is used to handle the AndroidAgentOs class.
+    This class is a facade for the AndroidAgentOs class.
     It is used to scale the coordinates to the target resolution
     and back to the real screen resolution.
     """

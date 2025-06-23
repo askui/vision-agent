@@ -5,7 +5,7 @@ from typing_extensions import override
 
 from askui.models.shared.tools import Tool
 from askui.tools.android.agent_os import ANDROID_KEY
-from askui.tools.android.agent_os_handler import AndroidAgentOsHandler
+from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 
 
 class AndroidScreenshotTool(Tool):
@@ -13,7 +13,7 @@ class AndroidScreenshotTool(Tool):
     Takes a screenshot from the currently connected Android device.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_screenshot_tool",
             description=(
@@ -25,11 +25,11 @@ class AndroidScreenshotTool(Tool):
                 """
             ),
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self) -> tuple[str, Image.Image]:
-        screenshot = self._agent_os_handler.screenshot()
+        screenshot = self._agent_os_facade.screenshot()
         return "Screenshot was taken.", screenshot
 
 
@@ -41,7 +41,7 @@ class AndroidTapTool(Tool):
     The top left corner of the screen is (0, 0).
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_tap_tool",
             description=(
@@ -66,11 +66,11 @@ class AndroidTapTool(Tool):
                 "required": ["x", "y"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, x: int, y: int) -> str:
-        self._agent_os_handler.tap(x, y)
+        self._agent_os_facade.tap(x, y)
         return f"Tapped at ({x}, {y})"
 
 
@@ -79,7 +79,7 @@ class AndroidTypeTool(Tool):
     Types the given text on the Android device screen.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_type_tool",
             description=(
@@ -103,11 +103,11 @@ class AndroidTypeTool(Tool):
                 "required": ["text"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, text: str) -> str:
-        self._agent_os_handler.type(text)
+        self._agent_os_facade.type(text)
         return f"Typed: {text}"
 
 
@@ -116,8 +116,8 @@ class AndroidDragAndDropTool(Tool):
     Performs a drag and drop gesture on the Android device screen.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
-        self._agent_os_handler = agent_os_handler
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
+        self._agent_os_facade = agent_os_facade
         super().__init__(
             name="android_drag_and_drop_tool",
             description=(
@@ -163,12 +163,12 @@ class AndroidDragAndDropTool(Tool):
 
     @override
     def __call__(self, x1: int, y1: int, x2: int, y2: int, duration: int = 1000) -> str:
-        self._agent_os_handler.drag_and_drop(x1, y1, x2, y2, duration)
+        self._agent_os_facade.drag_and_drop(x1, y1, x2, y2, duration)
         return f"Dragged and dropped from ({x1}, {y1}) to ({x2}, {y2}) in {duration}ms"
 
 
 class AndroidKeyTapEventTool(Tool):
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_key_event_tool",
             description=(
@@ -192,11 +192,11 @@ class AndroidKeyTapEventTool(Tool):
                 "required": ["key_name"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, key_name: ANDROID_KEY) -> str:
-        self._agent_os_handler.key_tap(key_name)
+        self._agent_os_facade.key_tap(key_name)
         return f"Tapped on Key: {key_name}"
 
 
@@ -205,7 +205,7 @@ class AndroidSwipeTool(Tool):
     Performs a swipe gesture on the Android device screen.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_swipe_tool",
             description=(
@@ -265,11 +265,11 @@ class AndroidSwipeTool(Tool):
                 "required": ["x1", "y1", "x2", "y2"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, x1: int, y1: int, x2: int, y2: int, duration: int = 1000) -> str:
-        self._agent_os_handler.swipe(x1, y1, x2, y2, duration)
+        self._agent_os_facade.swipe(x1, y1, x2, y2, duration)
         return f"Swiped from ({x1}, {y1}) to ({x2}, {y2}) in {duration}ms"
 
 
@@ -278,7 +278,7 @@ class AndroidKeyCombinationTool(Tool):
     Performs a key combination on the Android device.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_key_combination_tool",
             description=(
@@ -321,11 +321,11 @@ class AndroidKeyCombinationTool(Tool):
                 "required": ["keys"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, keys: list[ANDROID_KEY], duration: int = 100) -> str:
-        self._agent_os_handler.key_combination(keys, duration)
+        self._agent_os_facade.key_combination(keys, duration)
         return f"Performed key combination: {keys}"
 
 
@@ -334,7 +334,7 @@ class AndroidShellTool(Tool):
     Executes a shell command on the Android device.
     """
 
-    def __init__(self, agent_os_handler: AndroidAgentOsHandler) -> None:
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
         super().__init__(
             name="android_shell_tool",
             description=(
@@ -363,9 +363,9 @@ class AndroidShellTool(Tool):
                 "required": ["command"],
             },
         )
-        self._agent_os_handler = agent_os_handler
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, command: str) -> str:
-        output = self._agent_os_handler.shell(command)
+        output = self._agent_os_facade.shell(command)
         return f"Shell command executed. Output: {output}"

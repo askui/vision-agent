@@ -12,7 +12,7 @@ from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.android.agent_os import ANDROID_KEY
-from askui.tools.android.agent_os_handler import AndroidAgentOsHandler
+from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
@@ -60,7 +60,7 @@ class AndroidVisionAgent:
         configure_logging(level=log_level)
         self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        self._act_agent_os_handler = AndroidAgentOsHandler(self.os, self._reporter)
+        self._act_agent_os_handler = AndroidAgentOsFacade(self.os, self._reporter)
         self.act_tool_collection = ToolCollection(
             tools=[
                 AndroidScreenshotTool(self._act_agent_os_handler),
