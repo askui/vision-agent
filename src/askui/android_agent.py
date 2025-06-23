@@ -537,18 +537,18 @@ class AndroidVisionAgent:
         self.os.swipe(x1, y1, x2, y2, duration_in_ms)
 
     @telemetry.record_call(
-        exclude={"device_serial_number"},
+        exclude={"device_sn"},
     )
     @validate_call
     def set_device_by_serial_number(
         self,
-        device_serial_number: str,
+        device_sn: str,
     ) -> None:
         """
         Sets the active device for screen interactions by name.
 
         Args:
-            device_serial_number (str): The serial number of the device to set as active.
+            device_sn (str): The serial number of the device to set as active.
 
         Example:
             ```python
@@ -557,7 +557,7 @@ class AndroidVisionAgent:
             with AndroidVisionAgent() as agent:
                 agent.set_device_by_serial_number("Pixel 6")  # Sets the active device to the Pixel 6
         """
-        self.os.set_device_by_serial_number(device_serial_number)
+        self.os.set_device_by_serial_number(device_sn)
 
     @telemetry.record_call(exclude={"goal", "on_message"})
     @validate_call

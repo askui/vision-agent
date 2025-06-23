@@ -111,14 +111,14 @@ class PpadbAgentOs(AndroidAgentOs):
         self._device = devices[device_index]
         self.set_display_by_index(0)
 
-    def set_device_by_serial_number(self, device_serial_number: str) -> None:
+    def set_device_by_serial_number(self, device_sn: str) -> None:
         devices = self._get_connected_devices()
         for device in devices:
-            if device.serial == device_serial_number:
+            if device.serial == device_sn:
                 self._device = device
                 self.set_display_by_index(0)
                 return
-        msg = f"Device name {device_serial_number} not found"
+        msg = f"Device name {device_sn} not found"
         raise RuntimeError(msg)
 
     def screenshot(self) -> Image.Image:
@@ -189,9 +189,7 @@ class PpadbAgentOs(AndroidAgentOs):
         display_index: int = self._selected_display.display_index
 
         escaped_text = shlex.quote(text)
-
         shell_safe_text = escaped_text.replace(" ", "%s")
-
         self.shell(f"input -d {display_index} text {shell_safe_text}")
 
     def key_tap(self, key: ANDROID_KEY) -> None:
