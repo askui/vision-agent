@@ -75,7 +75,7 @@ class OpenRouterModel(GetModel):
             client
             if client is not None
             else OpenAI(
-                api_key=self._settings.open_router_api_key.get_secret_value(),
+                api_key=self._settings.api_key.get_secret_value(),
                 base_url=str(self._settings.base_url),
             )
         )
