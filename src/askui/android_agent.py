@@ -12,8 +12,8 @@ from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.android.agent_os import ANDROID_KEY
+from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
-from askui.tools.android.ppadb_agent_os_handler import PpadbAgentOSHandler
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
     AndroidKeyCombinationTool,
@@ -60,21 +60,22 @@ class AndroidVisionAgent:
         configure_logging(level=log_level)
         self.os = PpadbAgentOs()
         self._reporter = CompositeReporter(reporters=reporters)
-        android_os_handler = PpadbAgentOSHandler(self.os, self._reporter)
+        self._act_agent_os_facade = AndroidAgentOsFacade(self.os, self._reporter)
+        self.act_tool_collection = ToolCollection(
+            tools=[
+                AndroidScreenshotTool(self._act_agent_os_facade),
+                AndroidTapTool(self._act_agent_os_facade),
+                AndroidTypeTool(self._act_agent_os_facade),
+                AndroidDragAndDropTool(self._act_agent_os_facade),
+                AndroidKeyTapEventTool(self._act_agent_os_facade),
+                AndroidSwipeTool(self._act_agent_os_facade),
+                AndroidKeyCombinationTool(self._act_agent_os_facade),
+                AndroidShellTool(self._act_agent_os_facade),
+                ExceptionTool(),
+            ]
+        )
         _models = initialize_default_android_model_registry(
-            tool_collection=ToolCollection(
-                tools=[
-                    AndroidScreenshotTool(android_os_handler),
-                    AndroidTapTool(android_os_handler),
-                    AndroidTypeTool(android_os_handler),
-                    AndroidDragAndDropTool(android_os_handler),
-                    AndroidKeyTapEventTool(android_os_handler),
-                    AndroidSwipeTool(android_os_handler),
-                    AndroidKeyCombinationTool(android_os_handler),
-                    AndroidShellTool(android_os_handler),
-                    ExceptionTool(),
-                ]
-            ),
+            tool_collection=self.act_tool_collection,
             reporter=self._reporter,
         )
         _models.update(models or {})
@@ -421,8 +422,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_tap("KEYCODE_HOME")  # Taps the home key
-                agent.key_tap("KEYCODE_BACK")  # Taps the back key
+                agent.key_tap("HOME")  # Taps the home key
+                agent.key_tap("BACK")  # Taps the back key
             ```
         """
         self.os.key_tap(key)
@@ -431,7 +432,7 @@ class AndroidVisionAgent:
     @validate_call
     def key_combination(
         self,
-        keys: Annotated[list[ANDROID_KEY], Field(min_length=1)],
+        keys: Annotated[list[ANDROID_KEY], Field(min_length=2)],
         duration_in_ms: int = 100,
     ) -> None:
         """
@@ -446,8 +447,8 @@ class AndroidVisionAgent:
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"])  # Taps the home key and then the back key
-                agent.key_combination(["KEYCODE_HOME", "KEYCODE_BACK"], duration_in_ms=200)  # Taps the home key and then the back key with a 200ms delay
+                agent.key_combination(["HOME", "BACK"])  # Taps the home key and then the back key
+                agent.key_combination(["HOME", "BACK"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
             ```
         """
         self.os.key_combination(keys, duration_in_ms)
@@ -536,27 +537,27 @@ class AndroidVisionAgent:
         self.os.swipe(x1, y1, x2, y2, duration_in_ms)
 
     @telemetry.record_call(
-        exclude={"device_name"},
+        exclude={"device_sn"},
     )
     @validate_call
-    def set_device_by_name(
+    def set_device_by_serial_number(
         self,
-        device_name: str,
+        device_sn: str,
     ) -> None:
         """
         Sets the active device for screen interactions by name.
 
         Args:
-            device_name (str): The name of the device to set as active.
+            device_sn (str): The serial number of the device to set as active.
 
         Example:
             ```python
             from askui import AndroidVisionAgent
 
             with AndroidVisionAgent() as agent:
-                agent.set_device_by_name("Pixel 6")  # Sets the active device to the Pixel 6
+                agent.set_device_by_serial_number("Pixel 6")  # Sets the active device to the Pixel 6
         """
-        self.os.set_device_by_name(device_name)
+        self.os.set_device_by_serial_number(device_sn)
 
     @telemetry.record_call(exclude={"goal", "on_message"})
     @validate_call
