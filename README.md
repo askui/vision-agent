@@ -128,8 +128,8 @@ with VisionAgent() as agent:
 
     agent.click("search field")
 
-    # Use Anthropic (Claude 3.5 Sonnet V2) as model
-    agent.click("search field", model="anthropic-claude-3-5-sonnet-20241022")
+    # Use Anthropic (Claude 4 Sonnet) as model
+    agent.click("search field", model="claude-sonnet-4-20250514")
 ```
 
 
@@ -201,7 +201,7 @@ with VisionAgent(model="askui-combo") as agent:
 
 # Use different models for different tasks
 with VisionAgent(model={
-    "act": "anthropic-claude-3-5-sonnet-20241022",  # Use Claude for act()
+    "act": "claude-sonnet-4-20250514",  # Use Claude for act()
     "get": "askui",  # Use AskUI for get()
     "locate": "askui-combo",  # Use AskUI combo for locate() (and click(), mouse_move())
 }) as agent:
@@ -240,7 +240,7 @@ Supported commands are: `act()`, `click()`, `get()`, `locate()`, `mouse_move()`
 Supported commands are: `act()`, `get()`, `click()`, `locate()`, `mouse_move()`
 | Model Name  | Info | Execution Speed | Security | Cost | Reliability |
 |-------------|--------------------|--------------|--------------|--------------|--------------|
-| `anthropic-claude-3-5-sonnet-20241022` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
+| `claude-sonnet-4-20250514` | The [Computer Use](https://docs.anthropic.com/en/docs/agents-and-tools/computer-use) model from Antrophic is a Large Action Model (LAM), which can autonomously achieve goals. e.g. `"Book me a flight from Berlin to Rom"` | slow, >1s per step | Model hosting by Anthropic | High, up to 1,5$ per act | Not recommended for production usage |
 > **Note:** Configure your Antrophic Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
 
 
@@ -409,7 +409,7 @@ custom_models: ModelRegistry = {
     "dynamic-model": lambda: create_custom_model("your-api-key"),
     "dynamic-model-cached": lambda: create_custom_model_cached("your-api-key"),
     "askui": lambda: create_custom_model_cached("your-api-key"), # overrides default model
-    "anthropic-claude-3-5-sonnet-20241022": lambda: create_custom_model_cached("your-api-key"), # overrides model
+    "claude-sonnet-4-20250514": lambda: create_custom_model_cached("your-api-key"), # overrides model
 }
 
 
@@ -735,7 +735,7 @@ with VisionAgent() as agent:
 
 **AskUI Vision Agent** is a versatile AI powered framework that enables you to automate computer tasks in Python.
 
-It connects Agent OS with powerful computer use models like Anthropic's Claude Sonnet 3.5 v2 and the AskUI Prompt-to-Action series. It is your entry point for building complex automation scenarios with detailed instructions or let the agent explore new challenges on its own.
+It connects Agent OS with powerful computer use models like Anthropic's Claude Sonnet 4 and the AskUI Prompt-to-Action series. It is your entry point for building complex automation scenarios with detailed instructions or let the agent explore new challenges on its own.
 
 
 ![image](docs/assets/Architecture.svg)

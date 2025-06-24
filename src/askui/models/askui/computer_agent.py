@@ -1,6 +1,15 @@
 import httpx
+from anthropic import NotGiven
+from anthropic.types import ThinkingConfigEnabledParam
+from anthropic.types.beta import (
+    BetaTextBlockParam,
+    BetaThinkingConfigParam,
+    BetaToolChoiceParam,
+    BetaToolUnionParam,
+)
+from pydantic import BaseModel, ConfigDict
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
-from typing_extensions import override
+from typing_extensions import Literal, override
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.shared.computer_agent import ComputerAgent
@@ -9,6 +18,21 @@ from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 
 from ...logger import logger
+
+NOT_GIVEN = NotGiven()
+
+
+class RequestBody(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    max_tokens: int
+    messages: list[MessageParam]
+    provider: Literal["gcp_vertex"] = "gcp_vertex"
+    model: str
+    tools: list[BetaToolUnionParam]
+    betas: list[str]
+    system: list[BetaTextBlockParam]
+    thinking: BetaThinkingConfigParam | NotGiven = NOT_GIVEN
+    tool_choice: BetaToolChoiceParam | NotGiven = NOT_GIVEN
 
 
 def is_retryable_error(exception: BaseException) -> bool:
@@ -47,20 +71,26 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
         model_choice: str,  # noqa: ARG002
     ) -> MessageParam:
         try:
-            request_body = {
-                "max_tokens": self._settings.max_tokens,
-                "messages": [msg.model_dump(mode="json") for msg in messages],
-                "model": self._settings.model,
-                "tools": self._tool_collection.to_params(),
-                "betas": self._settings.betas,
-                "system": [self._system],
-            }
+            request_body = RequestBody(
+                max_tokens=self._settings.max_tokens,
+                messages=messages,
+                model=self._settings.model,
+                tools=self._tool_collection.to_params(),
+                betas=self._settings.betas,
+                system=[self._system],
+                tool_choice=self._settings.tool_choice,
+            )
+            if self._settings.thinking:
+                request_body.thinking = ThinkingConfigEnabledParam(
+                    budget_tokens=self._settings.thinking.budget_tokens,
+                    type="enabled",
+                )
+
             response = self._client.post(
-                "/act/inference", json=request_body, timeout=300.0
+                "/act/inference", json=request_body.model_dump(), timeout=300.0
             )
             response.raise_for_status()
-            response_data = response.json()
-            return MessageParam.model_validate(response_data)
+            return MessageParam.model_validate(response.json())
         except Exception as e:  # noqa: BLE001
             if is_retryable_error(e):
                 logger.debug(e)

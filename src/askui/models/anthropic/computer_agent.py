@@ -1,6 +1,11 @@
 from typing import TYPE_CHECKING, cast
 
 from anthropic import Anthropic
+from anthropic.types import (
+    ThinkingConfigDisabledParam,
+    ThinkingConfigEnabledParam,
+    ThinkingConfigParam,
+)
 from typing_extensions import override
 
 from askui.models.anthropic.settings import ClaudeComputerAgentSettings
@@ -30,16 +35,23 @@ class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
     def _create_message(
         self, messages: list[MessageParam], model_choice: str
     ) -> MessageParam:
+        _thinking: ThinkingConfigParam = ThinkingConfigDisabledParam(type="disabled")
+
+        if self._settings.thinking:
+            _thinking = ThinkingConfigEnabledParam(
+                type="enabled",
+                budget_tokens=self._settings.thinking.budget_tokens,
+            )
+
         response = self._client.beta.messages.with_raw_response.create(
             max_tokens=self._settings.max_tokens,
-            messages=[
-                cast("BetaMessageParam", message.model_dump(mode="json"))
-                for message in messages
-            ],
+            messages=cast("list[BetaMessageParam]", messages),
             model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
             system=[self._system],
             tools=self._tool_collection.to_params(),
             betas=self._settings.betas,
+            thinking=_thinking,
+            tool_choice=self._settings.tool_choice,
         )
         parsed_response = response.parse()
         return MessageParam.model_validate(parsed_response.model_dump())

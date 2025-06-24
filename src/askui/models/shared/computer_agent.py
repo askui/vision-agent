@@ -9,7 +9,7 @@ from askui.models.shared.base_agent import AgentSettingsBase, BaseAgent
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 
-COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
+COMPUTER_USE_BETA_FLAG = "computer-use-2025-01-24"
 
 PC_KEY = [
     "backspace",

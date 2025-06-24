@@ -5,6 +5,7 @@ from anthropic.types.beta import BetaTextBlockParam
 from pydantic import BaseModel
 from typing_extensions import TypeVar, override
 
+from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
 from askui.models.shared.computer_agent_cb_param import OnMessageCb, OnMessageCbParam
 from askui.models.shared.computer_agent_message_param import (
@@ -117,6 +118,8 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
             )
         else:
             message_by_assistant = messages[-1]
+
+        self._handle_stop_reason(message_by_assistant)
         if tool_result_message := self._use_tools(message_by_assistant):
             if tool_result_message := self._call_on_message(
                 on_message, tool_result_message, messages
@@ -238,3 +241,11 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
                     new_content.append(content)
                 tool_result.content = new_content
         return messages
+
+    def _handle_stop_reason(self, message: MessageParam) -> None:
+        if message.stop_reason == "max_tokens":
+            error_msg = f"Model stopped due to reaching maximum token limit of {self._settings.max_tokens} tokens"  # noqa: E501
+            raise MaxTokensExceededError(self._settings.max_tokens, error_msg)
+        if message.stop_reason == "refusal":
+            error_msg = "Model refused to process the request"
+            raise ModelRefusalError(message=error_msg)

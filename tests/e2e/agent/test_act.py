@@ -12,7 +12,7 @@ from askui.tools.toolbox import AgentToolbox
     [
         None,
         ModelName.ASKUI,
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514,
     ],
 )
 def test_act(

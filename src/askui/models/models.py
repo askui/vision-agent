@@ -23,7 +23,7 @@ class ModelName(str, Enum):
     elements.
     """
 
-    ANTHROPIC__CLAUDE__3_5__SONNET__20241022 = "anthropic-claude-3-5-sonnet-20241022"
+    ANTHROPIC__CLAUDE__SONNET__4__20250514 = "claude-sonnet-4-20250514"
     ASKUI = "askui"
     ASKUI__AI_ELEMENT = "askui-ai-element"
     ASKUI__COMBO = "askui-combo"
@@ -38,7 +38,7 @@ class ModelName(str, Enum):
 
 
 ANTHROPIC_MODEL_NAME_MAPPING = {
-    ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: "claude-3-5-sonnet-20241022",
+    ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514: "claude-sonnet-4-20250514",
 }
 
 

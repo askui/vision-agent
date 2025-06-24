@@ -1,3 +1,5 @@
+from typing import TypeAlias
+
 from pydantic import BaseModel
 from typing_extensions import Literal
 
@@ -80,14 +82,35 @@ class ToolUseBlockParam(BaseModel):
     cache_control: CacheControlEphemeralParam | None = None
 
 
+class BetaThinkingBlock(BaseModel):
+    signature: str
+    thinking: str
+    type: Literal["thinking"]
+
+
+class BetaRedactedThinkingBlock(BaseModel):
+    data: str
+    type: Literal["redacted_thinking"]
+
+
 ContentBlockParam = (
-    ImageBlockParam | TextBlockParam | ToolResultBlockParam | ToolUseBlockParam
+    ImageBlockParam
+    | TextBlockParam
+    | ToolResultBlockParam
+    | ToolUseBlockParam
+    | BetaThinkingBlock
+    | BetaRedactedThinkingBlock
 )
+
+StopReason: TypeAlias = Literal[
+    "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
+]
 
 
 class MessageParam(BaseModel):
     role: Literal["user", "assistant"]
     content: str | list[ContentBlockParam]
+    stop_reason: StopReason | None = None
 
 
 __all__ = [

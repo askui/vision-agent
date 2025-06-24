@@ -99,3 +99,41 @@ class ModelTypeMismatchError(ModelNotFoundError):
             message=f'Model "{model_choice}" is an instance of {actual_type.mro()}, '
             f"expected it to be an instance of {expected_type.mro()}",
         )
+
+
+class MaxTokensExceededError(AutomationError):
+    """Exception raised when the model stops due to reaching the maximum token limit.
+
+    Args:
+        max_tokens (int): The maximum token limit that was exceeded.
+        message (str, optional): Custom error message. If not provided, a default
+            message will be generated.
+    """
+
+    def __init__(self, max_tokens: int, message: str | None = None):
+        self.max_tokens = max_tokens
+        error_msg = (
+            f"Model stopped due to reaching maximum token limit of {max_tokens} tokens"
+            if message is None
+            else message
+        )
+        super().__init__(error_msg)
+
+
+class ModelRefusalError(AutomationError):
+    """Exception raised when the model refuses to process the request.
+
+    Args:
+        reason (str, optional): The reason for the refusal if provided by the model.
+        message (str, optional): Custom error message. If not provided, a default
+            message will be generated.
+    """
+
+    def __init__(self, reason: str | None = None, message: str | None = None):
+        self.reason = reason
+        error_msg = (
+            f"Model refused to process the request{f': {reason}' if reason else ''}"
+            if message is None
+            else message
+        )
+        super().__init__(error_msg)

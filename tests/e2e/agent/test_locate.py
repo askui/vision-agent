@@ -16,7 +16,7 @@ from askui.models.exceptions import ElementNotFoundError
     "model",
     [
         ModelName.ASKUI,
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514,
     ],
 )
 class TestVisionAgentLocate:
@@ -152,7 +152,7 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator."""
-        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+        if model in [ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
@@ -169,7 +169,7 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+        if model in [ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
@@ -193,7 +193,7 @@ class TestVisionAgentLocate:
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+        if model in [ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__icon.png"
         image = PILImage.open(image_path)
@@ -208,7 +208,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using an AI element locator."""
-        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+        if model in [ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon")
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -222,7 +222,7 @@ class TestVisionAgentLocate:
         model: str,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]:
+        if model in [ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon", threshold=1.0)
         with pytest.raises(ElementNotFoundError):

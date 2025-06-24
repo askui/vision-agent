@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
 
 
 class ChatCompletionsCreateSettings(BaseModel):
@@ -75,4 +76,11 @@ class ChatCompletionsCreateSettings(BaseModel):
     )
     presence_penalty: float | None = Field(
         default=None,
+    )
+
+
+class ThinkingSettings(BaseSettings):
+    budget_tokens: int = Field(
+        default=1024,
+        ge=1024,  # Minimum value is 1024, as required by Claude's internal reasoning process  # noqa: E501
     )

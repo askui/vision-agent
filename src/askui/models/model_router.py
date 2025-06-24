@@ -1,6 +1,7 @@
 import functools
 from typing import Type, overload
 
+from anthropic.types.beta import BetaToolChoiceAutoParam
 from typing_extensions import Literal
 
 from askui.locators.locators import Locator
@@ -34,6 +35,7 @@ from askui.models.models import (
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
+from askui.models.shared.settings import ThinkingSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
@@ -102,6 +104,12 @@ def initialize_default_model_registry(  # noqa: C901
             reporter=reporter,
             settings=AskUiComputerAgentSettings(
                 askui=askui_settings(),
+                tool_choice=BetaToolChoiceAutoParam(
+                    type="auto", disable_parallel_tool_use=False
+                ),
+                thinking=ThinkingSettings(
+                    budget_tokens=2000,
+                ),
             ),
         )
         return ModelFacade(
@@ -122,7 +130,7 @@ def initialize_default_model_registry(  # noqa: C901
         ModelName.ASKUI__COMBO: askui_model_router,
         ModelName.ASKUI__OCR: askui_model_router,
         ModelName.ASKUI__PTA: askui_model_router,
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
+        ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514: anthropic_facade,
         ModelName.HF__SPACES__ASKUI__PTA_1: hf_spaces_handler,
         ModelName.HF__SPACES__QWEN__QWEN2_VL_2B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,

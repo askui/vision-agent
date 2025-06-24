@@ -11,7 +11,7 @@ from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
-from askui.tools.computer import Computer20241022Tool
+from askui.tools.computer import Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.utils.image_utils import ImageSource, Img
 
@@ -83,7 +83,7 @@ class VisionAgent:
         )
         _models = initialize_default_model_registry(
             tool_collection=ToolCollection(
-                tools=[Computer20241022Tool(self.tools.os), ExceptionTool()]
+                tools=[Computer20250124Tool(self.tools.os), ExceptionTool()]
             ),
             reporter=self._reporter,
         )
@@ -597,6 +597,11 @@ class VisionAgent:
 
         Returns:
             None
+
+        Raises:
+            MaxTokensExceededError: If the model reaches the maximum token limit
+                defined in the agent settings.
+            ModelRefusalError: If the model refuses to process the request.
 
         Example:
             ```python
