@@ -1,5 +1,3 @@
-from typing import TypeAlias
-
 from pydantic import BaseModel
 from typing_extensions import Literal
 
@@ -102,7 +100,7 @@ ContentBlockParam = (
     | BetaRedactedThinkingBlock
 )
 
-StopReason: TypeAlias = Literal[
+StopReason = Literal[
     "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
 ]
 
