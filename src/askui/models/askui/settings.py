@@ -1,11 +1,7 @@
 import base64
 from functools import cached_property
 
-from anthropic import NotGiven
-from anthropic.types.beta import (
-    BetaToolChoiceAutoParam,
-    BetaToolChoiceParam,
-)
+from anthropic.types.beta import BetaToolChoiceAutoParam, BetaToolChoiceParam
 from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
@@ -13,8 +9,6 @@ from askui.models.models import ModelName
 from askui.models.shared.base_agent import AgentSettingsBase
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 from askui.models.shared.settings import ThinkingSettings
-
-NOT_GIVEN = NotGiven()
 
 
 class AskUiSettings(BaseSettings):
@@ -51,8 +45,8 @@ class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
     model: str = ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
     thinking: ThinkingSettings | None = None
-    tool_choice: BetaToolChoiceParam | BetaToolChoiceAutoParam = (
-        BetaToolChoiceAutoParam(type="auto")
+    tool_choice: BetaToolChoiceParam = Field(
+        default_factory=lambda: BetaToolChoiceAutoParam(type="auto")
     )
 
 

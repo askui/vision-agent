@@ -1,12 +1,9 @@
-from anthropic import NotGiven
 from anthropic.types.beta import BetaToolChoiceAutoParam, BetaToolChoiceParam
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 from askui.models.shared.settings import ChatCompletionsCreateSettings, ThinkingSettings
-
-NOT_GIVEN = NotGiven()
 
 
 class AnthropicSettings(BaseSettings):
@@ -31,6 +28,6 @@ class ClaudeSettings(ClaudeSettingsBase):
 
 class ClaudeComputerAgentSettings(ComputerAgentSettingsBase, ClaudeSettingsBase):
     thinking: ThinkingSettings | None = None
-    tool_choice: BetaToolChoiceParam | BetaToolChoiceAutoParam = (
-        BetaToolChoiceAutoParam(type="auto")
+    tool_choice: BetaToolChoiceParam = Field(
+        default_factory=lambda: BetaToolChoiceAutoParam(type="auto")
     )
