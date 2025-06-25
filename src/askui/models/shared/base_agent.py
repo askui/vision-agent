@@ -244,8 +244,6 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
 
     def _handle_stop_reason(self, message: MessageParam) -> None:
         if message.stop_reason == "max_tokens":
-            error_msg = f"Model stopped due to reaching maximum token limit of {self._settings.max_tokens} tokens"  # noqa: E501
-            raise MaxTokensExceededError(self._settings.max_tokens, error_msg)
+            raise MaxTokensExceededError(self._settings.max_tokens)
         if message.stop_reason == "refusal":
-            error_msg = "Model refused to process the request"
-            raise ModelRefusalError(message=error_msg)
+            raise ModelRefusalError()
