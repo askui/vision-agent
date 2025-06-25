@@ -1,5 +1,5 @@
 import httpx
-from anthropic import NotGiven
+from anthropic import NOT_GIVEN, NotGiven
 from anthropic.types import ThinkingConfigEnabledParam
 from anthropic.types.beta import (
     BetaTextBlockParam,
@@ -9,7 +9,7 @@ from anthropic.types.beta import (
 )
 from pydantic import BaseModel, ConfigDict
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
-from typing_extensions import Literal, override
+from typing_extensions import override
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.shared.computer_agent import ComputerAgent
@@ -19,14 +19,11 @@ from askui.reporting import Reporter
 
 from ...logger import logger
 
-NOT_GIVEN = NotGiven()
-
 
 class RequestBody(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     max_tokens: int
     messages: list[MessageParam]
-    provider: Literal["gcp_vertex"] = "gcp_vertex"
     model: str
     tools: list[BetaToolUnionParam]
     betas: list[str]
@@ -90,7 +87,7 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
                 "/act/inference", json=request_body.model_dump(), timeout=300.0
             )
             response.raise_for_status()
-            return MessageParam.model_validate(response.json())
+            return MessageParam.model_validate_json(response.text)
         except Exception as e:  # noqa: BLE001
             if is_retryable_error(e):
                 logger.debug(e)
