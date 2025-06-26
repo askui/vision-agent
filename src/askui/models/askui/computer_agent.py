@@ -1,5 +1,4 @@
 import httpx
-from anthropic import NOT_GIVEN, NotGiven
 from anthropic.types.beta import (
     BetaTextBlockParam,
     BetaToolChoiceParam,
@@ -26,8 +25,8 @@ class RequestBody(BaseModel):
     tools: list[BetaToolUnionParam]
     betas: list[str]
     system: list[BetaTextBlockParam]
-    thinking: ThinkingConfigParam | NotGiven = NOT_GIVEN
-    tool_choice: BetaToolChoiceParam | NotGiven = NOT_GIVEN
+    thinking: ThinkingConfigParam
+    tool_choice: BetaToolChoiceParam
 
 
 def is_retryable_error(exception: BaseException) -> bool:
@@ -78,7 +77,9 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
             )
             response = self._client.post(
                 "/act/inference",
-                json=request_body.model_dump(mode="json"),
+                json=request_body.model_dump(
+                    mode="json", exclude={"messages": {"stop_reason"}}
+                ),
                 timeout=300.0,
             )
             response.raise_for_status()

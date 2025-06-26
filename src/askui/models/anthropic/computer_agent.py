@@ -33,7 +33,8 @@ class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
         response = self._client.beta.messages.with_raw_response.create(
             max_tokens=self._settings.max_tokens,
             messages=[
-                cast("BetaMessageParam", message.model_dump()) for message in messages
+                cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
+                for message in messages
             ],
             model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
             system=[self._system],
