@@ -167,9 +167,18 @@ class VisionAgent:
             msg += f" {repeat}x times"
         if locator is not None:
             msg += f" on {locator}"
+        logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
+        self._click(locator, button, repeat, model)
+
+    def _click(
+        self,
+        locator: Optional[str | Locator],
+        button: Literal["left", "middle", "right"],
+        repeat: int,
+        model: ModelComposition | str | None,
+    ) -> None:
         if locator is not None:
-            logger.debug("VisionAgent received instruction to click on %s", locator)
             self._mouse_move(locator, model)
         self.tools.os.click(button, repeat)
 
@@ -294,30 +303,51 @@ class VisionAgent:
         self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
         self.tools.os.mouse_scroll(x, y)
 
-    @telemetry.record_call(exclude={"text"})
-    @validate_call
+    @telemetry.record_call(exclude={"text", "locator"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def type(
         self,
         text: Annotated[str, Field(min_length=1)],
+        locator: str | Locator | None = None,
+        model: ModelComposition | str | None = None,
+        clear: bool = True,
     ) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
 
+        If `locator` is provided, it will first click on the element to give it focus before typing.
+        If `clear` is `True` (default), it will triple click on the element to select the current text (in multi-line inputs like textareas the current line or paragraph) before typing.
+
+        **IMPORTANT:** `clear` only works if a `locator` is provided.
+
         Args:
             text (str): The text to be typed. Must be at least `1` character long.
+            locator (str | Locator | None, optional): The identifier or description of the element (e.g., input field) to type into. If `None`, types at the current focus.
+            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element, i.e., input field, to type into using the `locator`.
+            clear (bool, optional): Whether to triple click on the element to give it focus and select the current text before typing. Defaults to `True`.
 
         Example:
             ```python
             from askui import VisionAgent
 
             with VisionAgent() as agent:
-                agent.type("Hello, world!")  # Types "Hello, world!"
-                agent.type("user@example.com")  # Types an email address
-                agent.type("password123")  # Types a password
+                agent.type("Hello, world!")  # Types "Hello, world!" at current focus
+                agent.type("user@example.com", locator="Email")  # Clicks on "Email" input, then types
+                agent.type("password123", locator="Password field", model="custom_model")  # Uses specific model
+                agent.type("Hello, world!", locator="Textarea", clear=False)  # Types "Hello, world!" into textarea without clearing
             ```
         """
-        self._reporter.add_message("User", f'type: "{text}"')
-        logger.debug("VisionAgent received instruction to type '%s'", text)
+        msg = f'type "{text}"'
+        if locator is not None:
+            msg += f" into {locator}"
+            if clear:
+                repeat = 3
+                msg += " clearing the current content (line/paragraph) of input field"
+            else:
+                repeat = 1
+            self._click(locator=locator, button="left", repeat=repeat, model=model)
+        logger.debug("VisionAgent received instruction to %s", msg)
+        self._reporter.add_message("User", msg)
         self.tools.os.type(text)
 
     @overload
