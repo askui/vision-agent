@@ -1,10 +1,8 @@
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 from askui.models.shared.settings import ChatCompletionsCreateSettings
-
-COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 
 
 class AnthropicSettings(BaseSettings):
@@ -15,7 +13,7 @@ class AnthropicSettings(BaseSettings):
     )
 
 
-class ClaudeSettingsBase(BaseModel):
+class ClaudeSettingsBase(BaseSettings):
     anthropic: AnthropicSettings = Field(default_factory=lambda: AnthropicSettings())
 
 

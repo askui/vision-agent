@@ -29,6 +29,7 @@ class ModelName(str, Enum):
     ASKUI__COMBO = "askui-combo"
     ASKUI__OCR = "askui-ocr"
     ASKUI__PTA = "askui-pta"
+    CLAUDE__SONNET__4__20250514 = "claude-sonnet-4-20250514"
     HF__SPACES__ASKUI__PTA_1 = "AskUI/PTA-1"
     HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B = "OS-Copilot/OS-Atlas-Base-7B"
     HF__SPACES__QWEN__QWEN2_VL_2B_INSTRUCT = "Qwen/Qwen2-VL-2B-Instruct"
@@ -39,6 +40,7 @@ class ModelName(str, Enum):
 
 ANTHROPIC_MODEL_NAME_MAPPING = {
     ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: "claude-3-5-sonnet-20241022",
+    ModelName.CLAUDE__SONNET__4__20250514: "claude-sonnet-4-20250514",
 }
 
 

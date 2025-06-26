@@ -84,7 +84,7 @@ def model_router(
     return ModelRouter(
         reporter=CompositeReporter(),
         models={
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: mock_anthropic_facade,
+            ModelName.CLAUDE__SONNET__4__20250514: mock_anthropic_facade,
             ModelName.ASKUI: mock_askui_facade,
             ModelName.ASKUI__AI_ELEMENT: mock_askui_facade,
             ModelName.ASKUI__COMBO: mock_askui_facade,
@@ -200,7 +200,7 @@ class TestModelRouter:
         x, y = model_router.locate(
             ImageSource(mock_image),
             locator,
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            ModelName.CLAUDE__SONNET__4__20250514,
         )
         assert x == 50
         assert y == 50
@@ -268,7 +268,7 @@ class TestModelRouter:
         response = model_router.get(
             "test query",
             mock_image_source,
-            model_choice=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            model_choice=ModelName.CLAUDE__SONNET__4__20250514,
         )
         assert response == "Mock response"
         mock_anthropic_facade.get.assert_called_once()  # type: ignore
@@ -301,11 +301,11 @@ class TestModelRouter:
         messages = [MessageParam(role="user", content="test goal")]
         model_router.act(
             messages,
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            ModelName.CLAUDE__SONNET__4__20250514,
         )
         mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
             messages,
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            ModelName.CLAUDE__SONNET__4__20250514,
             None,
         )
 

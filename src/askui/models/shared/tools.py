@@ -94,6 +94,10 @@ class ToolCollection:
 
     Use for dispatching tool calls
 
+    **Important**: Tools must have unique names. A tool with the same name as a tool
+    added before will override the tool added before.
+
+
     Vision:
     - Could be used for parallelizing tool calls configurable through init arg
     - Could be used for raising on an exception
@@ -102,23 +106,19 @@ class ToolCollection:
     """
 
     def __init__(self, tools: list[Tool]) -> None:
-        self._tools = tools
         self._tool_map = {tool.to_params()["name"]: tool for tool in tools}
 
-    def to_params(
-        self,
-    ) -> list[BetaToolUnionParam]:
-        return [tool.to_params() for tool in self._tools]
+    def to_params(self) -> list[BetaToolUnionParam]:
+        return [tool.to_params() for tool in self._tool_map.values()]
 
     def append_tool(self, tool: Tool) -> None:
         """Append a tool to the collection."""
-        self._tools.append(tool)
         self._tool_map[tool.to_params()["name"]] = tool
 
-    def reset_tools(self, tools: list[Tool]) -> None:
+    def reset_tools(self, tools: list[Tool] | None = None) -> None:
         """Reset the tools in the collection with new tools."""
-        self._tools = tools
-        self._tool_map = {tool.to_params()["name"]: tool for tool in tools}
+        _tools = tools or []
+        self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
 
     def run(
         self, tool_use_block_params: list[ToolUseBlockParam]

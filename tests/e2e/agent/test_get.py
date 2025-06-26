@@ -26,7 +26,13 @@ class BrowserContextResponse(ResponseSchemaBase):
 
 
 @pytest.mark.parametrize(
-    "model", [None, ModelName.ASKUI, ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022]
+    "model",
+    [
+        None,
+        ModelName.ASKUI,
+        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        ModelName.CLAUDE__SONNET__4__20250514,
+    ],
 )
 def test_get(
     vision_agent: VisionAgent,
@@ -132,7 +138,7 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
             "What is the current url shown in the url bar?",
             image=github_login_screenshot,
             response_schema=UrlResponse,
-            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            model=ModelName.CLAUDE__SONNET__4__20250514,
         )
 
 

@@ -141,7 +141,7 @@ class TestCustomModels:
             agent.act("test goal", model="custom-act")
 
         assert act_model.goals == [
-            [{"role": "user", "content": "test goal"}],
+            [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
         assert act_model.model_choices == ["custom-act"]
 
@@ -188,7 +188,7 @@ class TestCustomModels:
             agent.act("test goal", model="factory-model")
 
         assert act_model.goals == [
-            [{"role": "user", "content": "test goal"}],
+            [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
         assert act_model.model_choices == ["factory-model"]
 
@@ -219,7 +219,7 @@ class TestCustomModels:
             agent.act("another goal", model="act-2")
 
         assert act_model.goals == [
-            [{"role": "user", "content": "test goal"}],
+            [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
         assert act_model.model_choices == ["act-1"]
 
@@ -256,7 +256,7 @@ class TestCustomModels:
             agent.act("test goal")  # Should use custom model since it overrides "askui"
 
         assert act_model.goals == [
-            [{"role": "user", "content": "test goal"}],
+            [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
         assert act_model.model_choices == [ModelName.ASKUI]
 
@@ -337,6 +337,6 @@ class TestCustomModels:
             assert init_count == 2
 
         assert act_model.goals == [
-            [{"role": "user", "content": "test goal"}],
-            [{"role": "user", "content": "another goal"}],
+            [{"role": "user", "content": "test goal", "stop_reason": None}],
+            [{"role": "user", "content": "another goal", "stop_reason": None}],
         ]
