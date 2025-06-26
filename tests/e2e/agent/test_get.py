@@ -302,3 +302,41 @@ def test_get_with_nested_root_model(
     )
     assert isinstance(response, BasisWithNestedRootModel)
     assert isinstance(response.answer.root.answer, str)
+
+
+class StringListResponse(ResponseSchemaBase):
+    strings: list[str]
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_list_response_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response: list[str] = vision_agent.get(
+        "List all visible button texts as a list of strings.",
+        image=github_login_screenshot,
+        response_schema=list,
+        model=model,
+    )
+    assert isinstance(response, list)
+    assert all(isinstance(item, str) for item in response)
+    assert any("Sign in" in item or "sign in" in item.lower() for item in response)
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI])
+def test_get_with_dict_response_schema(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    response = vision_agent.get(
+        "Return a mapping from input field names to their values as a dictionary.",
+        image=github_login_screenshot,
+        response_schema=dict[str, str],
+        model=model,
+    )
+    assert isinstance(response, dict)
+    assert all(isinstance(k, str) and isinstance(v, str) for k, v in response.items())
+    assert any("username" in k.lower() or "login" in k.lower() for k in response.keys())

@@ -44,9 +44,16 @@ class ResponseSchemaBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+PrimitiveResponseSchemaBinding = ResponseSchemaBase | str | bool | int | float
+ResponseSchemaBinding = (
+    PrimitiveResponseSchemaBinding
+    | list["ResponseSchemaBinding"]
+    | dict[str, "ResponseSchemaBinding"]
+)
+
 ResponseSchema = TypeVar(
     "ResponseSchema",
-    bound=ResponseSchemaBase | str | bool | int | float,
+    bound=ResponseSchemaBinding,
 )
 """Type of the responses of data extracted, e.g., using `askui.VisionAgent.get()`.
 
@@ -56,6 +63,8 @@ The following types are allowed:
 - `bool`: Boolean responses
 - `int`: Integer responses
 - `float`: Floating point responses
+- `list[ResponseSchemaBinding]`: List of responses
+- `dict[str, ResponseSchemaBinding]`: Dictionary of responses
 
 Usually, serialized as a JSON schema, e.g., `str` as `{"type": "string"}`, to be
 passed to model(s). Also used for validating the responses of the model(s) used for
