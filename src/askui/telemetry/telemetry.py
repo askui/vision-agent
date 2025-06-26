@@ -200,7 +200,11 @@ class Telemetry:
                 if exclude_first_arg:
                     processed_args = processed_args[1:] if processed_args else ()
                 processed_args = tuple(
-                    arg.model_dump() if isinstance(arg, BaseModel) else arg
+                    arg.model_dump()
+                    if isinstance(arg, BaseModel)
+                    else str(arg)
+                    if inspect.isclass(arg)
+                    else arg
                     for arg in processed_args
                 )
                 processed_kwargs = {
@@ -208,7 +212,11 @@ class Telemetry:
                     for k, v in kwargs.items()
                 }
                 processed_kwargs = {
-                    k: v.model_dump() if isinstance(v, BaseModel) else v
+                    k: v.model_dump()
+                    if isinstance(v, BaseModel)
+                    else str(v)
+                    if inspect.isclass(v)
+                    else v
                     for k, v in processed_kwargs.items()
                 }
                 attributes: dict[str, Any] = {

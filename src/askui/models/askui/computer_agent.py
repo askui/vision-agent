@@ -86,4 +86,9 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
         except Exception as e:  # noqa: BLE001
             if is_retryable_error(e):
                 logger.debug(e)
+            if (
+                isinstance(e, httpx.HTTPStatusError)
+                and 400 <= e.response.status_code < 500
+            ):
+                raise ValueError(e.response.json()) from e
             raise
