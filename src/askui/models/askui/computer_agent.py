@@ -1,9 +1,7 @@
 import httpx
 from anthropic import NOT_GIVEN, NotGiven
-from anthropic.types import ThinkingConfigEnabledParam
 from anthropic.types.beta import (
     BetaTextBlockParam,
-    BetaThinkingConfigParam,
     BetaToolChoiceParam,
     BetaToolUnionParam,
 )
@@ -12,7 +10,7 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from typing_extensions import override
 
 from askui.models.askui.settings import AskUiComputerAgentSettings
-from askui.models.shared.computer_agent import ComputerAgent
+from askui.models.shared.computer_agent import ComputerAgent, ThinkingConfigParam
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
@@ -28,7 +26,7 @@ class RequestBody(BaseModel):
     tools: list[BetaToolUnionParam]
     betas: list[str]
     system: list[BetaTextBlockParam]
-    thinking: BetaThinkingConfigParam | NotGiven = NOT_GIVEN
+    thinking: ThinkingConfigParam | NotGiven = NOT_GIVEN
     tool_choice: BetaToolChoiceParam | NotGiven = NOT_GIVEN
 
 
@@ -76,15 +74,12 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
                 betas=self._settings.betas,
                 system=[self._system],
                 tool_choice=self._settings.tool_choice,
+                thinking=self._settings.thinking,
             )
-            if self._settings.thinking:
-                request_body.thinking = ThinkingConfigEnabledParam(
-                    budget_tokens=self._settings.thinking.budget_tokens,
-                    type="enabled",
-                )
-
             response = self._client.post(
-                "/act/inference", json=request_body.model_dump(), timeout=300.0
+                "/act/inference",
+                json=request_body.model_dump(mode="json"),
+                timeout=300.0,
             )
             response.raise_for_status()
             return MessageParam.model_validate_json(response.text)

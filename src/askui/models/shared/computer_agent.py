@@ -1,8 +1,10 @@
 import platform
 import sys
 from datetime import datetime, timezone
+from typing import Literal
 
-from pydantic import Field
+from anthropic.types.beta import BetaToolChoiceAutoParam, BetaToolChoiceParam
+from pydantic import BaseModel, Field
 from typing_extensions import TypeVar
 
 from askui.models.shared.base_agent import AgentSettingsBase, BaseAgent
@@ -149,10 +151,28 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 </IMPORTANT>"""  # noqa: DTZ002, E501
 
 
+class ThinkingConfigDisabledParam(BaseModel):
+    type: Literal["disabled"] = "disabled"
+
+
+class ThinkingConfigEnabledParam(BaseModel):
+    type: Literal["enabled"] = "enabled"
+    budget_tokens: int = Field(ge=1024, default=2048)
+
+
+ThinkingConfigParam = ThinkingConfigDisabledParam | ThinkingConfigEnabledParam
+
+
 class ComputerAgentSettingsBase(AgentSettingsBase):
     """Settings for computer agents."""
 
     betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_BETA_FLAG])
+    thinking: ThinkingConfigParam = Field(default_factory=ThinkingConfigEnabledParam)
+    tool_choice: BetaToolChoiceParam = Field(
+        default_factory=lambda: BetaToolChoiceAutoParam(
+            type="auto", disable_parallel_tool_use=False
+        )
+    )
 
 
 ComputerAgentSettings = TypeVar(

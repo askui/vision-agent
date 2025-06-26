@@ -1,14 +1,12 @@
 import base64
 from functools import cached_property
 
-from anthropic.types.beta import BetaToolChoiceAutoParam, BetaToolChoiceParam
 from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.models import ModelName
 from askui.models.shared.base_agent import AgentSettingsBase
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
-from askui.models.shared.settings import ThinkingSettings
 
 
 class AskUiSettings(BaseSettings):
@@ -42,16 +40,12 @@ class AskUiSettings(BaseSettings):
 
 
 class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
-    model: str = ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514
+    model: str = ModelName.CLAUDE__SONNET__4__20250514
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
-    thinking: ThinkingSettings | None = None
-    tool_choice: BetaToolChoiceParam = Field(
-        default_factory=lambda: BetaToolChoiceAutoParam(type="auto")
-    )
 
 
 class AskUiAndroidAgentSettings(AgentSettingsBase):
     """Settings for AskUI Android agent."""
 
-    model: str = ModelName.ANTHROPIC__CLAUDE__SONNET__4__20250514
+    model: str = ModelName.CLAUDE__SONNET__4__20250514
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
