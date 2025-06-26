@@ -246,4 +246,4 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         if message.stop_reason == "max_tokens":
             raise MaxTokensExceededError(self._settings.max_tokens)
         if message.stop_reason == "refusal":
-            raise ModelRefusalError()
+            raise ModelRefusalError
