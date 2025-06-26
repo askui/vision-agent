@@ -1,11 +1,11 @@
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.shared.computer_agent import ComputerAgentSettingsBase
 from askui.models.shared.settings import ChatCompletionsCreateSettings
 
 
-class AnthropicSettings(BaseModel):
+class AnthropicSettings(BaseSettings):
     api_key: SecretStr = Field(
         default=...,
         min_length=1,
@@ -14,7 +14,7 @@ class AnthropicSettings(BaseModel):
 
 
 class ClaudeSettingsBase(BaseSettings):
-    anthropic: AnthropicSettings = Field(default=...)
+    anthropic: AnthropicSettings = Field(default_factory=lambda: AnthropicSettings())
 
 
 class ClaudeSettings(ClaudeSettingsBase):
