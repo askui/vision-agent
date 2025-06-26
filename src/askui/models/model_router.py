@@ -15,6 +15,8 @@ from askui.models.askui.settings import (
     AskUiComputerAgentSettings,
 )
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
+from askui.models.huggingface.holo1 import Holo1LocateModel
+from askui.models.huggingface.settings import Holo1Settings
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
     MODEL_TYPES,
@@ -107,6 +109,15 @@ def initialize_default_model_registry(  # noqa: C901
             locator_serializer=vlm_locator_serializer(),
         )
 
+    @functools.cache
+    def holo1_locate_model() -> Holo1LocateModel:
+        settings = Holo1Settings()
+        return Holo1LocateModel(
+            locator_serializer=vlm_locator_serializer(),
+            model_name=settings.model_name,
+            device=settings.device,
+        )
+
     return {
         ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
         ModelName.ASKUI: askui_facade,
@@ -120,6 +131,7 @@ def initialize_default_model_registry(  # noqa: C901
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: hf_spaces_handler,
         ModelName.HF__SPACES__SHOWUI__2B: hf_spaces_handler,
+        ModelName.HF__HOLO_1: holo1_locate_model,
     }
 
 

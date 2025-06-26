@@ -24,6 +24,8 @@ dependencies = [
     "httpx>=0.28.1",
     "fastmcp>=2.3.4",
     "pure-python-adb>=0.3.0.dev0",
+    "transformers>=4.45.0",
+    "torch>=2.1.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
