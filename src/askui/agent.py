@@ -11,7 +11,7 @@ from askui.locators.locators import Locator
 from askui.models.shared.computer_agent_cb_param import OnMessageCb
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
-from askui.tools.computer import Computer20250124Tool
+from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.utils.image_utils import ImageSource, Img
 
@@ -81,10 +81,13 @@ class VisionAgent:
                 reporter=self._reporter,
             ),
         )
+        self._tool_collection = ToolCollection(
+            tools=[
+                ExceptionTool(),
+            ]
+        )
         _models = initialize_default_model_registry(
-            tool_collection=ToolCollection(
-                tools=[Computer20250124Tool(self.tools.os), ExceptionTool()]
-            ),
+            tool_collection=self._tool_collection,
             reporter=self._reporter,
         )
         _models.update(models or {})
@@ -625,7 +628,19 @@ class VisionAgent:
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
-        self._model_router.act(messages, model or self._model_choice["act"], on_message)
+        _model = model or self._model_choice["act"]
+        self._update_tool_collection(_model)
+        self._model_router.act(messages, _model, on_message)
+
+    def _update_tool_collection(self, model: str) -> None:
+        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+            self._tool_collection.append_tool(
+                Computer20241022Tool(agent_os=self.tools.os)
+            )
+        if model == ModelName.CLAUDE__SONNET__4__20250514 or model == ModelName.ASKUI:
+            self._tool_collection.append_tool(
+                Computer20250124Tool(agent_os=self.tools.os)
+            )
 
     @telemetry.record_call()
     @validate_call

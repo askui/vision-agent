@@ -11,7 +11,8 @@ from askui.models.shared.base_agent import AgentSettingsBase, BaseAgent
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 
-COMPUTER_USE_BETA_FLAG = "computer-use-2025-01-24"
+COMPUTER_USE_20241022_BETA_FLAG = "computer-use-2024-10-22"
+COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 
 PC_KEY = [
     "backspace",
@@ -166,8 +167,8 @@ ThinkingConfigParam = ThinkingConfigDisabledParam | ThinkingConfigEnabledParam
 class ComputerAgentSettingsBase(AgentSettingsBase):
     """Settings for computer agents."""
 
-    betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_BETA_FLAG])
-    thinking: ThinkingConfigParam = Field(default_factory=ThinkingConfigEnabledParam)
+    betas: list[str] = Field(default_factory=list)
+    thinking: ThinkingConfigParam = Field(default_factory=ThinkingConfigDisabledParam)
     tool_choice: BetaToolChoiceParam = Field(
         default_factory=lambda: BetaToolChoiceAutoParam(
             type="auto", disable_parallel_tool_use=False

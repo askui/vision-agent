@@ -1,11 +1,16 @@
 from typing import TYPE_CHECKING, cast
 
-from anthropic import Anthropic
+from anthropic import NOT_GIVEN, Anthropic, NotGiven
+from anthropic.types import AnthropicBetaParam
 from typing_extensions import override
 
 from askui.models.anthropic.settings import ClaudeComputerAgentSettings
 from askui.models.models import ANTHROPIC_MODEL_NAME_MAPPING, ModelName
-from askui.models.shared.computer_agent import ComputerAgent
+from askui.models.shared.computer_agent import (
+    COMPUTER_USE_20241022_BETA_FLAG,
+    COMPUTER_USE_20250124_BETA_FLAG,
+    ComputerAgent,
+)
 from askui.models.shared.computer_agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
@@ -26,6 +31,13 @@ class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
             api_key=self._settings.anthropic.api_key.get_secret_value()
         )
 
+    def _get_betas(self, model_choice: str) -> list[AnthropicBetaParam] | NotGiven:
+        if model_choice == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+            return self._settings.betas + [COMPUTER_USE_20241022_BETA_FLAG]
+        if model_choice == ModelName.CLAUDE__SONNET__4__20250514:
+            return self._settings.betas + [COMPUTER_USE_20250124_BETA_FLAG]
+        return NOT_GIVEN
+
     @override
     def _create_message(
         self, messages: list[MessageParam], model_choice: str
@@ -39,7 +51,7 @@ class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
             model=ANTHROPIC_MODEL_NAME_MAPPING[ModelName(model_choice)],
             system=[self._system],
             tools=self._tool_collection.to_params(),
-            betas=self._settings.betas,
+            betas=self._get_betas(model_choice),
             thinking=cast(
                 "BetaThinkingConfigParam", self._settings.thinking.model_dump()
             ),

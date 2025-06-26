@@ -6,7 +6,12 @@ from pydantic_settings import BaseSettings
 
 from askui.models.models import ModelName
 from askui.models.shared.base_agent import AgentSettingsBase
-from askui.models.shared.computer_agent import ComputerAgentSettingsBase
+from askui.models.shared.computer_agent import (
+    COMPUTER_USE_20250124_BETA_FLAG,
+    ComputerAgentSettingsBase,
+    ThinkingConfigEnabledParam,
+    ThinkingConfigParam,
+)
 
 
 class AskUiSettings(BaseSettings):
@@ -42,6 +47,10 @@ class AskUiSettings(BaseSettings):
 class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
     model: str = ModelName.CLAUDE__SONNET__4__20250514
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
+    betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_20250124_BETA_FLAG])
+    thinking: ThinkingConfigParam = Field(
+        default_factory=lambda: ThinkingConfigEnabledParam(budget_tokens=2048)
+    )
 
 
 class AskUiAndroidAgentSettings(AgentSettingsBase):
