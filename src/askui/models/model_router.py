@@ -5,15 +5,12 @@ from typing_extensions import Literal
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.anthropic.settings import ClaudeComputerAgentSettings, ClaudeSettings
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.android_agent import AskUiAndroidAgent
-from askui.models.askui.computer_agent import AskUiComputerAgent
+from askui.models.askui.messages_api import AskUiMessagesApi
 from askui.models.askui.model_router import AskUiModelRouter
-from askui.models.askui.settings import (
-    AskUiAndroidAgentSettings,
-    AskUiComputerAgentSettings,
-)
+from askui.models.askui.settings import AskUiAgentSettings, AskUiComputerAgentSettings
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
@@ -27,16 +24,17 @@ from askui.models.models import (
     ModelRegistry,
     Point,
 )
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent import Agent
+from askui.models.shared.agent_cb_param import OnMessageCb
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
+from askui.models.shared.prompts import ANDROID_SYSTEM_PROMPT, SYSTEM_PROMPT
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import CompositeReporter, Reporter
 from askui.utils.image_utils import ImageSource
 
 from ..logger import logger
-from .anthropic.computer_agent import ClaudeComputerAgent
 from .anthropic.model import ClaudeHandler
 from .askui.inference_api import AskUiInferenceApi, AskUiSettings
 
@@ -71,10 +69,18 @@ def initialize_default_model_registry(  # noqa: C901
 
     @functools.cache
     def anthropic_facade() -> ModelFacade:
-        computer_agent = ClaudeComputerAgent(
+        computer_settings = ClaudeComputerAgentSettings()
+        messages_api = AnthropicMessagesApi(
+            settings=computer_settings,
+            tool_collection=tool_collection,
+            system_prompt=SYSTEM_PROMPT,
+        )
+        computer_agent = Agent(
             tool_collection=tool_collection,
             reporter=reporter,
-            settings=ClaudeComputerAgentSettings(),
+            settings=computer_settings,
+            messages_api=messages_api,
+            system_prompt=SYSTEM_PROMPT,
         )
         handler = ClaudeHandler(
             settings=ClaudeSettings(),
@@ -88,12 +94,20 @@ def initialize_default_model_registry(  # noqa: C901
 
     @functools.cache
     def askui_facade() -> ModelFacade:
-        computer_agent = AskUiComputerAgent(
+        computer_settings = AskUiComputerAgentSettings(
+            askui=askui_settings(),
+        )
+        messages_api = AskUiMessagesApi(
+            settings=computer_settings,
+            tool_collection=tool_collection,
+            system_prompt=SYSTEM_PROMPT,
+        )
+        computer_agent = Agent(
             tool_collection=tool_collection,
             reporter=reporter,
-            settings=AskUiComputerAgentSettings(
-                askui=askui_settings(),
-            ),
+            settings=computer_settings,
+            messages_api=messages_api,
+            system_prompt=SYSTEM_PROMPT,
         )
         return ModelFacade(
             act_model=computer_agent,
@@ -128,7 +142,6 @@ def initialize_default_android_model_registry(  # noqa: C901
     reporter: Reporter,
 ) -> ModelRegistry:
     @functools.cache
-    @functools.cache
     def askui_settings() -> AskUiSettings:
         return AskUiSettings()
 
@@ -149,13 +162,27 @@ def initialize_default_android_model_registry(  # noqa: C901
         )
 
     @functools.cache
+    def askui_android_agent_settings() -> AskUiAgentSettings:
+        return AskUiAgentSettings(
+            askui=askui_settings(),
+        )
+
+    @functools.cache
+    def askui_messages_api() -> AskUiMessagesApi:
+        return AskUiMessagesApi(
+            settings=askui_android_agent_settings(),
+            tool_collection=tool_collection,
+            system_prompt=ANDROID_SYSTEM_PROMPT,
+        )
+
+    @functools.cache
     def askui_facade() -> ModelFacade:
-        android_agent = AskUiAndroidAgent(
+        android_agent = Agent(
             tool_collection=tool_collection,
             reporter=reporter,
-            settings=AskUiAndroidAgentSettings(
-                askui=askui_settings(),
-            ),
+            settings=askui_android_agent_settings(),
+            system_prompt=ANDROID_SYSTEM_PROMPT,
+            messages_api=askui_messages_api(),
         )
         return ModelFacade(
             act_model=android_agent,

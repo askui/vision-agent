@@ -13,7 +13,7 @@ from .models import (
 )
 from .openrouter.model import OpenRouterModel
 from .openrouter.settings import OpenRouterSettings
-from .shared.computer_agent_message_param import (
+from .shared.agent_message_param import (
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
     CitationCharLocationParam,

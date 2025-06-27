@@ -12,7 +12,7 @@ from askui.models.exceptions import ModelNotFoundError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter

@@ -8,8 +8,8 @@ from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_cb_param import OnMessageCb
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade

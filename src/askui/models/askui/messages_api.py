@@ -8,11 +8,11 @@ from pydantic import BaseModel, ConfigDict
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
-from askui.models.askui.settings import AskUiComputerAgentSettings
-from askui.models.shared.computer_agent import ComputerAgent, ThinkingConfigParam
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.askui.settings import AskUiAgentSettings
+from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_settings import ThinkingConfigParam
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.tools import ToolCollection
-from askui.reporting import Reporter
 
 from ...logger import logger
 
@@ -29,21 +29,35 @@ class RequestBody(BaseModel):
     tool_choice: BetaToolChoiceParam
 
 
-def is_retryable_error(exception: BaseException) -> bool:
+def _is_retryable_error(exception: BaseException) -> bool:
     """Check if the exception is a retryable error (status codes 429 or 529)."""
     if isinstance(exception, httpx.HTTPStatusError):
         return exception.response.status_code in (429, 529)
     return False
 
 
-class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
+class AskUiMessagesApi(MessagesApi):
+    """AskUI API implementation for message creation."""
+
     def __init__(
         self,
+        settings: AskUiAgentSettings,
         tool_collection: ToolCollection,
-        reporter: Reporter,
-        settings: AskUiComputerAgentSettings,
+        system_prompt: str,
     ) -> None:
-        super().__init__(settings, tool_collection, reporter)
+        """Initialize the AskUI message creator.
+
+        Args:
+            settings (AskUiAgentSettings): The settings for the agent.
+            tool_collection (ToolCollection): The tools for the agent.
+            system_prompt (str): The system prompt for the agent.
+        """
+        self._settings = settings
+        self._tool_collection = tool_collection
+        self._system = BetaTextBlockParam(
+            type="text",
+            text=system_prompt,
+        )
         self._client = httpx.Client(
             base_url=f"{self._settings.askui.base_url}",
             headers={
@@ -55,15 +69,24 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=30, max=240),
-        retry=retry_if_exception(is_retryable_error),
+        retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )
     @override
-    def _create_message(
+    def create_message(
         self,
         messages: list[MessageParam],
         model_choice: str,  # noqa: ARG002
     ) -> MessageParam:
+        """Create a message using the AskUI API.
+
+        Args:
+            messages (list[MessageParam]): The message history.
+            model_choice (str): The model to use for message creation.
+
+        Returns:
+            MessageParam: The created message.
+        """
         try:
             request_body = RequestBody(
                 max_tokens=self._settings.max_tokens,
@@ -85,7 +108,7 @@ class AskUiComputerAgent(ComputerAgent[AskUiComputerAgentSettings]):
             response.raise_for_status()
             return MessageParam.model_validate_json(response.text)
         except Exception as e:  # noqa: BLE001
-            if is_retryable_error(e):
+            if _is_retryable_error(e):
                 logger.debug(e)
             if (
                 isinstance(e, httpx.HTTPStatusError)

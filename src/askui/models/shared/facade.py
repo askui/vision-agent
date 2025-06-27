@@ -4,8 +4,8 @@ from typing_extensions import override
 
 from askui.locators.locators import Locator
 from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_cb_param import OnMessageCb
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 

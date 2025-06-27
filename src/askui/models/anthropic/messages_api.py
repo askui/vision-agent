@@ -2,31 +2,45 @@ from typing import TYPE_CHECKING, cast
 
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
 from anthropic.types import AnthropicBetaParam
+from anthropic.types.beta import BetaTextBlockParam
 from typing_extensions import override
 
 from askui.models.anthropic.settings import ClaudeComputerAgentSettings
 from askui.models.models import ANTHROPIC_MODEL_NAME_MAPPING, ModelName
-from askui.models.shared.computer_agent import (
+from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_settings import (
     COMPUTER_USE_20241022_BETA_FLAG,
     COMPUTER_USE_20250124_BETA_FLAG,
-    ComputerAgent,
 )
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.tools import ToolCollection
-from askui.reporting import Reporter
 
 if TYPE_CHECKING:
     from anthropic.types.beta import BetaMessageParam, BetaThinkingConfigParam
 
 
-class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
+class AnthropicMessagesApi(MessagesApi):
+    """Anthropic API implementation for message creation."""
+
     def __init__(
         self,
-        tool_collection: ToolCollection,
-        reporter: Reporter,
         settings: ClaudeComputerAgentSettings,
+        tool_collection: ToolCollection,
+        system_prompt: str,
     ) -> None:
-        super().__init__(settings, tool_collection, reporter)
+        """Initialize the Anthropic message creator.
+
+        Args:
+            settings (ClaudeComputerAgentSettings): The settings for the agent.
+            tool_collection (ToolCollection): The tools for the agent.
+            system_prompt (str): The system prompt for the agent.
+        """
+        self._settings = settings
+        self._tool_collection = tool_collection
+        self._system = BetaTextBlockParam(
+            type="text",
+            text=system_prompt,
+        )
         self._client = Anthropic(
             api_key=self._settings.anthropic.api_key.get_secret_value()
         )
@@ -39,9 +53,18 @@ class ClaudeComputerAgent(ComputerAgent[ClaudeComputerAgentSettings]):
         return NOT_GIVEN
 
     @override
-    def _create_message(
+    def create_message(
         self, messages: list[MessageParam], model_choice: str
     ) -> MessageParam:
+        """Create a message using the Anthropic API.
+
+        Args:
+            messages (list[MessageParam]): The message history.
+            model_choice (str): The model to use for message creation.
+
+        Returns:
+            MessageParam: The created message.
+        """
         response = self._client.beta.messages.with_raw_response.create(
             max_tokens=self._settings.max_tokens,
             messages=[

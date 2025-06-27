@@ -17,8 +17,8 @@ from askui import (
 )
 from askui.locators.locators import Locator
 from askui.models import ModelComposition, ModelDefinition, ModelName
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_cb_param import OnMessageCb
+from askui.models.shared.agent_message_param import MessageParam
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 

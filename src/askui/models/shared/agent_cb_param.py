@@ -2,7 +2,7 @@ from typing import Callable, Literal
 
 from pydantic import BaseModel
 
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam
 
 
 class OnMessageCbParam(BaseModel):

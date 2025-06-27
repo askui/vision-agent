@@ -10,12 +10,14 @@ from typing_extensions import override
 from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.inference_api import AskUiInferenceApi, AskUiSettings
+from askui.models.askui.messages_api import AskUiMessagesApi
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelName
+from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
+from askui.models.shared.prompts import SYSTEM_PROMPT
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
@@ -69,19 +71,26 @@ def askui_computer_agent(
     tool_collection_mock: ToolCollection,
     askui_settings: AskUiSettings,
     simple_html_reporter: Reporter,
-) -> AskUiComputerAgent:
-    return AskUiComputerAgent(
+) -> Agent:
+    settings = AskUiComputerAgentSettings(
+        askui=askui_settings,
+    )
+    return Agent(
         tool_collection=tool_collection_mock,
         reporter=simple_html_reporter,
-        settings=AskUiComputerAgentSettings(
-            askui=askui_settings,
+        settings=settings,
+        messages_api=AskUiMessagesApi(
+            settings=settings,
+            tool_collection=tool_collection_mock,
+            system_prompt=SYSTEM_PROMPT,
         ),
+        system_prompt=SYSTEM_PROMPT,
     )
 
 
 @pytest.fixture
 def askui_facade(
-    askui_computer_agent: AskUiComputerAgent,
+    askui_computer_agent: Agent,
     askui_inference_api: AskUiInferenceApi,
 ) -> ModelFacade:
     return ModelFacade(

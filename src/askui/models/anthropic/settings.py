@@ -1,7 +1,7 @@
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
-from askui.models.shared.computer_agent import ComputerAgentSettingsBase
+from askui.models.shared.agent_settings import AgentSettings
 from askui.models.shared.settings import ChatCompletionsCreateSettings
 
 
@@ -25,5 +25,5 @@ class ClaudeSettings(ClaudeSettingsBase):
     )
 
 
-class ClaudeComputerAgentSettings(ComputerAgentSettingsBase, ClaudeSettingsBase):
+class ClaudeComputerAgentSettings(AgentSettings, ClaudeSettingsBase):
     pass

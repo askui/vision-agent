@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Literal, TypedDict
 
 from askui.locators.locators import Locator
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_cb_param import OnMessageCb
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 

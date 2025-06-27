@@ -1,37 +1,23 @@
-from abc import ABC, abstractmethod
-from typing import Generic
-
 from anthropic.types.beta import BetaTextBlockParam
-from pydantic import BaseModel
-from typing_extensions import TypeVar, override
+from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
-from askui.models.shared.computer_agent_cb_param import OnMessageCb, OnMessageCbParam
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent_cb_param import OnMessageCb, OnMessageCbParam
+from askui.models.shared.agent_message_param import (
     ImageBlockParam,
     MessageParam,
     TextBlockParam,
 )
+from askui.models.shared.agent_settings import AgentSettings
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 
 from ...logger import logger
 
 
-class AgentSettingsBase(BaseModel):
-    """Settings for agents."""
-
-    max_tokens: int = 4096
-    only_n_most_recent_images: int = 3
-    image_truncation_threshold: int = 10
-    betas: list[str] = []
-
-
-AgentSettings = TypeVar("AgentSettings", bound=AgentSettingsBase)
-
-
-class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
+class Agent(ActModel):
     """Base class for agents that can execute autonomous actions.
 
     This class provides common functionality for both AskUI and Anthropic agents,
@@ -44,6 +30,7 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         tool_collection: ToolCollection,
         system_prompt: str,
         reporter: Reporter,
+        messages_api: MessagesApi,
     ) -> None:
         """Initialize the agent.
 
@@ -52,29 +39,16 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
             tool_collection (ToolCollection): The tools for the agent.
             system_prompt (str): The system prompt for the agent.
             reporter (Reporter): The reporter for logging messages and actions.
+            messages_api (MessagesApi): Messages API for creating messages.
         """
         self._settings: AgentSettings = settings
         self._reporter = reporter
         self._tool_collection = tool_collection
+        self._messages_api = messages_api
         self._system = BetaTextBlockParam(
             type="text",
             text=system_prompt,
         )
-
-    @abstractmethod
-    def _create_message(
-        self, messages: list[MessageParam], model_choice: str
-    ) -> MessageParam:
-        """Create a message using the agent's API.
-
-        Args:
-            messages (list[MessageParam]): The message history.
-            model_choice (str): The model to use for message creation.
-
-        Returns:
-            MessageParam: The created message.
-        """
-        raise NotImplementedError
 
     def _step(
         self,
@@ -104,7 +78,7 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
                 self._settings.image_truncation_threshold,
             )
         if messages[-1].role == "user":
-            response_message = self._create_message(messages, model_choice)
+            response_message = self._messages_api.create_message(messages, model_choice)
             message_by_assistant = self._call_on_message(
                 on_message, response_message, messages
             )

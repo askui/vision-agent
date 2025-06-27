@@ -4,8 +4,10 @@ import pytest
 from PIL import Image as PILImage
 from typing_extensions import override
 
-from askui.models.askui.computer_agent import AskUiComputerAgent
+from askui.models.askui.messages_api import AskUiMessagesApi
 from askui.models.askui.settings import AskUiComputerAgentSettings, AskUiSettings
+from askui.models.shared.agent import Agent
+from askui.models.shared.prompts import SYSTEM_PROMPT
 from askui.models.shared.tools import ToolCollection
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs
@@ -30,11 +32,18 @@ class ReporterMock(Reporter):
 @pytest.fixture
 def claude_computer_agent(
     agent_os_mock: AgentOs,
-) -> Generator[AskUiComputerAgent, None, None]:
+) -> Generator[Agent, None, None]:
     """Fixture providing a AskUiClaudeComputerAgent instance."""
-    agent = AskUiComputerAgent(
+    settings = AskUiComputerAgentSettings(askui=AskUiSettings())
+    agent = Agent(
         tool_collection=ToolCollection(tools=[Computer20241022Tool(agent_os_mock)]),
         reporter=ReporterMock(),
-        settings=AskUiComputerAgentSettings(askui=AskUiSettings()),
+        settings=settings,
+        messages_api=AskUiMessagesApi(
+            settings=settings,
+            tool_collection=ToolCollection(tools=[Computer20241022Tool(agent_os_mock)]),
+            system_prompt=SYSTEM_PROMPT,
+        ),
+        system_prompt=SYSTEM_PROMPT,
     )
     yield agent

@@ -6,7 +6,7 @@ from anthropic.types.beta.beta_tool_param import InputSchema
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
     ImageBlockParam,

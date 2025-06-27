@@ -5,10 +5,9 @@ from pydantic import UUID4, Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 from askui.models.models import ModelName
-from askui.models.shared.base_agent import AgentSettingsBase
-from askui.models.shared.computer_agent import (
+from askui.models.shared.agent_settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
-    ComputerAgentSettingsBase,
+    AgentSettings,
     ThinkingConfigEnabledParam,
     ThinkingConfigParam,
 )
@@ -44,17 +43,13 @@ class AskUiSettings(BaseSettings):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
-class AskUiComputerAgentSettings(ComputerAgentSettingsBase):
+class AskUiAgentSettings(AgentSettings):
     model: str = ModelName.CLAUDE__SONNET__4__20250514
     askui: AskUiSettings = Field(default_factory=AskUiSettings)
+
+
+class AskUiComputerAgentSettings(AskUiAgentSettings):
     betas: list[str] = Field(default_factory=lambda: [COMPUTER_USE_20250124_BETA_FLAG])
     thinking: ThinkingConfigParam = Field(
         default_factory=lambda: ThinkingConfigEnabledParam(budget_tokens=2048)
     )
-
-
-class AskUiAndroidAgentSettings(AgentSettingsBase):
-    """Settings for AskUI Android agent."""
-
-    model: str = ModelName.CLAUDE__SONNET__4__20250514
-    askui: AskUiSettings = Field(default_factory=AskUiSettings)
