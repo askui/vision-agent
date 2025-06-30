@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from chat.api.assistants.dependencies import get_assistant_service
 from chat.api.assistants.router import router as assistants_router
 from chat.api.dependencies import get_settings
+from chat.api.health.router import router as health_router
 from chat.api.messages.router import router as messages_router
 from chat.api.runs.router import router as runs_router
 from chat.api.threads.router import router as threads_router
@@ -40,4 +41,5 @@ v1_router.include_router(assistants_router)
 v1_router.include_router(threads_router)
 v1_router.include_router(messages_router)
 v1_router.include_router(runs_router)
+v1_router.include_router(health_router)
 app.include_router(v1_router)
