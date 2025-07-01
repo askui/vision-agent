@@ -24,6 +24,7 @@ dependencies = [
     "httpx>=0.28.1",
     "fastmcp>=2.3.4",
     "pure-python-adb>=0.3.0.dev0",
+    "playwright>=1.0.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -85,6 +86,7 @@ test = [
     "types-pyperclip>=1.8.2.20240311",
     "pytest-timeout>=2.4.0",
     "types-pynput>=1.8.1.20250318",
+    "playwright>=1.41.0",
 ]
 
 
