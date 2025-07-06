@@ -1,5 +1,5 @@
-from askui.models.shared.computer_agent import ComputerAgent
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent import Agent
+from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ImageBlockParam,
     MessageParam,
@@ -32,13 +32,13 @@ def make_message_with_tool_result(num_images: int, num_texts: int = 0) -> Messag
 
 def test_no_images() -> None:
     messages = [make_message_with_tool_result(0, 2)]
-    filtered = ComputerAgent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
+    filtered = Agent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
     assert filtered == messages
 
 
 def test_fewer_images_than_keep() -> None:
     messages = [make_message_with_tool_result(2, 1)]
-    filtered = ComputerAgent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
+    filtered = Agent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
     # Only ToolResultBlockParam with list content should be checked
     all_images = [
         c
@@ -60,7 +60,7 @@ def test_fewer_images_than_keep() -> None:
 
 def test_exactly_images_to_keep() -> None:
     messages = [make_message_with_tool_result(3, 1)]
-    filtered = ComputerAgent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
+    filtered = Agent._maybe_filter_to_n_most_recent_images(messages, 3, 2)
     # Only check .content if the type is correct
     first_block = (
         filtered[0].content[0]
@@ -94,7 +94,7 @@ def test_more_images_than_keep_removes_oldest() -> None:
         make_message_with_tool_result(2, 0),
         make_message_with_tool_result(2, 0),
     ]
-    filtered = ComputerAgent._maybe_filter_to_n_most_recent_images(messages, 2, 2)
+    filtered = Agent._maybe_filter_to_n_most_recent_images(messages, 2, 2)
     # Only 2 images should remain, and they should be the newest (from the last message)
     all_images = [
         c
@@ -117,7 +117,7 @@ def test_more_images_than_keep_removes_oldest() -> None:
 
 def test_removal_chunking() -> None:
     messages = [make_message_with_tool_result(5, 0)]
-    filtered = ComputerAgent._maybe_filter_to_n_most_recent_images(messages, 2, 2)
+    filtered = Agent._maybe_filter_to_n_most_recent_images(messages, 2, 2)
     # Should remove 4 (chunk of 4), leaving 1 image
     all_images = [
         c

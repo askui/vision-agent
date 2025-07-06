@@ -40,7 +40,7 @@ def test_get(
     model: str,
 ) -> None:
     url = vision_agent.get(
-        "What is the current url shown in the url bar?",
+        "What is the current url shown in the url bar?\nUrl: ",
         image=github_login_screenshot,
         model=model,
     )

@@ -5,15 +5,9 @@ from typing_extensions import Literal
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.models.anthropic.settings import ClaudeComputerAgentSettings, ClaudeSettings
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.android_agent import AskUiAndroidAgent
-from askui.models.askui.computer_agent import AskUiComputerAgent
 from askui.models.askui.model_router import AskUiModelRouter
-from askui.models.askui.settings import (
-    AskUiAndroidAgentSettings,
-    AskUiComputerAgentSettings,
-)
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
@@ -27,36 +21,53 @@ from askui.models.models import (
     ModelRegistry,
     Point,
 )
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent import Agent
+from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.settings import ActSettings
+from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
-from askui.reporting import CompositeReporter, Reporter
+from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
+from askui.settings import Settings
 from askui.utils.image_utils import ImageSource
 
 from ..logger import logger
-from .anthropic.computer_agent import ClaudeComputerAgent
-from .anthropic.model import ClaudeHandler
-from .askui.inference_api import AskUiInferenceApi, AskUiSettings
+from .askui.inference_api import AskUiInferenceApi
 
 
 def initialize_default_model_registry(  # noqa: C901
-    tool_collection: ToolCollection,
-    reporter: Reporter,
+    settings: Settings,
+    reporter: Reporter = NULL_REPORTER,
 ) -> ModelRegistry:
     @functools.cache
-    def askui_settings() -> AskUiSettings:
-        return AskUiSettings()
+    def vlm_locator_serializer() -> VlmLocatorSerializer:
+        return VlmLocatorSerializer()
+
+    @functools.cache
+    def anthropic_facade() -> ModelFacade:
+        messages_api = AnthropicMessagesApi(
+            settings=settings.anthropic.messages_api,
+            locator_serializer=vlm_locator_serializer(),
+        )
+        computer_agent = Agent(
+            messages_api=messages_api,
+            reporter=reporter,
+        )
+        return ModelFacade(
+            act_model=computer_agent,
+            get_model=messages_api,
+            locate_model=messages_api,
+        )
 
     @functools.cache
     def askui_inference_api() -> AskUiInferenceApi:
         return AskUiInferenceApi(
+            settings=settings.askui.inference_api,
             locator_serializer=AskUiLocatorSerializer(
                 ai_element_collection=AiElementCollection(),
                 reporter=reporter,
             ),
-            settings=askui_settings(),
         )
 
     @functools.cache
@@ -66,34 +77,10 @@ def initialize_default_model_registry(  # noqa: C901
         )
 
     @functools.cache
-    def vlm_locator_serializer() -> VlmLocatorSerializer:
-        return VlmLocatorSerializer()
-
-    @functools.cache
-    def anthropic_facade() -> ModelFacade:
-        computer_agent = ClaudeComputerAgent(
-            tool_collection=tool_collection,
-            reporter=reporter,
-            settings=ClaudeComputerAgentSettings(),
-        )
-        handler = ClaudeHandler(
-            settings=ClaudeSettings(),
-            locator_serializer=vlm_locator_serializer(),
-        )
-        return ModelFacade(
-            act_model=computer_agent,
-            get_model=handler,
-            locate_model=handler,
-        )
-
-    @functools.cache
     def askui_facade() -> ModelFacade:
-        computer_agent = AskUiComputerAgent(
-            tool_collection=tool_collection,
+        computer_agent = Agent(
+            messages_api=askui_inference_api(),
             reporter=reporter,
-            settings=AskUiComputerAgentSettings(
-                askui=askui_settings(),
-            ),
         )
         return ModelFacade(
             act_model=computer_agent,
@@ -120,55 +107,6 @@ def initialize_default_model_registry(  # noqa: C901
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: hf_spaces_handler,
         ModelName.HF__SPACES__SHOWUI__2B: hf_spaces_handler,
-    }
-
-
-def initialize_default_android_model_registry(  # noqa: C901
-    tool_collection: ToolCollection,
-    reporter: Reporter,
-) -> ModelRegistry:
-    @functools.cache
-    @functools.cache
-    def askui_settings() -> AskUiSettings:
-        return AskUiSettings()
-
-    @functools.cache
-    def askui_inference_api() -> AskUiInferenceApi:
-        return AskUiInferenceApi(
-            locator_serializer=AskUiLocatorSerializer(
-                ai_element_collection=AiElementCollection(),
-                reporter=reporter,
-            ),
-            settings=askui_settings(),
-        )
-
-    @functools.cache
-    def askui_model_router() -> AskUiModelRouter:
-        return AskUiModelRouter(
-            inference_api=askui_inference_api(),
-        )
-
-    @functools.cache
-    def askui_facade() -> ModelFacade:
-        android_agent = AskUiAndroidAgent(
-            tool_collection=tool_collection,
-            reporter=reporter,
-            settings=AskUiAndroidAgentSettings(
-                askui=askui_settings(),
-            ),
-        )
-        return ModelFacade(
-            act_model=android_agent,
-            get_model=askui_inference_api(),
-            locate_model=askui_model_router(),
-        )
-
-    return {
-        ModelName.ASKUI: askui_facade,
-        ModelName.ASKUI__AI_ELEMENT: askui_model_router,
-        ModelName.ASKUI__COMBO: askui_model_router,
-        ModelName.ASKUI__OCR: askui_model_router,
-        ModelName.ASKUI__PTA: askui_model_router,
     }
 
 
@@ -218,10 +156,18 @@ class ModelRouter:
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
         m = self._get_model(model_choice, "act")
         logger.debug(f'Routing "act" to model "{model_choice}"')
-        return m.act(messages, model_choice, on_message)
+        return m.act(
+            messages=messages,
+            model_choice=model_choice,
+            on_message=on_message,
+            settings=settings,
+            tools=tools,
+        )
 
     def get(
         self,

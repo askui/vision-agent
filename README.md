@@ -287,6 +287,7 @@ Here's how to create and use custom models:
 import functools
 from askui import (
     ActModel,
+    ActSettings,
     GetModel,
     LocateModel,
     Locator,
@@ -310,6 +311,8 @@ class MyActModel(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
         # Implement custom act logic, e.g.:
         # - Use a different AI model
@@ -389,6 +392,8 @@ class DynamicActModel(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
         pass
 

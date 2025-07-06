@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Literal
 
 from askui.agent import VisionAgent
 from askui.android_agent import AndroidVisionAgent
-from askui.models.shared.computer_agent_cb_param import OnMessageCbParam
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ImageBlockParam,
     MessageParam,
     TextBlockParam,
 )
+from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.tools.pynput_agent_os import PynputAgentOs
 from askui.utils.image_utils import ImageSource
 from chat.api.messages.service import MessageCreateRequest, MessageService

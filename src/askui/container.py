@@ -1,8 +1,8 @@
-from askui.settings import settings
+from askui.settings import SETTINGS
 from askui.telemetry import Telemetry
 from askui.telemetry.processors import Segment
 
-telemetry = Telemetry(settings.telemetry)
+telemetry = Telemetry(SETTINGS.telemetry)
 
-if settings.telemetry.segment:
-    telemetry.add_processor(Segment(settings.telemetry.segment))
+if SETTINGS.telemetry.segment:
+    telemetry.add_processor(Segment(SETTINGS.telemetry.segment))

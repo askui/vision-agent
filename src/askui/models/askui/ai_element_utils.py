@@ -48,7 +48,7 @@ class AiElement(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         arbitrary_types_allowed=True,
-        populate_by_name=True,
+        validate_by_name=True,
     )
 
     image: Image.Image
