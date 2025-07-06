@@ -1,16 +1,14 @@
 import logging
-import time
-import types
-from typing import Annotated, Optional, Type, overload
+from typing import Annotated, overload
 
-from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
+from typing_extensions import override
 
+from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.settings import ActSettings
+from askui.settings import SETTINGS
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
@@ -25,27 +23,93 @@ from askui.tools.android.tools import (
     AndroidTypeTool,
 )
 from askui.tools.exception_tool import ExceptionTool
-from askui.utils.image_utils import ImageSource, Img
 
-from .logger import configure_logging, logger
+from .logger import logger
 from .models import ModelComposition
-from .models.exceptions import ElementNotFoundError
-from .models.model_router import ModelRouter, initialize_default_android_model_registry
-from .models.models import (
-    ModelChoice,
-    ModelName,
-    ModelRegistry,
-    Point,
-    TotalModelChoice,
-)
-from .models.types.response_schemas import ResponseSchema
+from .models.models import ModelChoice, ModelName, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
-from .retry import ConfigurableRetry, Retry
+from .retry import Retry
+
+_SYSTEM_PROMPT = """
+You are an autonomous Android device control agent operating via ADB on a test device with full system access.
+Your primary goal is to execute tasks efficiently and reliably while maintaining system stability.
+
+<CORE PRINCIPLES>
+* Autonomy: Operate independently and make informed decisions without requiring user input.
+* Never ask for other tasks to be done, only do the task you are given.
+* Reliability: Ensure actions are repeatable and maintain system stability.
+* Efficiency: Optimize operations to minimize latency and resource usage.
+* Safety: Always verify actions before execution, even with full system access.
+</CORE PRINCIPLES>
+
+<OPERATIONAL GUIDELINES>
+1. Tool Usage:
+   * Verify tool availability before starting any operation
+   * Use the most direct and efficient tool for each task
+   * Combine tools strategically for complex operations
+   * Prefer built-in tools over shell commands when possible
+
+2. Error Handling:
+   * Assess failures systematically: check tool availability, permissions, and device state
+   * Implement retry logic with exponential backoff for transient failures
+   * Use fallback strategies when primary approaches fail
+   * Provide clear, actionable error messages with diagnostic information
+
+3. Performance Optimization:
+   * Use one-liner shell commands with inline filtering (grep, cut, awk, jq) for efficiency
+   * Minimize screen captures and coordinate calculations
+   * Cache device state information when appropriate
+   * Batch related operations when possible
+
+4. Screen Interaction:
+   * Ensure all coordinates are integers and within screen bounds
+   * Implement smart scrolling for off-screen elements
+   * Use appropriate gestures (tap, swipe, drag) based on context
+   * Verify element visibility before interaction
+
+5. System Access:
+   * Leverage full system access responsibly
+   * Use shell commands for system-level operations
+   * Monitor system state and resource usage
+   * Maintain system stability during operations
+
+6. Recovery Strategies:
+   * If an element is not visible, try:
+     - Scrolling in different directions
+     - Adjusting view parameters
+     - Using alternative interaction methods
+   * If a tool fails:
+     - Check device connection and state
+     - Verify tool availability and permissions
+     - Try alternative tools or approaches
+   * If stuck:
+     - Provide clear diagnostic information
+     - Suggest potential solutions
+     - Request user intervention only if necessary
+
+7. Best Practices:
+   * Document all significant operations
+   * Maintain operation logs for debugging
+   * Implement proper cleanup after operations
+   * Follow Android best practices for UI interaction
+
+<IMPORTANT NOTES>
+* This is a test device with full system access - use this capability responsibly
+* Always verify the success of critical operations
+* Maintain system stability as the highest priority
+* Provide clear, actionable feedback for all operations
+* Use the most efficient method for each task
+</IMPORTANT NOTES>
+"""
+
+_SETTINGS = SETTINGS.model_copy(deep=True)
+_SETTINGS.act.messages.system = _SYSTEM_PROMPT
+_ACT_SETTINGS_20241022 = _SETTINGS.act.model_copy(deep=True)
+_ACT_SETTINGS_20250124 = _SETTINGS.act.model_copy(deep=True)
+_ACT_SETTINGS_20250124.messages.thinking = {"type": "enabled", "budget_tokens": 2048}
 
 
-class AndroidVisionAgent:
-    """ """
-
+class AndroidVisionAgent(AgentBase):
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
@@ -56,73 +120,29 @@ class AndroidVisionAgent:
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
     ) -> None:
-        load_dotenv()
-        configure_logging(level=log_level)
         self.os = PpadbAgentOs()
-        self._reporter = CompositeReporter(reporters=reporters)
-        self._act_agent_os_facade = AndroidAgentOsFacade(self.os, self._reporter)
-        self.act_tool_collection = ToolCollection(
+        reporter = CompositeReporter(reporters=reporters)
+        act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
+        super().__init__(
+            log_level=log_level,
+            reporter=reporter,
+            model=model,
+            retry=retry,
+            models=models,
             tools=[
-                AndroidScreenshotTool(self._act_agent_os_facade),
-                AndroidTapTool(self._act_agent_os_facade),
-                AndroidTypeTool(self._act_agent_os_facade),
-                AndroidDragAndDropTool(self._act_agent_os_facade),
-                AndroidKeyTapEventTool(self._act_agent_os_facade),
-                AndroidSwipeTool(self._act_agent_os_facade),
-                AndroidKeyCombinationTool(self._act_agent_os_facade),
-                AndroidShellTool(self._act_agent_os_facade),
+                AndroidScreenshotTool(act_agent_os_facade),
+                AndroidTapTool(act_agent_os_facade),
+                AndroidTypeTool(act_agent_os_facade),
+                AndroidDragAndDropTool(act_agent_os_facade),
+                AndroidKeyTapEventTool(act_agent_os_facade),
+                AndroidSwipeTool(act_agent_os_facade),
+                AndroidKeyCombinationTool(act_agent_os_facade),
+                AndroidShellTool(act_agent_os_facade),
                 ExceptionTool(),
-            ]
+            ],
+            settings=SETTINGS,
+            agent_os=self.os,
         )
-        _models = initialize_default_android_model_registry(
-            tool_collection=self.act_tool_collection,
-            reporter=self._reporter,
-        )
-        _models.update(models or {})
-        self._model_router = ModelRouter(
-            reporter=self._reporter,
-            models=_models,
-        )
-        self.model = model
-        self._retry = retry or ConfigurableRetry(
-            strategy="Exponential",
-            base_delay=1000,
-            retry_count=3,
-            on_exception_types=(ElementNotFoundError,),
-        )
-        self._model_choice = self._initialize_model_choice(model)
-
-    def _initialize_model_choice(
-        self, model_choice: ModelComposition | ModelChoice | str | None
-    ) -> TotalModelChoice:
-        """Initialize the model choice based on the provided model parameter.
-
-        Args:
-            model (ModelComposition | ModelChoice | str | None):
-            The model to initialize from. Can be a ModelComposition,
-            ModelChoice dict, string, or None.
-
-        Returns:
-            TotalModelChoice: A dict with keys "act", "get", and "locate"
-            mapping to model names (or a ModelComposition for "locate").
-        """
-        if isinstance(model_choice, ModelComposition):
-            return {
-                "act": ModelName.ASKUI,
-                "get": ModelName.ASKUI,
-                "locate": model_choice,
-            }
-        if isinstance(model_choice, str) or model_choice is None:
-            return {
-                "act": model_choice or ModelName.ASKUI,
-                "get": model_choice or ModelName.ASKUI,
-                "locate": model_choice or ModelName.ASKUI,
-            }
-        return {
-            "act": model_choice.get("act", ModelName.ASKUI),
-            "get": model_choice.get("get", ModelName.ASKUI),
-            "locate": model_choice.get("locate", ModelName.ASKUI),
-        }
 
     @overload
     def tap(
@@ -172,59 +192,6 @@ class AndroidVisionAgent:
             point = self._locate(locator=target, model=model)
             self.os.tap(point[0], point[1])
 
-    def _locate(
-        self,
-        locator: str | Locator,
-        screenshot: Optional[Img] = None,
-        model: ModelComposition | str | None = None,
-    ) -> Point:
-        def locate_with_screenshot() -> Point:
-            _screenshot = ImageSource(
-                self.os.screenshot() if screenshot is None else screenshot
-            )
-            return self._model_router.locate(
-                screenshot=_screenshot,
-                locator=locator,
-                model_choice=model or self._model_choice["locate"],
-            )
-
-        point = self._retry.attempt(locate_with_screenshot)
-        self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
-        logger.debug("ModelRouter locate: (%d, %d)", point[0], point[1])
-        return point
-
-    @telemetry.record_call(exclude={"locator", "screenshot"})
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def locate(
-        self,
-        locator: str | Locator,
-        screenshot: Optional[Img] = None,
-        model: ModelComposition | str | None = None,
-    ) -> Point:
-        """
-        Locates the UI element identified by the provided locator.
-
-        Args:
-            locator (str | Locator): The identifier or description of the element to locate.
-            screenshot (Img | None, optional): The screenshot to use for locating the element. Can be a path to an image file, a PIL Image object or a data URL. If `None`, takes a screenshot of the currently selected display.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element using the `locator`.
-
-        Returns:
-            Point: The coordinates of the element as a tuple (x, y).
-
-        Example:
-            ```python
-            from askui import AndroidVisionAgent
-
-            with AndroidVisionAgent() as agent:
-                point = agent.locate("Submit button")
-                print(f"Element found at coordinates: {point}")
-            ```
-        """
-        self._reporter.add_message("User", f"locate {locator}")
-        logger.debug("VisionAgent received instruction to locate %s", locator)
-        return self._locate(locator, screenshot, model)
-
     @telemetry.record_call(exclude={"text"})
     @validate_call
     def type(
@@ -251,159 +218,6 @@ class AndroidVisionAgent:
         self._reporter.add_message("User", f'type: "{text}"')
         logger.debug("VisionAgent received instruction to type '%s'", text)
         self.os.type(text)
-
-    @overload
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: None = None,
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> str: ...
-    @overload
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: Type[ResponseSchema],
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> ResponseSchema: ...
-
-    @telemetry.record_call(exclude={"query", "image", "response_schema"})
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: Type[ResponseSchema] | None = None,
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> ResponseSchema | str:
-        """
-        Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
-
-        Args:
-            query (str): The query describing what information to retrieve.
-            image (Img | None, optional): The image to extract information from. Defaults to a screenshot of the current screen. Can be a path to an image file, a PIL Image object or a data URL.
-            response_schema (Type[ResponseSchema] | None, optional): A Pydantic model class that defines the response schema. If not provided, returns a string.
-            model (str | None, optional): The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`. Note: `response_schema` is not supported by all models.
-
-        Returns:
-            ResponseSchema | str: The extracted information, `str` if no `response_schema` is provided.
-
-        Example:
-            ```python
-            from askui import ResponseSchemaBase, VisionAgent
-            from PIL import Image
-            import json
-
-            class UrlResponse(ResponseSchemaBase):
-                url: str
-
-            class NestedResponse(ResponseSchemaBase):
-                nested: UrlResponse
-
-            class LinkedListNode(ResponseSchemaBase):
-                value: str
-                next: "LinkedListNode | None"
-
-            with AndroidVisionAgent() as agent:
-                # Get URL as string
-                url = agent.get("What is the current url shown in the url bar?")
-
-                # Get URL as Pydantic model from image at (relative) path
-                response = agent.get(
-                    "What is the current url shown in the url bar?",
-                    response_schema=UrlResponse,
-                    image="screenshot.png",
-                )
-                # Dump whole model
-                print(response.model_dump_json(indent=2))
-                # or
-                response_json_dict = response.model_dump(mode="json")
-                print(json.dumps(response_json_dict, indent=2))
-                # or for regular dict
-                response_dict = response.model_dump()
-                print(response_dict["url"])
-
-                # Get boolean response from PIL Image
-                is_login_page = agent.get(
-                    "Is this a login page?",
-                    response_schema=bool,
-                    image=Image.open("screenshot.png"),
-                )
-                print(is_login_page)
-
-                # Get integer response
-                input_count = agent.get(
-                    "How many input fields are visible on this page?",
-                    response_schema=int,
-                )
-                print(input_count)
-
-                # Get float response
-                design_rating = agent.get(
-                    "Rate the page design quality from 0 to 1",
-                    response_schema=float,
-                )
-                print(design_rating)
-
-                # Get nested response
-                nested = agent.get(
-                    "Extract the URL and its metadata from the page",
-                    response_schema=NestedResponse,
-                )
-                print(nested.nested.url)
-
-                # Get recursive response
-                linked_list = agent.get(
-                    "Extract the breadcrumb navigation as a linked list",
-                    response_schema=LinkedListNode,
-                )
-                current = linked_list
-                while current:
-                    print(current.value)
-                    current = current.next
-            ```
-        """
-        logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.os.screenshot() if image is None else image)
-        self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
-        response = self._model_router.get(
-            image=_image,
-            query=query,
-            response_schema=response_schema,
-            model_choice=model or self._model_choice["get"],
-        )
-        message_content = (
-            str(response)
-            if isinstance(response, (str, bool, int, float))
-            else response.model_dump()
-        )
-        self._reporter.add_message("Agent", message_content)
-        return response
-
-    @telemetry.record_call()
-    @validate_call
-    def wait(
-        self,
-        sec: Annotated[float, Field(gt=0.0)],
-    ) -> None:
-        """
-        Pauses the execution of the program for the specified number of seconds.
-
-        Args:
-            sec (float): The number of seconds to wait. Must be greater than `0.0`.
-
-        Example:
-            ```python
-            from askui import AndroidVisionAgent
-
-            with AndroidVisionAgent() as agent:
-                agent.wait(5)  # Pauses execution for 5 seconds
-                agent.wait(0.5)  # Pauses execution for 500 milliseconds
-            ```
-        """
-        time.sleep(sec)
 
     @telemetry.record_call()
     @validate_call
@@ -559,73 +373,18 @@ class AndroidVisionAgent:
         """
         self.os.set_device_by_serial_number(device_sn)
 
-    @telemetry.record_call(exclude={"goal", "on_message"})
-    @validate_call
-    def act(
-        self,
-        goal: Annotated[str | list[MessageParam], Field(min_length=1)],
-        model: str | None = None,
-        on_message: OnMessageCb | None = None,
-    ) -> None:
-        """
-        Instructs the agent to achieve a specified goal through autonomous actions.
-
-        The agent will analyze the screen, determine necessary steps, and perform actions
-        to accomplish the goal. This may include clicking, typing, scrolling, and other
-        interface interactions.
-
-        Args:
-            goal (str | list[MessageParam]): A description of what the agent should achieve.
-            model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
-            on_message (OnMessageCb | None, optional): Callback for new messages. If it returns `None`, stops and does not add the message.
-
-        Returns:
-            None
-
-        Example:
-            ```python
-            from askui import AndroidVisionAgent
-
-            with AndroidVisionAgent() as agent:
-                agent.act("Open the settings menu")
-                agent.act("Log in with username 'admin' and password '1234'")
-            ```
-        """
-        goal_str = (
-            goal
-            if isinstance(goal, str)
-            else "\n".join(msg.model_dump_json() for msg in goal)
-        )
-        self._reporter.add_message("User", f'act: "{goal_str}"')
-        logger.debug(
-            "VisionAgent received instruction to act towards the goal '%s'", goal_str
-        )
-        messages: list[MessageParam] = (
-            [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
-        )
-        self._model_router.act(messages, model or self._model_choice["act"], on_message)
-
-    @telemetry.record_call(flush=True)
-    def close(self) -> None:
-        """Disconnects from the Android device."""
-        self.os.disconnect()
-        self._reporter.generate()
-
-    @telemetry.record_call()
-    def open(self) -> None:
-        """Connects to the Android device."""
-        self.os.connect()
-
-    @telemetry.record_call()
-    def __enter__(self) -> "AndroidVisionAgent":
-        self.open()
-        return self
-
-    @telemetry.record_call(exclude={"exc_value", "traceback"})
-    def __exit__(
-        self,
-        exc_type: Type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: types.TracebackType | None,
-    ) -> None:
-        self.close()
+    @override
+    def _get_settings_for_act(self, model: str) -> ActSettings:
+        match model:
+            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+                return _ACT_SETTINGS_20241022
+            case ModelName.ASKUI:
+                match _SETTINGS.askui.inference_api.model:
+                    case "anthropic-claude-3-5-sonnet-20241022":
+                        return _ACT_SETTINGS_20241022
+                    case "claude-sonnet-4-20250514":
+                        return _ACT_SETTINGS_20250124
+            case ModelName.CLAUDE__SONNET__4__20250514:
+                return _ACT_SETTINGS_20250124
+            case _:
+                return _SETTINGS.act

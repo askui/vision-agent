@@ -1,1 +1,0 @@
-"""Anthropic model implementations."""

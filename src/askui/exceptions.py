@@ -1,5 +1,4 @@
 from .models.askui.ai_element_utils import AiElementNotFound
-from .models.askui.exceptions import AskUiApiError, AskUiApiRequestFailedError
 from .models.exceptions import (
     AutomationError,
     ElementNotFoundError,
@@ -11,8 +10,6 @@ from .models.exceptions import (
 
 __all__ = [
     "AiElementNotFound",
-    "AskUiApiError",
-    "AskUiApiRequestFailedError",
     "AutomationError",
     "ElementNotFoundError",
     "ModelNotFoundError",

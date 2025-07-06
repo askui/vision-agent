@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam
 from chat.api.models import (
     MAX_MESSAGES_PER_THREAD,
     AssistantId,

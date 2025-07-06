@@ -12,7 +12,7 @@ from askui.models.exceptions import ModelNotFoundError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter
@@ -289,9 +289,11 @@ class TestModelRouter:
         messages = [MessageParam(role="user", content="test goal")]
         model_router.act(messages, ModelName.TARS)
         mock_tars.act.assert_called_once_with(  # type: ignore[attr-defined]
-            messages,
-            ModelName.TARS,
-            None,
+            messages=messages,
+            model_choice=ModelName.TARS,
+            on_message=None,
+            settings=None,
+            tools=None,
         )
 
     def test_act_with_claude_model(
@@ -304,9 +306,11 @@ class TestModelRouter:
             ModelName.CLAUDE__SONNET__4__20250514,
         )
         mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
-            messages,
-            ModelName.CLAUDE__SONNET__4__20250514,
-            None,
+            messages=messages,
+            model_choice=ModelName.CLAUDE__SONNET__4__20250514,
+            on_message=None,
+            settings=None,
+            tools=None,
         )
 
     def test_act_with_invalid_model(self, model_router: ModelRouter) -> None:

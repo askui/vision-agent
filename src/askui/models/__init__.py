@@ -12,8 +12,8 @@ from .models import (
     Point,
 )
 from .openrouter.model import OpenRouterModel
-from .openrouter.settings import OpenRouterSettings
-from .shared.computer_agent_message_param import (
+from .openrouter.settings import ChatCompletionsCreateSettings, OpenRouterSettings
+from .shared.agent_message_param import (
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
     CitationCharLocationParam,
@@ -28,7 +28,6 @@ from .shared.computer_agent_message_param import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from .shared.settings import ChatCompletionsCreateSettings
 
 __all__ = [
     "ActModel",

@@ -53,6 +53,26 @@ class Reporter(ABC):
         """
 
 
+class NullReporter(Reporter):
+    """A reporter that does nothing."""
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict[str, Any], list[Any]],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
+        pass
+
+    @override
+    def generate(self) -> None:
+        pass
+
+
+NULL_REPORTER = NullReporter()
+
+
 class CompositeReporter(Reporter):
     """A reporter that combines multiple reporters.
 
