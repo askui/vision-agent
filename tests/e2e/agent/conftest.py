@@ -12,7 +12,7 @@ from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
-    AskUiInferenceApiSettings,
+    AskUiInferenceApiAuthorizedSettings,
 )
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.models import ModelName
@@ -62,7 +62,7 @@ def askui_facade(
             ),
             reporter=reporter,
         ),
-        settings=AskUiInferenceApiSettings(
+        settings=AskUiInferenceApiAuthorizedSettings(
             messages=settings.messages,
         ),
     )

@@ -43,7 +43,7 @@ class Agent(ActModel):
     def _step(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb,
         settings: ActSettings,
         tool_collection: ToolCollection,
@@ -57,7 +57,7 @@ class Agent(ActModel):
         Args:
             messages (list[MessageParam]): The message history.
                 Contains at least one message.
-            model_choice (str): The model to use for message creation.
+            model (str): The model to use for message creation.
             on_message (OnMessageCb): Callback on new messages
             settings (AgentSettings): The settings for the step.
             tool_collection (ToolCollection): The tools to use for the step.
@@ -75,7 +75,7 @@ class Agent(ActModel):
         if messages[-1].role == "user":
             response_message = self._messages_api.create_message(
                 messages=messages,
-                model_choice=model_choice,
+                model=model,
                 tools=tool_collection,
                 max_tokens=settings.messages.max_tokens,
                 betas=settings.messages.betas,
@@ -109,7 +109,7 @@ class Agent(ActModel):
                 messages.append(tool_result_message)
                 self._step(
                     messages=messages,
-                    model_choice=model_choice,
+                    model=model,
                     tool_collection=tool_collection,
                     on_message=on_message,
                     settings=settings,
@@ -134,11 +134,12 @@ class Agent(ActModel):
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
     ) -> None:
+        _settings = settings or ActSettings()
         self._step(
             messages=messages,
-            model_choice=model_choice,
+            model=_settings.messages.model or model_choice,
             on_message=on_message or NULL_ON_MESSAGE_CB,
-            settings=settings or ActSettings(),
+            settings=_settings,
             tool_collection=ToolCollection(tools),
         )
 
