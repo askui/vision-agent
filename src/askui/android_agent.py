@@ -7,8 +7,7 @@ from typing_extensions import override
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.settings import ActSettings
-from askui.settings import SETTINGS
+from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
@@ -102,11 +101,20 @@ Your primary goal is to execute tasks efficiently and reliably while maintaining
 </IMPORTANT NOTES>
 """
 
-_SETTINGS = SETTINGS.model_copy(deep=True)
-_SETTINGS.act.messages.system = _SYSTEM_PROMPT
-_ACT_SETTINGS_20241022 = _SETTINGS.act.model_copy(deep=True)
-_ACT_SETTINGS_20250124 = _SETTINGS.act.model_copy(deep=True)
-_ACT_SETTINGS_20250124.messages.thinking = {"type": "enabled", "budget_tokens": 2048}
+_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value,
+        system=_SYSTEM_PROMPT,
+    ),
+)
+
+_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.CLAUDE__SONNET__4__20250514.value,
+        system=_SYSTEM_PROMPT,
+        thinking={"type": "enabled", "budget_tokens": 2048},
+    ),
+)
 
 
 class AndroidVisionAgent(AgentBase):
@@ -140,7 +148,6 @@ class AndroidVisionAgent(AgentBase):
                 AndroidShellTool(act_agent_os_facade),
                 ExceptionTool(),
             ],
-            settings=SETTINGS,
             agent_os=self.os,
         )
 
@@ -374,17 +381,11 @@ class AndroidVisionAgent(AgentBase):
         self.os.set_device_by_serial_number(device_sn)
 
     @override
-    def _get_settings_for_act(self, model: str) -> ActSettings:
-        match model:
+    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
+        match model_choice:
             case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ACT_SETTINGS_20241022
-            case ModelName.ASKUI:
-                match _SETTINGS.askui.inference_api.model:
-                    case "anthropic-claude-3-5-sonnet-20241022":
-                        return _ACT_SETTINGS_20241022
-                    case "claude-sonnet-4-20250514":
-                        return _ACT_SETTINGS_20250124
-            case ModelName.CLAUDE__SONNET__4__20250514:
-                return _ACT_SETTINGS_20250124
+                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
+            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
+                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:
-                return _SETTINGS.act
+                return ActSettings()

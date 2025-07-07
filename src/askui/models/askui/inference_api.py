@@ -1,7 +1,6 @@
 import base64
 import json as json_lib
-from functools import cached_property
-from typing import Any, Literal, Type
+from typing import Any, Type
 
 import httpx
 from anthropic import NOT_GIVEN, NotGiven
@@ -38,33 +37,33 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class AskUiInferenceApiSettings(BaseSettings):
-    model_config = SettingsConfigDict(validate_by_name=True)
+class AskUiInferenceApiSettingsBase(BaseSettings):
+    model_config = SettingsConfigDict(validate_by_name=True, env_prefix="ASKUI_")
 
     inference_endpoint: HttpUrl = Field(
         default_factory=lambda: HttpUrl("https://inference.askui.com"),  # noqa: F821
-        validation_alias="ASKUI_INFERENCE_ENDPOINT",
     )
     messages: MessageSettings = Field(default_factory=MessageSettings)
+
+
+AskUiInferenceApiSettingsUnauthorized = AskUiInferenceApiSettingsBase
+
+
+class AskUiInferenceApiAuthorizedSettings(AskUiInferenceApiSettingsBase):
     token: SecretStr = Field(
         default=...,
-        validation_alias="ASKUI_TOKEN",
     )
     workspace_id: UUID4 = Field(
         default=...,
-        validation_alias="ASKUI_WORKSPACE_ID",
     )
-    model: Literal[
-        "anthropic-claude-3-5-sonnet-20241022", "claude-sonnet-4-20250514"
-    ] = "claude-sonnet-4-20250514"
 
-    @cached_property
+    @property
     def authorization_header(self) -> str:
         token_str = self.token.get_secret_value()
         token_base64 = base64.b64encode(token_str.encode()).decode()
         return f"Basic {token_base64}"
 
-    @cached_property
+    @property
     def base_url(self) -> str:
         # NOTE(OS): Pydantic parses urls with trailing slashes
         # meaning "https://inference.askui.com" turns into -> "https://inference.askui.com/"
@@ -72,21 +71,33 @@ class AskUiInferenceApiSettings(BaseSettings):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
+AskUiInferenceApiSettings = (
+    AskUiInferenceApiAuthorizedSettings | AskUiInferenceApiSettingsUnauthorized
+)
+
+
 class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def __init__(
         self,
-        settings: AskUiInferenceApiSettings,
         locator_serializer: AskUiLocatorSerializer,
+        settings: AskUiInferenceApiSettings | None = None,
     ) -> None:
-        self._settings = settings
-        self._client = httpx.Client(
+        self._settings = settings or AskUiInferenceApiSettingsUnauthorized()
+        self._locator_serializer = locator_serializer
+
+    @property
+    def _client(self) -> httpx.Client:
+        if not isinstance(self._settings, AskUiInferenceApiAuthorizedSettings):
+            self._settings = AskUiInferenceApiAuthorizedSettings.model_validate(
+                self._settings.model_dump()
+            )
+        return httpx.Client(
             base_url=f"{self._settings.base_url}",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": self._settings.authorization_header,
             },
         )
-        self._locator_serializer = locator_serializer
 
     @retry(
         stop=stop_after_attempt(3),
@@ -183,7 +194,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def create_message(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         tools: ToolCollection | NotGiven = NOT_GIVEN,
         max_tokens: int | NotGiven = NOT_GIVEN,
         betas: list[AnthropicBetaParam] | NotGiven = NOT_GIVEN,
@@ -198,7 +209,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             ],
             "tools": tools.to_params() if tools else NOT_GIVEN,
             "max_tokens": max_tokens or self._settings.messages.max_tokens,
-            "model": self._settings.model,
+            "model": model,
             "betas": betas or self._settings.messages.betas,
             "system": system or self._settings.messages.system,
             "thinking": thinking or self._settings.messages.thinking,

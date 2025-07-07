@@ -29,7 +29,6 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
-from askui.settings import Settings
 from askui.utils.image_utils import ImageSource
 
 from ..logger import logger
@@ -37,7 +36,6 @@ from .askui.inference_api import AskUiInferenceApi
 
 
 def initialize_default_model_registry(  # noqa: C901
-    settings: Settings,
     reporter: Reporter = NULL_REPORTER,
 ) -> ModelRegistry:
     @functools.cache
@@ -47,7 +45,6 @@ def initialize_default_model_registry(  # noqa: C901
     @functools.cache
     def anthropic_facade() -> ModelFacade:
         messages_api = AnthropicMessagesApi(
-            settings=settings.anthropic.messages_api,
             locator_serializer=vlm_locator_serializer(),
         )
         computer_agent = Agent(
@@ -63,7 +60,6 @@ def initialize_default_model_registry(  # noqa: C901
     @functools.cache
     def askui_inference_api() -> AskUiInferenceApi:
         return AskUiInferenceApi(
-            settings=settings.askui.inference_api,
             locator_serializer=AskUiLocatorSerializer(
                 ai_element_collection=AiElementCollection(),
                 reporter=reporter,

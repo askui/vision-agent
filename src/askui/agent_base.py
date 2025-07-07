@@ -1,6 +1,6 @@
 import time
 import types
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Annotated, Optional, Type, overload
 
 from dotenv import load_dotenv
@@ -13,7 +13,6 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
-from askui.settings import Settings
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource, Img
@@ -34,7 +33,7 @@ from .reporting import Reporter
 from .retry import ConfigurableRetry, Retry
 
 
-class AgentBase(ABC):
+class AgentBase(ABC):  # noqa: B024
     def __init__(
         self,
         log_level: int | str,
@@ -43,7 +42,6 @@ class AgentBase(ABC):
         retry: Retry | None,
         models: ModelRegistry | None,
         tools: list[Tool] | None,
-        settings: Settings,
         agent_os: AgentOs | AndroidAgentOs,
     ) -> None:
         load_dotenv()
@@ -52,7 +50,6 @@ class AgentBase(ABC):
         self._agent_os = agent_os
         self._tools: list[Tool] = tools or []
         self._model_router = self._init_model_router(
-            settings=settings,
             reporter=self._reporter,
             models=models or {},
         )
@@ -67,12 +64,10 @@ class AgentBase(ABC):
 
     def _init_model_router(
         self,
-        settings: Settings,
         reporter: Reporter,
         models: ModelRegistry,
     ) -> ModelRouter:
         _models = initialize_default_model_registry(
-            settings=settings,
             reporter=reporter,
         )
         _models.update(models)
@@ -119,6 +114,8 @@ class AgentBase(ABC):
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         model: str | None = None,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -134,6 +131,10 @@ class AgentBase(ABC):
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message.
+            tools (list[Tool] | None, optional): The tools for the agent.
+                Defaults to a list of default tools depending on the selected model.
+            settings (AgentSettings | None, optional): The settings for the agent.
+                Defaults to a default settings depending on the selected model.
 
         Returns:
             None
@@ -165,22 +166,21 @@ class AgentBase(ABC):
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
-        _model = model or self._model_choice["act"]
-        _tools = self._get_tools_for_act(_model)
-        _settings = self._get_settings_for_act(_model)
+        model_choice = model or self._model_choice["act"]
+        _settings = settings or self._get_default_settings_for_act(model_choice)
+        _tools = tools or self._get_default_tools_for_act(model_choice)
         self._model_router.act(
             messages=messages,
-            model_choice=_model,
+            model_choice=model_choice,
             on_message=on_message,
             settings=_settings,
             tools=_tools,
         )
 
-    @abstractmethod
-    def _get_settings_for_act(self, model: str) -> ActSettings:
-        raise NotImplementedError
+    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:  # noqa: ARG002
+        return ActSettings()
 
-    def _get_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
+    def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:  # noqa: ARG002
         return self._tools
 
     @overload

@@ -80,14 +80,9 @@ class _UnexpectedResponseError(Exception):
         super().__init__(self.message)
 
 
-class AnthropicMessagesApiSettings(BaseSettings):
-    model_config = SettingsConfigDict(validate_by_name=True)
+class AnthropicMessagesApiSettingsBase(BaseSettings):
+    model_config = SettingsConfigDict(validate_by_name=True, env_prefix="ANTHROPIC_")
 
-    api_key: SecretStr = Field(
-        default=...,
-        min_length=1,
-        validation_alias="ANTHROPIC_API_KEY",
-    )
     messages: MessageSettings = Field(default_factory=MessageSettings)
     resolution: tuple[int, int] = Field(
         default_factory=lambda: (1280, 800),
@@ -95,21 +90,43 @@ class AnthropicMessagesApiSettings(BaseSettings):
     )
 
 
+AnthropicMessagesApiUnauthorizedSettings = AnthropicMessagesApiSettingsBase
+
+
+class AnthropicMessagesApiAuthorizedSettings(AnthropicMessagesApiSettingsBase):
+    api_key: SecretStr = Field(
+        default=...,
+        min_length=1,
+    )
+
+
+AnthropicMessagesApiSettings = (
+    AnthropicMessagesApiAuthorizedSettings | AnthropicMessagesApiUnauthorizedSettings
+)
+
+
 class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
     def __init__(
         self,
-        settings: AnthropicMessagesApiSettings,
         locator_serializer: VlmLocatorSerializer,
+        settings: AnthropicMessagesApiSettings | None = None,
     ) -> None:
-        self._settings = settings
-        self._client = Anthropic(api_key=self._settings.api_key.get_secret_value())
+        self._settings = settings or AnthropicMessagesApiUnauthorizedSettings()
         self._locator_serializer = locator_serializer
+
+    @property
+    def _client(self) -> Anthropic:
+        if not isinstance(self._settings, AnthropicMessagesApiAuthorizedSettings):
+            self._settings = AnthropicMessagesApiAuthorizedSettings.model_validate(
+                self._settings.model_dump()
+            )
+        return Anthropic(api_key=self._settings.api_key.get_secret_value())
 
     @override
     def create_message(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         tools: ToolCollection | NotGiven = NOT_GIVEN,
         max_tokens: int | NotGiven = NOT_GIVEN,
         betas: list[AnthropicBetaParam] | NotGiven = NOT_GIVEN,
@@ -124,7 +141,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
             ],
             tools=tools.to_params() if tools else NOT_GIVEN,
             max_tokens=max_tokens or self._settings.messages.max_tokens,
-            model=ANTHROPIC_MODEL_MAPPING[model_choice],
+            model=ANTHROPIC_MODEL_MAPPING[model],
             betas=betas or self._settings.messages.betas,
             system=system or self._settings.messages.system,
             thinking=thinking or self._settings.messages.thinking,
@@ -165,7 +182,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
                     ),
                 )
             ],
-            model_choice=model_choice,
+            model=model_choice,
             system=system,
         )
         content: list[ContentBlockParam] = (

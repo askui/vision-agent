@@ -14,9 +14,9 @@ from askui.models.shared.settings import (
     COMPUTER_USE_20241022_BETA_FLAG,
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
+    MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.settings import SETTINGS
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 
@@ -165,13 +165,23 @@ _SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
 </IMPORTANT>"""  # noqa: DTZ002, E501
 
-_SETTINGS = SETTINGS.model_copy(deep=True)
-_SETTINGS.act.messages.system = _SYSTEM_PROMPT
-_ACT_SETTINGS_20241022 = _SETTINGS.act.model_copy(deep=True)
-_ACT_SETTINGS_20241022.messages.betas = [COMPUTER_USE_20241022_BETA_FLAG]
-_ACT_SETTINGS_20250124 = _SETTINGS.act.model_copy(deep=True)
-_ACT_SETTINGS_20250124.messages.betas = [COMPUTER_USE_20250124_BETA_FLAG]
-_ACT_SETTINGS_20250124.messages.thinking = {"type": "enabled", "budget_tokens": 2048}
+
+_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value,
+        system=_SYSTEM_PROMPT,
+        betas=[COMPUTER_USE_20241022_BETA_FLAG],
+    ),
+)
+
+_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.CLAUDE__SONNET__4__20250514.value,
+        system=_SYSTEM_PROMPT,
+        betas=[COMPUTER_USE_20250124_BETA_FLAG],
+        thinking={"type": "enabled", "budget_tokens": 2048},
+    ),
+)
 
 
 class VisionAgent(AgentBase):
@@ -229,7 +239,6 @@ class VisionAgent(AgentBase):
             tools=[
                 ExceptionTool(),
             ],
-            settings=_SETTINGS,
             agent_os=self.tools.os,
         )
 
@@ -503,37 +512,21 @@ class VisionAgent(AgentBase):
         self.tools.os.mouse_down(button)
 
     @override
-    def _get_settings_for_act(self, model: str) -> ActSettings:
-        match model:
+    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
+        match model_choice:
             case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ACT_SETTINGS_20241022
-            case ModelName.ASKUI:
-                match _SETTINGS.askui.inference_api.model:
-                    case "anthropic-claude-3-5-sonnet-20241022":
-                        return _ACT_SETTINGS_20241022
-                    case "claude-sonnet-4-20250514":
-                        return _ACT_SETTINGS_20250124
-            case ModelName.CLAUDE__SONNET__4__20250514:
-                return _ACT_SETTINGS_20250124
+                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
+            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
+                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:
-                return _SETTINGS.act
+                return ActSettings()
 
     @override
-    def _get_tools_for_act(self, model: str) -> list[Tool]:
-        match model:
+    def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:
+        match model_choice:
             case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
                 return self._tools + [Computer20241022Tool(agent_os=self.tools.os)]
-            case ModelName.ASKUI:
-                match _SETTINGS.askui.inference_api.model:
-                    case "anthropic-claude-3-5-sonnet-20241022":
-                        return self._tools + [
-                            Computer20241022Tool(agent_os=self.tools.os)
-                        ]
-                    case "claude-sonnet-4-20250514":
-                        return self._tools + [
-                            Computer20250124Tool(agent_os=self.tools.os)
-                        ]
-            case ModelName.CLAUDE__SONNET__4__20250514:
+            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
             case _:
                 return self._tools

@@ -19,7 +19,7 @@ class MessagesApi(ABC):
     def create_message(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         tools: ToolCollection | NotGiven = NOT_GIVEN,
         max_tokens: int | NotGiven = NOT_GIVEN,
         betas: list[AnthropicBetaParam] | NotGiven = NOT_GIVEN,
@@ -31,7 +31,7 @@ class MessagesApi(ABC):
 
         Args:
             messages (list[MessageParam]): The messages to create a message.
-            model_choice (str): The model to use.
+            model (str): The model to use.
             tools (ToolCollection | NotGiven): The tools to use.
             max_tokens (int | NotGiven): The maximum number of tokens to generate.
             betas (list[AnthropicBetaParam] | NotGiven): The betas to use.

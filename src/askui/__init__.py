@@ -32,6 +32,7 @@ from .models import (
     UrlImageSourceParam,
 )
 from .models.shared.settings import ActSettings, MessageSettings
+from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
@@ -70,6 +71,7 @@ __all__ = [
     "Retry",
     "TextBlockParam",
     "TextCitationParam",
+    "Tool",
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
