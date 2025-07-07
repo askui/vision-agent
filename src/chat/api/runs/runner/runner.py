@@ -16,6 +16,13 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.tools.pynput_agent_os import PynputAgentOs
 from askui.utils.image_utils import ImageSource
+from askui.web_agent import WebVisionAgent
+from chat.api.assistants.seeds import (
+    ANDROID_VISION_AGENT,
+    ASKUI_VISION_AGENT,
+    ASKUI_WEB_AGENT,
+    HUMAN_DEMONSTRATION_AGENT,
+)
 from chat.api.messages.service import MessageCreateRequest, MessageService
 from chat.api.models import MAX_MESSAGES_PER_THREAD, ListQuery
 from chat.api.runs.models import Run, RunError
@@ -33,11 +40,6 @@ if TYPE_CHECKING:
     from askui.tools.agent_os import InputEvent
 
 logger = logging.getLogger(__name__)
-
-
-ASKUI_VISION_AGENT_ID = "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmca"
-ASKUI_ANDROID_AGENT_ID = "asst_78da09fbf1ed43c7826fb1686f89f541"
-HUMAN_AGENT_ID = "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmcb"
 
 
 class Runner:
@@ -152,8 +154,16 @@ class Runner:
             event_queue=event_queue,
         )
 
+    def _run_askui_web_agent(self, event_queue: queue.Queue[Events]) -> None:
+        self._run_agent(
+            agent_type="web",
+            event_queue=event_queue,
+        )
+
     def _run_agent(
-        self, agent_type: Literal["android", "vision"], event_queue: queue.Queue[Events]
+        self,
+        agent_type: Literal["android", "vision", "web"],
+        event_queue: queue.Queue[Events],
     ) -> None:
         messages: list[MessageParam] = [
             MessageParam(
@@ -199,6 +209,14 @@ class Runner:
                 )
             return
 
+        if agent_type == "web":
+            with WebVisionAgent() as web_agent:
+                web_agent.act(
+                    messages,
+                    on_message=on_message,
+                )
+            return
+
         with VisionAgent() as agent:
             agent.act(
                 messages,
@@ -217,12 +235,14 @@ class Runner:
             )
         )
         try:
-            if self._run.assistant_id == HUMAN_AGENT_ID:
+            if self._run.assistant_id == HUMAN_DEMONSTRATION_AGENT.id:
                 self._run_human_agent(event_queue)
-            elif self._run.assistant_id == ASKUI_VISION_AGENT_ID:
+            elif self._run.assistant_id == ASKUI_VISION_AGENT.id:
                 self._run_askui_vision_agent(event_queue)
-            elif self._run.assistant_id == ASKUI_ANDROID_AGENT_ID:
+            elif self._run.assistant_id == ANDROID_VISION_AGENT.id:
                 self._run_askui_android_agent(event_queue)
+            elif self._run.assistant_id == ASKUI_WEB_AGENT.id:
+                self._run_askui_web_agent(event_queue)
             updated_run = self._retrieve_run()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)
