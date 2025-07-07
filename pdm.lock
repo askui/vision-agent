@@ -2,10 +2,10 @@
 # It is not intended for manual editing.
 
 [metadata]
-groups = ["default", "chat", "pynput", "test"]
+groups = ["default", "android", "chat", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:3090c84eb2439f19cf4e2d303fcc89cf6852fa9739e84bd0e7d0cfe9e15a314b"
+content_hash = "sha256:cddcbf34746f07954e7be404593f3972cacc6c15aae3dcc3576937f46bf64a0a"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -151,7 +151,7 @@ name = "click"
 version = "8.1.8"
 requires_python = ">=3.7"
 summary = "Composable command line interface toolkit"
-groups = ["default", "chat"]
+groups = ["chat"]
 dependencies = [
     "colorama; platform_system == \"Windows\"",
     "importlib-metadata; python_version < \"3.8\"",
@@ -318,7 +318,7 @@ name = "evdev"
 version = "1.9.2"
 requires_python = ">=3.8"
 summary = "Bindings to the Linux input handling subsystem"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "\"linux\" in sys_platform"
 files = [
     {file = "evdev-1.9.2.tar.gz", hash = "sha256:5d3278892ce1f92a74d6bf888cc8525d9f68af85dbe336c95d1c87fb8f423069"},
@@ -330,6 +330,7 @@ version = "1.2.2"
 requires_python = ">=3.7"
 summary = "Backport of PEP 654 (exception groups)"
 groups = ["default", "chat", "test"]
+marker = "python_version < \"3.11\""
 files = [
     {file = "exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b"},
     {file = "exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc"},
@@ -360,27 +361,6 @@ dependencies = [
 files = [
     {file = "fastapi-0.115.12-py3-none-any.whl", hash = "sha256:e94613d6c05e27be7ffebdd6ea5f388112e5e430c8f7d6494a9d1d88d43e814d"},
     {file = "fastapi-0.115.12.tar.gz", hash = "sha256:1e2c2a2646905f9e83d32f04a3f86aff4a286669c6c950ca95b5fd68c2602681"},
-]
-
-[[package]]
-name = "fastmcp"
-version = "2.3.4"
-requires_python = ">=3.10"
-summary = "The fast, Pythonic way to build MCP servers."
-groups = ["default"]
-dependencies = [
-    "exceptiongroup>=1.2.2",
-    "httpx>=0.28.1",
-    "mcp<2.0.0,>=1.8.1",
-    "openapi-pydantic>=0.5.1",
-    "python-dotenv>=1.1.0",
-    "rich>=13.9.4",
-    "typer>=0.15.2",
-    "websockets>=14.0",
-]
-files = [
-    {file = "fastmcp-2.3.4-py3-none-any.whl", hash = "sha256:12a45f72dd95aeaa1a6a56281fff96ca46929def3ccd9f9eb125cb97b722fbab"},
-    {file = "fastmcp-2.3.4.tar.gz", hash = "sha256:f3fe004b8735b365a65ec2547eeb47db8352d5613697254854bc7c9c3c360eea"},
 ]
 
 [[package]]
@@ -429,7 +409,7 @@ name = "greenlet"
 version = "3.2.3"
 requires_python = ">=3.9"
 summary = "Lightweight in-process concurrent programming"
-groups = ["default", "test"]
+groups = ["chat", "test", "web"]
 files = [
     {file = "greenlet-3.2.3-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:1afd685acd5597349ee6d7a88a8bec83ce13c106ac78c196ee9dde7c04fe87be"},
     {file = "greenlet-3.2.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:761917cac215c61e9dc7324b2606107b3b292a8349bdebb31503ab4de3f559ac"},
@@ -643,17 +623,6 @@ files = [
 ]
 
 [[package]]
-name = "httpx-sse"
-version = "0.4.0"
-requires_python = ">=3.8"
-summary = "Consume Server-Sent Event (SSE) messages with HTTPX."
-groups = ["default"]
-files = [
-    {file = "httpx-sse-0.4.0.tar.gz", hash = "sha256:1e81a3a3070ce322add1d3529ed42eb5f70817f45ed6ec915ab753f961139721"},
-    {file = "httpx_sse-0.4.0-py3-none-any.whl", hash = "sha256:f329af6eae57eaa2bdfd962b42524764af68075ea87370a2de920af5341e318f"},
-]
-
-[[package]]
 name = "huggingface-hub"
 version = "0.30.1"
 requires_python = ">=3.8.0"
@@ -845,28 +814,6 @@ files = [
 ]
 
 [[package]]
-name = "mcp"
-version = "1.9.4"
-requires_python = ">=3.10"
-summary = "Model Context Protocol SDK"
-groups = ["default"]
-dependencies = [
-    "anyio>=4.5",
-    "httpx-sse>=0.4",
-    "httpx>=0.27",
-    "pydantic-settings>=2.5.2",
-    "pydantic<3.0.0,>=2.7.2",
-    "python-multipart>=0.0.9",
-    "sse-starlette>=1.6.1",
-    "starlette>=0.27",
-    "uvicorn>=0.23.1; sys_platform != \"emscripten\"",
-]
-files = [
-    {file = "mcp-1.9.4-py3-none-any.whl", hash = "sha256:7fcf36b62936adb8e63f89346bccca1268eeca9bf6dfb562ee10b1dfbda9dac0"},
-    {file = "mcp-1.9.4.tar.gz", hash = "sha256:cfb0bcd1a9535b42edaef89947b9e18a8feb49362e1cc059d6e7fc636f2cb09f"},
-]
-
-[[package]]
 name = "mdurl"
 version = "0.1.2"
 requires_python = ">=3.7"
@@ -882,7 +829,7 @@ name = "mss"
 version = "10.0.0"
 requires_python = ">=3.9"
 summary = "An ultra fast cross-platform multiple screenshots module in pure python using ctypes."
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 files = [
     {file = "mss-10.0.0-py3-none-any.whl", hash = "sha256:82cf6460a53d09e79b7b6d871163c982e6c7e9649c426e7b7591b74956d5cb64"},
     {file = "mss-10.0.0.tar.gz", hash = "sha256:d903e0d51262bf0f8782841cf16eaa6d7e3e1f12eae35ab41c2e318837c6637f"},
@@ -958,20 +905,6 @@ dependencies = [
 files = [
     {file = "openai-1.85.0-py3-none-any.whl", hash = "sha256:7dc3e839cb8bb8747979a90c63ad4cb25a8e0cbec17b53eec009532c9965cecf"},
     {file = "openai-1.85.0.tar.gz", hash = "sha256:6ba76e4ebc5725f71f2f6126c7cb5169ca8de60dd5aa61f350f9448ad162c913"},
-]
-
-[[package]]
-name = "openapi-pydantic"
-version = "0.5.1"
-requires_python = "<4.0,>=3.8"
-summary = "Pydantic OpenAPI schema implementation"
-groups = ["default"]
-dependencies = [
-    "pydantic>=1.8",
-]
-files = [
-    {file = "openapi_pydantic-0.5.1-py3-none-any.whl", hash = "sha256:a3a09ef4586f5bd760a8df7f43028b60cafb6d9f61de2acba9574766255ab146"},
-    {file = "openapi_pydantic-0.5.1.tar.gz", hash = "sha256:ff6835af6bde7a459fb93eb93bb92b8749b754fc6e51b2f1590a19dc3005ee0d"},
 ]
 
 [[package]]
@@ -1056,23 +989,23 @@ files = [
 
 [[package]]
 name = "playwright"
-version = "1.52.0"
+version = "1.53.0"
 requires_python = ">=3.9"
 summary = "A high-level API to automate web browsers"
-groups = ["default", "test"]
+groups = ["chat", "test", "web"]
 dependencies = [
     "greenlet<4.0.0,>=3.1.1",
     "pyee<14,>=13",
 ]
 files = [
-    {file = "playwright-1.52.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:19b2cb9d4794062008a635a99bd135b03ebb782d460f96534a91cb583f549512"},
-    {file = "playwright-1.52.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:0797c0479cbdc99607412a3c486a3a2ec9ddc77ac461259fd2878c975bcbb94a"},
-    {file = "playwright-1.52.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:7223960b7dd7ddeec1ba378c302d1d09733b8dac438f492e9854c85d3ca7144f"},
-    {file = "playwright-1.52.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:d010124d24a321e0489a8c0d38a3971a7ca7656becea7656c9376bfea7f916d4"},
-    {file = "playwright-1.52.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4173e453c43180acc60fd77ffe1ebee8d0efbfd9986c03267007b9c3845415af"},
-    {file = "playwright-1.52.0-py3-none-win32.whl", hash = "sha256:cd0bdf92df99db6237a99f828e80a6a50db6180ef8d5352fc9495df2c92f9971"},
-    {file = "playwright-1.52.0-py3-none-win_amd64.whl", hash = "sha256:dcbf75101eba3066b7521c6519de58721ea44379eb17a0dafa94f9f1b17f59e4"},
-    {file = "playwright-1.52.0-py3-none-win_arm64.whl", hash = "sha256:9d0085b8de513de5fb50669f8e6677f0252ef95a9a1d2d23ccee9638e71e65cb"},
+    {file = "playwright-1.53.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:48a1a15ce810f0ffe512b6050de9871ea193b41dd3cc1bbed87b8431012419ba"},
+    {file = "playwright-1.53.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a701f9498a5b87e3f929ec01cea3109fbde75821b19c7ba4bba54f6127b94f76"},
+    {file = "playwright-1.53.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:f765498341c4037b4c01e742ae32dd335622f249488ccd77ca32d301d7c82c61"},
+    {file = "playwright-1.53.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:db19cb5b58f3b15cad3e2419f4910c053e889202fc202461ee183f1530d1db60"},
+    {file = "playwright-1.53.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9276c9c935fc062f51f4f5107e56420afd6d9a524348dc437793dc2e34c742e3"},
+    {file = "playwright-1.53.0-py3-none-win32.whl", hash = "sha256:36eedec101724ff5a000cddab87dd9a72a39f9b3e65a687169c465484e667c06"},
+    {file = "playwright-1.53.0-py3-none-win_amd64.whl", hash = "sha256:d68975807a0fd997433537f1dcf2893cda95884a39dc23c6f591b8d5f691e9e8"},
+    {file = "playwright-1.53.0-py3-none-win_arm64.whl", hash = "sha256:fcfd481f76568d7b011571160e801b47034edd9e2383c43d83a5fb3f35c67885"},
 ]
 
 [[package]]
@@ -1106,7 +1039,7 @@ files = [
 name = "pure-python-adb"
 version = "0.3.0.dev0"
 summary = "Pure python implementation of the adb client"
-groups = ["default"]
+groups = ["android", "chat"]
 files = [
     {file = "pure-python-adb-0.3.0.dev0.tar.gz", hash = "sha256:0ecc89d780160cfe03260ba26df2c471a05263b2cad0318363573ee8043fb94d"},
 ]
@@ -1251,7 +1184,7 @@ name = "pyee"
 version = "13.0.0"
 requires_python = ">=3.8"
 summary = "A rough port of Node.js's EventEmitter to Python with a few tricks of its own"
-groups = ["default", "test"]
+groups = ["chat", "test", "web"]
 dependencies = [
     "typing-extensions",
 ]
@@ -1286,7 +1219,7 @@ files = [
 name = "pynput"
 version = "1.8.1"
 summary = "Monitor and control user input devices"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 dependencies = [
     "enum34; python_version == \"2.7\"",
     "evdev>=1.3; \"linux\" in sys_platform",
@@ -1305,7 +1238,7 @@ name = "pyobjc-core"
 version = "11.0"
 requires_python = ">=3.8"
 summary = "Python<->ObjC Interoperability Module"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "sys_platform == \"darwin\""
 files = [
     {file = "pyobjc_core-11.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:10866b3a734d47caf48e456eea0d4815c2c9b21856157db5917b61dee06893a1"},
@@ -1321,7 +1254,7 @@ name = "pyobjc-framework-applicationservices"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework ApplicationServices on macOS"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1343,7 +1276,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Cocoa frameworks on macOS"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1362,7 +1295,7 @@ name = "pyobjc-framework-coretext"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework CoreText on macOS"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1383,7 +1316,7 @@ name = "pyobjc-framework-quartz"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Quartz frameworks on macOS"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -1510,21 +1443,10 @@ files = [
 ]
 
 [[package]]
-name = "python-multipart"
-version = "0.0.20"
-requires_python = ">=3.8"
-summary = "A streaming multipart parser for Python"
-groups = ["default"]
-files = [
-    {file = "python_multipart-0.0.20-py3-none-any.whl", hash = "sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104"},
-    {file = "python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13"},
-]
-
-[[package]]
 name = "python-xlib"
 version = "0.33"
 summary = "Python X Library"
-groups = ["pynput"]
+groups = ["chat", "pynput"]
 marker = "\"linux\" in sys_platform"
 dependencies = [
     "six>=1.10.0",
@@ -1669,22 +1591,11 @@ files = [
 ]
 
 [[package]]
-name = "shellingham"
-version = "1.5.4"
-requires_python = ">=3.7"
-summary = "Tool to Detect Surrounding Shell"
-groups = ["default"]
-files = [
-    {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
-    {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["default", "pynput"]
+groups = ["default", "chat", "pynput"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
@@ -1702,26 +1613,11 @@ files = [
 ]
 
 [[package]]
-name = "sse-starlette"
-version = "2.3.5"
-requires_python = ">=3.9"
-summary = "SSE plugin for Starlette"
-groups = ["default"]
-dependencies = [
-    "anyio>=4.7.0",
-    "starlette>=0.41.3",
-]
-files = [
-    {file = "sse_starlette-2.3.5-py3-none-any.whl", hash = "sha256:251708539a335570f10eaaa21d1848a10c42ee6dc3a9cf37ef42266cdb1c52a8"},
-    {file = "sse_starlette-2.3.5.tar.gz", hash = "sha256:228357b6e42dcc73a427990e2b4a03c023e2495ecee82e14f07ba15077e334b2"},
-]
-
-[[package]]
 name = "starlette"
 version = "0.46.2"
 requires_python = ">=3.9"
 summary = "The little ASGI library that shines."
-groups = ["default", "chat"]
+groups = ["chat"]
 dependencies = [
     "anyio<5,>=3.6.2",
     "typing-extensions>=3.10.0; python_version < \"3.10\"",
@@ -1799,23 +1695,6 @@ files = [
 ]
 
 [[package]]
-name = "typer"
-version = "0.15.4"
-requires_python = ">=3.7"
-summary = "Typer, build great CLIs. Easy to code. Based on Python type hints."
-groups = ["default"]
-dependencies = [
-    "click<8.2,>=8.0.0",
-    "rich>=10.11.0",
-    "shellingham>=1.3.0",
-    "typing-extensions>=3.7.4.3",
-]
-files = [
-    {file = "typer-0.15.4-py3-none-any.whl", hash = "sha256:eb0651654dcdea706780c466cf06d8f174405a659ffff8f163cfbfee98c0e173"},
-    {file = "typer-0.15.4.tar.gz", hash = "sha256:89507b104f9b6a0730354f27c39fae5b63ccd0c95b1ce1f1a6ba0cfd329997c3"},
-]
-
-[[package]]
 name = "types-pillow"
 version = "10.2.0.20240822"
 requires_python = ">=3.8"
@@ -1889,7 +1768,7 @@ name = "typing-extensions"
 version = "4.13.1"
 requires_python = ">=3.8"
 summary = "Backported and Experimental Type Hints for Python 3.8+"
-groups = ["default", "chat", "test"]
+groups = ["default", "chat", "test", "web"]
 files = [
     {file = "typing_extensions-4.13.1-py3-none-any.whl", hash = "sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69"},
     {file = "typing_extensions-4.13.1.tar.gz", hash = "sha256:98795af00fb9640edec5b8e31fc647597b4691f099ad75f469a2616be1a76dff"},
@@ -1925,7 +1804,7 @@ name = "uvicorn"
 version = "0.34.3"
 requires_python = ">=3.9"
 summary = "The lightning-fast ASGI server."
-groups = ["default", "chat"]
+groups = ["chat"]
 dependencies = [
     "click>=7.0",
     "h11>=0.8",
