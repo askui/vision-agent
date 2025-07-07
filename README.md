@@ -775,11 +775,15 @@ If you would like to disable the recording of usage data, set the `ASKUI__VA__TE
 ### AskUI Chat
 
 AskUI Chat is a web application that allows interacting with an AskUI Vision Agent similar how it can be
-done with `VisionAgent.act()` but in a more interactive manner that involves less code. Aside from
-telling the AskUI Vision Agent what to do, the user can also demonstrate what to do (currently, only
+done with `VisionAgent.act()` or `AndroidVisionAgent.act()` but in a more interactive manner that involves less code. Aside from
+telling the agent what to do, the user can also demonstrate what to do (currently, only
 clicking is supported).
 
 **⚠️ Warning:** AskUI Chat is currently in an experimental stage and has several limitations (see below).
+
+#### Architecture
+
+This repository only includes the AskUI Chat API (`src/askui/chat`). The AskUI Chat UI can be accessed through the [AskUI Hub](https://hub.askui.com/) and connects to the local Chat API after it has been started.
 
 #### Configuration
 
@@ -787,13 +791,12 @@ To use the chat, configure the following environment variables:
 
 - `ASKUI_TOKEN`: AskUI Vision Agent behind chat uses currently the AskUI API
 - `ASKUI_WORKSPACE_ID`: AskUI Vision Agent behind chat uses currently the AskUI API
-- `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores its data in a directory locally. You can change the default directory by setting this environment variable.
+- `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores all data in a directory locally. You can change the default directory by setting this environment variable.
 
 #### Installation
 
 ```bash
 pdm install # is going to install the dependencies of the api
-pdm run chat:ui:install # is going to install the dependencies of the ui
 ```
 
 You may need to give permissions on the fast run of the Chat UI to demonstrate actions (aka record clicks).
@@ -802,7 +805,6 @@ You may need to give permissions on the fast run of the Chat UI to demonstrate a
 
 ```bash
 pdm run chat:api # is going to start the api at port 8000
-pdm run chat:ui # is going to start the ui at port 3000
 ```
 
 You can use the chat to record a workflow and redo it later. For that, just tell the agent to redo all previous steps.
@@ -815,7 +817,7 @@ You can use the chat to record a workflow and redo it later. For that, just tell
 #### Limitations
 
 - A lot of errors are not handled properly and we allow the user to do a lot of actions that can lead to errors instead of properly guiding the user.
-- The chat currently only allows rerunning actions through `VisionAgent.act()` which can be expensive, slow and is not necessary the most reliable way to do it.
+- The chat currently only allows rerunning actions through `VisionAgent.act()` (or `AndroidVisionAgent.act()` or `WebVisionAgent.act()`) which can be expensive, slow and is not necessary the most reliable way to do it.
 - A lot quirks in UI and API.
 - Currently, api and ui need to be run in dev mode.
 - When demonstrating actions, the corresponding screenshot may not reflect the correct state of the screen before the action. In this case, cancel demonstrating, delete messages and try again.
@@ -824,10 +826,3 @@ You can use the chat to record a workflow and redo it later. For that, just tell
 - The agent is going to fail if there are no messages in the conversation, there is no tool use result message following the tool use message somewhere in the conversation, a message is too long etc.
   Just adding or deleting the message in this case should fix the issue.
 - You should not switch the conversation while waiting for an agent's answers or demonstrating actions.
-
-
-
-#### Architecture
-
-- The chat api/backend is a [FastAPI](https://fastapi.tiangolo.com/) application that provides a REST API similar to [OpenAI's Assistants API](https://platform.openai.com/docs/assistants/overview).
-- The chat ui/frontend is a [Next.js](https://nextjs.org/) application that provides a web interface to the chat api.
