@@ -792,11 +792,14 @@ To use the chat, configure the following environment variables:
 - `ASKUI_TOKEN`: AskUI Vision Agent behind chat uses currently the AskUI API
 - `ASKUI_WORKSPACE_ID`: AskUI Vision Agent behind chat uses currently the AskUI API
 - `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores all data in a directory locally. You can change the default directory by setting this environment variable.
+- `ASKUI__CHAT_API__HOST` (optional, defaults to `127.0.0.1`): The host to bind the chat API to.
+- `ASKUI__CHAT_API__PORT` (optional, defaults to `9261`): The port to bind the chat API to.
+- `ASKUI__CHAT_API__LOG_LEVEL` (optional, defaults to `info`): The log level to use for the chat API.
 
 #### Installation
 
 ```bash
-pdm install # is going to install the dependencies of the api
+pip install askui[chat]
 ```
 
 You may need to give permissions on the fast run of the Chat UI to demonstrate actions (aka record clicks).
@@ -804,7 +807,7 @@ You may need to give permissions on the fast run of the Chat UI to demonstrate a
 #### Usage
 
 ```bash
-pdm run chat:api # is going to start the api at port 8000
+python -m askui.chat
 ```
 
 You can use the chat to record a workflow and redo it later. For that, just tell the agent to redo all previous steps.
