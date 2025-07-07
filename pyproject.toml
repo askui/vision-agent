@@ -54,7 +54,7 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
-"chat:api" = "uvicorn chat.api.app:app --reload --port 8000"
+"chat:api" = "uvicorn askui.chat.api.app:app --reload --port 8000"
 "mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
 
 [dependency-groups]
@@ -100,7 +100,6 @@ warn_unreachable = true
 strict_optional = true
 plugins = ["pydantic.mypy"]
 exclude = [
-    "src/askui/chat/.*",
     "src/askui/models/ui_tars_ep/ui_tars_api.py",
     "src/askui/tools/anthropic/computer.py",
     "src/askui/tools/askui/askui_ui_controller_grpc/.*",
