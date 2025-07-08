@@ -1,10 +1,11 @@
+import json
 import pathlib
 import subprocess
 import sys
 import time
 import types
 import uuid
-from typing import Literal, Type
+from typing import Literal, Type, Union
 
 import grpc
 from PIL import Image
@@ -28,6 +29,25 @@ from ..utils import process_exists, wait_for_port
 from .exceptions import (
     AskUiControllerOperationFailedError,
     AskUiControllerOperationTimeoutError,
+)
+from .mouse_cursor import MouseCursor
+from .render_objects import (
+    AddRenderObjectResponse,
+    GetMousePositionResponse,
+    Location,
+    RenderCommand,
+    RenderObject,
+    RenderObjectStyle,
+    RenderResponseMessage,
+    create_clear_render_objects_command,
+    create_delete_render_object_command,
+    create_get_mouse_position_command,
+    create_image_command,
+    create_line_command,
+    create_quad_command,
+    create_set_mouse_position_command,
+    create_text_command,
+    create_update_render_object_command,
 )
 
 
@@ -242,12 +262,14 @@ class AskUiControllerClient(AgentOs):
         self._stub: controller_v1.ControllerAPIStub | None = None
         self._channel: grpc.Channel | None = None
         self._session_info: controller_v1_pbs.SessionInfo | None = None
+        self._session_guid: str = str(uuid.uuid4())
         self._pre_action_wait = 0
         self._post_action_wait = 0.05
         self._max_retries = 10
         self._display = display
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
+        self._cursor: MouseCursor | None = None
 
     @telemetry.record_call()
     @override
@@ -361,9 +383,10 @@ class AskUiControllerClient(AgentOs):
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
+        session_guid = "{" + self._session_guid + "}"
         response = self._stub.StartSession(
             controller_v1_pbs.Request_StartSession(
-                sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True
+                sessionGUID=session_guid, immediateExecution=True
             )
         )
         self._session_info = response.sessionInfo
@@ -391,6 +414,17 @@ class AskUiControllerClient(AgentOs):
         self._stub.StopExecution(
             controller_v1_pbs.Request_StopExecution(sessionInfo=self._session_info)
         )
+
+    def _create_authenticated_request(
+        self, command: RenderCommand
+    ) -> controller_v1_pbs.Request_Send:
+        session_guid = "{" + self._session_guid + "}"
+        message = {
+            "message": {"header": {"authentication": session_guid}, "command": command}
+        }
+        request = controller_v1_pbs.Request_Send()
+        request.message = json.dumps(message)
+        return request
 
     @telemetry.record_call()
     @override
@@ -724,3 +758,326 @@ class AskUiControllerClient(AgentOs):
                 )
             ),
         )
+
+    @telemetry.record_call()
+    def get_mouse_position(self) -> Location:
+        """
+        Get the current mouse position in absolute coordinates.
+
+        Returns:
+            Location: The current mouse position as (x, y) coordinates.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_get_mouse_position_command()
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        response_data: RenderResponseMessage = json.loads(response.message)
+        mouse_response: GetMousePositionResponse = response_data["message"]["command"]
+
+        self._reporter.add_message("AgentOS", "get_mouse_position()")
+        return mouse_response["response"]["position"]
+
+    @telemetry.record_call()
+    def set_mouse_position(self, x: int, y: int) -> None:
+        """
+        Set the mouse position to the specified coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to set.
+            y (int): The vertical coordinate (in pixels) to set.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_set_mouse_position_command(x, y)
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        self._reporter.add_message("AgentOS", f"set_mouse_position({x}, {y})")
+
+    def add_quad_render_object(self, style: RenderObjectStyle) -> int:
+        """
+        Add a Quad render object with the specified style.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the quad.
+
+        Returns:
+            int: The ID of the created render object.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_quad_command(style)
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        response_data: RenderResponseMessage = json.loads(response.message)
+        add_response: AddRenderObjectResponse = response_data["message"]["command"]
+
+        self._reporter.add_message("AgentOS", f"add_quad_render_object({style})")
+        return add_response["response"]["id"]
+
+    def add_line_render_object(
+        self, style: RenderObjectStyle, points: list[Location]
+    ) -> int:
+        """
+        Add a Line render object with the specified style and points.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the line.
+            points (list[Location]): Array of point coordinates for the line.
+
+        Returns:
+            int: The ID of the created render object.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_line_command(style, points)
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        response_data: RenderResponseMessage = json.loads(response.message)
+        add_response: AddRenderObjectResponse = response_data["message"]["command"]
+
+        self._reporter.add_message(
+            "AgentOS", f"add_line_render_object({style}, {points})"
+        )
+        return add_response["response"]["id"]
+
+    def add_image_render_object(
+        self, style: RenderObjectStyle, bitmap_data: str
+    ) -> int:
+        """
+        Add an Image render object with the specified style and bitmap data.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the image.
+            bitmap_data (str): Base64 string of the bitmap data.
+
+        Returns:
+            int: The ID of the created render object.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_image_command(style, bitmap_data)
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        response_data: RenderResponseMessage = json.loads(response.message)
+        add_response: AddRenderObjectResponse = response_data["message"]["command"]
+
+        self._reporter.add_message("AgentOS", f"add_image_render_object({style})")
+        return add_response["response"]["id"]
+
+    def add_text_render_object(self, style: RenderObjectStyle, text: str) -> int:
+        """
+        Add a Text render object with the specified style and text content.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the text.
+            text (str): The text content to display.
+
+        Returns:
+            int: The ID of the created render object.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_text_command(style, text)
+        request = self._create_authenticated_request(command)
+
+        response = self._stub.Send(request)
+        response_data: RenderResponseMessage = json.loads(response.message)
+        add_response: AddRenderObjectResponse = response_data["message"]["command"]
+
+        self._reporter.add_message(
+            "AgentOS", f'add_text_render_object({style}, "{text}")'
+        )
+        return add_response["response"]["id"]
+
+    def update_render_object(
+        self,
+        object_id: int,
+        style: RenderObjectStyle,
+        additional_params: Union[list[Location], str, None] = None,
+    ) -> None:
+        """
+        Update an existing render object with new style and optional additional parameters.
+
+        Args:
+            object_id (int): The ID of the render object to update.
+            style (RenderObjectStyle): The new style properties.
+            additional_params (RenderObject | str | None, optional): Additional type-specific parameters.
+                Defaults to `None`.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_update_render_object_command(
+            object_id, style, additional_params
+        )
+        request = self._create_authenticated_request(command)
+
+        self._stub.Send(request)
+        self._reporter.add_message(
+            "AgentOS", f"update_render_object({object_id}, {style})"
+        )
+
+    def delete_render_object(self, object_id: int) -> None:
+        """
+        Delete a render object by its ID.
+
+        Args:
+            object_id (int): The ID of the render object to delete.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_delete_render_object_command(object_id)
+        request = self._create_authenticated_request(command)
+
+        self._stub.Send(request)
+        self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
+
+    def clear_render_objects(self) -> None:
+        """
+        Clear all render objects in the current session.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        command = create_clear_render_objects_command()
+        request = self._create_authenticated_request(command)
+
+        self._stub.Send(request)
+        self._reporter.add_message("AgentOS", "clear_render_objects()")
+
+    def create_mouse_cursor(
+        self,
+        x: int = 0,
+        y: int = 0,
+        color: str = "#000000",
+        opacity: float = 1.0,
+        line_width: int = 3,
+    ) -> MouseCursor:
+        """
+        Create a mouse cursor at the specified position.
+
+        Args:
+            x: Initial horizontal position
+            y: Initial vertical position
+            color: Cursor color (hex format)
+            opacity: Cursor opacity (0.0 to 1.0)
+            line_width: Line width for cursor outline
+
+        Returns:
+            MouseCursor: The created cursor instance
+        """
+        if self._cursor is not None:
+            self._cursor.destroy_cursor()
+
+        self._cursor = MouseCursor(
+            controller=self,
+            x=x,
+            y=y,
+            color=color,
+            opacity=opacity,
+            line_width=line_width,
+        )
+
+        self._cursor.create_cursor()
+        self._reporter.add_message("AgentOS", f"create_mouse_cursor({x}, {y}, {color})")
+        return self._cursor
+
+    def update_cursor_position(self, x: int, y: int) -> None:
+        """
+        Update the cursor position if a cursor exists.
+
+        Args:
+            x: New horizontal position
+            y: New vertical position
+        """
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.update_cursor_position(x, y)
+        self._reporter.add_message("AgentOS", f"update_cursor_position({x}, {y})")
+
+    def update_cursor_color(self, color: str) -> None:
+        """
+        Update the cursor color if a cursor exists.
+
+        Args:
+            color: New cursor color (hex format)
+        """
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.update_cursor_color(color)
+        self._reporter.add_message("AgentOS", f"update_cursor_color({color})")
+
+    def set_cursor_opacity(self, opacity: float) -> None:
+        """
+        Set the cursor opacity if a cursor exists.
+
+        Args:
+            opacity: New opacity value (0.0 to 1.0)
+        """
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.set_opacity(opacity)
+        self._reporter.add_message("AgentOS", f"set_cursor_opacity({opacity})")
+
+    def show_cursor(self) -> None:
+        """Show the cursor if it exists."""
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.show_cursor()
+        self._reporter.add_message("AgentOS", "show_cursor()")
+
+    def hide_cursor(self) -> None:
+        """Hide the cursor if it exists."""
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.hide_cursor()
+        self._reporter.add_message("AgentOS", "hide_cursor()")
+
+    def destroy_cursor(self) -> None:
+        """Destroy the cursor and clean up resources."""
+        if self._cursor is not None:
+            self._cursor.destroy_cursor()
+            self._cursor = None
+            self._reporter.add_message("AgentOS", "destroy_cursor()")
+
+    def animate_cursor_to(
+        self, target_x: int, target_y: int, duration_ms: int = 500
+    ) -> None:
+        """
+        Smoothly animate cursor to target position.
+
+        Args:
+            target_x: Target horizontal position
+            target_y: Target vertical position
+            duration_ms: Animation duration in milliseconds
+        """
+        if self._cursor is None:
+            raise RuntimeError("No cursor created. Call create_mouse_cursor() first.")
+
+        self._cursor.animate_to(target_x, target_y, duration_ms)
+        self._reporter.add_message(
+            "AgentOS", f"animate_cursor_to({target_x}, {target_y}, {duration_ms})"
+        )
+
+    @property
+    def cursor(self) -> MouseCursor | None:
+        """Get the current cursor instance."""
+        return self._cursor
