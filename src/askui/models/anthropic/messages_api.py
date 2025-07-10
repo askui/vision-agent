@@ -1,4 +1,5 @@
 import json
+from functools import cached_property
 from typing import Type, cast
 
 from anthropic import NOT_GIVEN, Anthropic, NotGiven
@@ -80,29 +81,23 @@ class _UnexpectedResponseError(Exception):
         super().__init__(self.message)
 
 
-class AnthropicMessagesApiSettingsBase(BaseSettings):
-    model_config = SettingsConfigDict(validate_by_name=True, env_prefix="ANTHROPIC_")
+class AnthropicMessagesApiSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        validate_by_name=True,
+        env_prefix="ANTHROPIC__",
+        env_nested_delimiter="__",
+    )
 
+    api_key: SecretStr = Field(
+        default=...,
+        min_length=1,
+        validation_alias="ANTHROPIC_API_KEY",
+    )
     messages: MessageSettings = Field(default_factory=MessageSettings)
     resolution: tuple[int, int] = Field(
         default_factory=lambda: (1280, 800),
         description="The resolution of the screen to use for the model",
     )
-
-
-AnthropicMessagesApiUnauthorizedSettings = AnthropicMessagesApiSettingsBase
-
-
-class AnthropicMessagesApiAuthorizedSettings(AnthropicMessagesApiSettingsBase):
-    api_key: SecretStr = Field(
-        default=...,
-        min_length=1,
-    )
-
-
-AnthropicMessagesApiSettings = (
-    AnthropicMessagesApiAuthorizedSettings | AnthropicMessagesApiUnauthorizedSettings
-)
 
 
 class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
@@ -111,15 +106,17 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         locator_serializer: VlmLocatorSerializer,
         settings: AnthropicMessagesApiSettings | None = None,
     ) -> None:
-        self._settings = settings or AnthropicMessagesApiUnauthorizedSettings()
+        self._settings_default = settings
         self._locator_serializer = locator_serializer
 
-    @property
+    @cached_property
+    def _settings(self) -> AnthropicMessagesApiSettings:
+        if self._settings_default is None:
+            return AnthropicMessagesApiSettings()
+        return self._settings_default
+
+    @cached_property
     def _client(self) -> Anthropic:
-        if not isinstance(self._settings, AnthropicMessagesApiAuthorizedSettings):
-            self._settings = AnthropicMessagesApiAuthorizedSettings.model_validate(
-                self._settings.model_dump()
-            )
         return Anthropic(api_key=self._settings.api_key.get_secret_value())
 
     @override

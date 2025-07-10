@@ -1,5 +1,6 @@
 import base64
 import json as json_lib
+from functools import cached_property
 from typing import Any, Type
 
 import httpx
@@ -37,24 +38,25 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-class AskUiInferenceApiSettingsBase(BaseSettings):
-    model_config = SettingsConfigDict(validate_by_name=True, env_prefix="ASKUI_")
+class AskUiInferenceApiSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        validate_by_name=True,
+        env_prefix="ASKUI__",
+        env_nested_delimiter="__",
+    )
 
     inference_endpoint: HttpUrl = Field(
         default_factory=lambda: HttpUrl("https://inference.askui.com"),  # noqa: F821
+        validation_alias="ASKUI_INFERENCE_ENDPOINT",
     )
     messages: MessageSettings = Field(default_factory=MessageSettings)
-
-
-AskUiInferenceApiSettingsUnauthorized = AskUiInferenceApiSettingsBase
-
-
-class AskUiInferenceApiAuthorizedSettings(AskUiInferenceApiSettingsBase):
     token: SecretStr = Field(
         default=...,
+        validation_alias="ASKUI_TOKEN",
     )
     workspace_id: UUID4 = Field(
         default=...,
+        validation_alias="ASKUI_WORKSPACE_ID",
     )
 
     @property
@@ -71,26 +73,23 @@ class AskUiInferenceApiAuthorizedSettings(AskUiInferenceApiSettingsBase):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
-AskUiInferenceApiSettings = (
-    AskUiInferenceApiAuthorizedSettings | AskUiInferenceApiSettingsUnauthorized
-)
-
-
 class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def __init__(
         self,
         locator_serializer: AskUiLocatorSerializer,
         settings: AskUiInferenceApiSettings | None = None,
     ) -> None:
-        self._settings = settings or AskUiInferenceApiSettingsUnauthorized()
+        self._settings_default = settings
         self._locator_serializer = locator_serializer
 
-    @property
+    @cached_property
+    def _settings(self) -> AskUiInferenceApiSettings:
+        if self._settings_default is None:
+            return AskUiInferenceApiSettings()
+        return self._settings_default
+
+    @cached_property
     def _client(self) -> httpx.Client:
-        if not isinstance(self._settings, AskUiInferenceApiAuthorizedSettings):
-            self._settings = AskUiInferenceApiAuthorizedSettings.model_validate(
-                self._settings.model_dump()
-            )
         return httpx.Client(
             base_url=f"{self._settings.base_url}",
             headers={
