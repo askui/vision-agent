@@ -1,39 +1,190 @@
 import logging
-import time
-import types
-from typing import Annotated, Literal, Optional, Type, overload
+import platform
+import sys
+from datetime import datetime, timezone
+from typing import Annotated, Literal, Optional
 
-from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
+from typing_extensions import override
 
+from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.settings import (
+    COMPUTER_USE_20241022_BETA_FLAG,
+    COMPUTER_USE_20250124_BETA_FLAG,
+    ActSettings,
+    MessageSettings,
+)
+from askui.models.shared.tools import Tool
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
-from askui.utils.image_utils import ImageSource, Img
 
-from .logger import configure_logging, logger
+from .logger import logger
 from .models import ModelComposition
-from .models.exceptions import ElementNotFoundError
-from .models.model_router import ModelRouter, initialize_default_model_registry
-from .models.models import (
-    ModelChoice,
-    ModelName,
-    ModelRegistry,
-    Point,
-    TotalModelChoice,
-)
-from .models.types.response_schemas import ResponseSchema
+from .models.models import ModelChoice, ModelName, ModelRegistry
 from .reporting import CompositeReporter, Reporter
-from .retry import ConfigurableRetry, Retry
+from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
 
+_PC_KEY = [
+    "backspace",
+    "delete",
+    "enter",
+    "tab",
+    "escape",
+    "up",
+    "down",
+    "right",
+    "left",
+    "home",
+    "end",
+    "pageup",
+    "pagedown",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5",
+    "f6",
+    "f7",
+    "f8",
+    "f9",
+    "f10",
+    "f11",
+    "f12",
+    "space",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "!",
+    '"',
+    "#",
+    "$",
+    "%",
+    "&",
+    "'",
+    "(",
+    ")",
+    "*",
+    "+",
+    ",",
+    "-",
+    ".",
+    "/",
+    ":",
+    ";",
+    "<",
+    "=",
+    ">",
+    "?",
+    "@",
+    "[",
+    "\\",
+    "]",
+    "^",
+    "_",
+    "`",
+    "{",
+    "|",
+    "}",
+    "~",
+]
 
-class VisionAgent:
+_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
+* You are utilising a {sys.platform} machine using {platform.machine()} architecture with internet access.
+* When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
+* When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
+* When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* Valid keyboard keys available are {", ".join(_PC_KEY)}
+* The current date is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y").replace(" 0", " ")}.
+</SYSTEM_CAPABILITY>
+
+<IMPORTANT>
+* When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
+* If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
+</IMPORTANT>"""  # noqa: DTZ002, E501
+
+
+_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value,
+        system=_SYSTEM_PROMPT,
+        betas=[COMPUTER_USE_20241022_BETA_FLAG],
+    ),
+)
+
+_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
+    messages=MessageSettings(
+        model=ModelName.CLAUDE__SONNET__4__20250514.value,
+        system=_SYSTEM_PROMPT,
+        betas=[COMPUTER_USE_20250124_BETA_FLAG],
+        thinking={"type": "enabled", "budget_tokens": 2048},
+    ),
+)
+
+
+class VisionAgent(AgentBase):
     """
     A vision-based agent that can interact with user interfaces through computer vision and AI.
 
@@ -72,66 +223,24 @@ class VisionAgent:
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
     ) -> None:
-        load_dotenv()
-        configure_logging(level=log_level)
-        self._reporter = CompositeReporter(reporters=reporters)
+        reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
             agent_os=AskUiControllerClient(
                 display=display,
-                reporter=self._reporter,
-            ),
+                reporter=reporter,
+            )
         )
-        self._tool_collection = ToolCollection(
+        super().__init__(
+            log_level=log_level,
+            reporter=reporter,
+            model=model,
+            retry=retry,
+            models=models,
             tools=[
                 ExceptionTool(),
-            ]
+            ],
+            agent_os=self.tools.os,
         )
-        _models = initialize_default_model_registry(
-            tool_collection=self._tool_collection,
-            reporter=self._reporter,
-        )
-        _models.update(models or {})
-        self._model_router = ModelRouter(
-            reporter=self._reporter,
-            models=_models,
-        )
-        self.model = model
-        self._retry = retry or ConfigurableRetry(
-            strategy="Exponential",
-            base_delay=1000,
-            retry_count=3,
-            on_exception_types=(ElementNotFoundError,),
-        )
-        self._model_choice = self._initialize_model_choice(model)
-
-    def _initialize_model_choice(
-        self, model_choice: ModelComposition | ModelChoice | str | None
-    ) -> TotalModelChoice:
-        """Initialize the model choice based on the provided model parameter.
-
-        Args:
-            model (ModelComposition | ModelChoice | str | None): The model to initialize from. Can be a ModelComposition, ModelChoice dict, string, or None.
-
-        Returns:
-            TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to model names (or a ModelComposition for "locate").
-        """
-        if isinstance(model_choice, ModelComposition):
-            return {
-                "act": ModelName.ASKUI,
-                "get": ModelName.ASKUI,
-                "locate": model_choice,
-            }
-        if isinstance(model_choice, str) or model_choice is None:
-            return {
-                "act": model_choice or ModelName.ASKUI,
-                "get": model_choice or ModelName.ASKUI,
-                "locate": model_choice or ModelName.ASKUI,
-            }
-        return {
-            "act": model_choice.get("act", ModelName.ASKUI),
-            "get": model_choice.get("get", ModelName.ASKUI),
-            "locate": model_choice.get("locate", ModelName.ASKUI),
-        }
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -184,59 +293,6 @@ class VisionAgent:
         if locator is not None:
             self._mouse_move(locator, model)
         self.tools.os.click(button, repeat)
-
-    def _locate(
-        self,
-        locator: str | Locator,
-        screenshot: Optional[Img] = None,
-        model: ModelComposition | str | None = None,
-    ) -> Point:
-        def locate_with_screenshot() -> Point:
-            _screenshot = ImageSource(
-                self.tools.os.screenshot() if screenshot is None else screenshot
-            )
-            return self._model_router.locate(
-                screenshot=_screenshot,
-                locator=locator,
-                model_choice=model or self._model_choice["locate"],
-            )
-
-        point = self._retry.attempt(locate_with_screenshot)
-        self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
-        logger.debug("ModelRouter locate: (%d, %d)", point[0], point[1])
-        return point
-
-    @telemetry.record_call(exclude={"locator", "screenshot"})
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def locate(
-        self,
-        locator: str | Locator,
-        screenshot: Optional[Img] = None,
-        model: ModelComposition | str | None = None,
-    ) -> Point:
-        """
-        Locates the UI element identified by the provided locator.
-
-        Args:
-            locator (str | Locator): The identifier or description of the element to locate.
-            screenshot (Img | None, optional): The screenshot to use for locating the element. Can be a path to an image file, a PIL Image object or a data URL. If `None`, takes a screenshot of the currently selected display.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element using the `locator`.
-
-        Returns:
-            Point: The coordinates of the element as a tuple (x, y).
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                point = agent.locate("Submit button")
-                print(f"Element found at coordinates: {point}")
-            ```
-        """
-        self._reporter.add_message("User", f"locate {locator}")
-        logger.debug("VisionAgent received instruction to locate %s", locator)
-        return self._locate(locator, screenshot, model)
 
     def _mouse_move(
         self, locator: str | Locator, model: ModelComposition | str | None = None
@@ -353,159 +409,6 @@ class VisionAgent:
         self._reporter.add_message("User", msg)
         self.tools.os.type(text)
 
-    @overload
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: None = None,
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> str: ...
-    @overload
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: Type[ResponseSchema],
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> ResponseSchema: ...
-
-    @telemetry.record_call(exclude={"query", "image", "response_schema"})
-    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-    def get(
-        self,
-        query: Annotated[str, Field(min_length=1)],
-        response_schema: Type[ResponseSchema] | None = None,
-        model: str | None = None,
-        image: Optional[Img] = None,
-    ) -> ResponseSchema | str:
-        """
-        Retrieves information from an image (defaults to a screenshot of the current screen) based on the provided query.
-
-        Args:
-            query (str): The query describing what information to retrieve.
-            image (Img | None, optional): The image to extract information from. Defaults to a screenshot of the current screen. Can be a path to an image file, a PIL Image object or a data URL.
-            response_schema (Type[ResponseSchema] | None, optional): A Pydantic model class that defines the response schema. If not provided, returns a string.
-            model (str | None, optional): The composition or name of the model(s) to be used for retrieving information from the screen or image using the `query`. Note: `response_schema` is not supported by all models.
-
-        Returns:
-            ResponseSchema | str: The extracted information, `str` if no `response_schema` is provided.
-
-        Example:
-            ```python
-            from askui import ResponseSchemaBase, VisionAgent
-            from PIL import Image
-            import json
-
-            class UrlResponse(ResponseSchemaBase):
-                url: str
-
-            class NestedResponse(ResponseSchemaBase):
-                nested: UrlResponse
-
-            class LinkedListNode(ResponseSchemaBase):
-                value: str
-                next: "LinkedListNode | None"
-
-            with VisionAgent() as agent:
-                # Get URL as string
-                url = agent.get("What is the current url shown in the url bar?")
-
-                # Get URL as Pydantic model from image at (relative) path
-                response = agent.get(
-                    "What is the current url shown in the url bar?",
-                    response_schema=UrlResponse,
-                    image="screenshot.png",
-                )
-                # Dump whole model
-                print(response.model_dump_json(indent=2))
-                # or
-                response_json_dict = response.model_dump(mode="json")
-                print(json.dumps(response_json_dict, indent=2))
-                # or for regular dict
-                response_dict = response.model_dump()
-                print(response_dict["url"])
-
-                # Get boolean response from PIL Image
-                is_login_page = agent.get(
-                    "Is this a login page?",
-                    response_schema=bool,
-                    image=Image.open("screenshot.png"),
-                )
-                print(is_login_page)
-
-                # Get integer response
-                input_count = agent.get(
-                    "How many input fields are visible on this page?",
-                    response_schema=int,
-                )
-                print(input_count)
-
-                # Get float response
-                design_rating = agent.get(
-                    "Rate the page design quality from 0 to 1",
-                    response_schema=float,
-                )
-                print(design_rating)
-
-                # Get nested response
-                nested = agent.get(
-                    "Extract the URL and its metadata from the page",
-                    response_schema=NestedResponse,
-                )
-                print(nested.nested.url)
-
-                # Get recursive response
-                linked_list = agent.get(
-                    "Extract the breadcrumb navigation as a linked list",
-                    response_schema=LinkedListNode,
-                )
-                current = linked_list
-                while current:
-                    print(current.value)
-                    current = current.next
-            ```
-        """
-        logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self.tools.os.screenshot() if image is None else image)
-        self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
-        response = self._model_router.get(
-            image=_image,
-            query=query,
-            response_schema=response_schema,
-            model_choice=model or self._model_choice["get"],
-        )
-        message_content = (
-            str(response)
-            if isinstance(response, (str, bool, int, float))
-            else response.model_dump()
-        )
-        self._reporter.add_message("Agent", message_content)
-        return response
-
-    @telemetry.record_call()
-    @validate_call
-    def wait(
-        self,
-        sec: Annotated[float, Field(gt=0.0)],
-    ) -> None:
-        """
-        Pauses the execution of the program for the specified number of seconds.
-
-        Args:
-            sec (float): The number of seconds to wait. Must be greater than `0.0`.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                agent.wait(5)  # Pauses execution for 5 seconds
-                agent.wait(0.5)  # Pauses execution for 500 milliseconds
-            ```
-        """
-        time.sleep(sec)
-
     @telemetry.record_call()
     @validate_call
     def key_up(
@@ -608,69 +511,25 @@ class VisionAgent:
         logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
         self.tools.os.mouse_down(button)
 
-    @telemetry.record_call(exclude={"goal", "on_message"})
-    @validate_call
-    def act(
-        self,
-        goal: Annotated[str | list[MessageParam], Field(min_length=1)],
-        model: str | None = None,
-        on_message: OnMessageCb | None = None,
-    ) -> None:
-        """
-        Instructs the agent to achieve a specified goal through autonomous actions.
+    @override
+    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
+        match model_choice:
+            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
+            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
+                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
+            case _:
+                return ActSettings()
 
-        The agent will analyze the screen, determine necessary steps, and perform actions
-        to accomplish the goal. This may include clicking, typing, scrolling, and other
-        interface interactions.
-
-        Args:
-            goal (str | list[MessageParam]): A description of what the agent should achieve.
-            model (str | None, optional): The composition or name of the model(s) to be used for achieving the `goal`.
-            on_message (OnMessageCb | None, optional): Callback for new messages. If it returns `None`, stops and does not add the message.
-
-        Returns:
-            None
-
-        Raises:
-            MaxTokensExceededError: If the model reaches the maximum token limit
-                defined in the agent settings.
-            ModelRefusalError: If the model refuses to process the request.
-
-        Example:
-            ```python
-            from askui import VisionAgent
-
-            with VisionAgent() as agent:
-                agent.act("Open the settings menu")
-                agent.act("Search for 'printer' in the search box")
-                agent.act("Log in with username 'admin' and password '1234'")
-            ```
-        """
-        goal_str = (
-            goal
-            if isinstance(goal, str)
-            else "\n".join(msg.model_dump_json() for msg in goal)
-        )
-        self._reporter.add_message("User", f'act: "{goal_str}"')
-        logger.debug(
-            "VisionAgent received instruction to act towards the goal '%s'", goal_str
-        )
-        messages: list[MessageParam] = (
-            [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
-        )
-        _model = model or self._model_choice["act"]
-        self._update_tool_collection(_model)
-        self._model_router.act(messages, _model, on_message)
-
-    def _update_tool_collection(self, model: str) -> None:
-        if model == ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-            self._tool_collection.append_tool(
-                Computer20241022Tool(agent_os=self.tools.os)
-            )
-        if model == ModelName.CLAUDE__SONNET__4__20250514 or model == ModelName.ASKUI:
-            self._tool_collection.append_tool(
-                Computer20250124Tool(agent_os=self.tools.os)
-            )
+    @override
+    def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:
+        match model_choice:
+            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
+                return self._tools + [Computer20241022Tool(agent_os=self.tools.os)]
+            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
+                return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
+            case _:
+                return self._tools
 
     @telemetry.record_call()
     @validate_call
@@ -750,26 +609,3 @@ class VisionAgent:
         """
         logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
         self.tools.os.run_command(command)
-
-    @telemetry.record_call()
-    def close(self) -> None:
-        self.tools.os.disconnect()
-        self._reporter.generate()
-
-    @telemetry.record_call()
-    def open(self) -> None:
-        self.tools.os.connect()
-
-    @telemetry.record_call()
-    def __enter__(self) -> "VisionAgent":
-        self.open()
-        return self
-
-    @telemetry.record_call(exclude={"exc_value", "traceback"})
-    def __exit__(
-        self,
-        exc_type: Type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: types.TracebackType | None,
-    ) -> None:
-        self.close()

@@ -8,8 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel
 from typing_extensions import Literal, TypedDict
 
 from askui.locators.locators import Locator
-from askui.models.shared.computer_agent_cb_param import OnMessageCb
-from askui.models.shared.computer_agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.settings import ActSettings
+from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
@@ -36,12 +38,6 @@ class ModelName(str, Enum):
     HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT = "Qwen/Qwen2-VL-7B-Instruct"
     HF__SPACES__SHOWUI__2B = "showlab/ShowUI-2B"
     TARS = "tars"
-
-
-ANTHROPIC_MODEL_NAME_MAPPING = {
-    ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: "claude-3-5-sonnet-20241022",
-    ModelName.CLAUDE__SONNET__4__20250514: "claude-sonnet-4-20250514",
-}
 
 
 MODEL_DEFINITION_PROPERTY_REGEX_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
@@ -73,7 +69,7 @@ class ModelDefinition(BaseModel):
     """
 
     model_config = ConfigDict(
-        populate_by_name=True,
+        validate_by_name=True,
     )
     task: ModelDefinitionProperty = Field(
         description=(
@@ -170,6 +166,8 @@ class ActModel(abc.ABC):
                 messages: list[MessageParam],
                 model_choice: str,
                 on_message: OnMessageCb | None = None,
+                tools: list[Tool] | None = None,
+                settings: AgentSettings | None = None,
             ) -> None:
                 pass  # implement action logic here
 
@@ -183,6 +181,8 @@ class ActModel(abc.ABC):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
         """
         Execute autonomous actions to achieve a goal, using a message history
@@ -212,6 +212,10 @@ class ActModel(abc.ABC):
                 added to the message history and the acting continues based on the
                 message. The message may be modified by the callback to allow for
                 directing the assistant/agent or tool use.
+            tools (list[Tool] | None, optional): The tools for the agent.
+                Defaults to `None`.
+            settings (AgentSettings | None, optional): The settings for the agent.
+                Defaults to `None`.
 
         Returns:
             None
@@ -371,8 +375,15 @@ Example:
     from askui import ModelRegistry, ActModel
 
     class MyModel(ActModel):
-        def act(self, goal: str, model_choice: str) -> None:
-            pass
+        def act(
+            self,
+            messages: list[MessageParam],
+            model_choice: str,
+            on_message: OnMessageCb | None = None,
+            tools: list[Tool] | None = None,
+            settings: AgentSettings | None = None,
+        ) -> None:
+            pass  # implement action logic here
 
     # Registry with model instance
     registry: ModelRegistry = {

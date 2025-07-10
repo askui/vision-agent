@@ -1,45 +1,134 @@
+import base64
 import json as json_lib
 from typing import Any, Type
 
-import requests
+import httpx
+from anthropic import NOT_GIVEN, NotGiven
+from anthropic.types import AnthropicBetaParam
+from anthropic.types.beta import (
+    BetaTextBlockParam,
+    BetaThinkingConfigParam,
+    BetaToolChoiceParam,
+)
+from pydantic import UUID4, Field, HttpUrl, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
-from askui.models.askui.settings import AskUiSettings
 from askui.models.exceptions import ElementNotFoundError
 from askui.models.models import GetModel, LocateModel, ModelComposition, Point
+from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.settings import MessageSettings
+from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
 from ..types.response_schemas import to_response_schema
-from .exceptions import AskUiApiRequestFailedError
 
 
-class AskUiInferenceApi(GetModel, LocateModel):
+def _is_retryable_error(exception: BaseException) -> bool:
+    """Check if the exception is a retryable error (status codes 429 or 529)."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in (429, 529)
+    return False
+
+
+class AskUiInferenceApiSettingsBase(BaseSettings):
+    model_config = SettingsConfigDict(validate_by_name=True, env_prefix="ASKUI_")
+
+    inference_endpoint: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("https://inference.askui.com"),  # noqa: F821
+    )
+    messages: MessageSettings = Field(default_factory=MessageSettings)
+
+
+AskUiInferenceApiSettingsUnauthorized = AskUiInferenceApiSettingsBase
+
+
+class AskUiInferenceApiAuthorizedSettings(AskUiInferenceApiSettingsBase):
+    token: SecretStr = Field(
+        default=...,
+    )
+    workspace_id: UUID4 = Field(
+        default=...,
+    )
+
+    @property
+    def authorization_header(self) -> str:
+        token_str = self.token.get_secret_value()
+        token_base64 = base64.b64encode(token_str.encode()).decode()
+        return f"Basic {token_base64}"
+
+    @property
+    def base_url(self) -> str:
+        # NOTE(OS): Pydantic parses urls with trailing slashes
+        # meaning "https://inference.askui.com" turns into -> "https://inference.askui.com/"
+        # https://github.com/pydantic/pydantic/issues/7186
+        return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
+
+
+AskUiInferenceApiSettings = (
+    AskUiInferenceApiAuthorizedSettings | AskUiInferenceApiSettingsUnauthorized
+)
+
+
+class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def __init__(
         self,
-        settings: AskUiSettings,
         locator_serializer: AskUiLocatorSerializer,
+        settings: AskUiInferenceApiSettings | None = None,
     ) -> None:
-        self._settings = settings
+        self._settings = settings or AskUiInferenceApiSettingsUnauthorized()
         self._locator_serializer = locator_serializer
 
-    def _request(self, endpoint: str, json: dict[str, Any] | None = None) -> Any:
-        response = requests.post(
-            f"{self._settings.base_url}/{endpoint}",
-            json=json,
+    @property
+    def _client(self) -> httpx.Client:
+        if not isinstance(self._settings, AskUiInferenceApiAuthorizedSettings):
+            self._settings = AskUiInferenceApiAuthorizedSettings.model_validate(
+                self._settings.model_dump()
+            )
+        return httpx.Client(
+            base_url=f"{self._settings.base_url}",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": self._settings.authorization_header,
             },
-            timeout=30,
         )
-        if response.status_code != 200:
-            raise AskUiApiRequestFailedError(response.status_code, response.text)
 
-        return response.json()
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=30, max=240),
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True,
+    )
+    def _post(
+        self,
+        path: str,
+        json: dict[str, Any] | None = None,
+        timeout: float = 30.0,
+    ) -> httpx.Response:
+        try:
+            response = self._client.post(
+                path,
+                json=json,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+        except Exception as e:  # noqa: BLE001
+            if (
+                isinstance(e, httpx.HTTPStatusError)
+                and 400 <= e.response.status_code < 500
+            ):
+                raise ValueError(e.response.text) from e
+            if _is_retryable_error(e):
+                logger.debug(e)
+            raise
+        else:
+            return response
 
     @override
     def locate(
@@ -65,7 +154,8 @@ class AskUiInferenceApi(GetModel, LocateModel):
             logger.debug(
                 f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}"
             )
-        content = self._request(endpoint="inference", json=json)
+        response = self._post(path="/inference", json=json)
+        content = response.json()
         assert content["type"] == "COMMANDS", (
             f"Received unknown content type {content['type']}"
         )
@@ -94,7 +184,40 @@ class AskUiInferenceApi(GetModel, LocateModel):
         json_schema = _response_schema.model_json_schema()
         json["config"] = {"json_schema": json_schema}
         logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
-        content = self._request(endpoint="vqa/inference", json=json)
-        response = content["data"]["response"]
-        validated_response = _response_schema.model_validate(response)
+        response = self._post(path="/vqa/inference", json=json)
+        content = response.json()
+        data = content["data"]["response"]
+        validated_response = _response_schema.model_validate(data)
         return validated_response.root
+
+    @override
+    def create_message(
+        self,
+        messages: list[MessageParam],
+        model: str,
+        tools: ToolCollection | NotGiven = NOT_GIVEN,
+        max_tokens: int | NotGiven = NOT_GIVEN,
+        betas: list[AnthropicBetaParam] | NotGiven = NOT_GIVEN,
+        system: str | list[BetaTextBlockParam] | NotGiven = NOT_GIVEN,
+        thinking: BetaThinkingConfigParam | NotGiven = NOT_GIVEN,
+        tool_choice: BetaToolChoiceParam | NotGiven = NOT_GIVEN,
+    ) -> MessageParam:
+        json = {
+            "messages": [
+                message.model_dump(mode="json", exclude={"stop_reason"})
+                for message in messages
+            ],
+            "tools": tools.to_params() if tools else NOT_GIVEN,
+            "max_tokens": max_tokens or self._settings.messages.max_tokens,
+            "model": model,
+            "betas": betas or self._settings.messages.betas,
+            "system": system or self._settings.messages.system,
+            "thinking": thinking or self._settings.messages.thinking,
+            "tool_choice": tool_choice or self._settings.messages.tool_choice,
+        }
+        response = self._post(
+            "/act/inference",
+            json={k: v for k, v in json.items() if not isinstance(v, NotGiven)},
+            timeout=300.0,
+        )
+        return MessageParam.model_validate_json(response.text)

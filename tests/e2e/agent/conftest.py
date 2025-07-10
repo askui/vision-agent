@@ -10,13 +10,19 @@ from typing_extensions import override
 from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.computer_agent import AskUiComputerAgent
-from askui.models.askui.inference_api import AskUiInferenceApi, AskUiSettings
+from askui.models.askui.inference_api import (
+    AskUiInferenceApi,
+    AskUiInferenceApiAuthorizedSettings,
+)
 from askui.models.askui.model_router import AskUiModelRouter
-from askui.models.askui.settings import AskUiComputerAgentSettings
 from askui.models.models import ModelName
+from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.settings import (
+    COMPUTER_USE_20250124_BETA_FLAG,
+    ActSettings,
+    MessageSettings,
+)
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -42,50 +48,30 @@ def simple_html_reporter() -> Reporter:
 
 
 @pytest.fixture
-def askui_settings() -> AskUiSettings:
-    return AskUiSettings()
-
-
-@pytest.fixture
-def askui_inference_api(
-    askui_settings: AskUiSettings,
+def askui_facade(
     path_fixtures: pathlib.Path,
-) -> AskUiInferenceApi:
-    ai_element_collection = AiElementCollection(
-        additional_ai_element_locations=[path_fixtures / "images"]
+) -> ModelFacade:
+    settings = ActSettings(
+        messages=MessageSettings(betas=[COMPUTER_USE_20250124_BETA_FLAG])
     )
     reporter = SimpleHtmlReporter()
-    serializer = AskUiLocatorSerializer(
-        ai_element_collection=ai_element_collection, reporter=reporter
-    )
-    return AskUiInferenceApi(
-        locator_serializer=serializer,
-        settings=askui_settings,
-    )
-
-
-@pytest.fixture
-def askui_computer_agent(
-    tool_collection_mock: ToolCollection,
-    askui_settings: AskUiSettings,
-    simple_html_reporter: Reporter,
-) -> AskUiComputerAgent:
-    return AskUiComputerAgent(
-        tool_collection=tool_collection_mock,
-        reporter=simple_html_reporter,
-        settings=AskUiComputerAgentSettings(
-            askui=askui_settings,
+    askui_inference_api = AskUiInferenceApi(
+        locator_serializer=AskUiLocatorSerializer(
+            ai_element_collection=AiElementCollection(
+                additional_ai_element_locations=[path_fixtures / "images"]
+            ),
+            reporter=reporter,
+        ),
+        settings=AskUiInferenceApiAuthorizedSettings(
+            messages=settings.messages,
         ),
     )
-
-
-@pytest.fixture
-def askui_facade(
-    askui_computer_agent: AskUiComputerAgent,
-    askui_inference_api: AskUiInferenceApi,
-) -> ModelFacade:
+    agent = Agent(
+        messages_api=askui_inference_api,
+        reporter=reporter,
+    )
     return ModelFacade(
-        act_model=askui_computer_agent,
+        act_model=agent,
         get_model=askui_inference_api,
         locate_model=AskUiModelRouter(inference_api=askui_inference_api),
     )

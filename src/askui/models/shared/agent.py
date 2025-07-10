@@ -1,86 +1,52 @@
-from abc import ABC, abstractmethod
-from typing import Generic
-
-from anthropic.types.beta import BetaTextBlockParam
-from pydantic import BaseModel
-from typing_extensions import TypeVar, override
+from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
-from askui.models.shared.computer_agent_cb_param import OnMessageCb, OnMessageCbParam
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent_message_param import (
     ImageBlockParam,
     MessageParam,
     TextBlockParam,
 )
-from askui.models.shared.tools import ToolCollection
-from askui.reporting import Reporter
+from askui.models.shared.agent_on_message_cb import (
+    NULL_ON_MESSAGE_CB,
+    OnMessageCb,
+    OnMessageCbParam,
+)
+from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.settings import ActSettings
+from askui.models.shared.tools import Tool, ToolCollection
+from askui.reporting import NULL_REPORTER, Reporter
 
 from ...logger import logger
 
 
-class AgentSettingsBase(BaseModel):
-    """Settings for agents."""
-
-    max_tokens: int = 4096
-    only_n_most_recent_images: int = 3
-    image_truncation_threshold: int = 10
-    betas: list[str] = []
-
-
-AgentSettings = TypeVar("AgentSettings", bound=AgentSettingsBase)
-
-
-class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
+class Agent(ActModel):
     """Base class for agents that can execute autonomous actions.
 
     This class provides common functionality for both AskUI and Anthropic agents,
     including tool handling, message processing, and image filtering.
+
+    Args:
+        messages_api (MessagesApi): Messages API for creating messages.
+        reporter (Reporter, optional): The reporter for logging messages and actions.
+            Defaults to `NULL_REPORTER`.
     """
 
     def __init__(
         self,
-        settings: AgentSettings,
-        tool_collection: ToolCollection,
-        system_prompt: str,
-        reporter: Reporter,
+        messages_api: MessagesApi,
+        reporter: Reporter = NULL_REPORTER,
     ) -> None:
-        """Initialize the agent.
-
-        Args:
-            settings (AgentSettings): The settings for the agent.
-            tool_collection (ToolCollection): The tools for the agent.
-            system_prompt (str): The system prompt for the agent.
-            reporter (Reporter): The reporter for logging messages and actions.
-        """
-        self._settings: AgentSettings = settings
+        self._messages_api = messages_api
         self._reporter = reporter
-        self._tool_collection = tool_collection
-        self._system = BetaTextBlockParam(
-            type="text",
-            text=system_prompt,
-        )
-
-    @abstractmethod
-    def _create_message(
-        self, messages: list[MessageParam], model_choice: str
-    ) -> MessageParam:
-        """Create a message using the agent's API.
-
-        Args:
-            messages (list[MessageParam]): The message history.
-            model_choice (str): The model to use for message creation.
-
-        Returns:
-            MessageParam: The created message.
-        """
-        raise NotImplementedError
 
     def _step(
         self,
         messages: list[MessageParam],
-        model_choice: str,
-        on_message: OnMessageCb | None = None,
+        model: str,
+        on_message: OnMessageCb,
+        settings: ActSettings,
+        tool_collection: ToolCollection,
     ) -> None:
         """Execute a single step in the conversation.
 
@@ -91,20 +57,32 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         Args:
             messages (list[MessageParam]): The message history.
                 Contains at least one message.
-            model_choice (str): The model to use for message creation.
-            on_message (OnMessageCb | None, optional): Callback on new messages
+            model (str): The model to use for message creation.
+            on_message (OnMessageCb): Callback on new messages
+            settings (AgentSettings): The settings for the step.
+            tool_collection (ToolCollection): The tools to use for the step.
 
         Returns:
             None
         """
-        if self._settings.only_n_most_recent_images:
+        if settings.only_n_most_recent_images:
             messages = self._maybe_filter_to_n_most_recent_images(
                 messages,
-                self._settings.only_n_most_recent_images,
-                self._settings.image_truncation_threshold,
+                settings.only_n_most_recent_images,
+                settings.image_truncation_threshold,
             )
+
         if messages[-1].role == "user":
-            response_message = self._create_message(messages, model_choice)
+            response_message = self._messages_api.create_message(
+                messages=messages,
+                model=model,
+                tools=tool_collection,
+                max_tokens=settings.messages.max_tokens,
+                betas=settings.messages.betas,
+                system=settings.messages.system,
+                thinking=settings.messages.thinking,
+                tool_choice=settings.messages.tool_choice,
+            )
             message_by_assistant = self._call_on_message(
                 on_message, response_message, messages
             )
@@ -119,8 +97,10 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         else:
             message_by_assistant = messages[-1]
 
-        self._handle_stop_reason(message_by_assistant)
-        if tool_result_message := self._use_tools(message_by_assistant):
+        self._handle_stop_reason(message_by_assistant, settings.messages.max_tokens)
+        if tool_result_message := self._use_tools(
+            message_by_assistant, tool_collection
+        ):
             if tool_result_message := self._call_on_message(
                 on_message, tool_result_message, messages
             ):
@@ -129,8 +109,10 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
                 messages.append(tool_result_message)
                 self._step(
                     messages=messages,
-                    model_choice=model_choice,
+                    model=model,
+                    tool_collection=tool_collection,
                     on_message=on_message,
+                    settings=settings,
                 )
 
     def _call_on_message(
@@ -149,16 +131,22 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
+        tools: list[Tool] | None = None,
+        settings: ActSettings | None = None,
     ) -> None:
+        _settings = settings or ActSettings()
         self._step(
             messages=messages,
-            model_choice=model_choice,
-            on_message=on_message,
+            model=_settings.messages.model or model_choice,
+            on_message=on_message or NULL_ON_MESSAGE_CB,
+            settings=_settings,
+            tool_collection=ToolCollection(tools),
         )
 
     def _use_tools(
         self,
         message: MessageParam,
+        tool_collection: ToolCollection,
     ) -> MessageParam | None:
         """Process tool use blocks in a message.
 
@@ -177,7 +165,7 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
             for content_block in message.content
             if content_block.type == "tool_use"
         ]
-        content = self._tool_collection.run(tool_use_content_blocks)
+        content = tool_collection.run(tool_use_content_blocks)
         if len(content) == 0:
             return None
 
@@ -242,8 +230,8 @@ class BaseAgent(ActModel, ABC, Generic[AgentSettings]):
                 tool_result.content = new_content
         return messages
 
-    def _handle_stop_reason(self, message: MessageParam) -> None:
+    def _handle_stop_reason(self, message: MessageParam, max_tokens: int) -> None:
         if message.stop_reason == "max_tokens":
-            raise MaxTokensExceededError(self._settings.max_tokens)
+            raise MaxTokensExceededError(max_tokens)
         if message.stop_reason == "refusal":
             raise ModelRefusalError

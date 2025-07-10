@@ -5,8 +5,9 @@ from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
 from anthropic.types.beta.beta_tool_param import InputSchema
 from PIL import Image
 from pydantic import BaseModel, Field
+from typing_extensions import Self
 
-from askui.models.shared.computer_agent_message_param import (
+from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
     ImageBlockParam,
@@ -105,20 +106,24 @@ class ToolCollection:
       within tool call or doing tool call or if tool is not found
     """
 
-    def __init__(self, tools: list[Tool]) -> None:
-        self._tool_map = {tool.to_params()["name"]: tool for tool in tools}
+    def __init__(self, tools: list[Tool] | None = None) -> None:
+        _tools = tools or []
+        self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
 
     def to_params(self) -> list[BetaToolUnionParam]:
         return [tool.to_params() for tool in self._tool_map.values()]
 
-    def append_tool(self, tool: Tool) -> None:
+    def append_tool(self, *tools: Tool) -> "Self":
         """Append a tool to the collection."""
-        self._tool_map[tool.to_params()["name"]] = tool
+        for tool in tools:
+            self._tool_map[tool.to_params()["name"]] = tool
+        return self
 
-    def reset_tools(self, tools: list[Tool] | None = None) -> None:
+    def reset_tools(self, tools: list[Tool] | None = None) -> "Self":
         """Reset the tools in the collection with new tools."""
         _tools = tools or []
         self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
+        return self
 
     def run(
         self, tool_use_block_params: list[ToolUseBlockParam]

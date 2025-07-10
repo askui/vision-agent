@@ -31,6 +31,8 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
+from .models.shared.settings import ActSettings, MessageSettings
+from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
@@ -38,6 +40,7 @@ from .utils.image_utils import ImageSource, Img
 
 __all__ = [
     "ActModel",
+    "ActSettings",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
     "CitationCharLocationParam",
@@ -52,6 +55,7 @@ __all__ = [
     "LocateModel",
     "Locator",
     "MessageParam",
+    "MessageSettings",
     "Model",
     "ModelChoice",
     "ModelComposition",
@@ -67,6 +71,7 @@ __all__ = [
     "Retry",
     "TextBlockParam",
     "TextCitationParam",
+    "Tool",
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
