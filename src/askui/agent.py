@@ -28,136 +28,12 @@ from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
 
-_PC_KEY = [
-    "backspace",
-    "delete",
-    "enter",
-    "tab",
-    "escape",
-    "up",
-    "down",
-    "right",
-    "left",
-    "home",
-    "end",
-    "pageup",
-    "pagedown",
-    "f1",
-    "f2",
-    "f3",
-    "f4",
-    "f5",
-    "f6",
-    "f7",
-    "f8",
-    "f9",
-    "f10",
-    "f11",
-    "f12",
-    "space",
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-    "!",
-    '"',
-    "#",
-    "$",
-    "%",
-    "&",
-    "'",
-    "(",
-    ")",
-    "*",
-    "+",
-    ",",
-    "-",
-    ".",
-    "/",
-    ":",
-    ";",
-    "<",
-    "=",
-    ">",
-    "?",
-    "@",
-    "[",
-    "\\",
-    "]",
-    "^",
-    "_",
-    "`",
-    "{",
-    "|",
-    "}",
-    "~",
-]
-
 _SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * You are utilising a {sys.platform} machine using {platform.machine()} architecture with internet access.
 * When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
 * When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
-* When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
-* Valid keyboard keys available are {", ".join(_PC_KEY)}
-* The current date is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y").replace(" 0", " ")}.
+* When using your function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* The current date and time is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y %H:%M:%S %z")}.
 </SYSTEM_CAPABILITY>
 
 <IMPORTANT>
@@ -211,7 +87,7 @@ class VisionAgent(AgentBase):
         ```
     """
 
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
+    @telemetry.record_call(exclude={"model_router", "reporters", "tools", "act_tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
@@ -222,6 +98,7 @@ class VisionAgent(AgentBase):
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
+        act_tools: list[Tool] | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
@@ -238,7 +115,8 @@ class VisionAgent(AgentBase):
             models=models,
             tools=[
                 ExceptionTool(),
-            ],
+            ]
+            + (act_tools or []),
             agent_os=self.tools.os,
         )
 

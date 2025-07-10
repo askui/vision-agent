@@ -4,10 +4,14 @@ from typing import Literal
 from PIL import Image
 from pydantic import BaseModel
 
-ModifierKey = Literal["command", "alt", "control", "shift", "right_shift"]
+ModifierKey = Literal[
+    "command",
+    "alt",
+    "control",
+    "shift",
+    "right_shift",
+]
 """Modifier keys for keyboard actions."""
-
-ModifierKeys: list[ModifierKey] = ["command", "alt", "control", "shift", "right_shift"]
 
 PcKey = Literal[
     "backspace",
@@ -308,7 +312,6 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def set_display(self, display: int = 1) -> None:
         """
         Sets the active display for screen interactions.
@@ -319,7 +322,6 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def run_command(self, command: str, timeout_ms: int = 30000) -> None:
         """
         Executes a shell command.
