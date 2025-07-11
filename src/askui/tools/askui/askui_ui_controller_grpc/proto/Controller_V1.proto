@@ -1,0 +1,539 @@
+syntax = "proto3";
+
+package Askui.API.TDKv1;
+
+service ControllerAPI {
+	// General
+	rpc StartSession (Request_StartSession) returns (Response_StartSession) {}
+	rpc EndSession (Request_EndSession) returns (Response_Void) {}
+
+	rpc Send (Request_Send) returns (Response_Send) {}
+	rpc Poll (Request_Poll) returns (Response_Poll) {}
+
+	rpc StartExecution (Request_StartExecution) returns (Response_Void) {}
+	rpc StopExecution (Request_StopExecution) returns (Response_Void) {}
+
+	// Run action and record it
+	rpc RunRecordedAction (Request_RunRecordedAction) returns (Response_RunRecordedAction) {}
+
+	// Schedule an action
+	rpc ScheduleBatchedAction (Request_ScheduleBatchedAction) returns (Response_ScheduleBatchedAction) {}
+	
+	// Start and stop batched execution
+	rpc StartBatchRun (Request_StartBatchRun) returns (Response_Void) {}
+	rpc StopBatchRun(Request_StopBatchRun) returns (Response_Void) {}
+
+	// Recorded or batched actions access
+	rpc GetActionCount (Request_GetActionCount) returns (Response_GetActionCount) {}
+	rpc GetAction (Request_GetAction) returns (Response_GetAction) {}
+	
+	// Modify actions batch
+	rpc RemoveAction (Request_RemoveAction) returns (Response_Void) {}
+	
+	// Clear all batched or recorded actions
+	rpc RemoveAllActions (Request_RemoveAllActions) returns (Response_Void) {}
+
+	// Capturing
+	rpc CaptureScreen (Request_CaptureScreen) returns (Response_CaptureScreen) {}
+	
+	// Configuration
+	rpc SetTestConfiguration (Reuqest_SetTestConfiguration) returns (Response_Void) {}
+	rpc SetMouseDelay (Request_SetMouseDelay) returns (Response_Void) {} // TODO: TDKv2 should use push and pop instead.
+	rpc SetKeyboardDelay (Request_SetKeyboardDelay) returns (Response_Void) {} // TODO: TDKv2 should use push and pop instead.
+
+	// Device Information
+	rpc GetDisplayInformation (Request_Void) returns (Response_GetDisplayInformation) {}
+	rpc GetMousePosition (Request_Void) returns (Response_GetMousePosition) {}
+	rpc GetProcessList (Request_GetProcessList) returns (Response_GetProcessList) {}
+	rpc GetWindowList (Request_GetWindowList) returns (Response_GetWindowList) {}
+	rpc GetAutomationTargetList (Request_Void) returns (Response_GetAutomationTargetList) {}
+
+	// Device Configuration
+	rpc SetActiveDisplay (Request_SetActiveDisplay) returns (Response_Void) {}
+	rpc SetActiveWindow (Request_SetActiveWindow) returns (Response_Void) {}
+	rpc SetActiveAutomationTarget (Request_SetActiveAutomationTarget) returns (Response_Void) {}
+
+	// Deprecated Utilities
+	rpc GetColor (Request_GetColor) returns (Response_GetColor) {}
+	rpc GetPixelColor (Request_GetPixelColor) returns (Response_GetPixelColor) {}
+	
+	rpc SetDisplayLabel(Request_SetDisplayLabel) returns (Response_Void) {} // TODO: Not yet implemented, supposded to be deleted if not needed.
+}
+
+message Void {}
+
+message Request_Void {}
+message Response_Void {}
+
+message Size2 {
+	uint32 width = 1;
+	uint32 height = 2;
+}
+
+message Delta2 {
+	int32 x = 1;
+	int32 y = 2;
+}
+
+message Coordinate2 {
+	int32 x = 1;
+	int32 y = 2;
+}
+
+message Rectangle {
+	int32 left = 1;
+	int32 top = 2;
+	int32 right = 3;
+	int32 bottom = 4;
+}
+
+message Bitmap {
+	uint32 width = 1;
+	uint32 height = 2;
+	uint32 lineWidth = 3;
+	uint32 bitsPerPixel = 4;
+	uint32 bytesPerPixel = 5;
+	bytes data = 6;
+}
+
+message Color {
+	uint32 r = 1;
+	uint32 g = 2;
+	uint32 b = 3;
+}
+
+message GUID {
+	uint64 highPart = 1;
+	uint64 lowPart = 2;
+}
+
+message SessionInfo {
+	GUID sessionGUID = 1;
+	uint64 sessionID = 2;
+}
+
+message CaptureArea {
+	Size2 size = 3;
+	Coordinate2 coordinate = 2;
+}
+
+// Usage
+//
+//	displayID:
+//		Value from 'DisplayInformation::displayID', use '0' if screenshots shall be taked from virtual sreen.
+//
+//	captureArea:
+//		Defines either the area to capture on virtual screen or of the display if 'displayID'.
+message CaptureParameters {
+	optional uint32 displayID = 1;
+	optional CaptureArea captureArea = 2;
+}
+
+//
+// Poll
+enum PollEventID {
+	reserved 1;
+
+	PollEventID_Undefined = 0;
+	//Any = 1;
+	PollEventID_ActionFinished = 2;
+}
+
+message PollEventParameters_ActionFinished {
+	uint32 actionID = 1;
+}
+
+message PollEventParameters {
+	oneof dataOf {
+		PollEventParameters_ActionFinished actionFinished = 1;
+	}
+}
+
+//
+//
+enum MouseButton {
+	MouseButton_Undefined = 0;
+
+	MouseButton_Left = 1;
+	MouseButton_Right = 2;
+	MouseButton_Middle = 3;
+}
+
+//
+// Action Parameters
+enum ActionClassID {
+	ActionClassID_Undefined = 0;
+	
+	ActionClassID_Wait = 1;
+	
+	ActionClassID_MouseButton_Press = 8;
+	ActionClassID_MouseButton_Release = 9;
+	ActionClassID_MouseButton_PressAndRelease = 10;
+	ActionClassID_MouseWheelScroll = 11;
+	ActionClassID_MouseMove = 12;
+	ActionClassID_MouseMove_Delta = 13;
+
+	ActionClassID_KeyboardKey_Press = 14;
+	ActionClassID_KeyboardKey_Release = 15;
+	ActionClassID_KeyboardKey_PressAndRelease = 16;
+	ActionClassID_KeyboardKeys_Press = 17;
+	ActionClassID_KeyboardKeys_Release = 18;
+	ActionClassID_KeyboardKeys_PressAndRelease = 19; 
+
+	ActionClassID_KeyboardType_Text = 20;
+	ActionClassID_KeyboardType_UnicodeText = 21;
+
+	ActionClassID_RunCommand = 22;
+}
+
+message ActionParameters_Wait {
+	uint32 milliseconds = 1;
+}
+
+message ActionParameters_MouseButton_Press {
+	MouseButton mouseButton = 1;
+}
+
+message ActionParameters_MouseButton_Release {
+	MouseButton mouseButton = 1;
+}
+
+message ActionParameters_MouseButton_PressAndRelease {
+	MouseButton mouseButton = 1;
+	uint32 count = 2;
+}
+
+enum MouseWheelDeltaType {
+	MouseWheelDelta_Undefined = 0;
+	MouseWheelDelta_Raw = 1;
+	MouseWheelDelta_Detent = 2;
+}
+
+enum MouseWheelScrollDirection {
+	MouseWheelScrollDirection_Undefined = 0;
+	MouseWheelScrollDirection_Vertical = 1;
+	MouseWheelScrollDirection_Horizontal = 2;
+}
+
+message ActionParameters_MouseWheelScroll {
+	MouseWheelScrollDirection direction = 1;
+	MouseWheelDeltaType deltaType = 2;
+	int32 delta = 3;
+	int32 milliseconds = 4;
+}
+
+message ActionParameters_MouseMove {
+	Coordinate2 position = 1;
+	optional uint32 milliseconds = 2;
+}
+
+message ActionParameters_MouseMove_Delta {
+	Delta2 delta = 1;
+	optional uint32 milliseconds = 2;
+}
+
+message ActionParameters_KeyboardKey_Press {
+	string keyName = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+message ActionParameters_KeyboardKey_Release {
+	string keyName = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+message ActionParameters_KeyboardKey_PressAndRelease {
+	string keyName = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+message ActionParameters_KeyboardKeys_Press {
+	repeated string keyNames = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+message ActionParameters_KeyboardKeys_Release {
+	repeated string keyNames = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+message ActionParameters_KeyboardKeys_PressAndRelease {
+	repeated string keyNames = 1;
+	repeated string modifierKeyNames = 2;
+}
+
+enum TypingSpeedValue {
+	TypingSpeedValue_Undefined = 0;
+	TypingSpeedValue_CharactersPerSecond = 1;
+	TypingSpeedValue_Seconds = 2;
+}
+
+message ActionParameters_KeyboardType_Text {
+	string text = 1;
+	TypingSpeedValue typingSpeedValue = 2;
+	optional uint32 typingSpeed = 3; 
+}
+
+message ActionParameters_KeyboardType_UnicodeText {
+	bytes text = 1;
+	TypingSpeedValue typingSpeedValue = 2;
+	optional uint32 typingSpeed = 3; 
+}
+
+message ActionParameters_RunCommand {
+	string command = 1;
+	optional uint32 timeoutInMilliseconds = 2;
+}
+
+message ActionParameters {
+	oneof dataOf {
+		Void none = 1;
+		ActionParameters_Wait wait = 2;
+		ActionParameters_MouseButton_Press mouseButtonPress = 3;
+		ActionParameters_MouseButton_Release mouseButtonRelease = 4;
+		ActionParameters_MouseButton_PressAndRelease mouseButtonPressAndRelease = 5;
+		ActionParameters_MouseWheelScroll mouseWheelScroll = 6;
+		ActionParameters_MouseMove mouseMove = 7;
+		ActionParameters_MouseMove_Delta mouseMoveDelta = 8;
+		ActionParameters_KeyboardKey_Press keyboardKeyPress = 9;
+		ActionParameters_KeyboardKey_Release keyboardKeyRelease = 10;
+		ActionParameters_KeyboardKey_PressAndRelease keyboardKeyPressAndRelease = 11;
+		ActionParameters_KeyboardKeys_Press keyboardKeysPress = 12;
+		ActionParameters_KeyboardKeys_Release keyboardKeysRelease = 13;
+		ActionParameters_KeyboardKeys_PressAndRelease keyboardKeysPressAndRelease = 14;
+		ActionParameters_KeyboardType_Text keyboardTypeText = 15;
+		ActionParameters_KeyboardType_UnicodeText keyboardTypeUnicodeText = 16;
+		ActionParameters_RunCommand runcommand = 17;
+	} 
+}
+
+//
+// Request and Response Messages
+message Request_StartSession {
+	string sessionGUID = 1;      // "{62F7CE3F-D73B-4F96-826F-43D767DAB5C1}"
+	bool immediateExecution = 2; // true
+}
+
+message Response_StartSession {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_EndSession {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_Send {
+	string message = 1;
+}
+
+message Request_Poll {
+	SessionInfo sessionInfo = 1;
+	PollEventID pollEventID = 2;
+}
+
+message Request_StartExecution {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_StopExecution {
+	SessionInfo sessionInfo = 1;
+}
+
+message Response_Send {
+	string message = 1;
+}
+
+message Response_Poll {
+	PollEventID pollEventID = 1;
+	PollEventParameters pollEventParameters = 2;
+}
+
+message Request_RunRecordedAction {
+	SessionInfo sessionInfo = 1;
+	ActionClassID actionClassID = 2;
+	ActionParameters actionParameters = 3;
+}
+
+message Response_RunRecordedAction {
+	uint32 actionID = 1;
+	uint32 requiredMilliseconds = 2;
+}
+
+message Request_ScheduleBatchedAction {
+	SessionInfo sessionInfo = 1;
+	ActionClassID actionClassID = 2;
+	ActionParameters actionParameters = 3;
+}
+
+message Response_ScheduleBatchedAction {
+	uint32 actionID = 1;
+}
+
+message Request_GetActionCount {
+	SessionInfo sessionInfo = 1;
+}
+
+message Response_GetActionCount {
+	uint32 actionCount = 1;
+}
+
+message Request_GetAction {
+	SessionInfo sessionInfo = 1;
+	uint32 actionIndex = 2;
+}
+
+message Response_GetAction {
+	uint32 actionID = 1;
+	ActionClassID actionClassID = 2;
+	ActionParameters actionParameters = 3;
+}
+
+message Request_RemoveAction {
+	SessionInfo sessionInfo = 1;
+	uint32 actionID = 2;
+}
+
+message Request_RemoveAllActions {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_StartBatchRun {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_StopBatchRun {
+	SessionInfo sessionInfo = 1;
+}
+
+message Request_CaptureScreen {
+	SessionInfo sessionInfo = 1;
+	optional CaptureParameters captureParameters = 2;
+}
+
+message Response_CaptureScreen {
+	Bitmap bitmap = 1;
+}
+
+message Response_GetContinuousCapturedScreen {
+	Bitmap bitmap = 1;
+}
+
+message Reuqest_SetTestConfiguration {
+	SessionInfo sessionInfo = 1;
+	CaptureParameters defaultCaptureParameters = 2;
+	uint32 mouseDelayInMilliseconds = 3;
+	uint32 keyboardDelayInMilliseconds = 4;
+}
+
+message Request_SetMouseDelay {
+	SessionInfo sessionInfo = 1;
+	uint32 delayInMilliseconds = 2;
+}
+
+message Request_SetKeyboardDelay {
+	SessionInfo sessionInfo = 1;
+	uint32 delayInMilliseconds = 2;
+}
+
+message DisplayInformation {
+	uint32 displayID = 1;
+	string name = 2;
+	Size2 sizeInPixels = 3;
+	Rectangle virtualScreenRectangle = 4;
+}
+
+message Response_GetDisplayInformation {
+	repeated DisplayInformation displays = 1;
+	Rectangle virtualScreenRectangle = 2;
+}
+
+message Response_GetMousePosition {
+	int32 x = 1;
+	int32 y = 2;
+}
+
+message ProcessInfoExtended {
+	bool hasWindow = 1;
+}
+
+message ProcessInfo {
+	uint64 ID = 1;
+	string name = 2;
+	optional ProcessInfoExtended extendedInfo = 3;
+}
+
+message Request_GetProcessList {
+	bool getExtendedInfo = 1;
+}
+
+message Response_GetProcessList {
+	repeated ProcessInfo processes = 1;
+}
+
+message Request_GetWindowList {
+	uint64 processID = 1;
+}
+
+message WindowInfo {
+	uint64 ID = 1;
+	string name = 2;
+}
+
+message Response_GetWindowList {
+	repeated WindowInfo windows = 1;
+}
+
+message Request_SetActiveDisplay {
+	uint32 displayID = 1;
+}
+
+message Request_SetActiveWindow {
+	uint64 processID = 1;
+	uint64 windowID = 2;
+}
+
+enum AutomationTargetType {
+	AutomationTarget_Local = 0;
+	AutomationTarget_Background = 1;
+	AutomationTarget_Companion = 2;
+}
+
+message AutomationTarget {
+	uint64 ID = 1;
+	AutomationTargetType type = 2;
+	string name = 3;
+	bool active = 4;
+}
+
+message Response_GetAutomationTargetList {
+	repeated AutomationTarget targets = 1;
+}
+
+message Request_SetActiveAutomationTarget {
+	uint64 ID = 1;
+}
+ 
+message Request_GetColor {
+	int32 x = 1;
+	int32 y = 2;
+	Bitmap bitmap = 3;
+}
+
+message Response_GetColor {
+	Color color = 1;
+}
+
+message Request_GetPixelColor {
+	int32 x = 1;
+	int32 y = 2;
+}
+
+message Response_GetPixelColor {
+	Color color = 1;
+}
+
+message Request_SetDisplayLabel {
+	SessionInfo sessionInfo = 1;
+	uint32 displayID = 2;
+	string label = 3;
+}
