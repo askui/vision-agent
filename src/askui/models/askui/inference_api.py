@@ -43,6 +43,7 @@ class AskUiInferenceApiSettings(BaseSettings):
         validate_by_name=True,
         env_prefix="ASKUI__",
         env_nested_delimiter="__",
+        arbitrary_types_allowed=True,
     )
 
     inference_endpoint: HttpUrl = Field(
@@ -50,6 +51,13 @@ class AskUiInferenceApiSettings(BaseSettings):
         validation_alias="ASKUI_INFERENCE_ENDPOINT",
     )
     messages: MessageSettings = Field(default_factory=MessageSettings)
+    authorization: str | NotGiven = Field(
+        default=NOT_GIVEN,
+        description=(
+            "The authorization header to use for the AskUI Inference API. "
+            "If not provided, the token will be used to generate the header."
+        ),
+    )
     token: SecretStr = Field(
         default=...,
         validation_alias="ASKUI_TOKEN",
@@ -61,6 +69,8 @@ class AskUiInferenceApiSettings(BaseSettings):
 
     @property
     def authorization_header(self) -> str:
+        if self.authorization:
+            return self.authorization
         token_str = self.token.get_secret_value()
         token_base64 = base64.b64encode(token_str.encode()).decode()
         return f"Basic {token_base64}"

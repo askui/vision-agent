@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
-from askui.chat.api.dependencies import get_settings
+from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.health.router import router as health_router
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
@@ -24,6 +24,7 @@ app = FastAPI(
     title="AskUI Chat API",
     version="0.1.0",
     lifespan=lifespan,
+    dependencies=[SetEnvFromHeadersDep],
 )
 
 # Add CORS middleware

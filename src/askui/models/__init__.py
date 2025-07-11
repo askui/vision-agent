@@ -8,7 +8,6 @@ from .models import (
     ModelDefinition,
     ModelName,
     ModelRegistry,
-    OnMessageCb,
     Point,
 )
 from .openrouter.model import OpenRouterModel
@@ -28,11 +27,13 @@ from .shared.agent_message_param import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
+from .shared.agent_on_message_cb import OnMessageCb, OnMessageCbParam
 
 __all__ = [
     "ActModel",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
+    "ChatCompletionsCreateSettings",
     "CitationCharLocationParam",
     "CitationContentBlockLocationParam",
     "CitationPageLocationParam",
@@ -48,13 +49,13 @@ __all__ = [
     "ModelName",
     "ModelRegistry",
     "OnMessageCb",
+    "OnMessageCbParam",
+    "OpenRouterModel",
+    "OpenRouterSettings",
     "Point",
     "TextBlockParam",
     "TextCitationParam",
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
-    "OpenRouterModel",
-    "OpenRouterSettings",
-    "ChatCompletionsCreateSettings",
 ]
