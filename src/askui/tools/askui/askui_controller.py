@@ -16,10 +16,10 @@ from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
-from askui.tools.askui.askui_ui_controller_grpc import (
+from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
-from askui.tools.askui.askui_ui_controller_grpc import (
+from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
 from askui.utils.image_utils import draw_point_on_image
