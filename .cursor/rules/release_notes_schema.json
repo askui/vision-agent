@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Release Notes Changes Schema",
+  "description": "Schema for the list of changes in release notes",
+  "type": "object",
+  "properties": {
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+            "type": {
+                "type": "string",
+                "enum": ["feat", "fix", "refactor", "docs", "chore", "perf", "test", "build", "ci", "other"],
+                "description": "Type of change following conventional commit types"
+            },
+            "module": {
+                "type": "string",
+                "description": "Highest level module if change is within src directory"
+            },
+            "files": {
+                "type": "array",
+                "items": {
+                "type": "string"
+                },
+                "description": "List of all file paths that relate to the change"
+            },
+            "summary": {
+                "type": "string",
+                "description": "Summary of the change in imperative mood"
+            },
+            "content": {
+                "type": "array",
+                "items": {
+                "type": "string"
+                },
+                "description": "Long form descriptions of the changes and update instructions if breaking change. Code references should be in formated as code using backticks, e.g., `code`, or code blocks."
+            },
+            "breaking": {
+                "type": "boolean",
+                "description": "Whether this is a breaking change that may break existing code or change behavior"
+            }
+        },
+        "required": ["type", "summary", "content", "files", "breaking"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["changes"],
+  "additionalProperties": false
+}
