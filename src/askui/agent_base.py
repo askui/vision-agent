@@ -107,7 +107,7 @@ class AgentBase(ABC):  # noqa: B024
             "locate": model_choice.get("locate", ModelName.ASKUI),
         }
 
-    @telemetry.record_call(exclude={"goal", "on_message", "settings"})
+    @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
     @validate_call
     def act(
         self,
