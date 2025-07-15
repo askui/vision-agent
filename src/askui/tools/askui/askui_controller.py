@@ -404,6 +404,7 @@ class AskUiControllerClient(AgentOs):
 
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
+
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -724,3 +725,487 @@ class AskUiControllerClient(AgentOs):
                 )
             ),
         )
+
+    @telemetry.record_call()
+    def get_display_information(
+        self,
+    ) -> controller_v1_pbs.Response_GetDisplayInformation:
+        """
+        Get information about all available displays and virtual screen.
+
+        Returns:
+            controller_v1_pbs.Response_GetDisplayInformation:
+                - displays: List of DisplayInformation objects
+                - virtualScreenRectangle: Overall virtual screen bounds
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_display_information()")
+
+        response: controller_v1_pbs.Response_GetDisplayInformation = (
+            self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_mouse_position(self) -> controller_v1_pbs.Response_GetMousePosition:
+        """
+        Get the current mouse cursor position.
+
+        Returns:
+            controller_v1_pbs.Response_GetMousePosition: Mouse position containing:
+                - x: Horizontal coordinate
+                - y: Vertical coordinate
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_mouse_position()")
+
+        response: controller_v1_pbs.Response_GetMousePosition = (
+            self._stub.GetMousePosition(controller_v1_pbs.Request_Void())
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_process_list(
+        self, get_extended_info: bool = False
+    ) -> controller_v1_pbs.Response_GetProcessList:
+        """
+        Get a list of running processes.
+
+        Args:
+            get_extended_info (bool, optional): Whether to include
+                extended process information.
+                Defaults to False.
+
+        Returns:
+            controller_v1_pbs.Response_GetProcessList: Process list response containing:
+                - processes: List of ProcessInfo objects
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_process_list({get_extended_info})")
+
+        response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
+            controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_window_list(
+        self, process_id: int
+    ) -> controller_v1_pbs.Response_GetWindowList:
+        """
+        Get a list of windows for a specific process.
+
+        Args:
+            process_id (int): The ID of the process to get windows for.
+
+        Returns:
+            controller_v1_pbs.Response_GetWindowList: Window list response containing:
+                - windows: List of WindowInfo objects with ID and name
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_window_list({process_id})")
+
+        response: controller_v1_pbs.Response_GetWindowList = self._stub.GetWindowList(
+            controller_v1_pbs.Request_GetWindowList(processID=process_id)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_automation_target_list(
+        self,
+    ) -> controller_v1_pbs.Response_GetAutomationTargetList:
+        """
+        Get a list of available automation targets.
+
+        Returns:
+            controller_v1_pbs.Response_GetAutomationTargetList:
+                Automation target list response:
+                - targets: List of AutomationTarget objects
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_automation_target_list()")
+
+        response: controller_v1_pbs.Response_GetAutomationTargetList = (
+            self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def set_test_configuration(
+        self,
+        default_capture_parameters: controller_v1_pbs.CaptureParameters | None = None,
+        mouse_delay_ms: int = 0,
+        keyboard_delay_ms: int = 0,
+    ) -> None:
+        """
+        Configure test settings including default capture parameters and delays.
+
+        Args:
+            default_capture_parameters
+                (controller_v1_pbs.CaptureParameters | None, optional):
+                Default capture parameters with displayID and captureArea.
+                Defaults to None.
+            mouse_delay_ms (int, optional): Mouse delay in milliseconds. Defaults to 0.
+            keyboard_delay_ms (int, optional): Keyboard delay in milliseconds.
+                Defaults to 0.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS",
+            f"set_test_configuration("
+            f"{default_capture_parameters}, "
+            f"{mouse_delay_ms}, "
+            f"{keyboard_delay_ms})",
+        )
+
+        # Use provided capture parameters or create empty one
+        capture_params = (
+            default_capture_parameters or controller_v1_pbs.CaptureParameters()
+        )
+
+        self._stub.SetTestConfiguration(
+            controller_v1_pbs.Reuqest_SetTestConfiguration(
+                sessionInfo=self._session_info,
+                defaultCaptureParameters=capture_params,
+                mouseDelayInMilliseconds=mouse_delay_ms,
+                keyboardDelayInMilliseconds=keyboard_delay_ms,
+            )
+        )
+
+    @telemetry.record_call()
+    def set_mouse_delay(self, delay_ms: int) -> None:
+        """
+        Configure mouse action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for mouse actions.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"set_mouse_delay({delay_ms})")
+
+        self._stub.SetMouseDelay(
+            controller_v1_pbs.Request_SetMouseDelay(
+                sessionInfo=self._session_info, delayInMilliseconds=delay_ms
+            )
+        )
+
+    @telemetry.record_call()
+    def set_keyboard_delay(self, delay_ms: int) -> None:
+        """
+        Configure keyboard action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for keyboard actions.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"set_keyboard_delay({delay_ms})")
+
+        self._stub.SetKeyboardDelay(
+            controller_v1_pbs.Request_SetKeyboardDelay(
+                sessionInfo=self._session_info, delayInMilliseconds=delay_ms
+            )
+        )
+
+    @telemetry.record_call()
+    def set_active_window(self, process_id: int, window_id: int) -> None:
+        """
+        Set the active window for automation.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS", f"set_active_window({process_id}, {window_id})"
+        )
+
+        self._stub.SetActiveWindow(
+            controller_v1_pbs.Request_SetActiveWindow(
+                processID=process_id, windowID=window_id
+            )
+        )
+
+    @telemetry.record_call()
+    def set_active_automation_target(self, target_id: int) -> None:
+        """
+        Set the active automation target.
+
+        Args:
+            target_id (int): The ID of the automation target to set as active.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS", f"set_active_automation_target({target_id})"
+        )
+
+        self._stub.SetActiveAutomationTarget(
+            controller_v1_pbs.Request_SetActiveAutomationTarget(ID=target_id)
+        )
+
+    @telemetry.record_call()
+    def schedule_batched_action(
+        self,
+        action_class_id: controller_v1_pbs.ActionClassID,
+        action_parameters: controller_v1_pbs.ActionParameters,
+    ) -> controller_v1_pbs.Response_ScheduleBatchedAction:
+        """
+        Schedule an action for batch execution.
+
+        Args:
+            action_class_id (controller_v1_pbs.ActionClassID): The class ID
+                of the action to schedule.
+            action_parameters (controller_v1_pbs.ActionParameters):
+                Parameters for the action.
+
+        Returns:
+            controller_v1_pbs.Response_ScheduleBatchedAction: Response containing
+                the scheduled action ID.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS",
+            f"schedule_batched_action({action_class_id}, {action_parameters})",
+        )
+
+        response: controller_v1_pbs.Response_ScheduleBatchedAction = (
+            self._stub.ScheduleBatchedAction(
+                controller_v1_pbs.Request_ScheduleBatchedAction(
+                    sessionInfo=self._session_info,
+                    actionClassID=action_class_id,
+                    actionParameters=action_parameters,
+                )
+            )
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def start_batch_run(self) -> None:
+        """
+        Start executing batched actions.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "start_batch_run()")
+
+        self._stub.StartBatchRun(
+            controller_v1_pbs.Request_StartBatchRun(sessionInfo=self._session_info)
+        )
+
+    @telemetry.record_call()
+    def stop_batch_run(self) -> None:
+        """
+        Stop executing batched actions.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "stop_batch_run()")
+
+        self._stub.StopBatchRun(
+            controller_v1_pbs.Request_StopBatchRun(sessionInfo=self._session_info)
+        )
+
+    @telemetry.record_call()
+    def get_action_count(self) -> controller_v1_pbs.Response_GetActionCount:
+        """
+        Get the count of recorded or batched actions.
+
+        Returns:
+            controller_v1_pbs.Response_GetActionCount: Response
+                containing the action count.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_action_count()")
+
+        response: controller_v1_pbs.Response_GetActionCount = self._stub.GetActionCount(
+            controller_v1_pbs.Request_GetActionCount(sessionInfo=self._session_info)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_action(self, action_index: int) -> controller_v1_pbs.Response_GetAction:
+        """
+        Get a specific action by its index.
+
+        Args:
+            action_index (int): The index of the action to retrieve.
+
+        Returns:
+            controller_v1_pbs.Response_GetAction: Action information containing:
+                - actionID: The action ID
+                - actionClassID: The action class ID
+                - actionParameters: The action parameters
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_action({action_index})")
+
+        response: controller_v1_pbs.Response_GetAction = self._stub.GetAction(
+            controller_v1_pbs.Request_GetAction(
+                sessionInfo=self._session_info, actionIndex=action_index
+            )
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def remove_action(self, action_id: int) -> None:
+        """
+        Remove a specific action by its ID.
+
+        Args:
+            action_id (int): The ID of the action to remove.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"remove_action({action_id})")
+
+        self._stub.RemoveAction(
+            controller_v1_pbs.Request_RemoveAction(
+                sessionInfo=self._session_info, actionID=action_id
+            )
+        )
+
+    @telemetry.record_call()
+    def remove_all_actions(self) -> None:
+        """
+        Clear all recorded or batched actions.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "remove_all_actions()")
+
+        self._stub.RemoveAllActions(
+            controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
+        )
+
+    @telemetry.record_call(exclude={"message"})
+    def send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+        """
+        Send a general message to the controller.
+
+        Args:
+            message (str): The message to send to the controller.
+
+        Returns:
+            controller_v1_pbs.Response_Send: Response containing
+                the message from the controller.
+
+        Raises:
+            AssertionError: If the gRPC stub is not initialized.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f'send_message("{message}")')
+
+        response: controller_v1_pbs.Response_Send = self._stub.Send(
+            controller_v1_pbs.Request_Send(message=message)
+        )
+
+        return response
