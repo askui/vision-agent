@@ -62,9 +62,7 @@ typecheck = "mypy"
     "format",
     "lint:fix",
 ] }
-=======
-"grpc:gen" = "python -m grpc_tools.protoc -I src/askui/tools/askui/askui_ui_controller_grpc/proto --python_out=src/askui/tools/askui/askui_ui_controller_grpc/generated --pyi_out=src/askui/tools/askui/askui_ui_controller_grpc/generated --grpc_python_out=src/askui/tools/askui/askui_ui_controller_grpc/generated src/askui/tools/askui/askui_ui_controller_grpc/proto/Controller_V1.proto"
-"grpc:fix-import" = "bash -c \"sed -i.bak 's/^import Controller_V1_pb2 as Controller__V1__pb2$/from . import Controller_V1_pb2 as Controller__V1__pb2/' src/askui/tools/askui/askui_ui_controller_grpc/generated/Controller_V1_pb2_grpc.py && rm src/askui/tools/askui/askui_ui_controller_grpc/generated/Controller_V1_pb2_grpc.py.bak\""
+"grpc:gen" = "bash -c \"python -m grpc_tools.protoc -I src/askui/tools/askui/askui_ui_controller_grpc/proto --python_out=src/askui/tools/askui/askui_ui_controller_grpc/generated --pyi_out=src/askui/tools/askui/askui_ui_controller_grpc/generated --grpc_python_out=src/askui/tools/askui/askui_ui_controller_grpc/generated src/askui/tools/askui/askui_ui_controller_grpc/proto/Controller_V1.proto && sed -i.bak 's/^import Controller_V1_pb2 as Controller__V1__pb2$/from . import Controller_V1_pb2 as Controller__V1__pb2/' src/askui/tools/askui/askui_ui_controller_grpc/generated/Controller_V1_pb2_grpc.py && rm src/askui/tools/askui/askui_ui_controller_grpc/generated/Controller_V1_pb2_grpc.py.bak\""
 
 [dependency-groups]
 test = [
