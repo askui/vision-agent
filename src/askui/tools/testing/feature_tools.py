@@ -26,7 +26,7 @@ class CreateFeatureTool(Tool):
         super().__init__(
             name="create_feature",
             description="Create a new feature",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 CreateFeatureToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -49,7 +49,7 @@ class RetrieveFeatureTool(Tool):
         super().__init__(
             name="retrieve_feature",
             description="Retrieve a feature",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 RetrieveFeatureToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -72,7 +72,7 @@ class ListFeatureTool(Tool):
         super().__init__(
             name="list_features",
             description="List features with optional filtering",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ListFeatureToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -96,7 +96,7 @@ class ModifyFeatureTool(Tool):
         super().__init__(
             name="modify_feature",
             description="Modify an existing feature",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ModifyFeatureToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -119,7 +119,7 @@ class DeleteFeatureTool(Tool):
         super().__init__(
             name="delete_feature",
             description="Delete a feature",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 DeleteFeatureToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,

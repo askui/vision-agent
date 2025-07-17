@@ -26,7 +26,7 @@ class CreateScenarioTool(Tool):
         super().__init__(
             name="create_scenario",
             description="Create a new scenario",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 CreateScenarioToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -49,7 +49,7 @@ class RetrieveScenarioTool(Tool):
         super().__init__(
             name="retrieve_scenario",
             description="Retrieve a scenario",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 RetrieveScenarioToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -72,7 +72,7 @@ class ListScenarioTool(Tool):
         super().__init__(
             name="list_scenarios",
             description="List scenarios with optional filtering",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ListScenariosToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -96,7 +96,7 @@ class ModifyScenarioTool(Tool):
         super().__init__(
             name="modify_scenario",
             description="Modify an existing scenario",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ModifyScenarioToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -121,7 +121,7 @@ class DeleteScenarioTool(Tool):
         super().__init__(
             name="delete_scenario",
             description="Delete a scenario",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 DeleteScenarioToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,

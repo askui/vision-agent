@@ -25,7 +25,7 @@ class ListExecutionTool(Tool):
         super().__init__(
             name="list_executions",
             description="List executions with optional filtering",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ListExecutionToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -60,7 +60,7 @@ class RetrieveExecutionTool(Tool):
         super().__init__(
             name="retrieve_execution",
             description="Retrieve an execution by id",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 RetrieveExecutionToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -92,7 +92,7 @@ class CreateExecutionTool(Tool):
         super().__init__(
             name="create_execution",
             description="Create a new execution",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 CreateExecutionToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -125,7 +125,7 @@ class ModifyExecutionTool(Tool):
         super().__init__(
             name="modify_execution",
             description="Modify an existing execution",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 ModifyExecutionToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
@@ -160,7 +160,7 @@ class DeleteExecutionTool(Tool):
         super().__init__(
             name="delete_execution",
             description="Delete an execution",
-            input_schema=jsonref.replace_refs(  # type: ignore
+            input_schema=jsonref.replace_refs(
                 DeleteExecutionToolInput.model_json_schema(),
                 lazy_load=False,
                 proxies=False,
