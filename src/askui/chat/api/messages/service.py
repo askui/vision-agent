@@ -4,17 +4,11 @@ from typing import Literal
 
 from pydantic import Field
 
-from askui.chat.api.models import (
-    MAX_MESSAGES_PER_THREAD,
-    AssistantId,
-    ListQuery,
-    MessageId,
-    RunId,
-    ThreadId,
-    UnixDatetime,
-)
-from askui.chat.api.utils import generate_time_ordered_id
+from askui.chat.api.models import AssistantId, MessageId, RunId, ThreadId
 from askui.models.shared.agent_message_param import MessageParam
+from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
+from askui.utils.datetime_utils import UnixDatetime
+from askui.utils.id_utils import generate_time_ordered_id
 
 
 class MessageBase(MessageParam):
@@ -47,9 +41,7 @@ class MessageService:
         self._threads_dir = base_dir / "threads"
 
     def create(self, thread_id: ThreadId, request: MessageCreateRequest) -> Message:
-        messages = self.list_(
-            thread_id, ListQuery(limit=MAX_MESSAGES_PER_THREAD, order="asc")
-        )
+        messages = self.list_(thread_id, ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
         new_message = Message(
             **request.model_dump(),
             thread_id=thread_id,
@@ -58,9 +50,7 @@ class MessageService:
         return new_message
 
     def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
-        messages = self.list_(
-            thread_id, ListQuery(limit=MAX_MESSAGES_PER_THREAD, order="asc")
-        )
+        messages = self.list_(thread_id, ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
         filtered_messages = [m for m in messages if m.id != message_id]
         if len(filtered_messages) == len(messages):
             error_msg = f"Message {message_id} not found in thread {thread_id}"
@@ -101,7 +91,7 @@ class MessageService:
         return thread_path
 
     def save(self, thread_id: ThreadId, messages: list[Message]) -> None:
-        if len(messages) > MAX_MESSAGES_PER_THREAD:
+        if len(messages) > LIST_LIMIT_MAX:
             error_msg = f"Thread {thread_id} has too many messages"
             raise ValueError(error_msg)
         messages = sorted(messages, key=lambda m: m.created_at)

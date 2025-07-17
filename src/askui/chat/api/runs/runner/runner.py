@@ -11,10 +11,10 @@ from askui.chat.api.assistants.seeds import (
     ANDROID_VISION_AGENT,
     ASKUI_VISION_AGENT,
     ASKUI_WEB_AGENT,
+    ASKUI_WEB_TESTING_AGENT,
     HUMAN_DEMONSTRATION_AGENT,
 )
 from askui.chat.api.messages.service import MessageCreateRequest, MessageService
-from askui.chat.api.models import MAX_MESSAGES_PER_THREAD, ListQuery
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import (
@@ -33,8 +33,10 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.tools.pynput_agent_os import PynputAgentOs
+from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
 from askui.utils.image_utils import ImageSource
 from askui.web_agent import WebVisionAgent
+from askui.web_testing_agent import WebTestingAgent
 
 if TYPE_CHECKING:
     from askui.tools.agent_os import InputEvent
@@ -160,9 +162,15 @@ class Runner:
             event_queue=event_queue,
         )
 
+    def _run_askui_web_testing_agent(self, event_queue: queue.Queue[Events]) -> None:
+        self._run_agent(
+            agent_type="web_testing",
+            event_queue=event_queue,
+        )
+
     def _run_agent(
         self,
-        agent_type: Literal["android", "vision", "web"],
+        agent_type: Literal["android", "vision", "web", "web_testing"],
         event_queue: queue.Queue[Events],
     ) -> None:
         messages: list[MessageParam] = [
@@ -172,7 +180,7 @@ class Runner:
             )
             for msg in self._msg_service.list_(
                 thread_id=self._run.thread_id,
-                query=ListQuery(limit=MAX_MESSAGES_PER_THREAD, order="asc"),
+                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
             )
         ]
 
@@ -217,6 +225,14 @@ class Runner:
                 )
             return
 
+        if agent_type == "web_testing":
+            with WebTestingAgent() as web_testing_agent:
+                web_testing_agent.act(
+                    messages,
+                    on_message=on_message,
+                )
+            return
+
         with VisionAgent() as agent:
             agent.act(
                 messages,
@@ -243,6 +259,8 @@ class Runner:
                 self._run_askui_android_agent(event_queue)
             elif self._run.assistant_id == ASKUI_WEB_AGENT.id:
                 self._run_askui_web_agent(event_queue)
+            elif self._run.assistant_id == ASKUI_WEB_TESTING_AGENT.id:
+                self._run_askui_web_testing_agent(event_queue)
             updated_run = self._retrieve_run()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)

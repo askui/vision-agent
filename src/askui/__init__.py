@@ -38,10 +38,13 @@ from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
 from .utils.image_utils import ImageSource, Img
+from .web_agent import WebVisionAgent
+from .web_testing_agent import WebTestingAgent
 
 __all__ = [
     "ActModel",
     "ActSettings",
+    "AndroidVisionAgent",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
     "CitationCharLocationParam",
@@ -78,5 +81,6 @@ __all__ = [
     "ToolUseBlockParam",
     "UrlImageSourceParam",
     "VisionAgent",
-    "AndroidVisionAgent",
+    "WebTestingAgent",
+    "WebVisionAgent",
 ]
