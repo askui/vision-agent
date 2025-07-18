@@ -3,8 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
-from askui.chat.api.models import AssistantId, RunId, ThreadId, UnixDatetime
-from askui.chat.api.utils import generate_time_ordered_id
+from askui.chat.api.models import AssistantId, RunId, ThreadId
+from askui.utils.datetime_utils import UnixDatetime
+from askui.utils.id_utils import generate_time_ordered_id
 
 RunStatus = Literal[
     "queued",

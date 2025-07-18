@@ -7,11 +7,15 @@ from .models.exceptions import (
     QueryNoResponseError,
     QueryUnexpectedResponseError,
 )
+from .utils.api_utils import ApiError, ConflictError, NotFoundError
 
 __all__ = [
     "AiElementNotFound",
+    "ApiError",
     "AutomationError",
+    "ConflictError",
     "ElementNotFoundError",
+    "NotFoundError",
     "ModelNotFoundError",
     "ModelTypeMismatchError",
     "QueryNoResponseError",

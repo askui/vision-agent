@@ -5,8 +5,9 @@ from fastapi import APIRouter, Body, HTTPException, Path, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse, RunId, ThreadId
+from askui.chat.api.models import ListQueryDep, RunId, ThreadId
 from askui.chat.api.runs.service import CreateRunRequest
+from askui.utils.api_utils import ListQuery, ListResponse
 
 from .dependencies import RunServiceDep
 from .models import Run

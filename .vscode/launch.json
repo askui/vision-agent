@@ -28,7 +28,7 @@
             "preLaunchTask": "Create .env.tmp file",
             "postDebugTask": "Delete .env.tmp file",
             "module": "uvicorn",
-            "args": ["src.askui.chat.api.app:app","--reload","--port","9261"],
+            "args": ["askui.chat.api.app:app","--reload","--port","9261"],
             "envFile": "${workspaceFolder}/.env.tmp",
             "env": {
                 "ASKUI_WORKSPACES__LOG__FORMAT": "logfmt",

@@ -5,13 +5,13 @@ from pydantic import ConfigDict, validate_call
 from typing_extensions import override
 
 from askui.agent import VisionAgent
-from askui.container import telemetry
 from askui.models.shared.settings import (
     COMPUTER_USE_20241022_BETA_FLAG,
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
+from askui.models.shared.tools import Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 from askui.tools.playwright.tools import (
@@ -56,7 +56,6 @@ _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
 
 
 class WebVisionAgent(VisionAgent):
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
@@ -65,6 +64,7 @@ class WebVisionAgent(VisionAgent):
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
+        act_tools: list[Tool] | None = None,
     ) -> None:
         agent_os = PlaywrightAgentOs()
         tools = AgentToolbox(
@@ -84,7 +84,8 @@ class WebVisionAgent(VisionAgent):
                 PlaywrightGetPageTitleTool(agent_os=agent_os),
                 PlaywrightGetPageUrlTool(agent_os=agent_os),
                 ExceptionTool(),
-            ],
+            ]
+            + (act_tools or []),
         )
 
     @override

@@ -4,7 +4,8 @@ from pydantic import BaseModel, Field
 
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import SEEDS
-from askui.chat.api.models import DO_NOT_PATCH, DoNotPatch, ListQuery, ListResponse
+from askui.chat.api.models import DO_NOT_PATCH, DoNotPatch
+from askui.utils.api_utils import ListQuery, ListResponse
 
 
 class CreateAssistantRequest(BaseModel):
