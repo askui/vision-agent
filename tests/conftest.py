@@ -67,3 +67,10 @@ def disable_telemetry() -> None:
     from askui.container import telemetry
 
     telemetry.set_processors([])
+
+
+@pytest.fixture
+def askui_logo_bmp(path_fixtures: pathlib.Path) -> Image.Image:
+    """Fixture providing askui logo as BMP."""
+    screenshot_path = path_fixtures / "images" / "logo.bmp"
+    return Image.open(screenshot_path)
