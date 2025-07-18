@@ -408,7 +408,7 @@ class AgentOs(ABC):
         Render a line object to the display.
 
         Args:
-            style: The style properties for the line.
+            style (RenderObjectStyle): The style properties for the line.
             points (list[Coordinate]): The points defining the line.
 
         Returns:
@@ -421,7 +421,7 @@ class AgentOs(ABC):
         Render an image object to the display.
 
         Args:
-            style: The style properties for the image.
+            style (RenderObjectStyle): The style properties for the image.
             image_data (str): The image data to display.
 
         Returns:
@@ -434,7 +434,7 @@ class AgentOs(ABC):
         Render a text object to the display.
 
         Args:
-            style: The style properties for the text.
+            style (RenderObjectStyle): The style properties for the text.
             text_content (str): The text content to display.
 
         Returns:
@@ -448,7 +448,7 @@ class AgentOs(ABC):
 
         Args:
             object_id (int): The ID of the render object to update.
-            style: The new style properties.
+            style (RenderObjectStyle): The new style properties.
         """
         raise NotImplementedError
 
