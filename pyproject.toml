@@ -56,6 +56,7 @@ typecheck = "mypy"
 "typecheck:all" = "mypy src tests"
 "chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
 "mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
+"grpc:gen" = "bash scripts/grpc-gen.sh"
 
 [dependency-groups]
 test = [
@@ -133,6 +134,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "src/askui/tools/askui/askui_ui_controller_grpc/generated"
 ]
 
 # Same as Black.
