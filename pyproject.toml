@@ -134,7 +134,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    "generated"
+    "src/askui/tools/askui/askui_ui_controller_grpc/generated"
 ]
 
 # Same as Black.
