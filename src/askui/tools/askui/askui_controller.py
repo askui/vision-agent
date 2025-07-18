@@ -788,7 +788,7 @@ class AskUiControllerClient(AgentOs):
         Args:
             get_extended_info (bool, optional): Whether to include
                 extended process information.
-                Defaults to False.
+                Defaults to `False`.
 
         Returns:
             controller_v1_pbs.Response_GetProcessList: Process list response containing:
@@ -879,10 +879,11 @@ class AskUiControllerClient(AgentOs):
             default_capture_parameters
                 (controller_v1_pbs.CaptureParameters | None, optional):
                 Default capture parameters with displayID and captureArea.
-                Defaults to None.
-            mouse_delay_ms (int, optional): Mouse delay in milliseconds. Defaults to 0.
+                Defaults to `None`.
+            mouse_delay_ms (int, optional): Mouse delay in milliseconds.
+                Defaults to `0`.
             keyboard_delay_ms (int, optional): Keyboard delay in milliseconds.
-                Defaults to 0.
+                Defaults to `0`.
 
         Raises:
             AssertionError: If the gRPC stub is not initialized.
