@@ -1,6 +1,6 @@
 from .agent_os import AgentOs, Coordinate, ModifierKey, PcKey
-from .toolbox import AgentToolbox
 from .askui.command_helpers import create_style
+from .toolbox import AgentToolbox
 
 __all__ = [
     "AgentOs",
