@@ -15,12 +15,30 @@ from typing_extensions import Self, override
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
+from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
+)
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+    RenderObjectStyle,  # noqa: E501
+)
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (
+    AskuiAgentosSendResponseSchema,  # noqa: E501; noqa: E501
+)
+from askui.tools.askui.command_helpers import (
+    create_clear_render_objects_command,
+    create_delete_render_object_command,
+    create_get_mouse_position_command,
+    create_image_command,
+    create_line_command,
+    create_quad_command,
+    create_render_text,
+    create_set_mouse_position_command,
+    create_text_command,
+    create_update_render_object_command,
 )
 from askui.utils.image_utils import draw_point_on_image
 
@@ -248,6 +266,7 @@ class AskUiControllerClient(AgentOs):
         self._display = display
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
+        self._session_guid = "{" + str(uuid.uuid4()) + "}"
 
     @telemetry.record_call()
     @override
@@ -363,7 +382,7 @@ class AskUiControllerClient(AgentOs):
         )
         response = self._stub.StartSession(
             controller_v1_pbs.Request_StartSession(
-                sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True
+                sessionGUID=self._session_guid, immediateExecution=True
             )
         )
         self._session_info = response.sessionInfo
@@ -737,9 +756,6 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_GetDisplayInformation:
                 - displays: List of DisplayInformation objects
                 - virtualScreenRectangle: Overall virtual screen bounds
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -749,31 +765,6 @@ class AskUiControllerClient(AgentOs):
 
         response: controller_v1_pbs.Response_GetDisplayInformation = (
             self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
-        )
-
-        return response
-
-    @telemetry.record_call()
-    def get_mouse_position(self) -> controller_v1_pbs.Response_GetMousePosition:
-        """
-        Get the current mouse cursor position.
-
-        Returns:
-            controller_v1_pbs.Response_GetMousePosition: Mouse position containing:
-                - x: Horizontal coordinate
-                - y: Vertical coordinate
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", "get_mouse_position()")
-
-        response: controller_v1_pbs.Response_GetMousePosition = (
-            self._stub.GetMousePosition(controller_v1_pbs.Request_Void())
         )
 
         return response
@@ -793,9 +784,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             controller_v1_pbs.Response_GetProcessList: Process list response containing:
                 - processes: List of ProcessInfo objects
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -822,9 +810,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             controller_v1_pbs.Response_GetWindowList: Window list response containing:
                 - windows: List of WindowInfo objects with ID and name
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -849,9 +834,6 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_GetAutomationTargetList:
                 Automation target list response:
                 - targets: List of AutomationTarget objects
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -884,9 +866,6 @@ class AskUiControllerClient(AgentOs):
                 Defaults to `0`.
             keyboard_delay_ms (int, optional): Keyboard delay in milliseconds.
                 Defaults to `0`.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -921,9 +900,6 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             delay_ms (int): The delay in milliseconds to set for mouse actions.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -944,9 +920,6 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             delay_ms (int): The delay in milliseconds to set for keyboard actions.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -968,9 +941,6 @@ class AskUiControllerClient(AgentOs):
         Args:
             process_id (int): The ID of the process that owns the window.
             window_id (int): The ID of the window to set as active.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -993,9 +963,6 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             target_id (int): The ID of the automation target to set as active.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1027,9 +994,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             controller_v1_pbs.Response_ScheduleBatchedAction: Response containing
                 the scheduled action ID.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1056,9 +1020,6 @@ class AskUiControllerClient(AgentOs):
     def start_batch_run(self) -> None:
         """
         Start executing batched actions.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1074,9 +1035,6 @@ class AskUiControllerClient(AgentOs):
     def stop_batch_run(self) -> None:
         """
         Stop executing batched actions.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1096,9 +1054,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             controller_v1_pbs.Response_GetActionCount: Response
                 containing the action count.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1125,9 +1080,6 @@ class AskUiControllerClient(AgentOs):
                 - actionID: The action ID
                 - actionClassID: The action class ID
                 - actionParameters: The action parameters
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1150,9 +1102,6 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             action_id (int): The ID of the action to remove.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1170,9 +1119,6 @@ class AskUiControllerClient(AgentOs):
     def remove_all_actions(self) -> None:
         """
         Clear all recorded or batched actions.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1195,9 +1141,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             controller_v1_pbs.Response_Send: Response containing
                 the message from the controller.
-
-        Raises:
-            AssertionError: If the gRPC stub is not initialized.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1210,3 +1153,198 @@ class AskUiControllerClient(AgentOs):
         )
 
         return response
+
+    @telemetry.record_call()
+    def get_mouse_position(self) -> Coordinate:
+        """
+        Get the mouse cursor position
+
+        Returns:
+            Coordinate: Response containing the result of the mouse position change.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        req_json = create_get_mouse_position_command(
+            self._session_guid
+        ).model_dump_json(exclude_unset=True)
+        self._reporter.add_message("AgentOS", "get_mouse_position()")
+        res = self.send_message(req_json)
+        parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
+        return Coordinate(
+            x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
+            y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
+        )
+
+    @telemetry.record_call()
+    def set_mouse_position(self, x: int, y: int) -> None:
+        """
+        Set the mouse cursor position to specific coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to set the cursor to.
+            y (int): The vertical coordinate (in pixels) to set the cursor to.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        req_json = create_set_mouse_position_command(
+            x, y, self._session_guid
+        ).model_dump_json(exclude_unset=True)
+        self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
+        self.send_message(req_json)
+
+    @telemetry.record_call()
+    def render_quad(self, style: RenderObjectStyle) -> int:
+        """
+        Render a quad object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the quad.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_quad({style})")
+        req_json = create_quad_command(style, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self.send_message(req_json)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def render_line(self, style: RenderObjectStyle, points: list[Coordinate]) -> int:
+        """
+        Render a line object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the line.
+            points (list[Coordinates]): The points defining the line.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
+        req = create_line_command(style, points, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self.send_message(req)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call(exclude={"image_data"})
+    def render_image(self, style: RenderObjectStyle, image_data: str) -> int:
+        """
+        Render an image object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the image.
+            image_data (str): The base64-encoded image data.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
+        req = create_image_command(
+            style, image_data, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        res = self.send_message(req)
+
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def render_text(self, style: RenderObjectStyle, content: str) -> int:
+        """
+        Render a text object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the text.
+            content (str): The text content to display.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
+        text_obj = create_render_text(content)
+        req = create_text_command(style, text_obj, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self.send_message(req)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def update_render_object(self, object_id: int, style: RenderObjectStyle) -> None:
+        """
+        Update styling properties of an existing render object.
+
+        Args:
+            object_id (float): The ID of the render object to update.
+            style (RenderObjectStyle): The new style properties.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message(
+            "AgentOS", f"update_render_object({object_id}, {style})"
+        )
+        req = create_update_render_object_command(
+            object_id, style, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        self.send_message(req)
+
+    @telemetry.record_call()
+    def delete_render_object(self, object_id: int) -> None:
+        """
+        Delete an existing render object from the display.
+
+        Args:
+            object_id (RenderObjectId): The ID of the render object to delete.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
+        req = create_delete_render_object_command(
+            object_id, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        self.send_message(req)
+
+    @telemetry.record_call()
+    def clear_render_objects(self) -> None:
+        """
+        Clear all render objects from the display.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "clear_render_objects()")
+        req = create_clear_render_objects_command(self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        self.send_message(req)

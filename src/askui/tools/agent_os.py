@@ -1,8 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from PIL import Image
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+        RenderObjectStyle,
+    )
+
 
 ModifierKey = Literal[
     "command",
@@ -146,6 +152,11 @@ class ClickEvent(BaseModel):
     pressed: bool
     injected: bool = False
     timestamp: float
+
+
+class Coordinate(BaseModel):
+    x: int
+    y: int
 
 
 InputEvent = ClickEvent
@@ -357,5 +368,107 @@ class AgentOs(ABC):
 
         IMPORTANT: This method is still experimental and may not work at all and may
         change in the future.
+        """
+        raise NotImplementedError
+
+    def get_mouse_position(self) -> Coordinate:
+        """
+        Get the current mouse cursor position.
+
+        Returns:
+            The current mouse position data.
+        """
+        raise NotImplementedError
+
+    def set_mouse_position(self, x: int, y: int) -> None:
+        """
+        Set the mouse cursor position to specific coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to set the cursor to.
+            y (int): The vertical coordinate (in pixels) to set the cursor to.
+
+        """
+        raise NotImplementedError
+
+    def render_quad(self, style: "RenderObjectStyle") -> int:
+        """
+        Render a quad object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the quad.
+
+        Returns:
+            Response containing the render object ID.
+        """
+        raise NotImplementedError
+
+    def render_line(self, style: "RenderObjectStyle", points: list[Coordinate]) -> int:
+        """
+        Render a line object to the display.
+
+        Args:
+            style: The style properties for the line.
+            points (list[Coordinate]): The points defining the line.
+
+        Returns:
+            Response containing the render object ID.
+        """
+        raise NotImplementedError
+
+    def render_image(self, style: "RenderObjectStyle", image_data: str) -> int:
+        """
+        Render an image object to the display.
+
+        Args:
+            style: The style properties for the image.
+            image_data (str): The image data to display.
+
+        Returns:
+            Response containing the render object ID.
+        """
+        raise NotImplementedError
+
+    def render_text(self, style: "RenderObjectStyle", content: str) -> int:
+        """
+        Render a text object to the display.
+
+        Args:
+            style: The style properties for the text.
+            text_content (str): The text content to display.
+
+        Returns:
+            Response containing the render object ID.
+        """
+        raise NotImplementedError
+
+    def update_render_object(self, object_id: int, style: "RenderObjectStyle") -> None:
+        """
+        Update styling properties of an existing render object.
+
+        Args:
+            object_id (int): The ID of the render object to update.
+            style: The new style properties.
+        """
+        raise NotImplementedError
+
+    def delete_render_object(self, object_id: int) -> None:
+        """
+        Delete an existing render object from the display.
+
+        Args:
+            object_id (int): The ID of the render object to delete.
+
+        Returns:
+            Response confirming the deletion.
+        """
+        raise NotImplementedError
+
+    def clear_render_objects(self) -> None:
+        """
+        Clear all render objects from the display.
+
+        Returns:
+            Response confirming the clearing.
         """
         raise NotImplementedError
