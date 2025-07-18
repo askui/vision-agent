@@ -1,13 +1,20 @@
 from typing import Any, ClassVar
 from uuid import uuid4
 
-from pydantic import BaseModel, SerializerFunctionWrapHandler, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+)
 
 
 class NotGiven(BaseModel):
     """
     A sentinel value that represents a value that is not given.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     _uuid: ClassVar[str] = str(uuid4())
     _instance: ClassVar["NotGiven | None"] = None
