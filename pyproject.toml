@@ -7,7 +7,6 @@ authors = [
 dependencies = [
     "anthropic>=0.54.0",
     "gradio-client>=1.4.3",
-    "grpcio-tools>=1.67.0",
     "grpcio>=1.67.0",
     "httpx>=0.28.1",
     "Jinja2>=3.1.4",
@@ -23,7 +22,6 @@ dependencies = [
     "segment-analytics-python>=2.3.4",
     "tenacity>=9.1.2",
     "jsonref>=1.1.0",
-    "datamodel-code-generator>=0.31.2",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -219,4 +217,8 @@ pynput = [
 ]
 web = [
     "playwright>=1.41.0",
+]
+dev = [
+    "datamodel-code-generator>=0.31.2",
+    "grpcio-tools>=1.73.1",
 ]
