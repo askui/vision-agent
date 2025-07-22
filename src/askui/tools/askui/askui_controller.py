@@ -22,11 +22,11 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
-    RenderObjectStyle,  # noqa: E501
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+    RenderObjectStyle,
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (
-    AskuiAgentosSendResponseSchema,  # noqa: E501; noqa: E501
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
+    AskuiAgentosSendResponseSchema,
 )
 from askui.tools.askui.command_helpers import (
     create_clear_render_objects_command,
@@ -35,7 +35,6 @@ from askui.tools.askui.command_helpers import (
     create_image_command,
     create_line_command,
     create_quad_command,
-    create_render_text,
     create_set_mouse_position_command,
     create_text_command,
     create_update_render_object_command,
@@ -1285,8 +1284,8 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
-        text_obj = create_render_text(content)
-        req = create_text_command(style, text_obj, self._session_guid).model_dump_json(
+
+        req = create_text_command(style, content, self._session_guid).model_dump_json(
             exclude_unset=True, by_alias=True
         )
         res = self.send_message(req)

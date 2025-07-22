@@ -122,10 +122,8 @@ def create_line_command(
 def create_image_command(
     style: RenderObjectStyle, image_data: str, session_guid: str
 ) -> AskuiAgentosSendRequestSchema:
-    image_obj = create_render_image(image_data)
-    command = Command2(
-        name=Name2.AddRenderObject, parameters=["Image", style, image_obj]
-    )
+    image = RenderImage(root=image_data)
+    command = Command2(name=Name2.AddRenderObject, parameters=["Image", style, image])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
@@ -134,11 +132,10 @@ def create_image_command(
 
 
 def create_text_command(
-    style: RenderObjectStyle, text_content: RenderText, session_guid: str
+    style: RenderObjectStyle, text_content: str, session_guid: str
 ) -> AskuiAgentosSendRequestSchema:
-    command = Command2(
-        name=Name2.AddRenderObject, parameters=["Text", style, text_content]
-    )
+    text = RenderText(root=text_content)
+    command = Command2(name=Name2.AddRenderObject, parameters=["Text", style, text])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
@@ -152,14 +149,6 @@ def create_render_line_points(points: list[Coordinate]) -> RenderLinePoints:
     ]
 
     return RenderLinePoints(location_points)
-
-
-def create_render_image(base64_data: str) -> RenderImage:
-    return RenderImage(root=base64_data)
-
-
-def create_render_text(text: str) -> RenderText:
-    return RenderText(root=text)
 
 
 def create_render_object_id(object_id: int) -> RenderObjectId:
