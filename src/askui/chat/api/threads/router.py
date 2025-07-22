@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse, ThreadId
+from askui.chat.api.models import ListQueryDep, ThreadId
 from askui.chat.api.threads.dependencies import ThreadServiceDep
 from askui.chat.api.threads.service import (
     Thread,
@@ -8,6 +8,7 @@ from askui.chat.api.threads.service import (
     ThreadModifyRequest,
     ThreadService,
 )
+from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/threads", tags=["threads"])
 

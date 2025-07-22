@@ -17,7 +17,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.utils.image_utils import ImageSource
 
-PrimitiveToolCallResult = Image.Image | None | str
+PrimitiveToolCallResult = Image.Image | None | str | BaseModel
 
 ToolCallResult = (
     PrimitiveToolCallResult
@@ -41,6 +41,9 @@ def _convert_to_content(
             for sublist in [_convert_to_content(item) for item in result]
             for item in sublist
         ]
+
+    if isinstance(result, BaseModel):
+        return [TextBlockParam(text=result.model_dump_json())]
 
     return [
         ImageBlockParam(

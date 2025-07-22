@@ -8,13 +8,14 @@ from typing import Literal, overload
 
 from pydantic import BaseModel
 
-from askui.chat.api.models import AssistantId, ListQuery, ListResponse, RunId, ThreadId
+from askui.chat.api.models import AssistantId, RunId, ThreadId
 from askui.chat.api.runs.models import Run
 from askui.chat.api.runs.runner.events import Events
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import ErrorEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
 from askui.chat.api.runs.runner.runner import Runner
+from askui.utils.api_utils import ListQuery, ListResponse
 
 
 class CreateRunRequest(BaseModel):

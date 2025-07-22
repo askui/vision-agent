@@ -4,9 +4,10 @@ from fastapi import APIRouter, HTTPException
 from askui.chat.api.assistants.dependencies import AssistantServiceDep
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.service import (
-    AssistantService,
-)  # AssistantModifyRequest, CreateAssistantRequest,
-from askui.chat.api.models import ListQuery, ListQueryDep, ListResponse
+    AssistantService,  # AssistantModifyRequest, CreateAssistantRequest,
+)
+from askui.chat.api.models import ListQueryDep
+from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/assistants", tags=["assistants"])
 
