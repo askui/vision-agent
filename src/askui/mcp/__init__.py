@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.tools.tool import Tool
 
 from askui.agent import VisionAgent
 
@@ -16,7 +17,7 @@ class AppContext:
 @asynccontextmanager
 async def mcp_lifespan(server: FastMCP[Any]) -> AsyncIterator[AppContext]:  # noqa: ARG001
     with VisionAgent(display=2) as vision_agent:
-        server.add_tool(vision_agent.click)
+        server.add_tool(Tool.from_function(vision_agent.click))
         yield AppContext(vision_agent=vision_agent)
 
 

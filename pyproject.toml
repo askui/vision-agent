@@ -7,7 +7,6 @@ authors = [
 dependencies = [
     "anthropic>=0.54.0",
     "gradio-client>=1.4.3",
-    "grpcio-tools>=1.67.0",
     "grpcio>=1.67.0",
     "httpx>=0.28.1",
     "Jinja2>=3.1.4",
@@ -57,6 +56,7 @@ typecheck = "mypy"
 "chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
 "mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
 "grpc:gen" = "bash scripts/grpc-gen.sh"
+"json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
 [dependency-groups]
 test = [
@@ -236,4 +236,8 @@ pynput = [
 ]
 web = [
     "playwright>=1.41.0",
+]
+dev = [
+    "datamodel-code-generator>=0.31.2",
+    "grpcio-tools>=1.73.1",
 ]
