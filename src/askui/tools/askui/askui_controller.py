@@ -847,52 +847,6 @@ class AskUiControllerClient(AgentOs):
         return response
 
     @telemetry.record_call()
-    def set_test_configuration(
-        self,
-        default_capture_parameters: controller_v1_pbs.CaptureParameters | None = None,
-        mouse_delay_ms: int = 0,
-        keyboard_delay_ms: int = 0,
-    ) -> None:
-        """
-        Configure test settings including default capture parameters and delays.
-
-        Args:
-            default_capture_parameters
-                (controller_v1_pbs.CaptureParameters | None, optional):
-                Default capture parameters with displayID and captureArea.
-                Defaults to `None`.
-            mouse_delay_ms (int, optional): Mouse delay in milliseconds.
-                Defaults to `0`.
-            keyboard_delay_ms (int, optional): Keyboard delay in milliseconds.
-                Defaults to `0`.
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message(
-            "AgentOS",
-            f"set_test_configuration("
-            f"{default_capture_parameters}, "
-            f"{mouse_delay_ms}, "
-            f"{keyboard_delay_ms})",
-        )
-
-        # Use provided capture parameters or create empty one
-        capture_params = (
-            default_capture_parameters or controller_v1_pbs.CaptureParameters()
-        )
-
-        self._stub.SetTestConfiguration(
-            controller_v1_pbs.Reuqest_SetTestConfiguration(
-                sessionInfo=self._session_info,
-                defaultCaptureParameters=capture_params,
-                mouseDelayInMilliseconds=mouse_delay_ms,
-                keyboardDelayInMilliseconds=keyboard_delay_ms,
-            )
-        )
-
-    @telemetry.record_call()
     def set_mouse_delay(self, delay_ms: int) -> None:
         """
         Configure mouse action delay.
