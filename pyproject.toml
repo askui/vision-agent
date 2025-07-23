@@ -7,7 +7,6 @@ authors = [
 dependencies = [
     "anthropic>=0.54.0",
     "gradio-client>=1.4.3",
-    "grpcio-tools>=1.67.0",
     "grpcio>=1.67.0",
     "httpx>=0.28.1",
     "Jinja2>=3.1.4",
@@ -62,6 +61,8 @@ typecheck = "mypy"
     "format",
     "lint:fix",
 ] }
+"grpc:gen" = "bash scripts/grpc-gen.sh"
+"json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
 [dependency-groups]
 test = [
@@ -80,6 +81,10 @@ test = [
     "pytest-timeout>=2.4.0",
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
+]
+dev = [
+    "datamodel-code-generator>=0.31.2",
+    "grpcio-tools>=1.73.1",
 ]
 
 
@@ -114,6 +119,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
+    "src/askui/tools/askui/askui_ui_controller_grpc/generated"
 ]
 
 # Same as Black.

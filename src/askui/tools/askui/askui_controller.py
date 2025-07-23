@@ -15,12 +15,29 @@ from typing_extensions import Self, override
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
-from askui.tools.askui.askui_ui_controller_grpc import (
+from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
+from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
-from askui.tools.askui.askui_ui_controller_grpc import (
+from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
+)
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+    RenderObjectStyle,
+)
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
+    AskuiAgentosSendResponseSchema,
+)
+from askui.tools.askui.command_helpers import (
+    create_clear_render_objects_command,
+    create_delete_render_object_command,
+    create_get_mouse_position_command,
+    create_image_command,
+    create_line_command,
+    create_quad_command,
+    create_set_mouse_position_command,
+    create_text_command,
+    create_update_render_object_command,
 )
 from askui.utils.image_utils import draw_point_on_image
 
@@ -248,6 +265,7 @@ class AskUiControllerClient(AgentOs):
         self._display = display
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
+        self._session_guid = "{" + str(uuid.uuid4()) + "}"
 
     @telemetry.record_call()
     @override
@@ -363,7 +381,7 @@ class AskUiControllerClient(AgentOs):
         )
         response = self._stub.StartSession(
             controller_v1_pbs.Request_StartSession(
-                sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True
+                sessionGUID=self._session_guid, immediateExecution=True
             )
         )
         self._session_info = response.sessionInfo
@@ -404,6 +422,7 @@ class AskUiControllerClient(AgentOs):
 
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
+
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -724,3 +743,560 @@ class AskUiControllerClient(AgentOs):
                 )
             ),
         )
+
+    @telemetry.record_call()
+    def get_display_information(
+        self,
+    ) -> controller_v1_pbs.Response_GetDisplayInformation:
+        """
+        Get information about all available displays and virtual screen.
+
+        Returns:
+            controller_v1_pbs.Response_GetDisplayInformation:
+                - displays: List of DisplayInformation objects
+                - virtualScreenRectangle: Overall virtual screen bounds
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_display_information()")
+
+        response: controller_v1_pbs.Response_GetDisplayInformation = (
+            self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_process_list(
+        self, get_extended_info: bool = False
+    ) -> controller_v1_pbs.Response_GetProcessList:
+        """
+        Get a list of running processes.
+
+        Args:
+            get_extended_info (bool, optional): Whether to include
+                extended process information.
+                Defaults to `False`.
+
+        Returns:
+            controller_v1_pbs.Response_GetProcessList: Process list response containing:
+                - processes: List of ProcessInfo objects
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_process_list({get_extended_info})")
+
+        response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
+            controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_window_list(
+        self, process_id: int
+    ) -> controller_v1_pbs.Response_GetWindowList:
+        """
+        Get a list of windows for a specific process.
+
+        Args:
+            process_id (int): The ID of the process to get windows for.
+
+        Returns:
+            controller_v1_pbs.Response_GetWindowList: Window list response containing:
+                - windows: List of WindowInfo objects with ID and name
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_window_list({process_id})")
+
+        response: controller_v1_pbs.Response_GetWindowList = self._stub.GetWindowList(
+            controller_v1_pbs.Request_GetWindowList(processID=process_id)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_automation_target_list(
+        self,
+    ) -> controller_v1_pbs.Response_GetAutomationTargetList:
+        """
+        Get a list of available automation targets.
+
+        Returns:
+            controller_v1_pbs.Response_GetAutomationTargetList:
+                Automation target list response:
+                - targets: List of AutomationTarget objects
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_automation_target_list()")
+
+        response: controller_v1_pbs.Response_GetAutomationTargetList = (
+            self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def set_mouse_delay(self, delay_ms: int) -> None:
+        """
+        Configure mouse action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for mouse actions.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"set_mouse_delay({delay_ms})")
+
+        self._stub.SetMouseDelay(
+            controller_v1_pbs.Request_SetMouseDelay(
+                sessionInfo=self._session_info, delayInMilliseconds=delay_ms
+            )
+        )
+
+    @telemetry.record_call()
+    def set_keyboard_delay(self, delay_ms: int) -> None:
+        """
+        Configure keyboard action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for keyboard actions.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"set_keyboard_delay({delay_ms})")
+
+        self._stub.SetKeyboardDelay(
+            controller_v1_pbs.Request_SetKeyboardDelay(
+                sessionInfo=self._session_info, delayInMilliseconds=delay_ms
+            )
+        )
+
+    @telemetry.record_call()
+    def set_active_window(self, process_id: int, window_id: int) -> None:
+        """
+        Set the active window for automation.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS", f"set_active_window({process_id}, {window_id})"
+        )
+
+        self._stub.SetActiveWindow(
+            controller_v1_pbs.Request_SetActiveWindow(
+                processID=process_id, windowID=window_id
+            )
+        )
+
+    @telemetry.record_call()
+    def set_active_automation_target(self, target_id: int) -> None:
+        """
+        Set the active automation target.
+
+        Args:
+            target_id (int): The ID of the automation target to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS", f"set_active_automation_target({target_id})"
+        )
+
+        self._stub.SetActiveAutomationTarget(
+            controller_v1_pbs.Request_SetActiveAutomationTarget(ID=target_id)
+        )
+
+    @telemetry.record_call()
+    def schedule_batched_action(
+        self,
+        action_class_id: controller_v1_pbs.ActionClassID,
+        action_parameters: controller_v1_pbs.ActionParameters,
+    ) -> controller_v1_pbs.Response_ScheduleBatchedAction:
+        """
+        Schedule an action for batch execution.
+
+        Args:
+            action_class_id (controller_v1_pbs.ActionClassID): The class ID
+                of the action to schedule.
+            action_parameters (controller_v1_pbs.ActionParameters):
+                Parameters for the action.
+
+        Returns:
+            controller_v1_pbs.Response_ScheduleBatchedAction: Response containing
+                the scheduled action ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message(
+            "AgentOS",
+            f"schedule_batched_action({action_class_id}, {action_parameters})",
+        )
+
+        response: controller_v1_pbs.Response_ScheduleBatchedAction = (
+            self._stub.ScheduleBatchedAction(
+                controller_v1_pbs.Request_ScheduleBatchedAction(
+                    sessionInfo=self._session_info,
+                    actionClassID=action_class_id,
+                    actionParameters=action_parameters,
+                )
+            )
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def start_batch_run(self) -> None:
+        """
+        Start executing batched actions.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "start_batch_run()")
+
+        self._stub.StartBatchRun(
+            controller_v1_pbs.Request_StartBatchRun(sessionInfo=self._session_info)
+        )
+
+    @telemetry.record_call()
+    def stop_batch_run(self) -> None:
+        """
+        Stop executing batched actions.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "stop_batch_run()")
+
+        self._stub.StopBatchRun(
+            controller_v1_pbs.Request_StopBatchRun(sessionInfo=self._session_info)
+        )
+
+    @telemetry.record_call()
+    def get_action_count(self) -> controller_v1_pbs.Response_GetActionCount:
+        """
+        Get the count of recorded or batched actions.
+
+        Returns:
+            controller_v1_pbs.Response_GetActionCount: Response
+                containing the action count.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_action_count()")
+
+        response: controller_v1_pbs.Response_GetActionCount = self._stub.GetActionCount(
+            controller_v1_pbs.Request_GetActionCount(sessionInfo=self._session_info)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_action(self, action_index: int) -> controller_v1_pbs.Response_GetAction:
+        """
+        Get a specific action by its index.
+
+        Args:
+            action_index (int): The index of the action to retrieve.
+
+        Returns:
+            controller_v1_pbs.Response_GetAction: Action information containing:
+                - actionID: The action ID
+                - actionClassID: The action class ID
+                - actionParameters: The action parameters
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"get_action({action_index})")
+
+        response: controller_v1_pbs.Response_GetAction = self._stub.GetAction(
+            controller_v1_pbs.Request_GetAction(
+                sessionInfo=self._session_info, actionIndex=action_index
+            )
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def remove_action(self, action_id: int) -> None:
+        """
+        Remove a specific action by its ID.
+
+        Args:
+            action_id (int): The ID of the action to remove.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f"remove_action({action_id})")
+
+        self._stub.RemoveAction(
+            controller_v1_pbs.Request_RemoveAction(
+                sessionInfo=self._session_info, actionID=action_id
+            )
+        )
+
+    @telemetry.record_call()
+    def remove_all_actions(self) -> None:
+        """
+        Clear all recorded or batched actions.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "remove_all_actions()")
+
+        self._stub.RemoveAllActions(
+            controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
+        )
+
+    def _send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+        """
+        Send a general message to the controller.
+
+        Args:
+            message (str): The message to send to the controller.
+
+        Returns:
+            controller_v1_pbs.Response_Send: Response containing
+                the message from the controller.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", f'send_message("{message}")')
+
+        response: controller_v1_pbs.Response_Send = self._stub.Send(
+            controller_v1_pbs.Request_Send(message=message)
+        )
+
+        return response
+
+    @telemetry.record_call()
+    def get_mouse_position(self) -> Coordinate:
+        """
+        Get the mouse cursor position
+
+        Returns:
+            Coordinate: Response containing the result of the mouse position change.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        req_json = create_get_mouse_position_command(
+            self._session_guid
+        ).model_dump_json(exclude_unset=True)
+        self._reporter.add_message("AgentOS", "get_mouse_position()")
+        res = self._send_message(req_json)
+        parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
+        return Coordinate(
+            x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
+            y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
+        )
+
+    @telemetry.record_call()
+    def set_mouse_position(self, x: int, y: int) -> None:
+        """
+        Set the mouse cursor position to specific coordinates.
+
+        Args:
+            x (int): The horizontal coordinate (in pixels) to set the cursor to.
+            y (int): The vertical coordinate (in pixels) to set the cursor to.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        req_json = create_set_mouse_position_command(
+            x, y, self._session_guid
+        ).model_dump_json(exclude_unset=True)
+        self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
+        self._send_message(req_json)
+
+    @telemetry.record_call()
+    def render_quad(self, style: RenderObjectStyle) -> int:
+        """
+        Render a quad object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the quad.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_quad({style})")
+        req_json = create_quad_command(style, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self._send_message(req_json)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def render_line(self, style: RenderObjectStyle, points: list[Coordinate]) -> int:
+        """
+        Render a line object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the line.
+            points (list[Coordinates]): The points defining the line.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
+        req = create_line_command(style, points, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self._send_message(req)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call(exclude={"image_data"})
+    def render_image(self, style: RenderObjectStyle, image_data: str) -> int:
+        """
+        Render an image object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the image.
+            image_data (str): The base64-encoded image data.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
+        req = create_image_command(
+            style, image_data, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        res = self._send_message(req)
+
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def render_text(self, style: RenderObjectStyle, content: str) -> int:
+        """
+        Render a text object to the display.
+
+        Args:
+            style (RenderObjectStyle): The style properties for the text.
+            content (str): The text content to display.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
+
+        req = create_text_command(style, content, self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        res = self._send_message(req)
+        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+            res.message
+        )
+        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+
+    @telemetry.record_call()
+    def update_render_object(self, object_id: int, style: RenderObjectStyle) -> None:
+        """
+        Update styling properties of an existing render object.
+
+        Args:
+            object_id (float): The ID of the render object to update.
+            style (RenderObjectStyle): The new style properties.
+
+        Returns:
+            int: Object ID.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message(
+            "AgentOS", f"update_render_object({object_id}, {style})"
+        )
+        req = create_update_render_object_command(
+            object_id, style, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        self._send_message(req)
+
+    @telemetry.record_call()
+    def delete_render_object(self, object_id: int) -> None:
+        """
+        Delete an existing render object from the display.
+
+        Args:
+            object_id (RenderObjectId): The ID of the render object to delete.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
+        req = create_delete_render_object_command(
+            object_id, self._session_guid
+        ).model_dump_json(exclude_unset=True, by_alias=True)
+        self._send_message(req)
+
+    @telemetry.record_call()
+    def clear_render_objects(self) -> None:
+        """
+        Clear all render objects from the display.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "clear_render_objects()")
+        req = create_clear_render_objects_command(self._session_guid).model_dump_json(
+            exclude_unset=True, by_alias=True
+        )
+        self._send_message(req)
