@@ -90,6 +90,11 @@ class UiTarsApiHandlerSettings(BaseSettings):
         min_length=1,
         validation_alias="TARS_API_KEY",
     )
+    tars_model_name: str = Field(
+        default="ui-tars",
+        validation_alias="TARS_MODEL_NAME",
+        description="Name of the TARS model to use for inference",
+    )
 
 
 class UiTarsApiHandler(ActModel, LocateModel, GetModel):
@@ -109,9 +114,9 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         )
         self._locator_serializer = locator_serializer
 
-    def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
+        def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
         chat_completion = self._client.chat.completions.create(
-            model="tgi",
+            model=self._settings.tars_model_name,
             messages=[
                 {
                     "role": "user",
@@ -297,7 +302,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         message_history = self.filter_message_thread(message_history)
 
         chat_completion = self._client.chat.completions.create(
-            model="tgi",
+            model=self._settings.tars_model_name,
             messages=message_history,
             top_p=None,
             temperature=None,

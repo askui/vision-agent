@@ -110,7 +110,8 @@ def initialize_default_model_registry(  # noqa: C901
 
         # Conditionally register TARS model if environment variables are available
     try:
-        # Try to create TARS settings to check if environment variables are set
+        # Try to create TARS settings to check if required environment variables are set
+        # (TARS_URL and TARS_API_KEY are required, TARS_MODEL_NAME is optional)
         tars_settings = UiTarsApiHandlerSettings()
 
         @functools.cache
@@ -130,7 +131,8 @@ def initialize_default_model_registry(  # noqa: C901
         logger.debug("TARS model registered successfully")
 
     except (ValueError, ImportError) as e:
-        # TARS environment variables are not set or TARS module is not available
+        # Required TARS environment variables (TARS_URL, TARS_API_KEY) are not set
+        # or TARS module is not available
         # This is expected behavior, so we just skip TARS registration
         logger.debug(f"TARS model not registered: {e}")
 
