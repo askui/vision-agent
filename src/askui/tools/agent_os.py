@@ -5,8 +5,9 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import \
-        RenderObjectStyle  # noqa: E501
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+        RenderObjectStyle,
+    )  # noqa: E501
 
 
 ModifierKey = Literal[
@@ -159,6 +160,7 @@ class SizeInPixels(BaseModel):
     width: int
     height: int
 
+
 class DisplayInformation(BaseModel):
     """Contains information about a single display."""
 
@@ -170,6 +172,7 @@ class GetDisplayInformationResponse(BaseModel):
     """Response model for display information requests."""
 
     displays: list[DisplayInformation]
+
 
 class Coordinate(BaseModel):
     x: int

@@ -10,9 +10,12 @@ from typing_extensions import override
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.settings import (COMPUTER_USE_20241022_BETA_FLAG,
-                                          COMPUTER_USE_20250124_BETA_FLAG,
-                                          ActSettings, MessageSettings)
+from askui.models.shared.settings import (
+    COMPUTER_USE_20241022_BETA_FLAG,
+    COMPUTER_USE_20250124_BETA_FLAG,
+    ActSettings,
+    MessageSettings,
+)
 from askui.models.shared.tools import Tool
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
@@ -399,7 +402,6 @@ class VisionAgent(AgentBase):
 
     @override
     def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:
-
         self._tools.append(ScreenSwitchTool(agent_os=self.tools.os))
 
         match model_choice:
