@@ -5,7 +5,11 @@
 groups = ["default", "all", "android", "chat", "dev", "mcp", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
+<<<<<<< HEAD
 content_hash = "sha256:c4c815df35c7f817156b1db01cf65a70559e024220543b4e15b8b64f1669c070"
+=======
+content_hash = "sha256:ecb4a5b9f12fc5d3cf4c6e98a65c9bb90df5c523ba9c8f335e5e40b8a4e9b9d1"
+>>>>>>> feat/update-controller-grpc
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -1082,6 +1086,20 @@ files = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "jsonref"
+version = "1.1.0"
+requires_python = ">=3.7"
+summary = "jsonref is a library for automatic dereferencing of JSON Reference objects for Python."
+groups = ["default"]
+files = [
+    {file = "jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9"},
+    {file = "jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552"},
+]
+
+[[package]]
+>>>>>>> feat/update-controller-grpc
 name = "jsonschema"
 version = "4.25.0"
 requires_python = ">=3.9"
@@ -1188,7 +1206,11 @@ files = [
 
 [[package]]
 name = "mcp"
+<<<<<<< HEAD
 version = "1.12.0"
+=======
+version = "1.12.1"
+>>>>>>> feat/update-controller-grpc
 requires_python = ">=3.10"
 summary = "Model Context Protocol SDK"
 groups = ["all", "mcp"]
@@ -1206,8 +1228,13 @@ dependencies = [
     "uvicorn>=0.23.1; sys_platform != \"emscripten\"",
 ]
 files = [
+<<<<<<< HEAD
     {file = "mcp-1.12.0-py3-none-any.whl", hash = "sha256:19a498b2bf273283e463b4dd1ed83f791fbba5c25bfa16b8b34cfd5571673e7f"},
     {file = "mcp-1.12.0.tar.gz", hash = "sha256:853f6b17a3f31ea6e2f278c2ec7d3b38457bc80c7c2c675260dd7f04a6fd0e70"},
+=======
+    {file = "mcp-1.12.1-py3-none-any.whl", hash = "sha256:34147f62891417f8b000c39718add844182ba424c8eb2cea250b4267bda4b08b"},
+    {file = "mcp-1.12.1.tar.gz", hash = "sha256:d1d0bdeb09e4b17c1a72b356248bf3baf75ab10db7008ef865c4afbeb0eb810e"},
+>>>>>>> feat/update-controller-grpc
 ]
 
 [[package]]

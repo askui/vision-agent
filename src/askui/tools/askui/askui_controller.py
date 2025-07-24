@@ -847,6 +847,7 @@ class AskUiControllerClient(AgentOs):
         return response
 
     @telemetry.record_call()
+<<<<<<< HEAD
     def set_test_configuration(
         self,
         default_capture_parameters: controller_v1_pbs.CaptureParameters | None = None,
@@ -893,6 +894,8 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
+=======
+>>>>>>> feat/update-controller-grpc
     def set_mouse_delay(self, delay_ms: int) -> None:
         """
         Configure mouse action delay.
@@ -1129,8 +1132,12 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
         )
 
+<<<<<<< HEAD
     @telemetry.record_call(exclude={"message"})
     def send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+=======
+    def _send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+>>>>>>> feat/update-controller-grpc
         """
         Send a general message to the controller.
 
@@ -1168,7 +1175,11 @@ class AskUiControllerClient(AgentOs):
             self._session_guid
         ).model_dump_json(exclude_unset=True)
         self._reporter.add_message("AgentOS", "get_mouse_position()")
+<<<<<<< HEAD
         res = self.send_message(req_json)
+=======
+        res = self._send_message(req_json)
+>>>>>>> feat/update-controller-grpc
         parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
         return Coordinate(
             x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
@@ -1191,7 +1202,11 @@ class AskUiControllerClient(AgentOs):
             x, y, self._session_guid
         ).model_dump_json(exclude_unset=True)
         self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
+<<<<<<< HEAD
         self.send_message(req_json)
+=======
+        self._send_message(req_json)
+>>>>>>> feat/update-controller-grpc
 
     @telemetry.record_call()
     def render_quad(self, style: RenderObjectStyle) -> int:
@@ -1211,7 +1226,11 @@ class AskUiControllerClient(AgentOs):
         req_json = create_quad_command(style, self._session_guid).model_dump_json(
             exclude_unset=True, by_alias=True
         )
+<<<<<<< HEAD
         res = self.send_message(req_json)
+=======
+        res = self._send_message(req_json)
+>>>>>>> feat/update-controller-grpc
         parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
             res.message
         )
@@ -1236,7 +1255,11 @@ class AskUiControllerClient(AgentOs):
         req = create_line_command(style, points, self._session_guid).model_dump_json(
             exclude_unset=True, by_alias=True
         )
+<<<<<<< HEAD
         res = self.send_message(req)
+=======
+        res = self._send_message(req)
+>>>>>>> feat/update-controller-grpc
         parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
             res.message
         )
@@ -1261,7 +1284,11 @@ class AskUiControllerClient(AgentOs):
         req = create_image_command(
             style, image_data, self._session_guid
         ).model_dump_json(exclude_unset=True, by_alias=True)
+<<<<<<< HEAD
         res = self.send_message(req)
+=======
+        res = self._send_message(req)
+>>>>>>> feat/update-controller-grpc
 
         parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
             res.message
@@ -1288,7 +1315,11 @@ class AskUiControllerClient(AgentOs):
         req = create_text_command(style, content, self._session_guid).model_dump_json(
             exclude_unset=True, by_alias=True
         )
+<<<<<<< HEAD
         res = self.send_message(req)
+=======
+        res = self._send_message(req)
+>>>>>>> feat/update-controller-grpc
         parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
             res.message
         )
@@ -1315,7 +1346,11 @@ class AskUiControllerClient(AgentOs):
         req = create_update_render_object_command(
             object_id, style, self._session_guid
         ).model_dump_json(exclude_unset=True, by_alias=True)
+<<<<<<< HEAD
         self.send_message(req)
+=======
+        self._send_message(req)
+>>>>>>> feat/update-controller-grpc
 
     @telemetry.record_call()
     def delete_render_object(self, object_id: int) -> None:
@@ -1332,7 +1367,11 @@ class AskUiControllerClient(AgentOs):
         req = create_delete_render_object_command(
             object_id, self._session_guid
         ).model_dump_json(exclude_unset=True, by_alias=True)
+<<<<<<< HEAD
         self.send_message(req)
+=======
+        self._send_message(req)
+>>>>>>> feat/update-controller-grpc
 
     @telemetry.record_call()
     def clear_render_objects(self) -> None:
@@ -1346,4 +1385,8 @@ class AskUiControllerClient(AgentOs):
         req = create_clear_render_objects_command(self._session_guid).model_dump_json(
             exclude_unset=True, by_alias=True
         )
+<<<<<<< HEAD
         self.send_message(req)
+=======
+        self._send_message(req)
+>>>>>>> feat/update-controller-grpc

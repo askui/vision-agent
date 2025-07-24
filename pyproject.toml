@@ -21,6 +21,7 @@ dependencies = [
     "rich>=13.9.4",
     "segment-analytics-python>=2.3.4",
     "tenacity>=9.1.2",
+    "jsonref>=1.1.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -52,9 +53,17 @@ format = "ruff format src tests"
 lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
-"typecheck:all" = "mypy src tests"
+"typecheck:all" = "mypy ."
 "chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
 "mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
+<<<<<<< HEAD
+=======
+"qa:fix" = { composite = [
+    "typecheck:all",
+    "format",
+    "lint:fix",
+] }
+>>>>>>> feat/update-controller-grpc
 "grpc:gen" = "bash scripts/grpc-gen.sh"
 "json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
@@ -76,6 +85,10 @@ test = [
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
 ]
+dev = [
+    "datamodel-code-generator>=0.31.2",
+    "grpcio-tools>=1.73.1",
+]
 
 
 [tool.pytest.ini_options]
@@ -84,31 +97,6 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
 timeout = 60
-
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_optional = true
-plugins = ["pydantic.mypy"]
-exclude = [
-    "src/askui/models/ui_tars_ep/ui_tars_api.py",
-    "src/askui/tools/anthropic/computer.py",
-    "src/askui/tools/askui/askui_ui_controller_grpc/.*",
-    "src/askui/tools/askui/askui_workspaces/.*",
-]
-mypy_path = "src"
-explicit_package_bases = true
-namespace_packages = true
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.

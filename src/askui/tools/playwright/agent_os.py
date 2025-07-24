@@ -201,14 +201,14 @@ class PlaywrightAgentOs(AgentOs):
         Args:
             text (str): The text to be typed.
             typing_speed (int, optional): The speed of typing in characters per
-                minute. Defaults to `50`.
+                second. Defaults to `50`.
         """
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
         # Convert typing speed from CPM to delay between characters
-        delay = (60 / typing_speed) * 1000 if typing_speed > 0 else 0
+        delay = 1000 / typing_speed if typing_speed > 0 else 0
         self._page.keyboard.type(text, delay=delay)
 
     @override

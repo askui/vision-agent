@@ -139,7 +139,9 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
             tools=tools.to_params() if tools else NOT_GIVEN,
             max_tokens=max_tokens or self._settings.messages.max_tokens,
             model=ANTHROPIC_MODEL_MAPPING[model],
-            betas=betas or self._settings.messages.betas,
+            betas=betas
+            if not isinstance(betas, NotGiven)
+            else self._settings.messages.betas,
             system=system or self._settings.messages.system,
             thinking=thinking or self._settings.messages.thinking,
             tool_choice=tool_choice or self._settings.messages.tool_choice,

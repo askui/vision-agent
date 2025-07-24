@@ -6,13 +6,8 @@ from askui.chat.api.messages.service import (
     MessageCreateRequest,
     MessageService,
 )
-from askui.chat.api.models import (
-    ListQuery,
-    ListQueryDep,
-    ListResponse,
-    MessageId,
-    ThreadId,
-)
+from askui.chat.api.models import ListQueryDep, MessageId, ThreadId
+from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 
