@@ -18,10 +18,20 @@ from askui.logger import logger
 from askui.reporting import Reporter
 from askui.tools.agent_os import (AgentOs, GetDisplayInformationResponse,
                                   ModifierKey, PcKey)
-from askui.tools.askui.askui_ui_controller_grpc import \
+from askui.tools.askui.askui_ui_controller_grpc.generated import \
     Controller_V1_pb2 as controller_v1_pbs
-from askui.tools.askui.askui_ui_controller_grpc import \
+from askui.tools.askui.askui_ui_controller_grpc.generated import \
     Controller_V1_pb2_grpc as controller_v1
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import \
+    RenderObjectStyle  # noqa: E501
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import \
+    AskuiAgentosSendResponseSchema  # noqa: E501
+from askui.tools.askui.command_helpers import (
+    create_clear_render_objects_command, create_delete_render_object_command,
+    create_get_mouse_position_command, create_image_command,
+    create_line_command, create_quad_command,
+    create_set_mouse_position_command, create_text_command,
+    create_update_render_object_command)
 from askui.utils.image_utils import draw_point_on_image
 
 from ..utils import process_exists, wait_for_port
@@ -246,6 +256,7 @@ class AskUiControllerClient(AgentOs):
         self._display = display
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
+        self._session_guid = "{" + str(uuid.uuid4()) + "}"
 
     @telemetry.record_call()
     @override
@@ -361,7 +372,7 @@ class AskUiControllerClient(AgentOs):
         )
         response = self._stub.StartSession(
             controller_v1_pbs.Request_StartSession(
-                sessionGUID="{" + str(uuid.uuid4()) + "}", immediateExecution=True
+                sessionGUID=self._session_guid, immediateExecution=True
             )
         )
         self._session_info = response.sessionInfo
@@ -402,6 +413,7 @@ class AskUiControllerClient(AgentOs):
 
         Returns:
             Image.Image: A PIL Image object containing the screenshot.
+
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"

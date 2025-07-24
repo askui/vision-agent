@@ -1,0 +1,149 @@
+{
+  "title": "AskUI AgentOS Send Response Schema",
+  "description": "Defines the schema for the controller gRPC API Send response.",
+  "type": "object",
+  "definitions": {
+    "length": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(\\d+(\\.\\d+)?(px|%)|auto)$",
+          "default": "0px"
+        },
+        {
+          "type": "number",
+          "default": 0.0
+        }
+      ]
+    },
+    "location2": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "$ref": "#/definitions/length"
+        },
+        "y": {
+          "$ref": "#/definitions/length"
+        }
+      },
+      "required": ["x", "y"]
+    },
+    "renderObjectId": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18446744073709551615
+    },
+    "actionId": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    }
+  },
+  "properties": {
+    "message": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "object",
+          "oneOf": [
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["GetMousePosition"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "position": {
+                      "$ref": "#/definitions/location2"
+                    }
+                  },
+                  "required": ["position"]
+                }
+              },
+              "required": ["name", "actionId", "response"]
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["SetMousePosition"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"]
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["AddRenderObject"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/renderObjectId"
+                    }
+                  },
+                  "required": ["id"]
+                }
+              },
+              "required": ["name", "actionId", "response"]
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["UpdateRenderObject"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"]
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["DeleteRenderObject"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"]
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["ClearRenderObjects"]
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"]
+            }
+          ]
+        }
+      },
+      "required": ["command"]
+    }
+  },
+  "required": ["message"]
+}
