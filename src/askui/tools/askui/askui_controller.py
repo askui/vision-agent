@@ -16,8 +16,9 @@ from typing_extensions import Self, override
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import (AgentOs, GetDisplayInformationResponse,
-                                  ModifierKey, PcKey)
+from askui.tools.agent_os import (AgentOs, Coordinate,
+                                  GetDisplayInformationResponse, ModifierKey,
+                                  PcKey)
 from askui.tools.askui.askui_ui_controller_grpc.generated import \
     Controller_V1_pb2 as controller_v1_pbs
 from askui.tools.askui.askui_ui_controller_grpc.generated import \
@@ -769,7 +770,7 @@ class AskUiControllerClient(AgentOs):
         )
         return GetDisplayInformationResponse.model_validate(response_dict)
 
-@telemetry.record_call()
+    @telemetry.record_call()
     def get_process_list(
         self, get_extended_info: bool = False
     ) -> controller_v1_pbs.Response_GetProcessList:
