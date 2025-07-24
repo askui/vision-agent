@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Literal
 
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ModifierKey = Literal[
     "command",
@@ -146,6 +146,26 @@ class ClickEvent(BaseModel):
     pressed: bool
     injected: bool = False
     timestamp: float
+
+
+class SizeInPixels(BaseModel):
+    """Represents the size of a display in pixels."""
+
+    width: int
+    height: int
+
+class DisplayInformation(BaseModel):
+    """Contains information about a single display."""
+
+    display_id: int = Field(alias="displayID")
+    size_in_pixels: SizeInPixels = Field(alias="sizeInPixels")
+
+
+class GetDisplayInformationResponse(BaseModel):
+    """Response model for display information requests."""
+
+    displays: list[DisplayInformation]
+
 
 
 InputEvent = ClickEvent
@@ -319,6 +339,18 @@ class AgentOs(ABC):
         Args:
             display (int, optional): The display ID to set as active.
                 Defaults to `1`.
+        """
+        raise NotImplementedError
+
+    def get_display_information(self) -> GetDisplayInformationResponse:
+        """
+        Get information about all available displays and virtual screen.
+        """
+        raise NotImplementedError
+
+    def get_active_display(self) -> int:
+        """
+        Get the active display.
         """
         raise NotImplementedError
 

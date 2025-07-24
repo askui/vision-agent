@@ -7,6 +7,7 @@ import uuid
 from typing import Literal, Type
 
 import grpc
+from google.protobuf.json_format import MessageToDict  # type: ignore
 from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,20 +16,17 @@ from typing_extensions import Self, override
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
-from askui.tools.askui.askui_ui_controller_grpc import (
-    Controller_V1_pb2 as controller_v1_pbs,
-)
-from askui.tools.askui.askui_ui_controller_grpc import (
-    Controller_V1_pb2_grpc as controller_v1,
-)
+from askui.tools.agent_os import (AgentOs, GetDisplayInformationResponse,
+                                  ModifierKey, PcKey)
+from askui.tools.askui.askui_ui_controller_grpc import \
+    Controller_V1_pb2 as controller_v1_pbs
+from askui.tools.askui.askui_ui_controller_grpc import \
+    Controller_V1_pb2_grpc as controller_v1
 from askui.utils.image_utils import draw_point_on_image
 
 from ..utils import process_exists, wait_for_port
-from .exceptions import (
-    AskUiControllerOperationFailedError,
-    AskUiControllerOperationTimeoutError,
-)
+from .exceptions import (AskUiControllerOperationFailedError,
+                         AskUiControllerOperationTimeoutError)
 
 
 class RemoteDeviceController(BaseModel):
@@ -704,6 +702,14 @@ class AskUiControllerClient(AgentOs):
         )
         self._display = display
 
+    @telemetry.record_call()
+    @override
+    def get_active_display(self) -> int:
+        """
+        Get the active display.
+        """
+        return self._display
+
     @telemetry.record_call(exclude={"command"})
     @override
     def run_command(self, command: str, timeout_ms: int = 30000) -> None:
@@ -724,3 +730,29 @@ class AskUiControllerClient(AgentOs):
                 )
             ),
         )
+
+    @telemetry.record_call()
+    def get_display_information(
+        self,
+    ) -> GetDisplayInformationResponse:
+        """
+        Get information about all available displays and virtual screen.
+
+        Returns:
+            GetDisplayInformationResponse: A Pydantic model containing information
+                about all available displays and the virtual screen.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+
+        self._reporter.add_message("AgentOS", "get_display_information()")
+
+        response: controller_v1_pbs.Response_GetDisplayInformation = (
+            self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        )
+        response_dict = MessageToDict(
+            response,
+            preserving_proto_field_name=True,
+        )
+        return GetDisplayInformationResponse.model_validate(response_dict)
