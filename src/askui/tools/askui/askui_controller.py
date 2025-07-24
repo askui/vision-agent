@@ -29,12 +29,12 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
     RenderObjectStyle,
-)  # noqa: E501
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (
+)
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
     AskuiAgentosSendResponseSchema,
-)  # noqa: E501
+)
 from askui.tools.askui.command_helpers import (
     create_clear_render_objects_command,
     create_delete_render_object_command,
