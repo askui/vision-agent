@@ -7,9 +7,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal, Tuple, Union
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 from PIL import Image as PILImage
-from PIL import ImageDraw, ImageOps, UnidentifiedImageError
 from pydantic import ConfigDict, RootModel, field_validator
 
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
@@ -233,15 +232,9 @@ def scale_coordinates_with_padding(
     scaled_x = x * scale_factor + pad_left
     scaled_y = y * scale_factor + pad_top
 
-    if (
-        scaled_x < 0
-        or scaled_y < 0
-        or scaled_x > max_width
-        or scaled_y > max_height
-    ):
+    if scaled_x < 0 or scaled_y < 0 or scaled_x > max_width or scaled_y > max_height:
         error_msg = "Coordinates are outside the padded image area"
         raise ValueError(error_msg)
-
 
     return scaled_x, scaled_y
 
