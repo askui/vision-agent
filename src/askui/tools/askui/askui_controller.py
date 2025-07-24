@@ -7,7 +7,7 @@ import uuid
 from typing import Literal, Type
 
 import grpc
-from google.protobuf.json_format import MessageToDict  # type: ignore
+from google.protobuf.json_format import MessageToDict
 from PIL import Image
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict

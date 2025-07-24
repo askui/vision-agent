@@ -8,14 +8,16 @@ class ScreenSwitchTool(Tool):
     """
 
     def __init__(self, agent_os: AgentOs) -> None:
-        # We need to determine the number of displays available to provide context to the agent
-        # indicating that screen switching can only be done this number of times.
+        # We need to determine the number of displays available to provide context
+        # to the agent indicating that screen switching can only be done this number
+        # of times.
         displays: list[DisplayInformation] = agent_os.get_display_information().displays
 
         super().__init__(
             name="screen_switch",
             description=f"""
-            This tool is useful for switching between multiple displays to find information not present on the current active screen.
+            This tool is useful for switching between multiple displays to find
+            information not present on the current active screen.
             If more than one display is available, this tool cycles through them.
             Number of displays available: {len(displays)}.
             """,
@@ -26,7 +28,8 @@ class ScreenSwitchTool(Tool):
     def __call__(self) -> None:
         """
         Cycles to the next display if there are multiple displays.
-        This tool is useful to switch between multiple displays if some information is not found on the current display.
+        This tool is useful to switch between multiple displays if some information is
+        not found on the current display.
         """
         if len(self._displays) <= 1:
             return
