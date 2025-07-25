@@ -12,7 +12,8 @@ class ListDisplayTool(Tool):
             name="list_display",
             description="""
             This tool is useful for listing all the available displays.
-            This is useful when the agent is not able to find the information on the current display.
+            This is useful when the agent is not able to find the information on the 
+            current display.
             """,
         )
         self._agent_os: AgentOs = agent_os
