@@ -7,8 +7,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal, Tuple, Union
 
-from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
+from PIL import Image
 from PIL import Image as PILImage
+from PIL import ImageDraw, ImageOps, UnidentifiedImageError
 from pydantic import ConfigDict, RootModel, field_validator
 
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
@@ -189,6 +190,65 @@ def scale_image_with_padding(
         fill=(0, 0, 0),  # Black padding
     )
 
+def scale_coordinates_with_padding(
+    x: float,
+    y: float,
+    original_width: int,
+    original_height: int,
+    max_width: int,
+    max_height: int,
+) -> Tuple[float, float]:
+    """Convert coordinates from an original image to a scaled and padded image.
+    This function takes coordinates from the original image and calculates
+    their corresponding position in an image that has been scaled and
+    padded to fit within `max_width` and `max_height`.
+    Args:
+        x (float): The x-coordinate in the original image.
+        y (float): The y-coordinate in the original image.
+        original_width (int): The width of the original image.
+        original_height (int): The height of the original image.
+        max_width (int): The maximum width of the output scaled and padded image.
+        max_height (int): The maximum height of the output scaled and padded image.
+    Returns:
+        Tuple[float, float]: A tuple of (scaled_x, scaled_y) coordinates
+        in the padded image.
+    """
+    scale_factor, scaled_width, scaled_height = _calculate_aspect_fit_scaling(
+        original_width, original_height, max_width, max_height
+    )
+
+    pad_left = (max_width - scaled_width) // 2
+    pad_top = (max_height - scaled_height) // 2
+
+    scaled_x = x * scale_factor + pad_left
+    scaled_y = y * scale_factor + pad_top
+
+    if scaled_x < 0 or scaled_y < 0 or scaled_x > max_width or scaled_y > max_height:
+        error_msg = "Coordinates are outside the padded image area"
+        raise ValueError(error_msg)
+    return scaled_x, scaled_y
+
+
+def _calculate_aspect_fit_scaling(
+    original_width: int,
+    original_height: int,
+    max_width: int,
+    max_height: int,
+) -> Tuple[float, float, float]:
+    """Calculate the scale factors for an image to fit within specified dimensions while maintaining aspect ratio and adding padding."""
+
+    aspect_ratio = original_width / original_height
+    if (max_width / max_height) > aspect_ratio:
+        scale_factor = max_height / original_height
+        scaled_width = int(original_width * scale_factor)
+        scaled_height = max_height
+    else:
+        scale_factor = max_width / original_width
+        scaled_width = max_width
+        scaled_height = int(original_height * scale_factor)
+
+    return scale_factor, scaled_width, scaled_height
+
 
 def scale_coordinates_back(
     x: float,
@@ -214,15 +274,10 @@ def scale_coordinates_back(
     Raises:
         ValueError: If the coordinates are outside the padded image area.
     """
-    aspect_ratio = original_width / original_height
-    if (max_width / max_height) > aspect_ratio:
-        scale_factor = max_height / original_height
-        scaled_width = int(original_width * scale_factor)
-        scaled_height = max_height
-    else:
-        scale_factor = max_width / original_width
-        scaled_width = max_width
-        scaled_height = int(original_height * scale_factor)
+    scale_factor, scaled_width, scaled_height = _calculate_aspect_fit_scaling(
+        original_width, original_height, max_width, max_height
+    )
+
     pad_left = (max_width - scaled_width) // 2
     pad_top = (max_height - scaled_height) // 2
     adjusted_x = x - pad_left
