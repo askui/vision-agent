@@ -114,7 +114,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         )
         self._locator_serializer = locator_serializer
 
-        def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
+    def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
         chat_completion = self._client.chat.completions.create(
             model=self._settings.tars_model_name,
             messages=[
