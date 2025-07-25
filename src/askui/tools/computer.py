@@ -440,7 +440,7 @@ class Computer20250124Tool(ComputerToolBase):
         scroll_amount: Annotated[int, Field(ge=0)] | None = None,
         duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
         key: str | None = None,  # maybe not all keys supported
-    ) -> Image.Image | None:
+    ) -> Image.Image | None | str:
         match action:
             case "hold_key":
                 self._hold_key(keystroke=text, duration=duration)  # type: ignore[arg-type]
