@@ -12,8 +12,12 @@ from PIL import Image
 from pydantic import Field, validate_call
 from typing_extensions import Self, override
 
-from askui.tools.agent_os import AgentOs, ModifierKey, PcKey
-from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
+from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
+from askui.utils.image_utils import (
+    scale_coordinates_back,
+    scale_coordinates_with_padding,
+    scale_image_with_padding,
+)
 
 from ..models.shared.tools import InputSchema, Tool
 
@@ -223,10 +227,10 @@ class ComputerToolBase(Tool, ABC):
         text: str | None = None,
         coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
         | None = None,
-    ) -> Image.Image | None:
+    ) -> Image.Image | None | str:
         match action:
             case "cursor_position":
-                raise ActionNotImplementedError(action, self.name)
+                return self._get_mouse_position_scaled()
             case "double_click":
                 return self._agent_os.click("left", 2)
             case "key":
@@ -324,6 +328,20 @@ class ComputerToolBase(Tool, ABC):
         self._real_screen_width = screenshot.width
         self._real_screen_height = screenshot.height
         return scale_image_with_padding(screenshot, self._width, self._height)
+
+    def _get_mouse_position_scaled(self) -> str:
+        mouse_position: Coordinate = self._agent_os.get_mouse_position()
+        real_screen_width, real_screen_height = self._get_real_screen_resolution()
+        x, y = scale_coordinates_with_padding(
+            mouse_position.x,
+            mouse_position.y,
+            real_screen_width,
+            real_screen_height,
+            self._width,
+            self._height,
+        )
+
+        return f"X={x},Y={y}"
 
 
 class Computer20241022Tool(ComputerToolBase):
@@ -426,7 +444,7 @@ class Computer20250124Tool(ComputerToolBase):
         scroll_amount: Annotated[int, Field(ge=0)] | None = None,
         duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
         key: str | None = None,  # maybe not all keys supported
-    ) -> Image.Image | None:
+    ) -> Image.Image | None | str:
         match action:
             case "hold_key":
                 self._hold_key(keystroke=text, duration=duration)  # type: ignore[arg-type]
