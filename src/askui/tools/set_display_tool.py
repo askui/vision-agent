@@ -12,7 +12,8 @@ class SetDisplayTool(Tool):
             name="set_display",
             description="""
             This tool is useful for setting the default display screen.
-            This is useful when the agent is not able to find the information on the current display.
+            This is useful when the agent is not able to find the information on the 
+            current display.
             """,
         )
         self._agent_os: AgentOs = agent_os
