@@ -15,6 +15,18 @@ class SetDisplayTool(Tool):
             This is useful when the agent is not able to find the information on the 
             current display.
             """,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "display_id": {
+                        "type": "integer",
+                        "description": (
+                            "The display id to set. Must be a valid display id."
+                        ),
+                    },
+                },
+                "required": ["display_id"],
+            },
         )
         self._agent_os: AgentOs = agent_os
 
