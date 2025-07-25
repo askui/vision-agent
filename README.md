@@ -165,13 +165,13 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 **Example Code:**
 ```python
+# Set environment variables before running this code:
+# TARS_URL=http://your-tars-endpoint.com/v1
+# TARS_API_KEY=your-tars-api-key
+# TARS_MODEL_NAME=your-model-name  # Optional, defaults to "ui-tars"
+
 from askui import VisionAgent
 
-# Set environment variables (or set them in your shell)
-import os
-os.environ["TARS_URL"] = "http://your-tars-endpoint.com"
-os.environ["TARS_API_KEY"] = "your-tars-api-key"
-os.environ["TARS_MODEL_NAME"] = "your-model-name"  # Optional, defaults to "ui-tars"
 
 # Use TARS model directly
 with VisionAgent(model="tars") as agent:

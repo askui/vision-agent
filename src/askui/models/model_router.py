@@ -34,7 +34,6 @@ from askui.utils.image_utils import ImageSource
 from ..logger import logger
 from .askui.inference_api import AskUiInferenceApi
 from .ui_tars_ep.ui_tars_api import UiTarsApiHandler, UiTarsApiHandlerSettings
-from ..tools.askui.askui_controller import AskUiControllerClient
 
 
 def initialize_default_model_registry(  # noqa: C901
@@ -92,8 +91,21 @@ def initialize_default_model_registry(  # noqa: C901
             locator_serializer=vlm_locator_serializer(),
         )
 
-    # Initialize base registry with standard models
-    registry = {
+    @functools.cache
+    def tars_handler() -> UiTarsApiHandler:
+        try:
+            settings = UiTarsApiHandlerSettings()
+            locator_serializer = VlmLocatorSerializer()
+            return UiTarsApiHandler(
+                reporter=reporter,
+                settings=settings,
+                locator_serializer=locator_serializer,
+            )
+        except Exception as e:
+            error_msg = f"Failed to initialize TARS model: {e}"
+            raise ValueError(error_msg)
+
+    return {
         ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
         ModelName.ASKUI: askui_facade,
         ModelName.ASKUI__AI_ELEMENT: askui_model_router,
@@ -106,37 +118,8 @@ def initialize_default_model_registry(  # noqa: C901
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: hf_spaces_handler,
         ModelName.HF__SPACES__SHOWUI__2B: hf_spaces_handler,
+        ModelName.TARS: tars_handler,
     }
-
-        # Conditionally register TARS model if environment variables are available
-    try:
-        # Try to create TARS settings to check if required environment variables are set
-        # (TARS_URL and TARS_API_KEY are required, TARS_MODEL_NAME is optional)
-        tars_settings = UiTarsApiHandlerSettings()
-
-        @functools.cache
-        def tars_handler() -> UiTarsApiHandler:
-            """Create TARS model handler with proper dependencies."""
-            agent_os = AskUiControllerClient(display=1, reporter=reporter)
-            locator_serializer = VlmLocatorSerializer()
-            return UiTarsApiHandler(
-                agent_os=agent_os,
-                reporter=reporter,
-                settings=tars_settings,
-                locator_serializer=locator_serializer,
-            )
-
-        # Register TARS model if environment variables are available
-        registry[ModelName.TARS] = tars_handler
-        logger.debug("TARS model registered successfully")
-
-    except (ValueError, ImportError) as e:
-        # Required TARS environment variables (TARS_URL, TARS_API_KEY) are not set
-        # or TARS module is not available
-        # This is expected behavior, so we just skip TARS registration
-        logger.debug(f"TARS model not registered: {e}")
-
-    return registry
 
 
 class ModelRouter:
