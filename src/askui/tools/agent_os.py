@@ -164,8 +164,8 @@ class SizeInPixels(BaseModel):
 class DisplayInformation(BaseModel):
     """Contains information about a single display."""
 
-    display_id: int = Field(alias="displayID")
-    size_in_pixels: SizeInPixels = Field(alias="sizeInPixels")
+    display_id: int = Field(validation_alias="displayID")
+    size_in_pixels: SizeInPixels = Field(validation_alias="sizeInPixels")
 
 
 class GetDisplayInformationResponse(BaseModel):
