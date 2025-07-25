@@ -198,20 +198,9 @@ def scale_coordinates_with_padding(
     max_width: int,
     max_height: int,
 ) -> Tuple[float, float]:
-    """Convert coordinates from an original image to a scaled and padded image.
-    This function takes coordinates from the original image and calculates
-    their corresponding position in an image that has been scaled and
-    padded to fit within `max_width` and `max_height`.
-    Args:
-        x (float): The x-coordinate in the original image.
-        y (float): The y-coordinate in the original image.
-        original_width (int): The width of the original image.
-        original_height (int): The height of the original image.
-        max_width (int): The maximum width of the output scaled and padded image.
-        max_height (int): The maximum height of the output scaled and padded image.
-    Returns:
-        Tuple[float, float]: A tuple of (scaled_x, scaled_y) coordinates
-        in the padded image.
+    """
+    Scale coordinates from an original coordinate system to a scaled and padded coordinate system.
+    
     """
     scale_factor, scaled_width, scaled_height = _calculate_aspect_fit_scaling(
         original_width, original_height, max_width, max_height
@@ -235,7 +224,18 @@ def _calculate_aspect_fit_scaling(
     max_width: int,
     max_height: int,
 ) -> Tuple[float, float, float]:
-    """Calculate the scale factors for an image to fit within specified dimensions while maintaining aspect ratio and adding padding."""
+    """Calculate the scale factors for an image to fit within specified dimensions while maintaining aspect ratio.
+    
+    Args:
+        original_width (int): The width of the original coordinate system.
+        original_height (int): The height of the original coordinate system.
+        max_width (int): The maximum width of the output scaled coordinate system.
+        max_height (int): The maximum height of the output scaled coordinate system.
+        
+    Returns:
+        Tuple[float, float, float]: A tuple of (scale_factor, scaled_width, scaled_height).
+    
+    """
 
     aspect_ratio = original_width / original_height
     if (max_width / max_height) > aspect_ratio:
