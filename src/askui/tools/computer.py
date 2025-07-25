@@ -4,16 +4,20 @@ from abc import ABC
 from dataclasses import dataclass
 from typing import Annotated, Literal, TypedDict, cast, get_args
 
-from anthropic.types.beta import (BetaToolComputerUse20241022Param,
-                                  BetaToolComputerUse20250124Param)
+from anthropic.types.beta import (
+    BetaToolComputerUse20241022Param,
+    BetaToolComputerUse20250124Param,
+)
 from PIL import Image
 from pydantic import Field, validate_call
 from typing_extensions import Self, override
 
 from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
-from askui.utils.image_utils import (scale_coordinates_back,
-                                     scale_coordinates_with_padding,
-                                     scale_image_with_padding)
+from askui.utils.image_utils import (
+    scale_coordinates_back,
+    scale_coordinates_with_padding,
+    scale_image_with_padding,
+)
 
 from ..models.shared.tools import InputSchema, Tool
 
