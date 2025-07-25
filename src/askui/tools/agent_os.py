@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
         RenderObjectStyle,
-    )
+    )  # noqa: E501
 
 
 ModifierKey = Literal[
@@ -157,6 +157,26 @@ class ClickEvent(BaseModel):
 class Coordinate(BaseModel):
     x: int
     y: int
+
+
+class SizeInPixels(BaseModel):
+    """Represents the size of a display in pixels."""
+
+    width: int
+    height: int
+
+
+class DisplayInformation(BaseModel):
+    """Contains information about a single display."""
+
+    display_id: int = Field(validation_alias="displayID")
+    size_in_pixels: SizeInPixels = Field(validation_alias="sizeInPixels", exclude=True)
+
+
+class GetDisplayInformationResponse(BaseModel):
+    """Response model for display information requests."""
+
+    displays: list[DisplayInformation]
 
 
 InputEvent = ClickEvent
@@ -320,6 +340,18 @@ class AgentOs(ABC):
             modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
                 press along with the main key. Defaults to `None`.
             count (int, optional): The number of times to tap the key. Defaults to `1`.
+        """
+        raise NotImplementedError
+
+    def get_display_information(self) -> GetDisplayInformationResponse:
+        """
+        Get information about all available displays and virtual screen.
+        """
+        raise NotImplementedError
+
+    def get_active_display(self) -> int:
+        """
+        Get the active display.
         """
         raise NotImplementedError
 

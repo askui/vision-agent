@@ -17,8 +17,11 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
+from askui.tools.active_display_tool import ActiveDisplayTool
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
+from askui.tools.list_display_tool import ListDisplayTool
+from askui.tools.set_display_tool import SetDisplayTool
 
 from .logger import logger
 from .models import ModelComposition
@@ -115,6 +118,9 @@ class VisionAgent(AgentBase):
             models=models,
             tools=[
                 ExceptionTool(),
+                SetDisplayTool(agent_os=self.tools.os),
+                ListDisplayTool(agent_os=self.tools.os),
+                ActiveDisplayTool(agent_os=self.tools.os),
             ]
             + (act_tools or []),
             agent_os=self.tools.os,

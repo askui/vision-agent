@@ -7,13 +7,20 @@ import uuid
 from typing import Literal, Type
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 from PIL import Image
 from typing_extensions import Self, override
 
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
+from askui.tools.agent_os import (
+    AgentOs,
+    Coordinate,
+    GetDisplayInformationResponse,
+    ModifierKey,
+    PcKey,
+)
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
@@ -21,11 +28,11 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
-    RenderObjectStyle,
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+    RenderObjectStyle,  # noqa: E501
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
-    AskuiAgentosSendResponseSchema,
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (
+    AskuiAgentosSendResponseSchema,  # noqa: E501
 )
 from askui.tools.askui.command_helpers import (
     create_clear_render_objects_command,
@@ -626,9 +633,18 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
+    @override
+    def get_active_display(self) -> int:
+        """
+        Get the active display.
+        """
+        return self._display
+
+    @telemetry.record_call()
+    @override
     def get_display_information(
         self,
-    ) -> controller_v1_pbs.Response_GetDisplayInformation:
+    ) -> GetDisplayInformationResponse:
         """
         Get information about all available displays and virtual screen.
 
@@ -647,7 +663,12 @@ class AskUiControllerClient(AgentOs):
             self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
         )
 
-        return response
+        response_dict = MessageToDict(
+            response,
+            preserving_proto_field_name=True,
+        )
+
+        return GetDisplayInformationResponse.model_validate(response_dict)
 
     @telemetry.record_call()
     def get_process_list(
