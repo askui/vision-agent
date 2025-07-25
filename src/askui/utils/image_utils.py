@@ -7,9 +7,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal, Tuple, Union
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 from PIL import Image as PILImage
-from PIL import ImageDraw, ImageOps, UnidentifiedImageError
 from pydantic import ConfigDict, RootModel, field_validator
 
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
@@ -190,6 +189,7 @@ def scale_image_with_padding(
         fill=(0, 0, 0),  # Black padding
     )
 
+
 def scale_coordinates_with_padding(
     x: float,
     y: float,
@@ -200,7 +200,7 @@ def scale_coordinates_with_padding(
 ) -> Tuple[float, float]:
     """
     Scale coordinates from an original coordinate system to a scaled and padded coordinate system.
-    
+
     """
     scale_factor, scaled_width, scaled_height = _calculate_aspect_fit_scaling(
         original_width, original_height, max_width, max_height
@@ -225,16 +225,16 @@ def _calculate_aspect_fit_scaling(
     max_height: int,
 ) -> Tuple[float, float, float]:
     """Calculate the scale factors for an image to fit within specified dimensions while maintaining aspect ratio.
-    
+
     Args:
         original_width (int): The width of the original coordinate system.
         original_height (int): The height of the original coordinate system.
         max_width (int): The maximum width of the output scaled coordinate system.
         max_height (int): The maximum height of the output scaled coordinate system.
-        
+
     Returns:
         Tuple[float, float, float]: A tuple of (scale_factor, scaled_width, scaled_height).
-    
+
     """
 
     aspect_ratio = original_width / original_height
