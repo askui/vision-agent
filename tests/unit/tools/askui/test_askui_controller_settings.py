@@ -347,8 +347,10 @@ class TestAskUiControllerSettings:
                     settings._find_remote_device_controller_by_installation_directory()
                     is None
                 )
-                # Note: _find_remote_device_controller_by_component_registry_file will raise
-                # FileNotFoundError when component_registry_file is None, so we test that separately
+                # Note: _find_remote_device_controller_by_component_registry_file will
+                # raise
+                # FileNotFoundError when component_registry_file is None, so we test
+                # that separately
 
     def test_assertion_error_when_no_controller_found(self) -> None:
         """Test that assertion error is raised when no controller is found."""

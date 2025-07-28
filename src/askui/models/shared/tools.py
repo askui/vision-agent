@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any
 
 from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
 from anthropic.types.beta.beta_tool_param import InputSchema
@@ -147,10 +147,7 @@ class ToolCollection:
                 tool_use_id=tool_use_block_param.id,
             )
         try:
-            tool_result: ToolCallResult = cast(
-                "ToolCallResult",
-                tool(**tool_use_block_param.input),  # type: ignore
-            )
+            tool_result: ToolCallResult = tool(**tool_use_block_param.input)  # type: ignore
             return ToolResultBlockParam(
                 content=_convert_to_content(tool_result),
                 tool_use_id=tool_use_block_param.id,

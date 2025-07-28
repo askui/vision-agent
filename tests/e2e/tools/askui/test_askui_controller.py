@@ -1,6 +1,5 @@
 import base64
 import io
-from pathlib import Path
 from typing import Literal
 
 import pytest
@@ -29,15 +28,6 @@ def controller_client(
         display=1,
         controller_server=controller_server,
     )
-
-
-def test_find_remote_device_controller_by_component_registry(
-    controller_server: AskUiControllerServer,
-) -> None:
-    remote_device_controller_path = Path(
-        controller_server._find_remote_device_controller_by_component_registry()
-    )
-    assert "AskuiRemoteDeviceController" == remote_device_controller_path.stem
 
 
 def test_actions(controller_client: AskUiControllerClient) -> None:
