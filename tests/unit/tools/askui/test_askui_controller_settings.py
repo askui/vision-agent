@@ -109,59 +109,77 @@ class TestAskUiControllerSettings:
     def test_build_controller_path_windows(self) -> None:
         """Test _build_controller_path for Windows platform."""
         with patch("sys.platform", "win32"):
-            settings = AskUiControllerSettings()
-            installation_dir = pathlib.Path("/test/installation")
-            expected_path = (
-                installation_dir
-                / "Binaries"
-                / "resources"
-                / "assets"
-                / "binaries"
-                / "AskuiRemoteDeviceController.exe"
-            )
-            assert settings._build_controller_path(installation_dir) == expected_path
+            with patch.dict(
+                "os.environ", {"ASKUI_CONTROLLER_PATH": "/tmp/test"}, clear=True
+            ):
+                settings = AskUiControllerSettings()
+                installation_dir = pathlib.Path("/test/installation")
+                expected_path = (
+                    installation_dir
+                    / "Binaries"
+                    / "resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController.exe"
+                )
+                assert (
+                    settings._build_controller_path(installation_dir) == expected_path
+                )
 
     def test_build_controller_path_darwin(self) -> None:
         """Test _build_controller_path for macOS platform."""
         with patch("sys.platform", "darwin"):
-            settings = AskUiControllerSettings()
-            installation_dir = pathlib.Path("/test/installation")
-            expected_path = (
-                installation_dir
-                / "Binaries"
-                / "askui-ui-controller.app"
-                / "Contents"
-                / "Resources"
-                / "assets"
-                / "binaries"
-                / "AskuiRemoteDeviceController"
-            )
-            assert settings._build_controller_path(installation_dir) == expected_path
+            with patch.dict(
+                "os.environ", {"ASKUI_CONTROLLER_PATH": "/tmp/test"}, clear=True
+            ):
+                settings = AskUiControllerSettings()
+                installation_dir = pathlib.Path("/test/installation")
+                expected_path = (
+                    installation_dir
+                    / "Binaries"
+                    / "askui-ui-controller.app"
+                    / "Contents"
+                    / "Resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController"
+                )
+                assert (
+                    settings._build_controller_path(installation_dir) == expected_path
+                )
 
     def test_build_controller_path_linux(self) -> None:
         """Test _build_controller_path for Linux platform."""
         with patch("sys.platform", "linux"):
-            settings = AskUiControllerSettings()
-            installation_dir = pathlib.Path("/test/installation")
-            expected_path = (
-                installation_dir
-                / "Binaries"
-                / "resources"
-                / "assets"
-                / "binaries"
-                / "AskuiRemoteDeviceController"
-            )
-            assert settings._build_controller_path(installation_dir) == expected_path
+            with patch.dict(
+                "os.environ", {"ASKUI_CONTROLLER_PATH": "/tmp/test"}, clear=True
+            ):
+                settings = AskUiControllerSettings()
+                installation_dir = pathlib.Path("/test/installation")
+                expected_path = (
+                    installation_dir
+                    / "Binaries"
+                    / "resources"
+                    / "assets"
+                    / "binaries"
+                    / "AskuiRemoteDeviceController"
+                )
+                assert (
+                    settings._build_controller_path(installation_dir) == expected_path
+                )
 
     def test_build_controller_path_unsupported_platform(self) -> None:
         """Test _build_controller_path for unsupported platform."""
         with patch("sys.platform", "unsupported"):
-            settings = AskUiControllerSettings()
-            installation_dir = pathlib.Path("/test/installation")
-            with pytest.raises(
-                NotImplementedError, match='Platform "unsupported" not supported'
+            with patch.dict(
+                "os.environ", {"ASKUI_CONTROLLER_PATH": "/tmp/test"}, clear=True
             ):
-                settings._build_controller_path(installation_dir)
+                settings = AskUiControllerSettings()
+                installation_dir = pathlib.Path("/test/installation")
+                with pytest.raises(
+                    NotImplementedError, match='Platform "unsupported" not supported'
+                ):
+                    settings._build_controller_path(installation_dir)
 
     def test_invalid_component_registry_file(self, tmp_path: pathlib.Path) -> None:
         """Test handling of invalid component registry file."""
