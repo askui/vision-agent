@@ -17,11 +17,11 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.tools.active_display_tool import ActiveDisplayTool
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
-from askui.tools.list_display_tool import ListDisplayTool
-from askui.tools.set_display_tool import SetDisplayTool
+from askui.tools.list_displays_tool import ListDisplaysTool
+from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
+from askui.tools.set_active_display_tool import SetActiveDisplayTool
 
 from .logger import logger
 from .models import ModelComposition
@@ -33,9 +33,10 @@ from .tools.askui import AskUiControllerClient
 
 _SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 * You are utilising a {sys.platform} machine using {platform.machine()} architecture with internet access.
+* When you cannot find something (application window, ui element etc.) on the currently selected/active displa/screen, check the other available displays by listing them and checking which one is currently active and then going through the other displays one by one until you find it or you have checked all of them.
 * When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
-* When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
-* When using your function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* When viewing a page it can be helpful to zoom out/in so that you can see everything on the page. Either that, or make sure you scroll down/up to see everything before deciding something isn't available.
+* When using your function calls, they take a while to run and send back to you. Where possible/feasible, try to chain multiple of these calls all into one function calls request.
 * The current date and time is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y %H:%M:%S %z")}.
 </SYSTEM_CAPABILITY>
 
@@ -118,9 +119,9 @@ class VisionAgent(AgentBase):
             models=models,
             tools=[
                 ExceptionTool(),
-                SetDisplayTool(agent_os=self.tools.os),
-                ListDisplayTool(agent_os=self.tools.os),
-                ActiveDisplayTool(agent_os=self.tools.os),
+                SetActiveDisplayTool(agent_os=self.tools.os),
+                RetrieveActiveDisplayTool(agent_os=self.tools.os),
+                ListDisplaysTool(agent_os=self.tools.os),
             ]
             + (act_tools or []),
             agent_os=self.tools.os,

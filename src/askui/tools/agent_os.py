@@ -5,8 +5,8 @@ from PIL import Image
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
-        RenderObjectStyle,
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+        RenderObjectStyle,  # noqa: E501
     )
 
 
@@ -159,24 +159,20 @@ class Coordinate(BaseModel):
     y: int
 
 
-class SizeInPixels(BaseModel):
+class DisplaySize(BaseModel):
     """Represents the size of a display in pixels."""
 
     width: int
     height: int
 
 
-class DisplayInformation(BaseModel):
-    """Contains information about a single display."""
-
-    display_id: int = Field(validation_alias="displayID")
-    size_in_pixels: SizeInPixels = Field(validation_alias="sizeInPixels", exclude=True)
+class Display(BaseModel):
+    id: int = Field(validation_alias="displayID")
+    size: DisplaySize = Field(validation_alias="sizeInPixels")
 
 
-class GetDisplayInformationResponse(BaseModel):
-    """Response model for display information requests."""
-
-    displays: list[DisplayInformation]
+class DisplaysListResponse(BaseModel):
+    data: list[Display] = Field(validation_alias="displays")
 
 
 InputEvent = ClickEvent
@@ -343,15 +339,18 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    def get_display_information(self) -> GetDisplayInformationResponse:
+    def list_displays(self) -> DisplaysListResponse:
         """
-        Get information about all available displays and virtual screen.
+        List all the available displays.
         """
         raise NotImplementedError
 
-    def get_active_display(self) -> int:
+    def retrieve_active_display(self) -> int:
         """
-        Get the active display.
+        Retrieve the id of the currently active display/screen.
+
+        Returns:
+            int: The id of the currently active display/screen.
         """
         raise NotImplementedError
 

@@ -17,7 +17,7 @@ from askui.reporting import Reporter
 from askui.tools.agent_os import (
     AgentOs,
     Coordinate,
-    GetDisplayInformationResponse,
+    DisplaysListResponse,
     ModifierKey,
     PcKey,
 )
@@ -634,7 +634,7 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def get_active_display(self) -> int:
+    def retrieve_active_display(self) -> int:
         """
         Get the active display.
         """
@@ -642,16 +642,14 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def get_display_information(
+    def list_displays(
         self,
-    ) -> GetDisplayInformationResponse:
+    ) -> DisplaysListResponse:
         """
-        Get information about all available displays and virtual screen.
+        List all available displays including virtual screens.
 
         Returns:
-            controller_v1_pbs.Response_GetDisplayInformation:
-                - displays: List of DisplayInformation objects
-                - virtualScreenRectangle: Overall virtual screen bounds
+            DisplaysListResponse
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -668,7 +666,7 @@ class AskUiControllerClient(AgentOs):
             preserving_proto_field_name=True,
         )
 
-        return GetDisplayInformationResponse.model_validate(response_dict)
+        return DisplaysListResponse.model_validate(response_dict)
 
     @telemetry.record_call()
     def get_process_list(

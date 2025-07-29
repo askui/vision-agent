@@ -2,27 +2,19 @@ from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 
 
-class SetDisplayTool(Tool):
-    """
-    Tool to set the display.
-    """
-
+class SetActiveDisplayTool(Tool):
     def __init__(self, agent_os: AgentOs) -> None:
         super().__init__(
-            name="set_display",
+            name="set_active_display",
             description="""
-            This tool is useful for setting the default display screen.
-            This is useful when the agent is not able to find the information on the 
-            current display.
+                Set the display screen from which screenshots are taken and on which
+                actions are performed.
             """,
             input_schema={
                 "type": "object",
                 "properties": {
                     "display_id": {
                         "type": "integer",
-                        "description": (
-                            "The display id to set. Must be a valid display id."
-                        ),
                     },
                 },
                 "required": ["display_id"],
