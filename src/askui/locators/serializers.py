@@ -13,9 +13,7 @@ from .locators import (
     Prompt,
     Text,
 )
-from .locators import (
-    AiElement as AiElementLocator,
-)
+from .locators import AiElement as AiElementLocator
 from .relatable import (
     BoundingRelation,
     LogicalRelation,

@@ -6,7 +6,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from askui.models.model_router import ModelRouter
-from askui.tools.agent_os import AgentOs
+from askui.tools.agent_os import AgentOs, Display, DisplaySize
 from askui.tools.toolbox import AgentToolbox
 
 
@@ -41,6 +41,10 @@ def path_fixtures_github_com__icon(path_fixtures_images: pathlib.Path) -> pathli
 def agent_os_mock(mocker: MockerFixture) -> AgentOs:
     """Fixture providing a mock agent os."""
     mock = mocker.MagicMock(spec=AgentOs)
+    mock.retrieve_active_display.return_value = Display(
+        id=1,
+        size=DisplaySize(width=100, height=100),
+    )
     mock.screenshot.return_value = Image.new("RGB", (100, 100), color="white")
     return cast("AgentOs", mock)
 

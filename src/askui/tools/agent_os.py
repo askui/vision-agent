@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
@@ -157,6 +157,26 @@ class ClickEvent(BaseModel):
 class Coordinate(BaseModel):
     x: int
     y: int
+
+
+class DisplaySize(BaseModel):
+    """Represents the size of a display in pixels."""
+
+    width: int
+    height: int
+
+
+class Display(BaseModel):
+    model_config = ConfigDict(
+        validate_by_name=True,
+    )
+
+    id: int = Field(validation_alias="displayID")
+    size: DisplaySize = Field(validation_alias="sizeInPixels")
+
+
+class DisplaysListResponse(BaseModel):
+    data: list[Display] = Field(validation_alias="displays")
 
 
 InputEvent = ClickEvent
@@ -320,6 +340,22 @@ class AgentOs(ABC):
             modifier_keys (list[ModifierKey] | None, optional): List of modifier keys to
                 press along with the main key. Defaults to `None`.
             count (int, optional): The number of times to tap the key. Defaults to `1`.
+        """
+        raise NotImplementedError
+
+    def list_displays(self) -> DisplaysListResponse:
+        """
+        List all the available displays.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def retrieve_active_display(self) -> Display:
+        """
+        Retrieve the currently active display/screen.
+
+        Returns:
+            Display: The currently active display/screen.
         """
         raise NotImplementedError
 

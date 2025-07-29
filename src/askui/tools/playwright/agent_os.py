@@ -16,7 +16,7 @@ from playwright.sync_api import (
 )
 from typing_extensions import override
 
-from ..agent_os import AgentOs, InputEvent, ModifierKey, PcKey
+from ..agent_os import AgentOs, Display, DisplaySize, InputEvent, ModifierKey, PcKey
 
 
 class PlaywrightAgentOs(AgentOs):
@@ -355,6 +355,28 @@ class PlaywrightAgentOs(AgentOs):
             if modifier_keys:
                 for modifier in modifier_keys:
                     self._page.keyboard.up(self._convert_key(modifier))
+
+    @override
+    def retrieve_active_display(self) -> Display:
+        """
+        Retrieve the currently active display/screen.
+        """
+        if not self._page:
+            error_msg = "No active page. Call connect() first."
+            raise RuntimeError(error_msg)
+
+        viewport_size = self._page.viewport_size
+        if viewport_size is None:
+            error_msg = "No viewport size."
+            raise RuntimeError(error_msg)
+
+        return Display(
+            id=1,
+            size=DisplaySize(
+                width=viewport_size["width"],
+                height=viewport_size["height"],
+            ),
+        )
 
     def _convert_key(self, key: PcKey | ModifierKey) -> str:
         """

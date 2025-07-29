@@ -122,7 +122,7 @@ def test_screenshot_basic(controller_client: AskUiControllerClient) -> None:
 def test_get_display_information(controller_client: AskUiControllerClient) -> None:
     """Test retrieving display information"""
     with controller_client:
-        display_info = controller_client.get_display_information()
+        display_info = controller_client.list_displays()
         assert display_info is not None
 
 

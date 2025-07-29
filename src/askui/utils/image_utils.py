@@ -3,11 +3,11 @@ import binascii
 import io
 import pathlib
 import re
-from io import BytesIO
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Tuple, Union
+from typing import Any, Literal, Union
 
-from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageDraw, UnidentifiedImageError
 from PIL import Image as PILImage
 from pydantic import ConfigDict, RootModel, field_validator
 
@@ -32,16 +32,14 @@ def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
     if isinstance(source, Image.Image):
         return source
 
-    if isinstance(source, Path) or (
-        isinstance(source, str) and not source.startswith(("data:", ","))
-    ):
+    if isinstance(source, Path) or (not source.startswith(("data:", ","))):
         try:
             return Image.open(source)
         except (OSError, FileNotFoundError, UnidentifiedImageError) as e:
             error_msg = f"Could not open image from file path: {source}"
             raise ValueError(error_msg) from e
 
-    if isinstance(source, str):
+    else:
         match = _DATA_URL_GENERIC_RE.match(source)
         if match:
             try:
@@ -73,6 +71,26 @@ def image_to_data_url(image: PILImage.Image) -> str:
     return f"data:image/png;base64,{image_to_base64(image=image, format_='PNG')}"
 
 
+def base64_to_image(base64_string: str) -> Image.Image:
+    """Convert a base64 string to a PIL Image.
+
+    Args:
+        base64_string (str): The base64 encoded image string.
+
+    Returns:
+        Image.Image: A PIL Image object.
+
+    Raises:
+        ValueError: If the base64 string is invalid or the image cannot be decoded.
+    """
+    try:
+        image_bytes = base64.b64decode(base64_string)
+        return Image.open(io.BytesIO(image_bytes))
+    except (binascii.Error, UnidentifiedImageError) as e:
+        error_msg = f"Could not convert base64 string to image: {e}"
+        raise ValueError(error_msg) from e
+
+
 def data_url_to_image(data_url: str) -> Image.Image:
     """Convert a data URL to a PIL Image.
 
@@ -83,13 +101,17 @@ def data_url_to_image(data_url: str) -> Image.Image:
         Image.Image: A PIL Image object.
 
     Raises:
-        ValueError: If the data URL is invalid or the image cannot be decoded.
+        ValueError: If the data URL is invalid or the data URL data cannot be decoded
+            or the image cannot be decoded.
     """
-    data_url = data_url.split(",")[1]
-    while len(data_url) % 4 != 0:
-        data_url += "="
-    image_data = base64.b64decode(data_url)
-    return Image.open(BytesIO(image_data))
+    try:
+        data_url_data = data_url.split(",")[1]
+        while len(data_url_data) % 4 != 0:
+            data_url_data += "="
+        return base64_to_image(data_url_data)
+    except (IndexError, ValueError) as e:
+        error_msg = f"Could not convert data URL to image: {e}"
+        raise ValueError(error_msg) from e
 
 
 def draw_point_on_image(
@@ -112,22 +134,6 @@ def draw_point_on_image(
     return img_copy
 
 
-def base64_to_image(base64_string: str) -> Image.Image:
-    """Convert a base64 string to a PIL Image.
-
-    Args:
-        base64_string (str): The base64 encoded image string.
-
-    Returns:
-        Image.Image: A PIL Image object.
-
-    Raises:
-        ValueError: If the base64 string is invalid or the image cannot be decoded.
-    """
-    image_bytes = base64.b64decode(base64_string)
-    return Image.open(io.BytesIO(image_bytes))
-
-
 def image_to_base64(
     image: Union[pathlib.Path, Image.Image], format_: Literal["PNG", "JPEG"] = "PNG"
 ) -> str:
@@ -145,99 +151,211 @@ def image_to_base64(
     """
     image_bytes: bytes | None = None
     if isinstance(image, Image.Image):
-        with io.BytesIO() as _bytes:
-            image.save(_bytes, format=format_)
-            image_bytes = _bytes.getvalue()
-    elif isinstance(image, pathlib.Path):
-        with Path.open(image, "rb") as f:
-            image_bytes = f.read()
+        with io.BytesIO() as buffer:
+            image.save(buffer, format=format_)
+            image_bytes = buffer.getvalue()
+    else:
+        with Path.open(image, "rb") as file:
+            image_bytes = file.read()
+
     return base64.b64encode(image_bytes).decode("utf-8")
 
 
-def scale_image_with_padding(
-    image: Image.Image, max_width: int, max_height: int
-) -> Image.Image:
-    """Scale an image to fit within specified dimensions while maintaining aspect ratio and adding padding.
+def _calc_center_offset(
+    image_size: tuple[int, int],
+    container_size: tuple[int, int],
+) -> tuple[int, int]:
+    """Calculate the offset to center the image in the container.
+
+    If the image is larger than the container, the offset will be negative.
 
     Args:
-        image (Image.Image): The PIL Image to scale.
-        max_width (int): The maximum width of the output image.
-        max_height (int): The maximum height of the output image.
+        image_size (tuple[int, int]): The size of the image to center (width, height).
+        container_size (tuple[int, int]): The size of the container to center the image in (width, height).
 
     Returns:
-        Image.Image: A new PIL Image that fits within the specified dimensions with padding.
+        tuple[int, int]: The offset to center the image in the container.
     """
-    original_width, original_height = image.size
-    aspect_ratio = original_width / original_height
-    if (max_width / max_height) > aspect_ratio:
-        scale_factor = max_height / original_height
-    else:
-        scale_factor = max_width / original_width
-    scaled_width = int(original_width * scale_factor)
-    scaled_height = int(original_height * scale_factor)
-    scaled_image = image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
-    pad_left = (max_width - scaled_width) // 2
-    pad_top = (max_height - scaled_height) // 2
-    return ImageOps.expand(
-        scaled_image,
-        border=(
-            pad_left,
-            pad_top,
-            max_width - scaled_width - pad_left,
-            max_height - scaled_height - pad_top,
-        ),
-        fill=(0, 0, 0),  # Black padding
+    return (
+        (container_size[0] - image_size[0]) // 2,
+        (container_size[1] - image_size[1]) // 2,
     )
 
 
-def scale_coordinates_back(
-    x: float,
-    y: float,
-    original_width: int,
-    original_height: int,
-    max_width: int,
-    max_height: int,
-) -> Tuple[float, float]:
-    """Convert coordinates from a scaled and padded image back to the original image coordinates.
+@dataclass
+class ScalingResults:
+    """Results of scaling calculations.
 
     Args:
-        x (float): The x-coordinate in the scaled image.
-        y (float): The y-coordinate in the scaled image.
-        original_width (int): The width of the original image.
-        original_height (int): The height of the original image.
-        max_width (int): The maximum width used for scaling.
-        max_height (int): The maximum height used for scaling.
+        factor (float): The scaling factor applied.
+        size (tuple[int, int]): The resulting size (width, height).
+    """
+
+    factor: float
+    size: tuple[int, int]
+
+
+def _calculate_scaling_for_fit(
+    original_size: tuple[int, int],
+    target_size: tuple[int, int],
+) -> ScalingResults:
+    """Calculate the scaling factor and size of an image to fit within target size while maintaining aspect ratio.
+
+    If the image is larger than the target size, the scaling factor will be less than 1.
+
+    Args:
+        original_size (tuple[int, int]): The size of the original image (width, height).
+        target_size (tuple[int, int]): The target size to fit the image into (width, height).
 
     Returns:
-        Tuple[float, float]: A tuple of (original_x, original_y) coordinates.
+        ScalingResults: The scaling factor and resulting size.
 
     Raises:
-        ValueError: If the coordinates are outside the padded image area.
+        ValueError: If the original size or target size is not positive.
     """
-    aspect_ratio = original_width / original_height
-    if (max_width / max_height) > aspect_ratio:
-        scale_factor = max_height / original_height
-        scaled_width = int(original_width * scale_factor)
-        scaled_height = max_height
-    else:
-        scale_factor = max_width / original_width
-        scaled_width = max_width
-        scaled_height = int(original_height * scale_factor)
-    pad_left = (max_width - scaled_width) // 2
-    pad_top = (max_height - scaled_height) // 2
-    adjusted_x = x - pad_left
-    adjusted_y = y - pad_top
-    if (
-        adjusted_x < 0
-        or adjusted_y < 0
-        or adjusted_x > scaled_width
-        or adjusted_y > scaled_height
-    ):
-        error_msg = "Coordinates are outside the padded image area"
+    if original_size[0] <= 0 or original_size[1] <= 0:
+        error_msg = f"Size must have positive width and height: {original_size}"
         raise ValueError(error_msg)
-    original_x = adjusted_x / scale_factor
-    original_y = adjusted_y / scale_factor
-    return original_x, original_y
+
+    if target_size[0] <= 0 or target_size[1] <= 0:
+        error_msg = f"Target size must have positive width and height: {target_size}"
+        raise ValueError(error_msg)
+
+    aspect_ratio = original_size[0] / original_size[1]
+    target_aspect_ratio = target_size[0] / target_size[1]
+    if target_aspect_ratio > aspect_ratio:
+        factor = target_size[1] / original_size[1]
+        width = max(1, int(original_size[0] * factor))  # Ensure minimum width of 1
+        height = target_size[1]
+    else:
+        factor = target_size[0] / original_size[0]
+        width = target_size[0]
+        height = max(1, int(original_size[1] * factor))  # Ensure minimum height of 1
+    return ScalingResults(factor=factor, size=(width, height))
+
+
+def _center_image_in_background(
+    image: Image.Image,
+    background_size: tuple[int, int],
+    background_color: tuple[int, int, int] = (0, 0, 0),
+) -> Image.Image:
+    """Center an image in a background image.
+
+    Args:
+        image (Image.Image): The image to center.
+        background_size (tuple[int, int]): The size of the background (width, height).
+        background_color (tuple[int, int, int], optional): The background color. Defaults to `(0, 0, 0)`.
+
+    Returns:
+        Image.Image: A new image with the input image centered on the background.
+    """
+    background = Image.new("RGB", background_size, background_color)
+    offset = _calc_center_offset(image.size, background_size)
+    background.paste(image, offset)
+    return background
+
+
+def scale_image_to_fit(
+    image: Image.Image,
+    target_size: tuple[int, int],
+) -> Image.Image:
+    """Scale an image to fit within specified size while maintaining aspect ratio.
+
+    Use black padding to fill the remaining space.
+
+    Args:
+        image (Image.Image): The PIL Image to scale.
+        target_size (tuple[int, int]): The target size to fit the image into (width, height).
+
+    Returns:
+        Image.Image: A new PIL Image that fits within the specified size.
+    """
+    scaling_results = _calculate_scaling_for_fit(image.size, target_size)
+    scaled_image = image.resize(scaling_results.size, Image.Resampling.LANCZOS)
+    return _center_image_in_background(scaled_image, target_size)
+
+
+def _scale_coordinates(
+    coordinates: tuple[int, int],
+    offset: tuple[int, int],
+    factor: float,
+    inverse: bool,
+) -> tuple[int, int]:
+    """Scale coordinates based on scaling factor and offset.
+
+    Args:
+        coordinates (tuple[int, int]): The coordinates to scale.
+        offset (tuple[int, int]): The offset to apply.
+        factor (float): The scaling factor.
+        inverse (bool): Whether to apply inverse scaling.
+
+    Returns:
+        tuple[int, int]: The scaled coordinates.
+    """
+    if inverse:
+        result = (
+            (coordinates[0] - offset[0]) / factor,
+            (coordinates[1] - offset[1]) / factor,
+        )
+    else:
+        result = (
+            (coordinates[0]) * factor + offset[0],
+            (coordinates[1]) * factor + offset[1],
+        )
+    return (int(result[0]), int(result[1]))
+
+
+def _check_coordinates_in_bounds(
+    coordinates: tuple[float, float],
+    bounds: tuple[int, int],
+) -> None:
+    """Check if coordinates are within bounds.
+
+    Args:
+        coordinates (tuple[float, float]): The coordinates to check.
+        bounds (tuple[int, int]): The bounds (width, height).
+
+    Raises:
+        ValueError: If coordinates are out of bounds.
+    """
+    if (
+        coordinates[0] < 0
+        or coordinates[1] < 0
+        or coordinates[0] > bounds[0]
+        or coordinates[1] > bounds[1]
+    ):
+        print(bounds)
+        error_msg = f"Coordinates {coordinates[0]}, {coordinates[1]} are out of bounds"
+        raise ValueError(error_msg)
+
+
+def scale_coordinates(
+    coordinates: tuple[int, int],
+    original_size: tuple[int, int],
+    target_size: tuple[int, int],
+    inverse: bool = False,
+) -> tuple[int, int]:
+    """Scale coordinates between original and scaled image sizes.
+
+    Args:
+        coordinates (tuple[int, int]): The coordinates to scale.
+        original_size (tuple[int, int]): The original image size (width, height).
+        target_size (tuple[int, int]): The target size (width, height).
+        inverse (bool, optional): Whether to scale from target to original. Defaults to `False`.
+
+    Returns:
+        tuple[int, int]: The scaled coordinates.
+
+    Raises:
+        ValueError: If the scaled coordinates are out of bounds.
+    """
+    scaling_results = _calculate_scaling_for_fit(original_size, target_size)
+    offset = _calc_center_offset(scaling_results.size, target_size)
+    result = _scale_coordinates(coordinates, offset, scaling_results.factor, inverse)
+    _check_coordinates_in_bounds(
+        result, original_size if inverse else scaling_results.size
+    )
+    return result
 
 
 Img = Union[str, Path, PILImage.Image]
@@ -251,9 +369,9 @@ Accepts:
 
 
 class ImageSource(RootModel):
-    """A Pydantic model that represents an image source and provides methods to convert it to different formats.
+    """A class that represents an image source and provides methods to convert it to different formats.
 
-    The model can be initialized with:
+    The class can be initialized with:
     - A PIL Image object
     - A file path (str or pathlib.Path)
     - A data URL string
@@ -291,3 +409,18 @@ class ImageSource(RootModel):
             str: A base64 encoded string of the image.
         """
         return image_to_base64(image=self.root)
+
+
+__all__ = [
+    "load_image",
+    "image_to_data_url",
+    "data_url_to_image",
+    "draw_point_on_image",
+    "base64_to_image",
+    "image_to_base64",
+    "scale_image_to_fit",
+    "scale_coordinates",
+    "ScalingResults",
+    "ImageSource",
+    "Img",
+]

@@ -45,8 +45,8 @@ from askui.utils.dict_utils import IdentityDefaultDict
 from askui.utils.image_utils import (
     ImageSource,
     image_to_base64,
-    scale_coordinates_back,
-    scale_image_with_padding,
+    scale_coordinates,
+    scale_image_to_fit,
 )
 
 from .utils import extract_click_coordinates
@@ -156,10 +156,9 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         system: str,
         model_choice: str,
     ) -> str:
-        scaled_image = scale_image_with_padding(
+        scaled_image = scale_image_to_fit(
             image.root,
-            self._settings.resolution[0],
-            self._settings.resolution[1],
+            self._settings.resolution,
         )
         message = self.create_message(
             messages=[
@@ -222,16 +221,12 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
                 ),
                 model_choice=model_choice,
             )
-            scaled_x, scaled_y = extract_click_coordinates(content)
-            x, y = scale_coordinates_back(
-                scaled_x,
-                scaled_y,
-                image.root.width,
-                image.root.height,
-                screen_width,
-                screen_height,
+            return scale_coordinates(
+                extract_click_coordinates(content),
+                image.root.size,
+                self._settings.resolution,
+                inverse=True,
             )
-            return int(x), int(y)
         except (
             _UnexpectedResponseError,
             ValueError,

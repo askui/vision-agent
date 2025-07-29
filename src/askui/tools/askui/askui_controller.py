@@ -7,13 +7,21 @@ import uuid
 from typing import Literal, Type
 
 import grpc
+from google.protobuf.json_format import MessageToDict
 from PIL import Image
 from typing_extensions import Self, override
 
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
-from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
+from askui.tools.agent_os import (
+    AgentOs,
+    Coordinate,
+    Display,
+    DisplaysListResponse,
+    ModifierKey,
+    PcKey,
+)
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
@@ -626,28 +634,49 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
-    def get_display_information(
-        self,
-    ) -> controller_v1_pbs.Response_GetDisplayInformation:
+    @override
+    def retrieve_active_display(self) -> Display:
         """
-        Get information about all available displays and virtual screen.
+        Retrieve the currently active display/screen.
 
         Returns:
-            controller_v1_pbs.Response_GetDisplayInformation:
-                - displays: List of DisplayInformation objects
-                - virtualScreenRectangle: Overall virtual screen bounds
+            Display: The currently active display/screen.
+        """
+        self._reporter.add_message("AgentOS", "retrieve_active_display()")
+        displays_list_response = self.list_displays()
+        for display in displays_list_response.data:
+            if display.id == self._display:
+                return display
+        error_msg = f"Display {self._display} not found"
+        raise ValueError(error_msg)
+
+    @telemetry.record_call()
+    @override
+    def list_displays(
+        self,
+    ) -> DisplaysListResponse:
+        """
+        List all available displays including virtual screens.
+
+        Returns:
+            DisplaysListResponse
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
 
-        self._reporter.add_message("AgentOS", "get_display_information()")
+        self._reporter.add_message("AgentOS", "list_displays()")
 
         response: controller_v1_pbs.Response_GetDisplayInformation = (
             self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
         )
 
-        return response
+        response_dict = MessageToDict(
+            response,
+            preserving_proto_field_name=True,
+        )
+
+        return DisplaysListResponse.model_validate(response_dict)
 
     @telemetry.record_call()
     def get_process_list(
