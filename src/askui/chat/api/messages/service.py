@@ -96,7 +96,7 @@ class MessageService:
             raise ValueError(error_msg)
         messages = sorted(messages, key=lambda m: m.created_at)
         thread_path = self._get_thread_path(thread_id)
-        with thread_path.open("w") as f:
+        with thread_path.open("w", encoding="utf-8") as f:
             for msg in messages:
                 f.write(msg.model_dump_json())
                 f.write("\n")
