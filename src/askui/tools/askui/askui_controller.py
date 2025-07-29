@@ -8,14 +8,13 @@ from typing import Literal, Type
 
 import grpc
 from PIL import Image
-from pydantic import BaseModel, Field, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self, override
 
 from askui.container import telemetry
 from askui.logger import logger
 from askui.reporting import Reporter
 from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
+from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
@@ -48,137 +47,19 @@ from .exceptions import (
 )
 
 
-class RemoteDeviceController(BaseModel):
-    askui_remote_device_controller: pathlib.Path = Field(
-        alias="AskUIRemoteDeviceController"
-    )
-
-
-class Executables(BaseModel):
-    executables: RemoteDeviceController = Field(alias="Executables")
-
-
-class InstalledPackages(BaseModel):
-    remote_device_controller_uuid: Executables = Field(
-        alias="{aed1b543-e856-43ad-b1bc-19365d35c33e}"
-    )
-
-
-class AskUiComponentRegistry(BaseModel):
-    definition_version: int = Field(alias="DefinitionVersion")
-    installed_packages: InstalledPackages = Field(alias="InstalledPackages")
-
-
-class AskUiControllerSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="ASKUI_",
-    )
-
-    component_registry_file: pathlib.Path | None = None
-    installation_directory: pathlib.Path | None = None
-
-    @model_validator(mode="after")
-    def validate_either_component_registry_or_installation_directory_is_set(
-        self,
-    ) -> "AskUiControllerSettings":
-        if self.component_registry_file is None and self.installation_directory is None:
-            error_msg = (
-                "Either ASKUI_COMPONENT_REGISTRY_FILE or "
-                "ASKUI_INSTALLATION_DIRECTORY environment variable must be set"
-            )
-            raise ValueError(error_msg)
-        return self
-
-
 class AskUiControllerServer:
     """
     Concrete implementation of `ControllerServer` for managing the AskUI Remote Device
     Controller process.
     Handles process discovery, startup, and shutdown for the native controller binary.
+
+    Args:
+        settings (AskUiControllerSettings | None, optional): Settings for the AskUI.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, settings: AskUiControllerSettings | None = None) -> None:
         self._process: subprocess.Popen[bytes] | None = None
-        self._settings = AskUiControllerSettings()
-
-    def _find_remote_device_controller(self) -> pathlib.Path:
-        if (
-            self._settings.installation_directory is not None
-            and self._settings.component_registry_file is None
-        ):
-            logger.warning(
-                "Outdated AskUI Suite detected. Please update to the latest version."
-            )
-            askui_remote_device_controller_path = (
-                self._find_remote_device_controller_by_legacy_path()
-            )
-            if not askui_remote_device_controller_path.is_file():
-                error_msg = (
-                    "AskUIRemoteDeviceController executable does not exist under "
-                    f"'{askui_remote_device_controller_path}'"
-                )
-                raise FileNotFoundError(error_msg)
-            return askui_remote_device_controller_path
-        return self._find_remote_device_controller_by_component_registry()
-
-    def _find_remote_device_controller_by_component_registry(self) -> pathlib.Path:
-        assert self._settings.component_registry_file is not None, (
-            "Component registry file is not set"
-        )
-        component_registry = AskUiComponentRegistry.model_validate_json(
-            self._settings.component_registry_file.read_text()
-        )
-        askui_remote_device_controller_path = (
-            component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller  # noqa: E501
-        )
-        if not askui_remote_device_controller_path.is_file():
-            error_msg = (
-                "AskUIRemoteDeviceController executable does not exist under "
-                f"'{askui_remote_device_controller_path}'"
-            )
-            raise FileNotFoundError(error_msg)
-        return askui_remote_device_controller_path
-
-    def _find_remote_device_controller_by_legacy_path(self) -> pathlib.Path:
-        assert self._settings.installation_directory is not None, (
-            "Installation directory is not set"
-        )
-        match sys.platform:
-            case "win32":
-                return (
-                    self._settings.installation_directory
-                    / "Binaries"
-                    / "resources"
-                    / "assets"
-                    / "binaries"
-                    / "AskuiRemoteDeviceController.exe"
-                )
-            case "darwin":
-                return (
-                    self._settings.installation_directory
-                    / "Binaries"
-                    / "askui-ui-controller.app"
-                    / "Contents"
-                    / "Resources"
-                    / "assets"
-                    / "binaries"
-                    / "AskuiRemoteDeviceController"
-                )
-            case "linux":
-                return (
-                    self._settings.installation_directory
-                    / "Binaries"
-                    / "resources"
-                    / "assets"
-                    / "binaries"
-                    / "AskuiRemoteDeviceController"
-                )
-            case _:
-                error_msg = (
-                    f"Platform {sys.platform} not supported by "
-                    "AskUI Remote Device Controller"
-                )
-                raise NotImplementedError(error_msg)
+        self._settings = settings or AskUiControllerSettings()
 
     def _start_process(self, path: pathlib.Path) -> None:
         self._process = subprocess.Popen(path)
@@ -198,11 +79,11 @@ class AskUiControllerServer:
             and process_exists("AskuiRemoteDeviceController.exe")
         ):
             self.clean_up()
-        remote_device_controller_path = self._find_remote_device_controller()
         logger.debug(
-            "Starting AskUI Remote Device Controller: %s", remote_device_controller_path
+            "Starting AskUI Remote Device Controller: %s",
+            self._settings.controller_path,
         )
-        self._start_process(remote_device_controller_path)
+        self._start_process(self._settings.controller_path)
         time.sleep(0.5)
 
     def clean_up(self) -> None:
