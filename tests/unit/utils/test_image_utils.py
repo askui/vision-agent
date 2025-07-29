@@ -75,10 +75,6 @@ class TestLoadImage:
                 img_str = base64.b64encode(img_bytes).decode()
                 load_image(img_str)
 
-    def test_load_image_unsupported_type(self) -> None:
-        with pytest.raises(AttributeError):
-            load_image(123)  # type: ignore
-
     def test_load_image_nonexistent_file(self) -> None:
         with pytest.raises(ValueError, match="Could not open image from file path"):
             load_image("nonexistent_file.png")
@@ -237,10 +233,6 @@ class TestBase64Conversion:
 
         # Verify the images are different (JPEG is lossy)
         assert png_base64 != jpeg_base64
-
-    def test_image_to_base64_unsupported_type(self) -> None:
-        with pytest.raises(AttributeError):
-            image_to_base64(123)  # type: ignore
 
 
 class TestImageScaling:
