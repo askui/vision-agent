@@ -345,12 +345,12 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    def retrieve_active_display(self) -> int:
+    def retrieve_active_display(self) -> Display:
         """
-        Retrieve the id of the currently active display/screen.
+        Retrieve the currently active display/screen.
 
         Returns:
-            int: The id of the currently active display/screen.
+            Display: The currently active display/screen.
         """
         raise NotImplementedError
 

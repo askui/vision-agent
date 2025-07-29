@@ -17,6 +17,7 @@ from askui.reporting import Reporter
 from askui.tools.agent_os import (
     AgentOs,
     Coordinate,
+    Display,
     DisplaysListResponse,
     ModifierKey,
     PcKey,
@@ -634,11 +635,20 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def retrieve_active_display(self) -> int:
+    def retrieve_active_display(self) -> Display:
         """
-        Get the active display.
+        Retrieve the currently active display/screen.
+
+        Returns:
+            Display: The currently active display/screen.
         """
-        return self._display
+        self._reporter.add_message("AgentOS", "retrieve_active_display()")
+        displays_list_response = self.list_displays()
+        for display in displays_list_response.data:
+            if display.id == self._display:
+                return display
+        error_msg = f"Display {self._display} not found"
+        raise ValueError(error_msg)
 
     @telemetry.record_call()
     @override
@@ -655,7 +665,7 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
 
-        self._reporter.add_message("AgentOS", "get_display_information()")
+        self._reporter.add_message("AgentOS", "list_displays()")
 
         response: controller_v1_pbs.Response_GetDisplayInformation = (
             self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())

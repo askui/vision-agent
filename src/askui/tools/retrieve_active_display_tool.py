@@ -7,10 +7,12 @@ class RetrieveActiveDisplayTool(Tool):
         super().__init__(
             name="retrieve_active_display",
             description="""
-                Retrieve the id (integer) of the currently active display/screen.
+                Retrieve the currently active display/screen.
             """,
         )
         self._agent_os: AgentOs = agent_os
 
     def __call__(self) -> str:
-        return str(self._agent_os.retrieve_active_display())
+        return str(
+            self._agent_os.retrieve_active_display().model_dump_json(exclude={"size"})
+        )
