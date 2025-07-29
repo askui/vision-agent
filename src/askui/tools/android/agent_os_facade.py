@@ -4,7 +4,7 @@ from PIL import Image
 
 from askui.reporting import Reporter
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
-from askui.utils.image_utils import scale_coordinates_back, scale_image_with_padding
+from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
 class AndroidAgentOsFacade(AndroidAgentOs):
@@ -32,10 +32,9 @@ class AndroidAgentOsFacade(AndroidAgentOs):
     def screenshot(self) -> Image.Image:
         screenshot = self._agent_os.screenshot()
         self._real_screen_resolution = screenshot.size
-        scaled_image = scale_image_with_padding(
+        scaled_image = scale_image_to_fit(
             screenshot,
-            self._target_resolution[0],
-            self._target_resolution[1],
+            self._target_resolution,
         )
 
         self._reporter.add_message("AndroidAgentOS", "Screenshot taken", screenshot)
@@ -45,15 +44,12 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         if self._real_screen_resolution is None:
             self._real_screen_resolution = self._agent_os.screenshot().size
 
-        scaled_x, scaled_y = scale_coordinates_back(
-            x,
-            y,
-            self._real_screen_resolution[0],
-            self._real_screen_resolution[1],
-            self._target_resolution[0],
-            self._target_resolution[1],
+        return scale_coordinates(
+            (x, y),
+            self._real_screen_resolution,
+            self._target_resolution,
+            inverse=True,
         )
-        return int(scaled_x), int(scaled_y)
 
     def tap(self, x: int, y: int) -> None:
         scaled_x, scaled_y = self._scale_coordinates_back(x, y)

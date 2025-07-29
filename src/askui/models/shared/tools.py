@@ -7,6 +7,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 from typing_extensions import Self
 
+from askui.logger import logger
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -155,6 +156,7 @@ class ToolCollection:
         except AgentException:
             raise
         except Exception as e:  # noqa: BLE001
+            logger.error(f"Tool {tool_use_block_param.name} failed: {e}", exc_info=True)
             return ToolResultBlockParam(
                 content=f"Tool {tool_use_block_param.name} failed: {e}",
                 is_error=True,

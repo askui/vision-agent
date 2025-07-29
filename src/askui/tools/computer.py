@@ -13,11 +13,7 @@ from pydantic import Field, validate_call
 from typing_extensions import Self, override
 
 from askui.tools.agent_os import AgentOs, Coordinate, ModifierKey, PcKey
-from askui.utils.image_utils import (
-    scale_coordinates_back,
-    scale_coordinates_with_padding,
-    scale_image_with_padding,
-)
+from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 from ..models.shared.tools import InputSchema, Tool
 
@@ -192,11 +188,33 @@ class BetaToolComputerUseParamBase(TypedDict):
     display_height_px: int
 
 
+@dataclass
+class Resolution:
+    width: int
+    height: int
+
+
+# https://github.com/anthropics/anthropic-quickstarts/blob/main/computer-use-demo/README.md
+RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC: dict[str, Resolution] = {
+    "XGA": Resolution(width=1024, height=768),  # 4:3
+    "WXGA": Resolution(width=1280, height=800),  # 16:10
+}
+
+
+def _get_closest_recommended_resolution(resolution: Resolution) -> Resolution:
+    return min(
+        RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC.values(),
+        key=lambda r: abs(r.width - resolution.width)
+        + abs(r.height - resolution.height),
+    )
+
+
 class ComputerToolBase(Tool, ABC):
     def __init__(
         self,
         agent_os: AgentOs,
         input_schema: InputSchema,
+        resolution: Resolution | None = None,
     ) -> None:
         super().__init__(
             name="computer",
@@ -204,8 +222,21 @@ class ComputerToolBase(Tool, ABC):
             input_schema=input_schema,
         )
         self._agent_os = agent_os
-        self._width = 1280
-        self._height = 800
+        real_resolution = self._get_real_screen_resolution()
+        self._resolution = resolution or _get_closest_recommended_resolution(
+            Resolution(
+                width=real_resolution[0],
+                height=real_resolution[1],
+            )
+        )
+
+    @property
+    def _width(self) -> int:
+        return self._resolution.width
+
+    @property
+    def _height(self) -> int:
+        return self._resolution.height
 
     @property
     def params_base(
@@ -228,7 +259,7 @@ class ComputerToolBase(Tool, ABC):
     ) -> Image.Image | None | str:
         match action:
             case "cursor_position":
-                return self._get_mouse_position_scaled()
+                return self._retrieve_cursor_position()
             case "double_click":
                 return self._agent_os.click("left", 2)
             case "key":
@@ -284,17 +315,12 @@ class ComputerToolBase(Tool, ABC):
         self,
         coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]],
     ) -> tuple[int, int]:
-        real_screen_width, real_screen_height = self._get_real_screen_resolution()
-        x, y = scale_coordinates_back(
-            coordinate[0],
-            coordinate[1],
-            real_screen_width,
-            real_screen_height,
-            self._width,
-            self._height,
+        return scale_coordinates(
+            coordinate,
+            self._get_real_screen_resolution(),
+            (self._width, self._height),
+            inverse=True,
         )
-        x, y = int(x), int(y)
-        return x, y
 
     @validate_call
     def _mouse_move(
@@ -320,18 +346,15 @@ class ComputerToolBase(Tool, ABC):
         Take a screenshot of the current screen, scale it and return it
         """
         screenshot = self._agent_os.screenshot()
-        return scale_image_with_padding(screenshot, self._width, self._height)
+        return scale_image_to_fit(screenshot, (self._width, self._height))
 
-    def _get_mouse_position_scaled(self) -> str:
+    def _retrieve_cursor_position(self) -> str:
         mouse_position: Coordinate = self._agent_os.get_mouse_position()
         real_screen_width, real_screen_height = self._get_real_screen_resolution()
-        x, y = scale_coordinates_with_padding(
-            mouse_position.x,
-            mouse_position.y,
-            real_screen_width,
-            real_screen_height,
-            self._width,
-            self._height,
+        x, y = scale_coordinates(
+            (mouse_position.x, mouse_position.y),
+            (real_screen_width, real_screen_height),
+            (self._width, self._height),
         )
 
         return f"X={x},Y={y}"
