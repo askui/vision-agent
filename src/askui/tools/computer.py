@@ -206,8 +206,6 @@ class ComputerToolBase(Tool, ABC):
         self._agent_os = agent_os
         self._width = 1280
         self._height = 800
-        self._real_screen_width: int | None = None
-        self._real_screen_height: int | None = None
 
     @property
     def params_base(
@@ -279,11 +277,8 @@ class ComputerToolBase(Tool, ABC):
         )
 
     def _get_real_screen_resolution(self) -> tuple[int, int]:
-        if self._real_screen_width is None or self._real_screen_height is None:
-            screenshot = self._agent_os.screenshot()
-            self._real_screen_width = screenshot.width
-            self._real_screen_height = screenshot.height
-        return self._real_screen_width, self._real_screen_height
+        size = self._agent_os.retrieve_active_display().size
+        return size.width, size.height
 
     def _scale_coordinates_back(
         self,
@@ -325,8 +320,6 @@ class ComputerToolBase(Tool, ABC):
         Take a screenshot of the current screen, scale it and return it
         """
         screenshot = self._agent_os.screenshot()
-        self._real_screen_width = screenshot.width
-        self._real_screen_height = screenshot.height
         return scale_image_with_padding(screenshot, self._width, self._height)
 
     def _get_mouse_position_scaled(self) -> str:

@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Literal
 
 from PIL import Image
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
-        RenderObjectStyle,  # noqa: E501
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+        RenderObjectStyle,
     )
 
 
@@ -167,6 +167,10 @@ class DisplaySize(BaseModel):
 
 
 class Display(BaseModel):
+    model_config = ConfigDict(
+        validate_by_name=True,
+    )
+
     id: int = Field(validation_alias="displayID")
     size: DisplaySize = Field(validation_alias="sizeInPixels")
 
@@ -345,6 +349,7 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def retrieve_active_display(self) -> Display:
         """
         Retrieve the currently active display/screen.
