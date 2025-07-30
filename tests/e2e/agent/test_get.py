@@ -30,6 +30,8 @@ class BrowserContextResponse(ResponseSchemaBase):
     [
         None,
         ModelName.ASKUI,
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
         ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         ModelName.CLAUDE__SONNET__4__20250514,
     ],
@@ -100,17 +102,18 @@ class OptionalUrlResponse(ResponseSchemaBase):
     url: str = "github.com"
 
 
-def test_get_with_response_schema_with_default_value_with_askui_model_raises(
+def test_get_with_response_schema_with_default_value(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
 ) -> None:
-    with pytest.raises(Exception):  # noqa: B017
-        vision_agent.get(
-            "What is the current url shown in the url bar?",
-            image=github_login_screenshot,
-            response_schema=OptionalUrlResponse,
-            model=ModelName.ASKUI,
-        )
+    response = vision_agent.get(
+        "What is the current url shown in the url bar?",
+        image=github_login_screenshot,
+        response_schema=OptionalUrlResponse,
+        model=ModelName.ASKUI,
+    )
+    assert isinstance(response, OptionalUrlResponse)
+    assert "github.com" in response.url
 
 
 @pytest.mark.parametrize("model", [None, ModelName.ASKUI])

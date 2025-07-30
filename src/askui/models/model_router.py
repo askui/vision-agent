@@ -7,6 +7,8 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.get_model import AskUiGetModel
+from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
@@ -58,6 +60,10 @@ def initialize_default_model_registry(  # noqa: C901
         )
 
     @functools.cache
+    def askui_google_genai_api() -> AskUiGoogleGenAiApi:
+        return AskUiGoogleGenAiApi()
+
+    @functools.cache
     def askui_inference_api() -> AskUiInferenceApi:
         return AskUiInferenceApi(
             locator_serializer=AskUiLocatorSerializer(
@@ -73,6 +79,13 @@ def initialize_default_model_registry(  # noqa: C901
         )
 
     @functools.cache
+    def askui_get_model() -> AskUiGetModel:
+        return AskUiGetModel(
+            google_genai_api=askui_google_genai_api(),
+            inference_api=askui_inference_api(),
+        )
+
+    @functools.cache
     def askui_facade() -> ModelFacade:
         computer_agent = Agent(
             messages_api=askui_inference_api(),
@@ -80,7 +93,7 @@ def initialize_default_model_registry(  # noqa: C901
         )
         return ModelFacade(
             act_model=computer_agent,
-            get_model=askui_inference_api(),
+            get_model=askui_get_model(),
             locate_model=askui_model_router(),
         )
 
@@ -93,6 +106,8 @@ def initialize_default_model_registry(  # noqa: C901
     return {
         ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
         ModelName.ASKUI: askui_facade,
+        ModelName.ASKUI__GEMINI__2_5__FLASH: askui_google_genai_api,
+        ModelName.ASKUI__GEMINI__2_5__PRO: askui_google_genai_api,
         ModelName.ASKUI__AI_ELEMENT: askui_model_router,
         ModelName.ASKUI__COMBO: askui_model_router,
         ModelName.ASKUI__OCR: askui_model_router,

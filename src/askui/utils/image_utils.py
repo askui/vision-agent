@@ -410,6 +410,16 @@ class ImageSource(RootModel):
         """
         return image_to_base64(image=self.root)
 
+    def to_bytes(self) -> bytes:
+        """Convert the image to bytes.
+
+        Returns:
+            bytes: The image as bytes.
+        """
+        img_byte_arr = io.BytesIO()
+        self.root.save(img_byte_arr, format="PNG")
+        return img_byte_arr.getvalue()
+
 
 __all__ = [
     "load_image",

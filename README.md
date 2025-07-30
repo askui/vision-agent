@@ -731,10 +731,8 @@ with VisionAgent() as agent:
 ```
 
 **⚠️ Limitations:**
-- Not all models support response schemas or all kinds of properties that a response schema can have at the moment
-- Default values are not supported, e.g., `url: str = "github.com"` or `url: str | None = None`. This includes `default_factory`
-  and `default` args of `pydantic.Field` as well, e.g., `url: str = Field(default="github.com")` or
-  `url: str = Field(default_factory=lambda: "github.com")`.
+- The support for response schemas varies among models. Currently, the `askui` model provides best support for response schemas
+  as we try different models under the hood with your schema to see which one works best.
 
 ## What is AskUI Vision Agent?
 
