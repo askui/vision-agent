@@ -84,13 +84,14 @@ class UiTarsApiHandlerSettings(BaseSettings):
 
     tars_url: HttpUrl = Field(
         validation_alias="TARS_URL",
+        description="URL of the TARS API",
     )
     tars_api_key: SecretStr = Field(
         min_length=1,
         validation_alias="TARS_API_KEY",
+        description="API key for authenticating with the TARS API",
     )
     tars_model_name: str = Field(
-        default="ui-tars",
         validation_alias="TARS_MODEL_NAME",
         description="Name of the TARS model to use for inference",
     )
