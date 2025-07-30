@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "chat", "dev", "mcp", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:ecb4a5b9f12fc5d3cf4c6e98a65c9bb90df5c523ba9c8f335e5e40b8a4e9b9d1"
+content_hash = "sha256:1798fa81b5af10196977271587aae133fd763fe780218adcece9662c41e65e32"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -1479,7 +1479,7 @@ name = "protobuf"
 version = "6.31.1"
 requires_python = ">=3.9"
 summary = ""
-groups = ["dev"]
+groups = ["default", "dev"]
 files = [
     {file = "protobuf-6.31.1-cp310-abi3-win32.whl", hash = "sha256:7fa17d5a29c2e04b7d90e5e32388b8bfd0e7107cd8e616feef7ed3fa6bdab5c9"},
     {file = "protobuf-6.31.1-cp310-abi3-win_amd64.whl", hash = "sha256:426f59d2964864a1a366254fa703b8632dcec0790d8862d30034d8245e1cd447"},
