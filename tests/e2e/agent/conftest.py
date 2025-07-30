@@ -10,6 +10,8 @@ from typing_extensions import override
 from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.get_model import AskUiGetModel
+from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
@@ -72,7 +74,10 @@ def askui_facade(
     )
     return ModelFacade(
         act_model=agent,
-        get_model=askui_inference_api,
+        get_model=AskUiGetModel(
+            google_genai_api=AskUiGoogleGenAiApi(),
+            inference_api=askui_inference_api,
+        ),
         locate_model=AskUiModelRouter(inference_api=askui_inference_api),
     )
 
