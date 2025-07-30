@@ -1,6 +1,6 @@
 """AskUI Vision Agent"""
 
-__version__ = "0.9.7"
+__version__ = "0.10.0"
 
 from .agent import VisionAgent
 from .android_agent import AndroidVisionAgent
