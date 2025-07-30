@@ -31,7 +31,7 @@ class AskUiGoogleGenAiApi(GetModel):
         self._settings = settings or AskUiInferenceApiSettings()
         self._client = genai.Client(
             vertexai=True,
-            api_key="Necessary",
+            api_key="DummyValueRequiredByGenaiClient",
             http_options=genai_types.HttpOptions(
                 base_url=f"{self._settings.base_url}/proxy/vertexai",
                 headers={
