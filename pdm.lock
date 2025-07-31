@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "chat", "dev", "mcp", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:02ec481499e740ea23f85f2490af2f9670ce24ac16614a1dc29c2f5db68fdba0"
+content_hash = "sha256:5033ba9a7c1da164c790105efce8b762b5ccc39bf8b872bca8451916baab0a8e"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -15,7 +15,7 @@ name = "annotated-types"
 version = "0.7.0"
 requires_python = ">=3.8"
 summary = "Reusable constraint types to use with typing.Annotated"
-groups = ["default", "all", "chat", "dev", "mcp"]
+groups = ["default", "all", "dev", "mcp"]
 dependencies = [
     "typing-extensions>=4.0.0; python_version < \"3.9\"",
 ]
@@ -49,7 +49,7 @@ name = "anyio"
 version = "4.9.0"
 requires_python = ">=3.9"
 summary = "High level compatibility layer for multiple asynchronous event loop implementations"
-groups = ["default", "all", "chat", "mcp"]
+groups = ["default", "all", "mcp"]
 dependencies = [
     "exceptiongroup>=1.0.2; python_version < \"3.11\"",
     "idna>=2.8",
@@ -612,7 +612,7 @@ name = "exceptiongroup"
 version = "1.2.2"
 requires_python = ">=3.7"
 summary = "Backport of PEP 654 (exception groups)"
-groups = ["default", "all", "chat", "mcp", "test"]
+groups = ["default", "all", "mcp", "test"]
 files = [
     {file = "exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b"},
     {file = "exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc"},
@@ -634,7 +634,7 @@ name = "fastapi"
 version = "0.115.12"
 requires_python = ">=3.8"
 summary = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
-groups = ["all", "chat"]
+groups = ["default"]
 dependencies = [
     "pydantic!=1.8,!=1.8.1,!=2.0.0,!=2.0.1,!=2.1.0,<3.0.0,>=1.7.4",
     "starlette<0.47.0,>=0.40.0",
@@ -1009,7 +1009,7 @@ name = "idna"
 version = "3.10"
 requires_python = ">=3.6"
 summary = "Internationalized Domain Names in Applications (IDNA)"
-groups = ["default", "all", "chat", "mcp"]
+groups = ["default", "all", "mcp"]
 files = [
     {file = "idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3"},
     {file = "idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9"},
@@ -1601,7 +1601,7 @@ name = "pydantic"
 version = "2.11.7"
 requires_python = ">=3.9"
 summary = "Data validation using Python type hints"
-groups = ["default", "all", "chat", "dev", "mcp"]
+groups = ["default", "all", "dev", "mcp"]
 dependencies = [
     "annotated-types>=0.6.0",
     "pydantic-core==2.33.2",
@@ -1618,7 +1618,7 @@ name = "pydantic-core"
 version = "2.33.2"
 requires_python = ">=3.9"
 summary = "Core functionality for Pydantic validation and serialization"
-groups = ["default", "all", "chat", "dev", "mcp"]
+groups = ["default", "all", "dev", "mcp"]
 dependencies = [
     "typing-extensions!=4.7.0,>=4.6.0",
 ]
@@ -2369,7 +2369,7 @@ name = "sniffio"
 version = "1.3.1"
 requires_python = ">=3.7"
 summary = "Sniff out which async library your code is running under"
-groups = ["default", "all", "chat", "mcp"]
+groups = ["default", "all", "mcp"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
@@ -2394,7 +2394,7 @@ name = "starlette"
 version = "0.46.2"
 requires_python = ">=3.9"
 summary = "The little ASGI library that shines."
-groups = ["all", "chat", "mcp"]
+groups = ["default", "all", "mcp"]
 dependencies = [
     "anyio<5,>=3.6.2",
     "typing-extensions>=3.10.0; python_version < \"3.10\"",
@@ -2571,7 +2571,7 @@ name = "typing-inspection"
 version = "0.4.0"
 requires_python = ">=3.9"
 summary = "Runtime typing introspection tools"
-groups = ["default", "all", "chat", "dev", "mcp"]
+groups = ["default", "all", "dev", "mcp"]
 dependencies = [
     "typing-extensions>=4.12.0",
 ]

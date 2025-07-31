@@ -6,6 +6,7 @@ authors = [
 ]
 dependencies = [
     "anthropic>=0.54.0",
+    "fastapi>=0.115.12",
     "gradio-client>=1.4.3",
     "grpcio>=1.67.0",
     "httpx>=0.28.1",
@@ -211,7 +212,6 @@ android = [
 ]
 chat = [
     "askui[android,pynput,web]",
-    "fastapi>=0.115.12",
     "uvicorn>=0.34.3",
 ]
 mcp = [
