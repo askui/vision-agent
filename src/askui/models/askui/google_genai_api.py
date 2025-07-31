@@ -3,7 +3,9 @@ from typing import Type
 
 import google.genai as genai
 from google.genai import types as genai_types
+from google.genai.errors import APIError
 from pydantic import ValidationError
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
 from askui.logger import logger
@@ -16,6 +18,17 @@ from askui.utils.image_utils import ImageSource
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
+
+
+def _is_retryable_error(exception: BaseException) -> bool:
+    """Check if the exception is a retryable error (status codes 429, 502, or 529).
+
+    The 502 status of the AskUI Inference API is usually temporary which is why we also
+    retry it.
+    """
+    if isinstance(exception, APIError):
+        return exception.code in (429, 502, 529)
+    return False
 
 
 def _extract_model_id(model_choice: str) -> str:
@@ -40,6 +53,12 @@ class AskUiGoogleGenAiApi(GetModel):
             ),
         )
 
+    @retry(
+        stop=stop_after_attempt(4),  # 3 retries
+        wait=wait_exponential(multiplier=30, min=30, max=120),  # 30s, 60s, 120s
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True,
+    )
     @override
     def get(
         self,
