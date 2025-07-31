@@ -32,9 +32,13 @@ from ..types.response_schemas import to_response_schema
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
-    """Check if the exception is a retryable error (status codes 429 or 529)."""
+    """Check if the exception is a retryable error (status codes 429, 502, or 529).
+
+    The 502 status of the AskUI Inference API is usually temporary which is why we also
+    retry it.
+    """
     if isinstance(exception, httpx.HTTPStatusError):
-        return exception.response.status_code in (429, 529)
+        return exception.response.status_code in (429, 502, 529)
     return False
 
 
@@ -120,8 +124,8 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         )
 
     @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=30, max=240),
+        stop=stop_after_attempt(4),  # 3 retries
+        wait=wait_exponential(multiplier=30, min=30, max=120),  # 30s, 60s, 120s
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )
