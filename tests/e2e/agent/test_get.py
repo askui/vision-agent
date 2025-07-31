@@ -311,3 +311,50 @@ def test_get_with_nested_root_model(
     )
     assert isinstance(response, BasisWithNestedRootModel)
     assert isinstance(response.answer.root.answer, str)
+
+
+class PageDomElementLevel4(ResponseSchemaBase):
+    tag: str
+    text: str | None = None
+
+
+class PageDomElementLevel3(ResponseSchemaBase):
+    tag: str
+    children: list["PageDomElementLevel4"]
+    text: str | None = None
+
+
+class PageDomElementLevel2(ResponseSchemaBase):
+    tag: str
+    children: list["PageDomElementLevel3"]
+    text: str | None = None
+
+
+class PageDomElementLevel1(ResponseSchemaBase):
+    tag: str
+    children: list["PageDomElementLevel2"]
+    text: str | None = None
+
+
+class PageDom(ResponseSchemaBase):
+    children: list[PageDomElementLevel1]
+
+
+@pytest.mark.parametrize("model", [ModelName.ASKUI__GEMINI__2_5__PRO])
+def test_get_with_deeply_nested_response_schema_with_model_that_does_not_support_recursion(
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    model: str,
+) -> None:
+    """Test for deeply nested structure with 4 levels of nesting.
+
+    This test case reproduces an issue reported by a user where they encountered
+    problems with a deeply nested structure containing 4 levels of nesting.
+    """
+    response = vision_agent.get(
+        "Create a possible dom of the page that goes 4 levels deep",
+        image=github_login_screenshot,
+        response_schema=PageDom,
+        model=model,
+    )
+    assert isinstance(response, PageDom)
