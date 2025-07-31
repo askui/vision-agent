@@ -23,11 +23,15 @@ def path_fixtures_images(path_fixtures: pathlib.Path) -> pathlib.Path:
 
 
 @pytest.fixture
-def github_login_screenshot(path_fixtures: pathlib.Path) -> Image.Image:
+def path_fixtures_screenshots(path_fixtures: pathlib.Path) -> pathlib.Path:
+    """Fixture providing the path to the screenshots directory."""
+    return path_fixtures / "screenshots"
+
+
+@pytest.fixture
+def github_login_screenshot(path_fixtures_screenshots: pathlib.Path) -> Image.Image:
     """Fixture providing the GitHub login screenshot."""
-    screenshot_path = (
-        path_fixtures / "screenshots" / "macos__chrome__github_com__login.png"
-    )
+    screenshot_path = path_fixtures_screenshots / "macos__chrome__github_com__login.png"
     return Image.open(screenshot_path)
 
 
