@@ -3,7 +3,6 @@
 __version__ = "0.10.0"
 
 from .agent import VisionAgent
-from .android_agent import AndroidVisionAgent
 from .locators import Locator
 from .models import (
     ActModel,
@@ -38,13 +37,25 @@ from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
 from .utils.image_utils import ImageSource, Img
-from .web_agent import WebVisionAgent
-from .web_testing_agent import WebTestingAgent
+
+try:
+    from .android_agent import AndroidVisionAgent
+
+    _ANDROID_AGENT_AVAILABLE = True
+except ImportError:
+    _ANDROID_AGENT_AVAILABLE = False
+
+try:
+    from .web_agent import WebVisionAgent
+    from .web_testing_agent import WebTestingAgent
+
+    _WEB_AGENTS_AVAILABLE = True
+except ImportError:
+    _WEB_AGENTS_AVAILABLE = False
 
 __all__ = [
     "ActModel",
     "ActSettings",
-    "AndroidVisionAgent",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
     "CitationCharLocationParam",
@@ -81,6 +92,10 @@ __all__ = [
     "ToolUseBlockParam",
     "UrlImageSourceParam",
     "VisionAgent",
-    "WebTestingAgent",
-    "WebVisionAgent",
 ]
+
+if _ANDROID_AGENT_AVAILABLE:
+    __all__ += ["AndroidVisionAgent"]
+
+if _WEB_AGENTS_AVAILABLE:
+    __all__ += ["WebVisionAgent", "WebTestingAgent"]
