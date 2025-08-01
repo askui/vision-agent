@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 def parse_retry_after_header(retry_after: str) -> float:
     """Parse the Retry-After header value.
 
-    The Retry-After header value can be a number of seconds or a date in RFC 2822 format:
+    The Retry-After header value can be a number of seconds or a date in
+    RFC 2822 format:
     - `<number>`
     - `<day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT`
 
