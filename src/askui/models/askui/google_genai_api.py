@@ -5,7 +5,14 @@ import google.genai as genai
 from google.genai import types as genai_types
 from google.genai.errors import APIError
 from pydantic import ValidationError
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryCallState,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
+from tenacity.wait import wait_base
 from typing_extensions import override
 
 from askui.logger import logger
@@ -14,10 +21,50 @@ from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedRespons
 from askui.models.models import GetModel, ModelName
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
+from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
+
+
+class _wait_for_retry_after_header(wait_base):
+    """Wait strategy that tries to wait for the length specified by
+    the Retry-After header, or the underlying wait strategy if not.
+    See RFC 6585 § 4.
+
+    Otherwise, wait according to the fallback strategy.
+    """
+
+    def __init__(self, fallback: wait_base) -> None:
+        """Initialize the wait strategy with a fallback strategy.
+
+        Args:
+            fallback (wait_base): The fallback wait strategy to use when
+                Retry-After header is not available or invalid.
+        """
+        self._fallback = fallback
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        """Calculate the wait time based on Retry-After header or fallback.
+
+        Args:
+            retry_state (RetryCallState): The retry state containing the
+                exception information.
+
+        Returns:
+            float: The wait time in seconds.
+        """
+        if outcome := retry_state.outcome:
+            exc = outcome.exception()
+            if isinstance(exc, APIError):
+                retry_after: str | None = exc.response.headers.get("Retry-After")
+                if retry_after:
+                    try:
+                        return parse_retry_after_header(retry_after)
+                    except ValueError:
+                        pass
+        return self._fallback(retry_state)
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -27,7 +74,7 @@ def _is_retryable_error(exception: BaseException) -> bool:
     retry it.
     """
     if isinstance(exception, APIError):
-        return exception.code in (429, 502, 529)
+        return exception.code in (408, 413, 429, 500, 502, 503, 504, 521, 522, 524)
     return False
 
 
@@ -55,7 +102,9 @@ class AskUiGoogleGenAiApi(GetModel):
 
     @retry(
         stop=stop_after_attempt(4),  # 3 retries
-        wait=wait_exponential(multiplier=30, min=30, max=120),  # 30s, 60s, 120s
+        wait=_wait_for_retry_after_header(
+            wait_exponential(multiplier=30, min=30, max=120)
+        ),  # retry after or as a fallback 30s, 60s, 120s
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )
