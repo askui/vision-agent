@@ -1,11 +1,12 @@
 from typing import Optional, Tuple, Union
 
 import pytest
+from httpx import HTTPStatusError
 
 from askui import ConfigurableRetry, LocateModel, VisionAgent
 from askui.locators.locators import Locator
 from askui.models import ModelComposition
-from askui.models.exceptions import ElementNotFoundError
+from askui.models.exceptions import ElementNotFoundError, ModelNotFoundError
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -53,6 +54,26 @@ def vision_agent_with_retry(
 
 
 @pytest.fixture
+def vision_agent_with_retry_on_multiple_exceptions(
+    failing_model: FailingLocateModel, agent_toolbox_mock: AgentToolbox
+) -> VisionAgent:
+    return VisionAgent(
+        models={"failing-locate": failing_model},
+        tools=agent_toolbox_mock,
+        retry=ConfigurableRetry(
+            on_exception_types=(
+                ElementNotFoundError,
+                HTTPStatusError,
+                ModelNotFoundError,
+            ),
+            strategy="Fixed",
+            retry_count=3,
+            base_delay=1,
+        ),
+    )
+
+
+@pytest.fixture
 def vision_agent_always_fail(
     always_failing_model: FailingLocateModel, agent_toolbox_mock: AgentToolbox
 ) -> VisionAgent:
@@ -76,6 +97,17 @@ def test_locate_retries_and_succeeds(
     )
     assert result == (10, 10)
     assert failing_model.calls == 3  # 2 fails + 1 success
+
+
+def test_locate_retries_on_multiple_exceptions_and_succeeds(
+    vision_agent_with_retry_on_multiple_exceptions: VisionAgent,
+    failing_model: FailingLocateModel,
+) -> None:
+    result = vision_agent_with_retry_on_multiple_exceptions.locate(
+        "something", screenshot=None, model="failing-locate"
+    )
+    assert result == (10, 10)
+    assert failing_model.calls == 3
 
 
 def test_locate_retries_and_fails(
