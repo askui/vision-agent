@@ -60,7 +60,7 @@ class ConfigurableRetry(Retry):
     parameters for delay and retry count.
 
     Args:
-        on_exception_types (Tuple[Type[Exception]]): Tuple of exception types that should trigger a retry
+        on_exception_types (Tuple[Type[Exception],...]): Tuple of exception types that should trigger a retry
         strategy (Literal["Exponential", "Fixed", "Linear"]): The retry strategy to use:
             - `"Exponential"`: Delay increases exponentially between retries
             - `"Fixed"`: Constant delay between retries
@@ -83,7 +83,7 @@ class ConfigurableRetry(Retry):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        on_exception_types: Tuple[Type[Exception]],
+        on_exception_types: Tuple[Type[Exception], ...],
         strategy: Literal["Exponential", "Fixed", "Linear"],
         base_delay: Annotated[int, Field(gt=0)] = 1000,
         retry_count: Annotated[int, Field(gt=0)] = 3,
