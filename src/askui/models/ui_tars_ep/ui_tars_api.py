@@ -248,7 +248,9 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         ]
         self.execute_act(self.act_history, computer_tool)
 
-    def add_screenshot_to_history(self, message_history: list[dict[str, Any]], computer_tool: Tool) -> None:
+    def add_screenshot_to_history(
+        self, message_history: list[dict[str, Any]], computer_tool: Tool
+    ) -> None:
         screenshot = computer_tool(action="screenshot")
         message_history.append(
             {
@@ -308,7 +310,9 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
 
         return filtered_messages
 
-    def execute_act(self, message_history: list[dict[str, Any]], computer_tool: Tool) -> None:
+    def execute_act(
+        self, message_history: list[dict[str, Any]], computer_tool: Tool
+    ) -> None:
         message_history = self.filter_message_thread(message_history)
 
         chat_completion = self._client.chat.completions.create(
@@ -341,7 +345,9 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
 
         action = message.parsed_action
         if action.action_type == "click":
-            computer_tool(action="mouse_move", coordinate=(action.start_box.x, action.start_box.y))
+            computer_tool(
+                action="mouse_move", coordinate=(action.start_box.x, action.start_box.y)
+            )
             computer_tool(action="left_click")
             time.sleep(1)
         if action.action_type == "type":
