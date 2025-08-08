@@ -114,9 +114,9 @@ def initialize_default_model_registry(  # noqa: C901
                 settings=settings,
                 locator_serializer=locator_serializer,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             error_msg = f"Failed to initialize TARS model: {e}"
-            raise ValueError(error_msg)
+            raise ValueError(error_msg)  # noqa: B904
 
     return {
         ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
