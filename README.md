@@ -159,9 +159,26 @@ You can use Vision Agent with UI-TARS if you provide your own UI-TARS API endpoi
 
 1. Step: Host the model locally or in the cloud. More information about hosting UI-TARS can be found [here](https://github.com/bytedance/UI-TARS?tab=readme-ov-file#deployment).
 
-2. Step: Provide the `TARS_URL` and `TARS_API_KEY` environment variables to Vision Agent.
+2. Step: Provide the `TARS_URL`, `TARS_API_KEY`, and `TARS_MODEL_NAME` environment variables to Vision Agent.
 
-3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands or when initializing the `VisionAgent`.
+3. Step: Use the `model="tars"` parameter in your `click()`, `get()` and `act()` etc. commands or when initializing the `VisionAgent`. The TARS model will be automatically registered if the environment variables are available.
+
+**Example Code:**
+```python
+# Set environment variables before running this code:
+# TARS_URL=http://your-tars-endpoint.com/v1
+# TARS_API_KEY=your-tars-api-key
+# TARS_MODEL_NAME=your-model-name
+
+from askui import VisionAgent
+
+
+# Use TARS model directly
+with VisionAgent(model="tars") as agent:
+    agent.click("Submit button")  # Uses TARS automatically
+    agent.get("What's on screen?")  # Uses TARS automatically
+    agent.act("Search for flights")  # Uses TARS automatically
+```
 
 
 ## ▶️ Start Building
