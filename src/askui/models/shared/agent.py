@@ -165,6 +165,9 @@ class Agent(ActModel):
             for content_block in message.content
             if content_block.type == "tool_use"
         ]
+        if len(tool_use_content_blocks) == 0:
+            return None
+
         content = tool_collection.run(tool_use_content_blocks)
         if len(content) == 0:
             return None
