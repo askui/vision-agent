@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
@@ -132,10 +133,10 @@ class ToolCollection:
     def run(
         self, tool_use_block_params: list[ToolUseBlockParam]
     ) -> list[ContentBlockParam]:
-        return [
-            self._run_tool(tool_use_block_param)
-            for tool_use_block_param in tool_use_block_params
-        ]
+        if len(tool_use_block_params) == 1:
+            return [self._run_tool(tool_use_block_params[0])]
+        with ThreadPoolExecutor() as executor:
+            return list(executor.map(self._run_tool, tool_use_block_params))
 
     def _run_tool(
         self, tool_use_block_param: ToolUseBlockParam
