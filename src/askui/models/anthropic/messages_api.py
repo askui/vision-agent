@@ -245,7 +245,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, PdfSource):
-            err_msg = "PDF processing is not supported by this model"
+            err_msg = f"PDF processing is not supported for model {model_choice}"
             raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:
