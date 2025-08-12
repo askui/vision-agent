@@ -176,7 +176,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: ImageSource,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
@@ -184,7 +184,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             error_msg = f'Response schema is not supported for model "{model_choice}"'
             raise NotImplementedError(error_msg)
         response = self._predict(
-            image_url=image.to_data_url(),
+            image_url=source.to_data_url(),
             instruction=query,
             prompt=PROMPT_QA,
         )

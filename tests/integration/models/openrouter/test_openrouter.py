@@ -37,7 +37,7 @@ def test_basic_query_returns_string(
 
     result = openrouter_model.get(
         query="What is in the image?",
-        image=image_source_github_login_screenshot,
+        source=image_source_github_login_screenshot,
         response_schema=None,
         model_choice="test-model",
     )
@@ -64,7 +64,7 @@ def test_query_with_response_schema_returns_validated_object(
 
     result = openrouter_model.get(
         query="What is in the image?",
-        image=image_source_github_login_screenshot,
+        source=image_source_github_login_screenshot,
         response_schema=TestResponse,
         model_choice="test-model",
     )
@@ -87,7 +87,7 @@ def test_no_response_from_model(
     with pytest.raises(QueryNoResponseError):
         openrouter_model.get(
             query="What is in the image?",
-            image=image_source_github_login_screenshot,
+            source=image_source_github_login_screenshot,
             response_schema=None,
             model_choice="test-model",
         )
@@ -106,7 +106,7 @@ def test_malformed_json_from_model(
     with pytest.raises(ValueError):
         openrouter_model.get(
             query="What is in the image?",
-            image=image_source_github_login_screenshot,
+            source=image_source_github_login_screenshot,
             response_schema=TestResponse,
             model_choice="test-model",
         )

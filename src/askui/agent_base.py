@@ -1,6 +1,7 @@
 import time
 import types
 from abc import ABC
+from pathlib import Path
 from typing import Annotated, Optional, Type, overload
 
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
-from askui.utils.image_utils import ImageSource, Img
+from askui.utils.image_utils import ImageSource, Img, Pdf, PdfSource, Source
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
@@ -189,7 +190,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
         model: str | None = None,
-        image: Optional[Img] = None,
+        source: Optional[Img | Pdf] = None,
     ) -> str: ...
     @overload
     def get(
@@ -197,37 +198,44 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
         model: str | None = None,
-        image: Optional[Img] = None,
+        source: Optional[Img | Pdf] = None,
     ) -> ResponseSchema: ...
 
-    @telemetry.record_call(exclude={"query", "image", "response_schema"})
+    @telemetry.record_call(exclude={"query", "source", "response_schema"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema] | None = None,
         model: str | None = None,
-        image: Optional[Img] = None,
+        source: Optional[Img | Pdf] = None,
     ) -> ResponseSchema | str:
         """
-        Retrieves information from an image (defaults to a screenshot of the current
-        screen) based on the provided `query`.
+        Retrieves information from an image or PDF based on the provided `query`.
+
+        If no `source` is provided, a screenshot of the current screen is taken.
 
         Args:
             query (str): The query describing what information to retrieve.
-            image (Img | None, optional): The image to extract information from.
-                Defaults to a screenshot of the current screen. Can be a path to
-                an image file, a PIL Image object or a data URL.
+            source (Img | Pdf | None, optional): The source to extract information from.
+                Can be a path to a PDF file, a path to an image file, a PIL Image
+                object or a data URL. Defaults to a screenshot of the current screen.
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.
             model (str | None, optional): The composition or name of the model(s) to
                 be used for retrieving information from the screen or image using the
                 `query`. Note: `response_schema` is not supported by all models.
+                PDF processing is only supported for Gemini models hosted on AskUI.
 
         Returns:
             ResponseSchema | str: The extracted information, `str` if no
                 `response_schema` is provided.
+
+        Raises:
+            NotImplementedError: If PDF processing is not supported for the selected
+                model.
+            ValueError: If the `source` is not a valid PDF or image.
 
         Example:
             ```python
@@ -253,7 +261,7 @@ class AgentBase(ABC):  # noqa: B024
                 response = agent.get(
                     "What is the current url shown in the url bar?",
                     response_schema=UrlResponse,
-                    image="screenshot.png",
+                    source="screenshot.png",
                 )
                 # Dump whole model
                 print(response.model_dump_json(indent=2))
@@ -268,7 +276,7 @@ class AgentBase(ABC):  # noqa: B024
                 is_login_page = agent.get(
                     "Is this a login page?",
                     response_schema=bool,
-                    image=Image.open("screenshot.png"),
+                    source=Image.open("screenshot.png"),
                 )
                 print(is_login_page)
 
@@ -302,13 +310,31 @@ class AgentBase(ABC):  # noqa: B024
                 while current:
                     print(current.value)
                     current = current.next
+
+                # Get text from PDF
+                text = agent.get(
+                    "Extract all text from the PDF",
+                    source="document.pdf",
+                )
+                print(text)
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _image = ImageSource(self._agent_os.screenshot() if image is None else image)
-        self._reporter.add_message("User", f'get: "{query}"', image=_image.root)
+        _source: Source | None = None
+        if source is None:
+            _source = ImageSource(self._agent_os.screenshot())
+        elif isinstance(source, (str, Path)) and Path(source).suffix.lower() == ".pdf":
+            _source = PdfSource(source)
+        else:
+            _source = ImageSource(source)
+
+        self._reporter.add_message(
+            "User",
+            f'get: "{query}"',
+            image=_source.root if isinstance(_source, ImageSource) else None,
+        )
         response = self._model_router.get(
-            image=_image,
+            source=_source,
             query=query,
             response_schema=response_schema,
             model_choice=model or self._model_choice["get"],

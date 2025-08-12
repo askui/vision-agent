@@ -57,6 +57,17 @@ class ImageBlockParam(BaseModel):
     cache_control: CacheControlEphemeralParam | None = None
 
 
+class Base64PdfSourceParam(BaseModel):
+    data: str
+    media_type: Literal["application/pdf"]
+    type: Literal["base64"] = "base64"
+
+
+class PdfBlockParam(BaseModel):
+    source: Base64PdfSourceParam
+    type: Literal["pdf"] = "pdf"
+
+
 class TextBlockParam(BaseModel):
     text: str
     type: Literal["text"] = "text"
@@ -98,6 +109,7 @@ ContentBlockParam = (
     | ToolUseBlockParam
     | BetaThinkingBlock
     | BetaRedactedThinkingBlock
+    | PdfBlockParam
 )
 
 StopReason = Literal[

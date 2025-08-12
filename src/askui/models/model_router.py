@@ -31,7 +31,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
-from askui.utils.image_utils import ImageSource
+from askui.utils.image_utils import ImageSource, Source
 
 from ..logger import logger
 from .askui.inference_api import AskUiInferenceApi
@@ -199,13 +199,13 @@ class ModelRouter:
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         model_choice: str,
         response_schema: Type[ResponseSchema] | None = None,
     ) -> ResponseSchema | str:
         m = self._get_model(model_choice, "get")
         logger.debug(f'Routing "get" to model "{model_choice}"')
-        return m.get(query, image, response_schema, model_choice)
+        return m.get(query, source, response_schema, model_choice)
 
     def locate(
         self,

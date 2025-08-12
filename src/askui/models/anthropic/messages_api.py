@@ -44,6 +44,8 @@ from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.dict_utils import IdentityDefaultDict
 from askui.utils.image_utils import (
     ImageSource,
+    PdfSource,
+    Source,
     image_to_base64,
     scale_coordinates,
     scale_image_to_fit,
@@ -238,16 +240,19 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
+        if isinstance(source, PdfSource):
+            err_msg = "PDF processing is not supported by this model"
+            raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:
                 error_msg = "Response schema is not yet supported for Anthropic"
                 raise NotImplementedError(error_msg)
             return self._inference(
-                image=image,
+                image=source,
                 prompt=query,
                 system=SYSTEM_PROMPT_GET,
                 model_choice=model_choice,
