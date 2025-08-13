@@ -1,5 +1,6 @@
 """Integration tests for custom model registration and selection."""
 
+import pathlib
 from typing import Any, Optional, Type, Union
 
 import pytest
@@ -168,11 +169,12 @@ class TestCustomModels:
         model_registry: ModelRegistry,
         get_model: SimpleGetModel,
         agent_toolbox_mock: AgentToolbox,
+        path_fixtures_dummy_pdf: pathlib.Path,
     ) -> None:
         """Test registering and using a custom get model with a PDF."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
             result = agent.get(
-                "test query", model="custom-get", source="tests/test_data/dummy.pdf"
+                "test query", model="custom-get", source=path_fixtures_dummy_pdf
             )
 
         assert result == "test response"

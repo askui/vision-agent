@@ -1,3 +1,4 @@
+import pathlib
 from typing import Literal
 
 import pytest
@@ -50,12 +51,12 @@ def test_get(
 
 
 def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
-    vision_agent: VisionAgent,
+    vision_agent: VisionAgent, path_fixtures_dummy_pdf: pathlib.Path
 ) -> None:
     with pytest.raises(NotImplementedError):
         vision_agent.get(
             "What is in the PDF?",
-            source="tests/test_data/dummy.pdf",
+            source=path_fixtures_dummy_pdf,
             model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         )
 
@@ -68,12 +69,11 @@ def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
     ],
 )
 def test_get_with_pdf_with_gemini_model(
-    vision_agent: VisionAgent,
-    model: str,
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_pdf: pathlib.Path
 ) -> None:
     response = vision_agent.get(
         "What is in the PDF? explain in 1 sentence",
-        source="tests/test_data/dummy.pdf",
+        source=path_fixtures_dummy_pdf,
         model=model,
     )
     assert isinstance(response, str)
