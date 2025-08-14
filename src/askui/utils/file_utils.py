@@ -1,33 +1,49 @@
 from pathlib import Path
 from typing import Union
 
-from filetype import guess  # type: ignore[import-untyped]
-from PIL import Image
+from PIL import Image as PILImage
 
 from askui.utils.image_utils import ImageSource
+from askui.utils.io_utils import source_file_type
 from askui.utils.pdf_utils import PdfSource
 
+# to avoid circular imports from image_utils and pdf_utils on read_bytes
 Source = Union[ImageSource, PdfSource]
 
+ALLOWED_IMAGE_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+]
 
-def load_source(source: Union[str, Path, Image.Image]) -> Source:
-    """Load a source and return appropriate Source object based on file type."""
+PDF_TYPE = "application/pdf"
 
-    if isinstance(source, Image.Image):
+ALLOWED_MIMETYPES = [PDF_TYPE] + ALLOWED_IMAGE_TYPES
+
+
+def load_source(source: Union[str, Path, PILImage.Image]) -> Source:
+    """Load a source and return it as an ImageSource or PdfSource.
+
+    Args:
+        source (Union[str, Path]): The source to load.
+
+    Returns:
+        Source: The loaded source as an ImageSource or PdfSource.
+
+    Raises:
+        ValueError: If the source is not a valid image or PDF file.
+    """
+    if isinstance(source, PILImage.Image):
         return ImageSource(source)
 
-    filepath = Path(source)
-    if not filepath.is_file():
-        msg = f"No such file or directory: '{source}'"
-        raise FileNotFoundError(msg)
-
-    kind = guess(str(filepath))
-    if kind and kind.mime == "application/pdf":
+    file_type = source_file_type(source)
+    if file_type in ALLOWED_IMAGE_TYPES:
+        return ImageSource(source)
+    if file_type == PDF_TYPE:
         return PdfSource(source)
-    if kind and kind.mime.startswith("image/"):
-        return ImageSource(source)
-    msg = f"Unsupported file type: {filepath.suffix}"
+    msg = f"Unsupported file type: {file_type}"
     raise ValueError(msg)
 
 
-__all__ = ["load_source", "Source"]
+__all__ = ["Source", "load_source"]

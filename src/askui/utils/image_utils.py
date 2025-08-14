@@ -11,52 +11,20 @@ from PIL import Image, ImageDraw, UnidentifiedImageError
 from PIL import Image as PILImage
 from pydantic import ConfigDict, RootModel, field_validator
 
+from askui.utils.io_utils import read_bytes
+
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
 # e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
 _DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
 
 
-def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
-    """Load and validate an image from a PIL Image, a path, or any form of base64 data URL.
-
-    Args:
-        source (Union[str, Path, Image.Image]): The image source to load from.
-            Can be a PIL Image, file path (`str` or `pathlib.Path`), or data URL.
-
-    Returns:
-        Image.Image: A valid PIL Image object.
-
-    Raises:
-        ValueError: If the input is not a valid or recognizable image.
-    """
-    if isinstance(source, Image.Image):
-        return source
-
-    if isinstance(source, Path) or (not source.startswith(("data:", ","))):
-        try:
-            return Image.open(source)
-        except (OSError, FileNotFoundError, UnidentifiedImageError) as e:
-            error_msg = f"Could not open image from file path: {source}"
-            raise ValueError(error_msg) from e
-
-    else:
-        match = _DATA_URL_GENERIC_RE.match(source)
-        if match:
-            try:
-                image_data = base64.b64decode(match.group(1))
-                return Image.open(io.BytesIO(image_data))
-            except (binascii.Error, UnidentifiedImageError):
-                try:
-                    return Image.open(source)
-                except (FileNotFoundError, UnidentifiedImageError) as e:
-                    error_msg = (
-                        f"Could not decode or identify image from input:"
-                        f"{source[:100]}{'...' if len(source) > 100 else ''}"
-                    )
-                    raise ValueError(error_msg) from e
-
-    error_msg = f"Unsupported image input type: {type(source)}"
-    raise ValueError(error_msg)
+def _bytes_to_image(image_bytes: bytes) -> Image.Image:
+    """Convert bytes to a PIL Image."""
+    try:
+        return Image.open(io.BytesIO(image_bytes))
+    except (FileNotFoundError, UnidentifiedImageError) as e:
+        error_msg = "Could not identify image from bytes"
+        raise ValueError(error_msg) from e
 
 
 def image_to_data_url(image: PILImage.Image) -> str:
@@ -391,8 +359,12 @@ class ImageSource(RootModel):
 
     @field_validator("root", mode="before")
     @classmethod
-    def validate_root(cls, v: Any) -> PILImage.Image:
-        return load_image(v)
+    def validate_root(cls, v: Any) -> Image.Image:
+        if isinstance(v, Image.Image):
+            return v
+
+        image_bytes = read_bytes(v)
+        return _bytes_to_image(image_bytes)
 
     def to_data_url(self) -> str:
         """Convert the image to a data URL.
@@ -422,7 +394,6 @@ class ImageSource(RootModel):
 
 
 __all__ = [
-    "load_image",
     "image_to_data_url",
     "data_url_to_image",
     "draw_point_on_image",
