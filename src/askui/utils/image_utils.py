@@ -14,32 +14,6 @@ from pydantic import ConfigDict, RootModel, field_validator
 # Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
 # e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
 _DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
-PDF_MAX_SIZE_BYTES = 20 * 1024 * 1024
-
-
-def load_pdf(source: Union[str, Path]) -> bytes:
-    """Load a PDF from a path and return its bytes.
-
-    Args:
-        source (Union[str, Path]): The PDF source to load from.
-
-    Returns:
-        bytes: The PDF content as bytes.
-
-    Raises:
-        FileNotFoundError: If the file is not found.
-        ValueError: If the file is too large.
-    """
-    filepath = Path(source)
-    if not filepath.is_file():
-        err_msg = f"No such file or directory: '{source}'"
-        raise FileNotFoundError(err_msg)
-
-    if filepath.stat().st_size > PDF_MAX_SIZE_BYTES:
-        err_msg = f"PDF file size exceeds the limit of {PDF_MAX_SIZE_BYTES} bytes."
-        raise ValueError(err_msg)
-
-    return filepath.read_bytes()
 
 
 def load_image(source: Union[str, Path, Image.Image]) -> Image.Image:
@@ -393,13 +367,6 @@ Accepts:
 - Data URL (e.g., `"data:image/png;base64,..."`)
 """
 
-Pdf = Union[str, Path]
-"""Type of the input PDFs for `askui.VisionAgent.get()`, etc.
-
-Accepts:
-- Relative or absolute file path (`str` or `pathlib.Path`)
-"""
-
 
 class ImageSource(RootModel):
     """A class that represents an image source and provides methods to convert it to different formats.
@@ -454,34 +421,6 @@ class ImageSource(RootModel):
         return img_byte_arr.getvalue()
 
 
-class PdfSource(RootModel):
-    """A class that represents a PDF source and provides methods to convert it to different formats.
-
-    The class can be initialized with:
-    - A file path (str or pathlib.Path)
-
-    Attributes:
-        root (bytes): The underlying PDF bytes.
-
-    Args:
-        root (Pdf): The PDF source to load from.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    root: bytes
-
-    def __init__(self, root: Pdf, **kwargs: dict[str, Any]) -> None:
-        super().__init__(root=root, **kwargs)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> bytes:
-        return load_pdf(v)
-
-
-Source = Union[ImageSource, PdfSource]
-
-
 __all__ = [
     "load_image",
     "image_to_data_url",
@@ -494,7 +433,4 @@ __all__ = [
     "ScalingResults",
     "ImageSource",
     "Img",
-    "PdfSource",
-    "Pdf",
-    "Source",
 ]

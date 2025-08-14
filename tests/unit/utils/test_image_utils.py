@@ -3,7 +3,6 @@ import pathlib
 
 import pytest
 from PIL import Image
-from pytest_mock import MockerFixture
 
 from askui.utils.image_utils import (
     ImageSource,
@@ -14,35 +13,9 @@ from askui.utils.image_utils import (
     image_to_base64,
     image_to_data_url,
     load_image,
-    load_pdf,
     scale_coordinates,
     scale_image_to_fit,
 )
-
-
-class TestLoadPdf:
-    def test_load_pdf_from_path(self, path_fixtures_dummy_pdf: pathlib.Path) -> None:
-        # Test loading from Path
-        loaded = load_pdf(path_fixtures_dummy_pdf)
-        assert isinstance(loaded, bytes)
-        assert len(loaded) > 0
-
-        # Test loading from str path
-        loaded = load_pdf(str(path_fixtures_dummy_pdf))
-        assert isinstance(loaded, bytes)
-        assert len(loaded) > 0
-
-    def test_load_pdf_nonexistent_file(self) -> None:
-        with pytest.raises(FileNotFoundError):
-            load_pdf("nonexistent_file.pdf")
-
-    def test_load_pdf_too_large(
-        self, mocker: MockerFixture, path_fixtures_dummy_pdf: pathlib.Path
-    ) -> None:
-        mocker.patch("pathlib.Path.stat", return_value=mocker.Mock(st_size=99999999))
-        mocker.patch("pathlib.Path.is_file", return_value=True)
-        with pytest.raises(ValueError):
-            load_pdf(path_fixtures_dummy_pdf)
 
 
 class TestLoadImage:

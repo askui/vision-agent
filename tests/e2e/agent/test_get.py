@@ -4,6 +4,7 @@ from typing import Literal
 import pytest
 from PIL import Image as PILImage
 from pydantic import BaseModel, RootModel
+from pytest_mock import MockerFixture
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
@@ -78,6 +79,31 @@ def test_get_with_pdf_with_gemini_model(
     )
     assert isinstance(response, str)
     assert "is a test page " in response.lower()
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_pdf_too_large(
+    vision_agent: VisionAgent,
+    model: str,
+    path_fixtures_dummy_pdf: pathlib.Path,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES",
+        1,
+    )
+    with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
+            model=model,
+        )
 
 
 def test_get_with_model_composition_should_use_default_model(

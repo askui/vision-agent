@@ -10,7 +10,8 @@ from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
-from askui.utils.image_utils import PdfSource, Source
+from askui.utils.file_utils import Source
+from askui.utils.pdf_utils import PdfSource
 
 from .settings import OpenRouterSettings
 
@@ -174,7 +175,7 @@ class OpenRouterModel(GetModel):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, PdfSource):
-            err_msg = f"PDF processing is not supported for model {model_choice}"
+            err_msg = f"PDF processing is not supported for the model {model_choice}"
             raise NotImplementedError(err_msg)
         response = self._predict(
             image_url=source.to_data_url(),

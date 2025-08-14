@@ -9,7 +9,8 @@ from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel, ModelName
 from askui.models.types.response_schemas import ResponseSchema
-from askui.utils.image_utils import PdfSource, Source
+from askui.utils.file_utils import Source
+from askui.utils.pdf_utils import PdfSource
 
 
 class AskUiGetModel(GetModel):

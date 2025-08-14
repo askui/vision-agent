@@ -18,7 +18,9 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
-from askui.utils.image_utils import ImageSource, PdfSource, Source, image_to_base64
+from askui.utils.file_utils import Source
+from askui.utils.image_utils import ImageSource, image_to_base64
+from askui.utils.pdf_utils import PdfSource
 
 from .parser import UITarsEPMessage
 from .prompts import PROMPT, PROMPT_QA
@@ -181,7 +183,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, PdfSource):
-            err_msg = f"PDF processing is not supported for model {model_choice}"
+            err_msg = f"PDF processing is not supported for the model {model_choice}"
             raise NotImplementedError(err_msg)
         if response_schema is not None:
             error_msg = f'Response schema is not supported for model "{model_choice}"'

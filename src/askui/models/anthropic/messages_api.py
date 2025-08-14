@@ -42,14 +42,14 @@ from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.dict_utils import IdentityDefaultDict
+from askui.utils.file_utils import Source
 from askui.utils.image_utils import (
     ImageSource,
-    PdfSource,
-    Source,
     image_to_base64,
     scale_coordinates,
     scale_image_to_fit,
 )
+from askui.utils.pdf_utils import PdfSource
 
 from .utils import extract_click_coordinates
 
@@ -245,7 +245,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, PdfSource):
-            err_msg = f"PDF processing is not supported for model {model_choice}"
+            err_msg = f"PDF processing is not supported for the model {model_choice}"
             raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:

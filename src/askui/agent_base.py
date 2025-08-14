@@ -16,7 +16,9 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
-from askui.utils.image_utils import ImageSource, Img, Pdf, PdfSource, Source
+from askui.utils.file_utils import load_source
+from askui.utils.image_utils import ImageSource, Img
+from askui.utils.pdf_utils import Pdf
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
@@ -320,17 +322,20 @@ class AgentBase(ABC):  # noqa: B024
             ```
         """
         logger.debug("VisionAgent received instruction to get '%s'", query)
-        _source: Source | None = None
-        if source is None:
-            _source = ImageSource(self._agent_os.screenshot())
-        elif isinstance(source, (str, Path)) and Path(source).suffix.lower() == ".pdf":
-            _source = PdfSource(source)
-        else:
-            _source = ImageSource(source)
+        _source = (
+            ImageSource(self._agent_os.screenshot())
+            if source is None
+            else load_source(source)
+        )
+
+        # Prepare message content with file path if available
+        user_message_content = f'get: "{query}"' + (
+            f" from '{source}'" if isinstance(source, (str, Path)) else ""
+        )
 
         self._reporter.add_message(
             "User",
-            f'get: "{query}"',
+            user_message_content,
             image=_source.root if isinstance(_source, ImageSource) else None,
         )
         response = self._model_router.get(
