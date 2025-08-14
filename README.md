@@ -246,7 +246,8 @@ Supported commands are: `act()`, `click()`, `get()`, `locate()`, `mouse_move()`
 | `askui-ocr` | `AskUI OCR` is an OCR model trained to address texts on UI Screens e.g. "`Login`", "`Search`" | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
 | `askui-combo` | AskUI Combo is an combination from the `askui-pta` and the `askui-ocr` model to improve the accuracy. | Fast, <500ms per step | Secure hosting by AskUI or on-premise | low, <0,05$ per step | Recommended for production usage, can be retrained |
 | `askui-ai-element`| [AskUI AI Element](https://docs.askui.com/docs/general/Element%20Selection/aielement) allows you to address visual elements like icons or images by demonstrating what you looking for. Therefore, you have to crop out the element and give it a name.  | Very fast, <5ms per step | Secure hosting by AskUI or on-premise | Low, <0,05$ per step | Recommended for production usage, deterministic behaviour |
-
+| `askui/gemini-2.5-flash`| The Get-Model allows to ask questions about screenshot or images.  | Slow, ~1 s per step | Secure hosting by AskUI or on-premise | High | Recommended for production usage, deterministic behaviour |
+| `askui/gemini-2.5-pro`| The Get-Model allows to ask questions about screenshot or images.  | Slow, ~1 s per step | Secure hosting by AskUI or on-premise | High | Recommended for production usage, deterministic behaviour |
 > **Note:** Configure your AskUI Model Provider [here](#3a-authenticate-with-an-ai-model-provider)
 
 </details>
