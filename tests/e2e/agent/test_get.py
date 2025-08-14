@@ -207,7 +207,9 @@ def test_get_with_string_schema(
     assert response in ["https://github.com/login", "github.com/login"]
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "model", [ModelName.ASKUI, ModelName.ASKUI__GEMINI__2_5__FLASH]
+)
 def test_get_with_boolean_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,

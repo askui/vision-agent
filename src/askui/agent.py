@@ -48,7 +48,7 @@ _SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value,
+        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         system=_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20241022_BETA_FLAG],
     ),
@@ -56,7 +56,7 @@ _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514.value,
+        model=ModelName.CLAUDE__SONNET__4__20250514,
         system=_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20250124_BETA_FLAG],
         thinking={"type": "enabled", "budget_tokens": 2048},

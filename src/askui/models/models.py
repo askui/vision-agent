@@ -1,7 +1,6 @@
 import abc
 import re
 from collections.abc import Iterator
-from enum import Enum
 from typing import Annotated, Callable, Type
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
@@ -16,10 +15,11 @@ from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 
 
-class ModelName(str, Enum):
+class ModelName:
     """Enumeration of all available model names in AskUI.
 
-    This enum provides type-safe access to model identifiers used throughout the
+    This enum is not really an `enum.Enum` but rather a collection of literal strings.
+    It provides type-safe access to model identifiers used throughout the
     library. Each model name corresponds to a specific AI model or model composition
     that can be used for different tasks like acting, getting information, or locating
     elements.
