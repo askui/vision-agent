@@ -118,9 +118,7 @@ def test_get_with_pdf_too_large_with_default_model(
 
     # This should raise a ValueError because the default model is Gemini and it falls
     # back to inference askui which does not support pdfs
-    with pytest.raises(
-        NotImplementedError, match="PDF processing is not supported for the model"
-    ):
+    with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
         vision_agent.get(
             "What is in the PDF?",
             source=path_fixtures_dummy_pdf,

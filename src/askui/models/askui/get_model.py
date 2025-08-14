@@ -46,6 +46,7 @@ class AskUiGetModel(GetModel):
     ) -> ResponseSchema | str:
         if isinstance(source, PdfSource):
             if model_choice not in [
+                ModelName.ASKUI,
                 ModelName.ASKUI__GEMINI__2_5__FLASH,
                 ModelName.ASKUI__GEMINI__2_5__PRO,
             ]:
