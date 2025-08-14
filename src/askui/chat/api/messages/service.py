@@ -64,7 +64,7 @@ class MessageService:
             raise FileNotFoundError(error_msg)
 
         messages: list[Message] = []
-        with thread_file.open("r") as f:
+        with thread_file.open("r", encoding="utf-8") as f:
             for line in f:
                 msg = Message.model_validate_json(line)
                 messages.append(msg)
