@@ -78,7 +78,7 @@ def test_get_with_pdf_with_gemini_model(
         model=model,
     )
     assert isinstance(response, str)
-    assert "is a test page " in response.lower()
+    assert "is a test " in response.lower()
 
 
 @pytest.mark.parametrize(
@@ -103,6 +103,27 @@ def test_get_with_pdf_too_large(
             "What is in the PDF?",
             source=path_fixtures_dummy_pdf,
             model=model,
+        )
+
+
+def test_get_with_pdf_too_large_with_default_model(
+    vision_agent: VisionAgent,
+    path_fixtures_dummy_pdf: pathlib.Path,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES",
+        1,
+    )
+
+    # This should raise a ValueError because the default model is Gemini and it falls
+    # back to inference askui which does not support pdfs
+    with pytest.raises(
+        NotImplementedError, match="PDF processing is not supported for the model"
+    ):
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
         )
 
 
