@@ -182,7 +182,7 @@ class VisionAgent(AgentBase):
     def _mouse_move(
         self, locator: str | Locator, model: ModelComposition | str | None = None
     ) -> None:
-        point = self._locate(locator=locator, model=model)
+        point = self._locate(locator=locator, model=model)[0]
         self.tools.os.mouse_move(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})

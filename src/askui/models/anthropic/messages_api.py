@@ -200,7 +200,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         if not isinstance(model_choice, str):
             error_msg = "Model composition is not supported for Claude"
             raise NotImplementedError(error_msg)
@@ -221,12 +221,14 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
                 ),
                 model_choice=model_choice,
             )
-            return scale_coordinates(
-                extract_click_coordinates(content),
-                image.root.size,
-                self._settings.resolution,
-                inverse=True,
-            )
+            return [
+                scale_coordinates(
+                    extract_click_coordinates(content),
+                    image.root.size,
+                    self._settings.resolution,
+                    inverse=True,
+                )
+            ]
         except (
             _UnexpectedResponseError,
             ValueError,

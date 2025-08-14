@@ -56,5 +56,5 @@ class ModelFacade(ActModel, GetModel, LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         return self._locate_model.locate(locator, image, model_choice)

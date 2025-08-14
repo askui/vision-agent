@@ -18,7 +18,7 @@ class AskUiModelRouter(LocateModel):
 
     def _locate_with_askui_ocr(
         self, screenshot: ImageSource, locator: str | Text
-    ) -> Point:
+    ) -> list[Point]:
         locator = Text(locator) if isinstance(locator, str) else locator
         return self._inference_api.locate(
             locator, screenshot, model_choice=ModelName.ASKUI__OCR
@@ -30,7 +30,7 @@ class AskUiModelRouter(LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         if (
             isinstance(model_choice, ModelComposition)
             or model_choice == ModelName.ASKUI

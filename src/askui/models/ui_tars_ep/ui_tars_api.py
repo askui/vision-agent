@@ -146,7 +146,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         if not isinstance(model_choice, str):
             error_msg = "Model composition is not supported for UI-TARS"
             raise NotImplementedError(error_msg)
@@ -169,7 +169,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             width, height = image.root.size
             new_height, new_width = smart_resize(height, width)
             x, y = (int(x / new_width * width), int(y / new_height * height))
-            return x, y
+            return [(x, y)]
         raise ElementNotFoundError(locator, locator_serialized)
 
     @override

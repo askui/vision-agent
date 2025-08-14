@@ -303,9 +303,9 @@ class LocateModel(abc.ABC):
                 locator: str | Locator,
                 image: ImageSource,
                 model_choice: ModelComposition | str,
-            ) -> Point:
+            ) -> list[Point]:
                 # Implement custom locate logic
-                return (100, 100)
+                return [(100, 100)]
 
         with VisionAgent(models={"my-locate": MyLocateModel()}) as agent:
             agent.click("button", model="my-locate")
@@ -318,7 +318,7 @@ class LocateModel(abc.ABC):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         """Find the coordinates of a UI element in an image.
 
         Args:

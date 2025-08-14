@@ -27,11 +27,11 @@ class FailingLocateModel(LocateModel):
         locator: Union[str, Locator],
         image: ImageSource,  # noqa: ARG002
         model_choice: Union[ModelComposition, str],  # noqa: ARG002
-    ) -> Tuple[int, int]:
+    ) -> list[Tuple[int, int]]:
         self.calls += 1
         if self.calls <= self.fail_times:
             raise ElementNotFoundError(locator, locator)
-        return self.succeed_point
+        return [self.succeed_point]
 
 
 @pytest.fixture

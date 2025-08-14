@@ -212,7 +212,7 @@ class ModelRouter:
         screenshot: ImageSource,
         locator: str | Locator,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         _model_choice = (
             ModelName.ASKUI
             if isinstance(model_choice, ModelComposition)

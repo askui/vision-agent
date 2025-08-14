@@ -367,12 +367,12 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         # Implement custom locate logic, e.g.:
         # - Use a different object detection model
         # - Implement custom element finding
         # - Call external vision services
-        return (100, 100)  # Example coordinates
+        return [(100, 100)]  # Example coordinates
 
 
 # Create model registry

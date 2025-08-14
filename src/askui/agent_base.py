@@ -326,8 +326,8 @@ class AgentBase(ABC):  # noqa: B024
         locator: str | Locator,
         screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
-    ) -> Point:
-        def locate_with_screenshot() -> Point:
+    ) -> list[Point]:
+        def locate_with_screenshot() -> list[Point]:
             _screenshot = ImageSource(
                 self._agent_os.screenshot() if screenshot is None else screenshot
             )
@@ -337,10 +337,10 @@ class AgentBase(ABC):  # noqa: B024
                 model_choice=model or self._model_choice["locate"],
             )
 
-        point = self._retry.attempt(locate_with_screenshot)
-        self._reporter.add_message("ModelRouter", f"locate: ({point[0]}, {point[1]})")
-        logger.debug("ModelRouter locate: (%d, %d)", point[0], point[1])
-        return point
+        points = self._retry.attempt(locate_with_screenshot)
+        self._reporter.add_message("ModelRouter", f"locate {len(points)} elements")
+        logger.debug("ModelRouter locate: %d elements", len(points))
+        return points
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -351,7 +351,7 @@ class AgentBase(ABC):  # noqa: B024
         model: ModelComposition | str | None = None,
     ) -> Point:
         """
-        Locates the UI element identified by the provided locator.
+        Locates the first matching UI element identified by the provided locator.
 
         Args:
             locator (str | Locator): The identifier or description of the element to
@@ -374,8 +374,50 @@ class AgentBase(ABC):  # noqa: B024
                 print(f"Element found at coordinates: {point}")
             ```
         """
-        self._reporter.add_message("User", f"locate {locator}")
-        logger.debug("VisionAgent received instruction to locate %s", locator)
+        self._reporter.add_message("User", f"locate first matching element {locator}")
+        logger.debug(
+            "VisionAgent received instruction to locate first matching element %s",
+            locator,
+        )
+        return self._locate(locator, screenshot, model)[0]
+
+    @telemetry.record_call(exclude={"locator", "screenshot"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def locate_all(
+        self,
+        locator: str | Locator,
+        screenshot: Optional[Img] = None,
+        model: ModelComposition | str | None = None,
+    ) -> list[Point]:
+        """
+        Locates all matching UI elements identified by the provided locator.
+
+        Args:
+            locator (str | Locator): The identifier or description of the element to
+                locate.
+            screenshot (Img | None, optional): The screenshot to use for locating the
+                element. Can be a path to an image file, a PIL Image object or a data
+                URL. If `None`, takes a screenshot of the currently selected display.
+            model (ModelComposition | str | None, optional): The composition or name
+                of the model(s) to be used for locating the element using the `locator`.
+
+        Returns:
+            list[Point]: The coordinates of the elements as a list of tuples (x, y).
+
+        Example:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                points = agent.locate_all("Submit button")
+                print(f"Found {len(points)} elements at coordinates: {points}")
+            ```
+        """
+        self._reporter.add_message("User", f"locate all matching UI elements {locator}")
+        logger.debug(
+            "VisionAgent received instruction to locate all matching UI elements %s",
+            locator,
+        )
         return self._locate(locator, screenshot, model)
 
     @telemetry.record_call()

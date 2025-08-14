@@ -93,11 +93,11 @@ class SimpleLocateModel(LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> list[Point]:
         self.locators.append(locator)
         self.images.append(image)
         self.model_choices.append(model_choice)
-        return self._point
+        return [self._point]
 
 
 class SimpleResponseSchema(ResponseSchemaBase):
