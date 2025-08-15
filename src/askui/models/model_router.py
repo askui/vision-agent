@@ -31,8 +31,8 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
-from askui.utils.file_utils import Source
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 from ..logger import logger
 from .askui.inference_api import AskUiInferenceApi

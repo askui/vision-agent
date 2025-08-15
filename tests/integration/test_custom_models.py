@@ -23,8 +23,8 @@ from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.toolbox import AgentToolbox
-from askui.utils.file_utils import Source
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 
 class SimpleActModel(ActModel):

@@ -2,29 +2,13 @@ import base64
 import binascii
 import io
 import pathlib
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Literal, Union
 
 from PIL import Image, ImageDraw, UnidentifiedImageError
 from PIL import Image as PILImage
-from pydantic import ConfigDict, RootModel, field_validator
-
-from askui.utils.io_utils import read_bytes
-
-# Regex to capture any kind of valid base64 data url (with optional media type and ;base64)
-# e.g., data:image/png;base64,... or data:;base64,... or data:,... or just ,...
-_DATA_URL_GENERIC_RE = re.compile(r"^(?:data:)?[^,]*?,(.*)$", re.DOTALL)
-
-
-def _bytes_to_image(image_bytes: bytes) -> Image.Image:
-    """Convert bytes to a PIL Image."""
-    try:
-        return Image.open(io.BytesIO(image_bytes))
-    except (FileNotFoundError, UnidentifiedImageError) as e:
-        error_msg = "Could not identify image from bytes"
-        raise ValueError(error_msg) from e
+from pydantic import ConfigDict, RootModel
 
 
 def image_to_data_url(image: PILImage.Image) -> str:
@@ -353,18 +337,6 @@ class ImageSource(RootModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     root: PILImage.Image
-
-    def __init__(self, root: Img, **kwargs: dict[str, Any]) -> None:
-        super().__init__(root=root, **kwargs)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> Image.Image:
-        if isinstance(v, Image.Image):
-            return v
-
-        image_bytes = read_bytes(v)
-        return _bytes_to_image(image_bytes)
 
     def to_data_url(self) -> str:
         """Convert the image to a data URL.

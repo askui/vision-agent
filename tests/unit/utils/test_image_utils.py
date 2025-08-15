@@ -3,7 +3,6 @@ import pathlib
 
 import pytest
 from PIL import Image
-from pydantic import ValidationError
 
 from askui.utils.image_utils import (
     ImageSource,
@@ -19,71 +18,14 @@ from askui.utils.image_utils import (
 
 
 class TestImageSource:
-    def test_image_source_from_pil(
-        self, path_fixtures_github_com__icon: pathlib.Path
-    ) -> None:
-        img = Image.open(path_fixtures_github_com__icon)
-        source = ImageSource(img)
-        assert source.root == img
-
-    def test_image_source_from_path(
-        self, path_fixtures_github_com__icon: pathlib.Path
-    ) -> None:
-        # Test loading from Path
-        source = ImageSource(path_fixtures_github_com__icon)
-        assert isinstance(source.root, Image.Image)
-        assert source.root.size == (128, 125)  # GitHub icon size
-
-        # Test loading from str path
-        source = ImageSource(str(path_fixtures_github_com__icon))
-        assert isinstance(source.root, Image.Image)
-        assert source.root.size == (128, 125)
-
-    def test_image_source_from_data_url(
-        self, path_fixtures_github_com__icon: pathlib.Path
-    ) -> None:
-        # Load test image and convert to base64
-        with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
-            img_bytes = f.read()
-        img_str = base64.b64encode(img_bytes).decode()
-
-        # Test different base64 formats
-        formats = [
-            f"data:image/png;base64,{img_str}",
-        ]
-
-        for fmt in formats:
-            source = ImageSource(fmt)
-            assert isinstance(source.root, Image.Image)
-            assert source.root.size == (128, 125)
-
-    def test_image_source_invalid(
-        self, path_fixtures_github_com__icon: pathlib.Path
-    ) -> None:
-        with pytest.raises(ValidationError):
-            ImageSource("invalid_path.png")
-
-        with pytest.raises(ValidationError):
-            ImageSource("invalid_base64")
-
-        with pytest.raises(OSError):
-            with pathlib.Path.open(path_fixtures_github_com__icon, "rb") as f:
-                img_bytes = f.read()
-                img_str = base64.b64encode(img_bytes).decode()
-                ImageSource(img_str)
-
-    def test_image_source_nonexistent_file(self) -> None:
-        with pytest.raises(ValidationError, match="No such file or directory"):
-            ImageSource("nonexistent_file.png")
-
     def test_to_data_url(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
-        source = ImageSource(path_fixtures_github_com__icon)
+        source = ImageSource(Image.open(path_fixtures_github_com__icon))
         data_url = source.to_data_url()
         assert data_url.startswith("data:image/png;base64,")
         assert len(data_url) > 100  # Should have some base64 content
 
     def test_to_base64(self, path_fixtures_github_com__icon: pathlib.Path) -> None:
-        source = ImageSource(path_fixtures_github_com__icon)
+        source = ImageSource(Image.open(path_fixtures_github_com__icon))
         base64_str = source.to_base64()
         assert len(base64_str) > 100  # Should have some base64 content
 

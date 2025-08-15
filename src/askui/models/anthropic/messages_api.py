@@ -42,7 +42,6 @@ from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.dict_utils import IdentityDefaultDict
-from askui.utils.file_utils import Source
 from askui.utils.image_utils import (
     ImageSource,
     image_to_base64,
@@ -50,6 +49,7 @@ from askui.utils.image_utils import (
     scale_image_to_fit,
 )
 from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from .utils import extract_click_coordinates
 

@@ -18,9 +18,9 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
-from askui.utils.file_utils import Source
 from askui.utils.image_utils import ImageSource, image_to_base64
 from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from .parser import UITarsEPMessage
 from .prompts import PROMPT, PROMPT_QA

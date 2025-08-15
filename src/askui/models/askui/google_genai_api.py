@@ -21,10 +21,9 @@ from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedRespons
 from askui.models.models import GetModel, ModelName
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
-from askui.utils.file_utils import Source
 from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
-from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
@@ -186,8 +185,8 @@ class AskUiGoogleGenAiApi(GetModel):
                 data=data,
                 mime_type="image/png",
             )
-        if isinstance(source, PdfSource):
-            data = source.root
+        with source.reader as r:
+            data = r.read()
             if len(data) > MAX_FILE_SIZE_BYTES:
                 _err_msg = (
                     f"PDF file size exceeds the limit of {MAX_FILE_SIZE_BYTES} bytes."
@@ -197,9 +196,3 @@ class AskUiGoogleGenAiApi(GetModel):
                 data=data,
                 mime_type="application/pdf",
             )
-        # Explicit error for unsupported source types (for future extensibility)
-        err_msg = (  # type: ignore[unreachable]
-            f"Unsupported source type: {type(source).__name__}. "
-            "Only ImageSource and PdfSource are supported."
-        )
-        raise NotImplementedError(err_msg)

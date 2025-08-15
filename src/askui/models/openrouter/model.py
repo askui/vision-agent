@@ -10,8 +10,8 @@ from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
-from askui.utils.file_utils import Source
 from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from .settings import OpenRouterSettings
 

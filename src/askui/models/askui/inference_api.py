@@ -26,9 +26,9 @@ from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
-from askui.utils.file_utils import Source
 from askui.utils.image_utils import ImageSource
 from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from ..types.response_schemas import to_response_schema
 

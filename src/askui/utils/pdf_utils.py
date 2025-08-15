@@ -1,9 +1,8 @@
+from io import BufferedReader, BytesIO
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 
-from pydantic import ConfigDict, RootModel, field_validator
-
-from askui.utils.io_utils import read_bytes
+from pydantic import ConfigDict, RootModel
 
 Pdf = Union[str, Path]
 """Type of the input PDFs for `askui.VisionAgent.get()`, etc.
@@ -28,15 +27,13 @@ class PdfSource(RootModel):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    root: bytes
+    root: bytes | Path
 
-    def __init__(self, root: Pdf, **kwargs: dict[str, Any]) -> None:
-        super().__init__(root=root, **kwargs)
-
-    @field_validator("root", mode="before")
-    @classmethod
-    def validate_root(cls, v: Any) -> bytes:
-        return read_bytes(v)
+    @property
+    def reader(self) -> BufferedReader | BytesIO:
+        if isinstance(self.root, Path):
+            return self.root.open("rb")
+        return BytesIO(self.root)
 
 
 __all__ = [

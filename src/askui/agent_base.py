@@ -16,9 +16,9 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
-from askui.utils.file_utils import load_source
 from askui.utils.image_utils import ImageSource, Img
 from askui.utils.pdf_utils import Pdf
+from askui.utils.source_utils import load_image_source, load_source
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
@@ -359,7 +359,7 @@ class AgentBase(ABC):  # noqa: B024
         model: ModelComposition | str | None = None,
     ) -> Point:
         def locate_with_screenshot() -> Point:
-            _screenshot = ImageSource(
+            _screenshot = load_image_source(
                 self._agent_os.screenshot() if screenshot is None else screenshot
             )
             return self._model_router.locate(
