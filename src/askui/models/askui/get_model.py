@@ -7,9 +7,8 @@ from askui.logger import logger
 from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
-from askui.models.models import GetModel, ModelName
+from askui.models.models import GetModel
 from askui.models.types.response_schemas import ResponseSchema
-from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
 
 
@@ -44,16 +43,6 @@ class AskUiGetModel(GetModel):
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
-        if isinstance(source, PdfSource):
-            if model_choice not in [
-                ModelName.ASKUI,
-                ModelName.ASKUI__GEMINI__2_5__FLASH,
-                ModelName.ASKUI__GEMINI__2_5__PRO,
-            ]:
-                err_msg = (
-                    f"PDF processing is not supported for the model '{model_choice}'"
-                )
-                raise NotImplementedError(err_msg)
         try:
             logger.debug("Attempting to use Google GenAI API")
             return self._google_genai_api.get(
