@@ -103,7 +103,7 @@ Your primary goal is to execute tasks efficiently and reliably while maintaining
 
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value,
+        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         system=_SYSTEM_PROMPT,
         betas=[],
     ),
@@ -111,7 +111,7 @@ _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514.value,
+        model=ModelName.CLAUDE__SONNET__4__20250514,
         system=_SYSTEM_PROMPT,
         thinking={"type": "enabled", "budget_tokens": 2048},
         betas=[],

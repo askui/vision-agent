@@ -23,9 +23,11 @@ from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
 from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
+MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
 
 class _wait_for_retry_after_header(wait_base):
@@ -112,7 +114,7 @@ class AskUiGoogleGenAiApi(GetModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
@@ -120,12 +122,10 @@ class AskUiGoogleGenAiApi(GetModel):
             _response_schema = to_response_schema(response_schema)
             json_schema = _response_schema.model_json_schema()
             logger.debug(f"json_schema:\n{json_lib.dumps(json_schema)}")
+            part = self._create_genai_part_from_source(source)
             content = genai_types.Content(
                 parts=[
-                    genai_types.Part.from_bytes(
-                        data=image.to_bytes(),
-                        mime_type="image/png",
-                    ),
+                    part,
                     genai_types.Part.from_text(text=query),
                 ],
                 role="user",
@@ -158,3 +158,41 @@ class AskUiGoogleGenAiApi(GetModel):
                 "Recursive response schemas are not supported by AskUiGoogleGenAiApi"
             )
             raise NotImplementedError(error_message) from e
+
+    def _create_genai_part_from_source(self, source: Source) -> genai_types.Part:
+        """Create a genai Part from a Source object.
+
+        Only ImageSource and PdfSource are currently supported.
+
+        Args:
+            source (Source): The source object to convert.
+
+        Returns:
+            genai_types.Part: The genai Part object.
+
+        Raises:
+            NotImplementedError: If source type is not ImageSource or PdfSource.
+            ValueError: If the source data exceeds the size limit.
+        """
+        if isinstance(source, ImageSource):
+            data = source.to_bytes()
+            if len(data) > MAX_FILE_SIZE_BYTES:
+                _err_msg = (
+                    f"Image file size exceeds the limit of {MAX_FILE_SIZE_BYTES} bytes."
+                )
+                raise ValueError(_err_msg)
+            return genai_types.Part.from_bytes(
+                data=data,
+                mime_type="image/png",
+            )
+        with source.reader as r:
+            data = r.read()
+            if len(data) > MAX_FILE_SIZE_BYTES:
+                _err_msg = (
+                    f"PDF file size exceeds the limit of {MAX_FILE_SIZE_BYTES} bytes."
+                )
+                raise ValueError(_err_msg)
+            return genai_types.Part.from_bytes(
+                data=data,
+                mime_type="application/pdf",
+            )

@@ -7,7 +7,7 @@ from PIL import Image as PILImage
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.locators.relatable import Relatable
-from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import load_image_source
 
 TextMatchType = Literal["similar", "exact", "contains", "regex"]
 """The type of match to use.
@@ -303,7 +303,7 @@ class Image(ImageBase):
             image_compare_format=image_compare_format,
             name=_generate_name() if name is None else name,
         )
-        self._image = ImageSource(image)
+        self._image = load_image_source(image)
 
 
 class AiElement(ImageBase):

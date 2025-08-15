@@ -1,5 +1,6 @@
 """Integration tests for custom model registration and selection."""
 
+import pathlib
 from typing import Any, Optional, Type, Union
 
 import pytest
@@ -24,6 +25,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 
 class SimpleActModel(ActModel):
@@ -51,7 +53,7 @@ class SimpleGetModel(GetModel):
 
     def __init__(self, response: str | ResponseSchemaBase = "test response") -> None:
         self.queries: list[str] = []
-        self.images: list[ImageSource] = []
+        self.sources: list[Source] = []
         self.schemas: list[Any] = []
         self.model_choices: list[str] = []
         self.response = response
@@ -59,12 +61,12 @@ class SimpleGetModel(GetModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Optional[Type[ResponseSchema]],
         model_choice: str,
     ) -> Union[ResponseSchema, str]:
         self.queries.append(query)
-        self.images.append(image)
+        self.sources.append(source)
         self.schemas.append(response_schema)
         self.model_choices.append(model_choice)
         if (
@@ -159,6 +161,23 @@ class TestCustomModels:
         """Test registering and using a custom get model."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
             result = agent.get("test query", model="custom-get")
+
+        assert result == "test response"
+        assert get_model.queries == ["test query"]
+        assert get_model.model_choices == ["custom-get"]
+
+    def test_register_and_use_custom_get_model_with_pdf(
+        self,
+        model_registry: ModelRegistry,
+        get_model: SimpleGetModel,
+        agent_toolbox_mock: AgentToolbox,
+        path_fixtures_dummy_pdf: pathlib.Path,
+    ) -> None:
+        """Test registering and using a custom get model with a PDF."""
+        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
+            result = agent.get(
+                "test query", model="custom-get", source=path_fixtures_dummy_pdf
+            )
 
         assert result == "test response"
         assert get_model.queries == ["test query"]

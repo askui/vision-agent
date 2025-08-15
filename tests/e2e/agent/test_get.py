@@ -1,8 +1,10 @@
+import pathlib
 from typing import Literal
 
 import pytest
 from PIL import Image as PILImage
 from pydantic import BaseModel, RootModel
+from pytest_mock import MockerFixture
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.models import ModelName
@@ -43,10 +45,84 @@ def test_get(
 ) -> None:
     url = vision_agent.get(
         "What is the current url shown in the url bar?\nUrl: ",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         model=model,
     )
     assert url in ["github.com/login", "https://github.com/login"]
+
+
+def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
+    vision_agent: VisionAgent, path_fixtures_dummy_pdf: pathlib.Path
+) -> None:
+    with pytest.raises(NotImplementedError):
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
+            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        )
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_pdf_with_gemini_model(
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_pdf: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is in the PDF? explain in 1 sentence",
+        source=path_fixtures_dummy_pdf,
+        model=model,
+    )
+    assert isinstance(response, str)
+    assert "is a test " in response.lower()
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_pdf_too_large(
+    vision_agent: VisionAgent,
+    model: str,
+    path_fixtures_dummy_pdf: pathlib.Path,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES",
+        1,
+    )
+    with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
+            model=model,
+        )
+
+
+def test_get_with_pdf_too_large_with_default_model(
+    vision_agent: VisionAgent,
+    path_fixtures_dummy_pdf: pathlib.Path,
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES",
+        1,
+    )
+
+    # This should raise a ValueError because the default model is Gemini and it falls
+    # back to inference askui which does not support pdfs
+    with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
+        )
 
 
 def test_get_with_model_composition_should_use_default_model(
@@ -76,7 +152,7 @@ def test_get_with_model_composition_should_use_default_model(
     ) as vision_agent:
         url = vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=github_login_screenshot,
+            source=github_login_screenshot,
         )
         assert url in ["github.com/login", "https://github.com/login"]
 
@@ -92,7 +168,7 @@ def test_get_with_response_schema_without_additional_properties_with_askui_model
     with pytest.raises(Exception):  # noqa: B017
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=github_login_screenshot,
+            source=github_login_screenshot,
             response_schema=UrlResponseBaseModel,  # type: ignore[type-var]
             model=ModelName.ASKUI,
         )
@@ -108,7 +184,7 @@ def test_get_with_response_schema_with_default_value(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=OptionalUrlResponse,
         model=ModelName.ASKUI,
     )
@@ -124,7 +200,7 @@ def test_get_with_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=UrlResponse,
         model=model,
     )
@@ -139,7 +215,7 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
     with pytest.raises(NotImplementedError):
         vision_agent.get(
             "What is the current url shown in the url bar?",
-            image=github_login_screenshot,
+            source=github_login_screenshot,
             response_schema=UrlResponse,
             model=ModelName.CLAUDE__SONNET__4__20250514,
         )
@@ -153,7 +229,7 @@ def test_get_with_nested_and_inherited_response_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current browser context?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=BrowserContextResponse,
         model=model,
     )
@@ -177,7 +253,7 @@ def test_get_with_recursive_response_schema(
     response = vision_agent.get(
         "Can you extract all segments (domain, path etc.) from the url as a linked list, "
         "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=LinkedListNode,
         model=model,
     )
@@ -200,14 +276,16 @@ def test_get_with_string_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=str,
         model=model,
     )
     assert response in ["https://github.com/login", "github.com/login"]
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "model", [ModelName.ASKUI, ModelName.ASKUI__GEMINI__2_5__FLASH]
+)
 def test_get_with_boolean_schema(
     vision_agent: VisionAgent,
     github_login_screenshot: PILImage.Image,
@@ -215,7 +293,7 @@ def test_get_with_boolean_schema(
 ) -> None:
     response = vision_agent.get(
         "Is this a login page?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=bool,
         model=model,
     )
@@ -231,7 +309,7 @@ def test_get_with_integer_schema(
 ) -> None:
     response = vision_agent.get(
         "How many input fields are visible on this page?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=int,
         model=model,
     )
@@ -247,7 +325,7 @@ def test_get_with_float_schema(
 ) -> None:
     response = vision_agent.get(
         "Return a floating point number between 0 and 1 as a rating for how you well this page is designed (0 is the worst, 1 is the best)",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=float,
         model=model,
     )
@@ -263,7 +341,7 @@ def test_get_returns_str_when_no_schema_specified(
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         model=model,
     )
     assert isinstance(response, str)
@@ -281,7 +359,7 @@ def test_get_with_basis_schema(
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=Basis,
         model=model,
     )
@@ -305,7 +383,7 @@ def test_get_with_nested_root_model(
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=BasisWithNestedRootModel,
         model=model,
     )
@@ -353,7 +431,7 @@ def test_get_with_deeply_nested_response_schema_with_model_that_does_not_support
     """
     response = vision_agent.get(
         "Create a possible dom of the page that goes 4 levels deep",
-        image=github_login_screenshot,
+        source=github_login_screenshot,
         response_schema=PageDom,
         model=model,
     )

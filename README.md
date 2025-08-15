@@ -350,7 +350,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
@@ -640,9 +640,9 @@ else:
     agent.click("Login")
 ```
 
-#### Using custom images
+#### Using custom images and PDFs
 
-Instead of taking a screenshot, you can analyze specific images:
+Instead of taking a screenshot, you can analyze specific images or PDFs:
 
 ```python
 from PIL import Image
@@ -651,10 +651,13 @@ from askui import VisionAgent
 # From PIL Image
 with VisionAgent() as agent:
   image = Image.open("screenshot.png")
-  result = agent.get("What's in this image?", image)
+  result = agent.get("What's in this image?", source=image)
 
   # From file path
-  result = agent.get("What's in this image?", "screenshot.png")
+  result = agent.get("What's in this image?", source="screenshot.png")
+
+  # From PDF
+  result = agent.get("What is this PDF about?", source="document.pdf")
 ```
 
 #### Using response schemas
@@ -696,7 +699,7 @@ with VisionAgent() as agent:
     response = agent.get(
         "What is the current url shown in the url bar?",
         response_schema=UrlResponse,
-        image="screenshot.png",
+        source="screenshot.png",
     )
 
     # Dump whole model
@@ -712,7 +715,7 @@ with VisionAgent() as agent:
     is_login_page = agent.get(
         "Is this a login page?",
         response_schema=bool,
-        image=Image.open("screenshot.png"),
+        source=Image.open("screenshot.png"),
     )
     print(is_login_page)
 
@@ -751,6 +754,7 @@ with VisionAgent() as agent:
 **⚠️ Limitations:**
 - The support for response schemas varies among models. Currently, the `askui` model provides best support for response schemas
   as we try different models under the hood with your schema to see which one works best.
+- PDF processing is only supported for Gemini models hosted on AskUI and for PDFs up to 20MB.
 
 ## What is AskUI Vision Agent?
 
