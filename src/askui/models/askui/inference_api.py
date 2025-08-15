@@ -20,7 +20,7 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
 from askui.models.exceptions import ElementNotFoundError
-from askui.models.models import GetModel, LocateModel, ModelComposition, Point
+from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import MessageSettings
@@ -162,7 +162,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> PointList:
         serialized_locator = (
             self._locator_serializer.serialize(locator=locator)
             if isinstance(locator, Locator)
@@ -171,7 +171,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
         json: dict[str, Any] = {
             "image": image.to_data_url(),
-            "instruction": f"Click on {serialized_locator['instruction']}",
+            "instruction": f"get element {serialized_locator['instruction']}",
         }
         if "customElements" in serialized_locator:
             json["customElements"] = serialized_locator["customElements"]
@@ -182,17 +182,20 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             )
         response = self._post(path="/inference", json=json)
         content = response.json()
-        assert content["type"] == "COMMANDS", (
+        assert content["type"] == "DETECTED_ELEMENTS", (
             f"Received unknown content type {content['type']}"
         )
-        actions = [
-            el for el in content["data"]["actions"] if el["inputEvent"] == "MOUSE_MOVE"
-        ]
-        if len(actions) == 0:
+        detected_elements = content["data"]["detected_elements"]
+        if len(detected_elements) == 0:
             raise ElementNotFoundError(locator, serialized_locator)
 
-        position = actions[0]["position"]
-        return int(position["x"]), int(position["y"])
+        return [
+            (
+                int((element["bndbox"]["xmax"] + element["bndbox"]["xmin"]) / 2),
+                int((element["bndbox"]["ymax"] + element["bndbox"]["ymin"]) / 2),
+            )
+            for element in detected_elements
+        ]
 
     @override
     def get(

@@ -3,7 +3,13 @@ from typing import Type
 from typing_extensions import override
 
 from askui.locators.locators import Locator
-from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
+from askui.models.models import (
+    ActModel,
+    GetModel,
+    LocateModel,
+    ModelComposition,
+    PointList,
+)
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
@@ -57,5 +63,5 @@ class ModelFacade(ActModel, GetModel, LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> Point:
+    ) -> PointList:
         return self._locate_model.locate(locator, image, model_choice)

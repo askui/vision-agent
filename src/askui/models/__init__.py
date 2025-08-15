@@ -9,6 +9,7 @@ from .models import (
     ModelName,
     ModelRegistry,
     Point,
+    PointList,
 )
 from .openrouter.model import OpenRouterModel
 from .openrouter.settings import ChatCompletionsCreateSettings, OpenRouterSettings
@@ -53,6 +54,7 @@ __all__ = [
     "OpenRouterModel",
     "OpenRouterSettings",
     "Point",
+    "PointList",
     "TextBlockParam",
     "TextCitationParam",
     "ToolResultBlockParam",

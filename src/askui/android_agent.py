@@ -198,7 +198,7 @@ class AndroidVisionAgent(AgentBase):
             msg += f" on {target}"
             self._reporter.add_message("User", msg)
             logger.debug("VisionAgent received instruction to click on %s", target)
-            point = self._locate(locator=target, model=model)
+            point = self._locate(locator=target, model=model)[0]
             self.os.tap(point[0], point[1])
 
     @telemetry.record_call(exclude={"text"})
