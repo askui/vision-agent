@@ -63,10 +63,6 @@ ANTHROPIC_MODEL_MAPPING: IdentityDefaultDict[ModelName | str, str] = (
                 "claude-3-5-sonnet-20241022"
             ),
             ModelName.CLAUDE__SONNET__4__20250514: "claude-sonnet-4-20250514",
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022.value: (
-                "claude-3-5-sonnet-20241022"
-            ),
-            ModelName.CLAUDE__SONNET__4__20250514.value: "claude-sonnet-4-20250514",
         }
     )
 )
