@@ -9,7 +9,7 @@ from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel
 from askui.models.types.response_schemas import ResponseSchema
-from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 
 class AskUiGetModel(GetModel):
@@ -39,7 +39,7 @@ class AskUiGetModel(GetModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
@@ -47,7 +47,7 @@ class AskUiGetModel(GetModel):
             logger.debug("Attempting to use Google GenAI API")
             return self._google_genai_api.get(
                 query=query,
-                image=image,
+                source=source,
                 response_schema=response_schema,
                 model_choice=model_choice,
             )
@@ -66,7 +66,7 @@ class AskUiGetModel(GetModel):
             )
             return self._inference_api.get(
                 query=query,
-                image=image,
+                source=source,
                 response_schema=response_schema,
                 model_choice=model_choice,
             )

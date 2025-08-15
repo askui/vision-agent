@@ -48,6 +48,8 @@ from askui.utils.image_utils import (
     scale_coordinates,
     scale_image_to_fit,
 )
+from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from .utils import extract_click_coordinates
 
@@ -234,16 +236,19 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
+        if isinstance(source, PdfSource):
+            err_msg = f"PDF processing is not supported for the model {model_choice}"
+            raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:
                 error_msg = "Response schema is not yet supported for Anthropic"
                 raise NotImplementedError(error_msg)
             return self._inference(
-                image=image,
+                image=source,
                 prompt=query,
                 system=SYSTEM_PROMPT_GET,
                 model_choice=model_choice,

@@ -10,6 +10,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 
 class ModelFacade(ActModel, GetModel, LocateModel):
@@ -44,11 +45,11 @@ class ModelFacade(ActModel, GetModel, LocateModel):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
-        return self._get_model.get(query, image, response_schema, model_choice)
+        return self._get_model.get(query, source, response_schema, model_choice)
 
     @override
     def locate(

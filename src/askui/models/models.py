@@ -13,6 +13,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import Source
 
 
 class ModelName:
@@ -231,23 +232,22 @@ class ActModel(abc.ABC):
 
 
 class GetModel(abc.ABC):
-    """Abstract base class for models that can extract information from images.
+    """Abstract base class for models that can extract information from images and PDFs.
 
     Models implementing this interface can be used with the `get()` method of
     `VisionAgent`
-    to extract information from screenshots or other images. These models analyze visual
-    content and return structured or unstructured information based on queries.
-
+    to extract information from screenshots, other images or PDFs. These models analyze
+    visual content and return structured or unstructured information based on queries.
     Example:
         ```python
-        from askui import GetModel, VisionAgent, ResponseSchema, ImageSource
+        from askui import GetModel, VisionAgent, ResponseSchema, Source
         from typing import Type
 
         class MyGetModel(GetModel):
             def get(
                 self,
                 query: str,
-                image: ImageSource,
+                source: Source,
                 response_schema: Type[ResponseSchema] | None,
                 model_choice: str,
             ) -> ResponseSchema | str:
@@ -263,15 +263,14 @@ class GetModel(abc.ABC):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
-        """Extract information from an image based on a query.
-
+        """Extract information from a source based on a query.
         Args:
             query (str): A description of what information to extract
-            image (ImageSource): The image to analyze (screenshot or provided image)
+            source (Source): The source to analyze (screenshot, image or PDF)
             response_schema (Type[ResponseSchema] | None): Optional Pydantic model class
                 defining the expected response structure
             model_choice (str): The name of the model being used (useful for models that

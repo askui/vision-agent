@@ -158,7 +158,7 @@ class TestImageLocator:
         )
 
     def test_initialization_with_invalid_args(self, test_image: PILImage.Image) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(FileNotFoundError):
             Image(image="not_an_image")
 
         with pytest.raises(ValueError):

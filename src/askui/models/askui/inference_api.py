@@ -27,6 +27,8 @@ from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
+from askui.utils.pdf_utils import PdfSource
+from askui.utils.source_utils import Source
 
 from ..types.response_schemas import to_response_schema
 
@@ -196,12 +198,15 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def get(
         self,
         query: str,
-        image: ImageSource,
+        source: Source,
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
+        if isinstance(source, PdfSource):
+            err_msg = f"PDF processing is not supported for the model {model_choice}"
+            raise NotImplementedError(err_msg)
         json: dict[str, Any] = {
-            "image": image.to_data_url(),
+            "image": source.to_data_url(),
             "prompt": query,
         }
         _response_schema = to_response_schema(response_schema)
