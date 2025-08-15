@@ -367,7 +367,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         # Implement custom locate logic, e.g.:
         # - Use a different object detection model
         # - Implement custom element finding

@@ -26,6 +26,7 @@ from .models.models import (
     ModelName,
     ModelRegistry,
     Point,
+    PointList,
     TotalModelChoice,
 )
 from .models.types.response_schemas import ResponseSchema
@@ -321,13 +322,14 @@ class AgentBase(ABC):  # noqa: B024
         self._reporter.add_message("Agent", message_content)
         return response
 
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def _locate(
         self,
         locator: str | Locator,
         screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
-    ) -> list[Point]:
-        def locate_with_screenshot() -> list[Point]:
+    ) -> PointList:
+        def locate_with_screenshot() -> PointList:
             _screenshot = ImageSource(
                 self._agent_os.screenshot() if screenshot is None else screenshot
             )
@@ -388,9 +390,12 @@ class AgentBase(ABC):  # noqa: B024
         locator: str | Locator,
         screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
-    ) -> list[Point]:
+    ) -> PointList:
         """
         Locates all matching UI elements identified by the provided locator.
+
+        Note: Some LocateModels can only locate a single element. In this case, the
+        returned list will have a length of 1.
 
         Args:
             locator (str | Locator): The identifier or description of the element to
@@ -402,7 +407,7 @@ class AgentBase(ABC):  # noqa: B024
                 of the model(s) to be used for locating the element using the `locator`.
 
         Returns:
-            list[Point]: The coordinates of the elements as a list of tuples (x, y).
+            PointList: The coordinates of the elements as a list of tuples (x, y).
 
         Example:
             ```python

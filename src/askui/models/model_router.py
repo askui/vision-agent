@@ -21,7 +21,7 @@ from askui.models.models import (
     ModelComposition,
     ModelName,
     ModelRegistry,
-    Point,
+    PointList,
 )
 from askui.models.shared.agent import Agent
 from askui.models.shared.agent_message_param import MessageParam
@@ -212,7 +212,7 @@ class ModelRouter:
         screenshot: ImageSource,
         locator: str | Locator,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         _model_choice = (
             ModelName.ASKUI
             if isinstance(model_choice, ModelComposition)

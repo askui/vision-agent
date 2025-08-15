@@ -8,7 +8,7 @@ from askui.models.exceptions import (
     ElementNotFoundError,
     ModelNotFoundError,
 )
-from askui.models.models import LocateModel, ModelComposition, ModelName, Point
+from askui.models.models import LocateModel, ModelComposition, ModelName, PointList
 from askui.utils.image_utils import ImageSource
 
 
@@ -18,7 +18,7 @@ class AskUiModelRouter(LocateModel):
 
     def _locate_with_askui_ocr(
         self, screenshot: ImageSource, locator: str | Text
-    ) -> list[Point]:
+    ) -> PointList:
         locator = Text(locator) if isinstance(locator, str) else locator
         return self._inference_api.locate(
             locator, screenshot, model_choice=ModelName.ASKUI__OCR
@@ -30,7 +30,7 @@ class AskUiModelRouter(LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         if (
             isinstance(model_choice, ModelComposition)
             or model_choice == ModelName.ASKUI

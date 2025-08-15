@@ -10,7 +10,7 @@ from typing_extensions import override
 from askui.exceptions import AutomationError
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.models import LocateModel, ModelComposition, ModelName, Point
+from askui.models.models import LocateModel, ModelComposition, ModelName, PointList
 from askui.utils.image_utils import ImageSource
 
 
@@ -65,7 +65,7 @@ class HFSpacesHandler(LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         """Predict element location using Hugging Face Spaces."""
         if not isinstance(model_choice, str):
             error_msg = "Model composition is not supported for Hugging Face Spaces"

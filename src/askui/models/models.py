@@ -147,6 +147,11 @@ Point = tuple[int, int]
 A tuple of two integers representing the coordinates of a point on the screen.
 """
 
+PointList = Annotated[list[Point], Field(min_length=1)]
+"""
+A list of points representing the coordinates of elements on the screen.
+"""
+
 
 class ActModel(abc.ABC):
     """Abstract base class for models that can execute autonomous actions.
@@ -294,7 +299,7 @@ class LocateModel(abc.ABC):
 
     Example:
         ```python
-        from askui import LocateModel, VisionAgent, Locator, ImageSource, Point
+        from askui import LocateModel, VisionAgent, Locator, ImageSource, PointList
         from askui.models import ModelComposition
 
         class MyLocateModel(LocateModel):
@@ -303,7 +308,7 @@ class LocateModel(abc.ABC):
                 locator: str | Locator,
                 image: ImageSource,
                 model_choice: ModelComposition | str,
-            ) -> list[Point]:
+            ) -> PointList:
                 # Implement custom locate logic
                 return [(100, 100)]
 
@@ -318,7 +323,7 @@ class LocateModel(abc.ABC):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         """Find the coordinates of a UI element in an image.
 
         Args:
@@ -329,7 +334,7 @@ class LocateModel(abc.ABC):
                 `ModelComposition` for models that support composition
 
         Returns:
-            A tuple of (x, y) coordinates where the element was found
+            A list of (x, y) coordinates where the element was found, minimum length 1
         """
         raise NotImplementedError
 

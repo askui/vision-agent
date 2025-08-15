@@ -11,6 +11,7 @@ from askui import (
     LocateModel,
     ModelRegistry,
     Point,
+    PointList,
     ResponseSchema,
     ResponseSchemaBase,
     VisionAgent,
@@ -93,7 +94,7 @@ class SimpleLocateModel(LocateModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         self.locators.append(locator)
         self.images.append(image)
         self.model_choices.append(model_choice)

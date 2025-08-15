@@ -20,7 +20,7 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
 from askui.models.exceptions import ElementNotFoundError
-from askui.models.models import GetModel, LocateModel, ModelComposition, Point
+from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import MessageSettings
@@ -160,7 +160,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         serialized_locator = (
             self._locator_serializer.serialize(locator=locator)
             if isinstance(locator, Locator)

@@ -11,7 +11,13 @@ from typing_extensions import override
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.exceptions import ElementNotFoundError, QueryNoResponseError
-from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition, Point
+from askui.models.models import (
+    ActModel,
+    GetModel,
+    LocateModel,
+    ModelComposition,
+    PointList,
+)
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
@@ -146,7 +152,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         locator: str | Locator,
         image: ImageSource,
         model_choice: ModelComposition | str,
-    ) -> list[Point]:
+    ) -> PointList:
         if not isinstance(model_choice, str):
             error_msg = "Model composition is not supported for UI-TARS"
             raise NotImplementedError(error_msg)
