@@ -360,7 +360,7 @@ class AgentBase(ABC):  # noqa: B024
         screenshot: Optional[Img] = None,
         model: ModelComposition | str | None = None,
     ) -> PointList:
-        def locate_with_screenshot() -> Point:
+        def locate_with_screenshot() -> PointList:
             _screenshot = load_image_source(
                 self._agent_os.screenshot() if screenshot is None else screenshot
             )
