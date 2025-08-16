@@ -12,7 +12,7 @@ from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource, Img
@@ -108,13 +108,13 @@ class AgentBase(ABC):  # noqa: B024
         }
 
     @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         model: str | None = None,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: list[Tool] | ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         """
@@ -131,9 +131,9 @@ class AgentBase(ABC):  # noqa: B024
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message.
-            tools (list[Tool] | None, optional): The tools for the agent.
+            tools (list[Tool] | ToolCollection | None, optional): The tools for the agent.
                 Defaults to a list of default tools depending on the selected model.
-            settings (AgentSettings | None, optional): The settings for the agent.
+            settings (ActSettings | None, optional): The settings for the agent.
                 Defaults to a default settings depending on the selected model.
 
         Returns:
@@ -148,6 +148,7 @@ class AgentBase(ABC):  # noqa: B024
             ```python
             from askui import VisionAgent
 
+            # Basic usage
             with VisionAgent() as agent:
                 agent.act("Open the settings menu")
                 agent.act("Search for 'printer' in the search box")
@@ -169,6 +170,8 @@ class AgentBase(ABC):  # noqa: B024
         model_choice = model or self._model_choice["act"]
         _settings = settings or self._get_default_settings_for_act(model_choice)
         _tools = tools or self._get_default_tools_for_act(model_choice)
+        if isinstance(_tools, list):
+            _tools = ToolCollection(tools=_tools)
         self._model_router.act(
             messages=messages,
             model_choice=model_choice,

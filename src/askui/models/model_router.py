@@ -4,7 +4,8 @@ from typing import Type, overload
 from typing_extensions import Literal
 
 from askui.locators.locators import Locator
-from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
+from askui.locators.serializers import (AskUiLocatorSerializer,
+                                        VlmLocatorSerializer)
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.get_model import AskUiGetModel
@@ -12,23 +13,15 @@ from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
-from askui.models.models import (
-    MODEL_TYPES,
-    ActModel,
-    GetModel,
-    LocateModel,
-    Model,
-    ModelComposition,
-    ModelName,
-    ModelRegistry,
-    Point,
-)
+from askui.models.models import (MODEL_TYPES, ActModel, GetModel, LocateModel,
+                                 Model, ModelComposition, ModelName,
+                                 ModelRegistry, Point)
 from askui.models.shared.agent import Agent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.facade import ModelFacade
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
 from askui.utils.image_utils import ImageSource
@@ -167,7 +160,7 @@ class ModelRouter:
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         m = self._get_model(model_choice, "act")

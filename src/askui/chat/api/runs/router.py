@@ -21,7 +21,7 @@ router = APIRouter(prefix="/threads/{thread_id}/runs", tags=["runs"])
 
 
 @router.post("")
-def create_run(
+async def create_run(
     thread_id: Annotated[ThreadId, Path(...)],
     request: Annotated[CreateRunRequest, Body(...)],
     run_service: RunService = RunServiceDep,
@@ -30,7 +30,7 @@ def create_run(
     Create a new run for a given thread.
     """
     stream = request.stream
-    run_or_async_generator = run_service.create(thread_id, stream, request)
+    run_or_async_generator = await run_service.create(thread_id, stream, request)
     if stream:
         async_generator = cast(
             "AsyncGenerator[Events, None]",

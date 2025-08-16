@@ -2,16 +2,12 @@ from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
-from askui.models.shared.agent_message_param import (
-    ImageBlockParam,
-    MessageParam,
-    TextBlockParam,
-)
-from askui.models.shared.agent_on_message_cb import (
-    NULL_ON_MESSAGE_CB,
-    OnMessageCb,
-    OnMessageCbParam,
-)
+from askui.models.shared.agent_message_param import (ImageBlockParam,
+                                                     MessageParam,
+                                                     TextBlockParam)
+from askui.models.shared.agent_on_message_cb import (NULL_ON_MESSAGE_CB,
+                                                     OnMessageCb,
+                                                     OnMessageCbParam)
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool, ToolCollection
@@ -131,7 +127,7 @@ class Agent(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         _settings = settings or ActSettings()
@@ -140,7 +136,7 @@ class Agent(ActModel):
             model=_settings.messages.model or model_choice,
             on_message=on_message or NULL_ON_MESSAGE_CB,
             settings=_settings,
-            tool_collection=ToolCollection(tools),
+            tool_collection=tools or ToolCollection(),
         )
 
     def _use_tools(

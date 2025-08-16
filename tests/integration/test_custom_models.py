@@ -5,22 +5,14 @@ from typing import Any, Optional, Type, Union
 import pytest
 from typing_extensions import override
 
-from askui import (
-    ActModel,
-    GetModel,
-    LocateModel,
-    ModelRegistry,
-    Point,
-    ResponseSchema,
-    ResponseSchemaBase,
-    VisionAgent,
-)
+from askui import (ActModel, GetModel, LocateModel, ModelRegistry, Point,
+                   ResponseSchema, ResponseSchemaBase, VisionAgent)
 from askui.locators.locators import Locator
 from askui.models import ModelComposition, ModelDefinition, ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -38,7 +30,7 @@ class SimpleActModel(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         self.goals.append([message.model_dump(mode="json") for message in messages])
@@ -210,7 +202,7 @@ class TestCustomModels:
                 messages: list[MessageParam],
                 model_choice: str,
                 on_message: OnMessageCb | None = None,
-                tools: list[Tool] | None = None,
+                tools: ToolCollection | None = None,
                 settings: ActSettings | None = None,
             ) -> None:
                 pass
