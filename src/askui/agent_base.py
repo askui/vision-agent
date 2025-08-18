@@ -16,6 +16,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
+from askui.utils.excel_utils import Excel
 from askui.utils.image_utils import ImageSource, Img
 from askui.utils.pdf_utils import Pdf
 from askui.utils.source_utils import load_image_source, load_source
@@ -193,7 +194,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
         model: str | None = None,
-        source: Optional[Img | Pdf] = None,
+        source: Optional[Img | Pdf | Excel] = None,
     ) -> str: ...
     @overload
     def get(
@@ -201,7 +202,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
         model: str | None = None,
-        source: Optional[Img | Pdf] = None,
+        source: Optional[Img | Pdf | Excel] = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "source", "response_schema"})
@@ -211,7 +212,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema] | None = None,
         model: str | None = None,
-        source: Optional[Img | Pdf] = None,
+        source: Optional[Img | Pdf | Excel] = None,
     ) -> ResponseSchema | str:
         """
         Retrieves information from an image or PDF based on the provided `query`.
@@ -220,9 +221,10 @@ class AgentBase(ABC):  # noqa: B024
 
         Args:
             query (str): The query describing what information to retrieve.
-            source (Img | Pdf | None, optional): The source to extract information from.
-                Can be a path to a PDF file, a path to an image file, a PIL Image
-                object or a data URL. Defaults to a screenshot of the current screen.
+            source (Img | Pdf | Excel | None, optional): The source to extract
+                information from. Can be a path to a PDF file, a path to an image file,
+                a path to an Excel file, a PIL Image object or a data URL. Defaults to a
+                screenshot of the current screen.
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.

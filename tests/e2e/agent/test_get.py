@@ -125,6 +125,47 @@ def test_get_with_pdf_too_large_with_default_model(
         )
 
 
+def test_get_with_xlsx_with_non_gemini_model_raises_not_implemented(
+    vision_agent: VisionAgent, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    with pytest.raises(NotImplementedError):
+        vision_agent.get(
+            "What is in the xlsx?",
+            source=path_fixtures_dummy_excel,
+            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        )
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_xlsx_with_gemini_model(
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is in the salary of Doe?",
+        source=path_fixtures_dummy_excel,
+        model=model,
+    )
+    assert isinstance(response, str)
+    assert "20000" in response.lower()
+
+
+def test_get_with_xlsx_with_default_model_with_chart_data(
+    vision_agent: VisionAgent, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What does the chart show?",
+        source=path_fixtures_dummy_excel,
+    )
+    assert isinstance(response, str)
+    assert "count of names" in response.lower()
+
+
 def test_get_with_model_composition_should_use_default_model(
     agent_toolbox_mock: AgentToolbox,
     askui_facade: ModelFacade,
