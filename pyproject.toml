@@ -1,7 +1,9 @@
 [project]
 name = "askui"
 description = "Automate computer tasks in Python"
-authors = [{ name = "askui GmbH", email = "info@askui.com" }]
+authors = [
+    {name = "askui GmbH", email = "info@askui.com"},
+]
 dependencies = [
     "anthropic>=0.54.0",
     "fastapi>=0.115.12",
@@ -28,7 +30,7 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 readme = "README.md"
-license = { text = "MIT" }
+license = {text = "MIT"}
 dynamic = ["version"]
 
 [build-system]
@@ -59,7 +61,11 @@ typecheck = "mypy"
 "typecheck:all" = "mypy ."
 "chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
 "mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
-"qa:fix" = { composite = ["typecheck:all", "format", "lint:fix"] }
+"qa:fix" = { composite = [
+    "typecheck:all",
+    "format",
+    "lint:fix",
+] }
 "grpc:gen" = "bash scripts/grpc-gen.sh"
 "json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
@@ -81,7 +87,10 @@ test = [
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
 ]
-dev = ["datamodel-code-generator>=0.31.2", "grpcio-tools>=1.73.1"]
+dev = [
+    "datamodel-code-generator>=0.31.2",
+    "grpcio-tools>=1.73.1",
+]
 
 
 [tool.pytest.ini_options]
@@ -115,7 +124,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    "src/askui/tools/askui/askui_ui_controller_grpc/generated",
+    "src/askui/tools/askui/askui_ui_controller_grpc/generated"
 ]
 
 # Same as Black.
@@ -134,26 +143,26 @@ line-ending = "auto"
 # Enable all rules
 select = ["ALL"]
 ignore = [
-    "ANN",    # Type annotations - handled by mypy
+    "ANN", # Type annotations - handled by mypy
     "COM812", # Unused import
-    "D",      # Documentation - we'll handle this separately
-    "ERA",    # Commented out code
-    "FBT",    # Boolean trap
-    "ICN",    # Import conventions
-    "ISC",    # Implicit string concatenation
-    "N",      # Naming
-    "PGH",    # PyGithub
-    "PL",     # Pylint
-    "PT",     # Pytest
-    "Q",      # Quotes
-    "RUF",    # Ruff-specific rules
-    "S",      # Bandit
-    "SIM",    # Simplify
-    "T",      # Pycodestyle
-    "TID",    # isort
-    "UP",     # Pyupgrade
-    "W",      # Pycodestyle
-    "YTT",    # flake8-2020
+    "D",   # Documentation - we'll handle this separately
+    "ERA", # Commented out code
+    "FBT", # Boolean trap
+    "ICN", # Import conventions
+    "ISC", # Implicit string concatenation
+    "N",   # Naming
+    "PGH", # PyGithub
+    "PL",  # Pylint
+    "PT",  # Pytest
+    "Q",   # Quotes
+    "RUF", # Ruff-specific rules
+    "S",   # Bandit
+    "SIM", # Simplify
+    "T",   # Pycodestyle
+    "TID", # isort
+    "UP",  # Pyupgrade
+    "W",   # Pycodestyle
+    "YTT", # flake8-2020
 ]
 
 # Allow autofix for all enabled rules
@@ -186,9 +195,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "tests/e2e/agent/test_locate_with_relations.py" = ["E501"]
 "tests/unit/locators/test_locators.py" = ["E501"]
 "tests/unit/locators/serializers/test_askui_locator_serializer.py" = ["E501"]
-"tests/unit/locators/serializers/test_locator_string_representation.py" = [
-    "E501",
-]
+"tests/unit/locators/serializers/test_locator_string_representation.py" = ["E501"]
 "tests/unit/utils/test_image_utils.py" = ["E501"]
 
 [tool.ruff.lint.flake8-quotes]
@@ -202,8 +209,20 @@ known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
 all = ["askui[android,chat,mcp,pynput,web]"]
-android = ["pure-python-adb>=0.3.0.dev0"]
-chat = ["askui[android,pynput,web]", "uvicorn>=0.34.3"]
-mcp = ["fastmcp>=2.3.4"]
-pynput = ["mss>=10.0.0", "pynput>=1.8.1"]
-web = ["playwright>=1.41.0"]
+android = [
+    "pure-python-adb>=0.3.0.dev0"
+]
+chat = [
+    "askui[android,pynput,web]",
+    "uvicorn>=0.34.3",
+]
+mcp = [
+    "fastmcp>=2.3.4",
+]
+pynput = [
+    "mss>=10.0.0",
+    "pynput>=1.8.1",
+]
+web = [
+    "playwright>=1.41.0",
+]
