@@ -59,7 +59,6 @@ lint = "ruff check src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy ."
 "chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
-"mcp:dev" = "mcp dev src/askui/mcp/__init__.py"
 "qa:fix" = { composite = [
     "typecheck:all",
     "format",
