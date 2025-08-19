@@ -21,7 +21,7 @@ from askui.models.models import (
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
 from askui.utils.excel_utils import OfficeDocumentSource
@@ -211,7 +211,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         if on_message is not None:

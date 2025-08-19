@@ -10,7 +10,7 @@ from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
@@ -191,7 +191,7 @@ class ActModel(abc.ABC):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         """
@@ -222,7 +222,7 @@ class ActModel(abc.ABC):
                 added to the message history and the acting continues based on the
                 message. The message may be modified by the callback to allow for
                 directing the assistant/agent or tool use.
-            tools (list[Tool] | None, optional): The tools for the agent.
+            tools (ToolCollection | None, optional): The tools for the agent.
                 Defaults to `None`.
             settings (AgentSettings | None, optional): The settings for the agent.
                 Defaults to `None`.
