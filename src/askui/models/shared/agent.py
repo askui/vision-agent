@@ -14,7 +14,7 @@ from askui.models.shared.agent_on_message_cb import (
 )
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.tools import ToolCollection
 from askui.reporting import NULL_REPORTER, Reporter
 
 from ...logger import logger
@@ -131,7 +131,7 @@ class Agent(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         _settings = settings or ActSettings()
@@ -140,7 +140,7 @@ class Agent(ActModel):
             model=_settings.messages.model or model_choice,
             on_message=on_message or NULL_ON_MESSAGE_CB,
             settings=_settings,
-            tool_collection=ToolCollection(tools),
+            tool_collection=tools or ToolCollection(),
         )
 
     def _use_tools(

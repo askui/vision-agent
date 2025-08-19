@@ -13,7 +13,7 @@ from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource, Img
@@ -52,7 +52,8 @@ class AgentBase(ABC):  # noqa: B024
         configure_logging(level=log_level)
         self._reporter = reporter
         self._agent_os = agent_os
-        self._tools: list[Tool] = tools or []
+
+        self._tools = tools or []
         self._model_router = self._init_model_router(
             reporter=self._reporter,
             models=models or {},
@@ -112,13 +113,13 @@ class AgentBase(ABC):  # noqa: B024
         }
 
     @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
-    @validate_call
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         model: str | None = None,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: list[Tool] | ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         """
@@ -135,8 +136,8 @@ class AgentBase(ABC):  # noqa: B024
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message.
-            tools (list[Tool] | None, optional): The tools for the agent.
-                Defaults to a list of default tools depending on the selected model.
+            tools (list[Tool] | ToolCollection | None, optional): The tools for the agent.
+                Defaults to default tools depending on the selected model.
             settings (AgentSettings | None, optional): The settings for the agent.
                 Defaults to a default settings depending on the selected model.
 
@@ -172,7 +173,7 @@ class AgentBase(ABC):  # noqa: B024
         )
         model_choice = model or self._model_choice["act"]
         _settings = settings or self._get_default_settings_for_act(model_choice)
-        _tools = tools or self._get_default_tools_for_act(model_choice)
+        _tools = self._build_tools(tools, model_choice)
         self._model_router.act(
             messages=messages,
             model_choice=model_choice,
@@ -180,6 +181,16 @@ class AgentBase(ABC):  # noqa: B024
             settings=_settings,
             tools=_tools,
         )
+
+    def _build_tools(
+        self, tools: list[Tool] | ToolCollection | None, model_choice: str
+    ) -> ToolCollection:
+        default_tools = self._get_default_tools_for_act(model_choice)
+        if isinstance(tools, list):
+            return ToolCollection(tools=default_tools + tools)
+        if isinstance(tools, ToolCollection):
+            return ToolCollection(default_tools) + tools
+        return ToolCollection(tools=default_tools)
 
     def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:  # noqa: ARG002
         return ActSettings()
