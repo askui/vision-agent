@@ -7,6 +7,7 @@ authors = [
 dependencies = [
     "anthropic>=0.54.0",
     "fastapi>=0.115.12",
+    "fastmcp>=2.3.0",
     "gradio-client>=1.4.3",
     "grpcio>=1.73.1",
     "httpx>=0.28.1",
@@ -26,6 +27,7 @@ dependencies = [
     "protobuf>=6.31.1",
     "google-genai>=1.20.0",
     "filetype>=1.2.0",
+    "asyncer>=0.0.8",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -38,6 +40,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/askui/__init__.py"
+
 
 
 [tool.pdm]
@@ -84,6 +87,7 @@ test = [
     "pytest-timeout>=2.4.0",
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
+    "pytest-asyncio>=1.1.0",
 ]
 dev = [
     "datamodel-code-generator>=0.31.2",
@@ -206,16 +210,14 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,chat,mcp,pynput,web]"]
+all = ["askui[android,chat,pynput,web]"]
 android = [
     "pure-python-adb>=0.3.0.dev0"
 ]
 chat = [
     "askui[android,pynput,web]",
     "uvicorn>=0.34.3",
-]
-mcp = [
-    "fastmcp>=2.3.4",
+    "anyio>=4.10.0",
 ]
 pynput = [
     "mss>=10.0.0",

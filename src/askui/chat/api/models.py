@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from askui.utils.api_utils import ListQuery
 
 AssistantId = str
+McpConfigId = str
 FileId = str
 MessageId = str
 RunId = str
