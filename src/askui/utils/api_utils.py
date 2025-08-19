@@ -40,6 +40,10 @@ class ConflictError(ApiError):
     pass
 
 
+class LimitReachedError(ApiError):
+    pass
+
+
 class NotFoundError(ApiError):
     pass
 

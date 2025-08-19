@@ -3,7 +3,9 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from askui.utils.api_utils import (
+    LIST_LIMIT_MAX,
     ConflictError,
+    LimitReachedError,
     ListQuery,
     ListResponse,
     NotFoundError,
@@ -54,7 +56,19 @@ class McpConfigService:
             raise NotFoundError(error_msg)
         return McpConfig.model_validate_json(mcp_config_file.read_text())
 
+    def _check_limit(self) -> None:
+        limit = LIST_LIMIT_MAX
+        list_result = self.list_(ListQuery(limit=limit))
+        if len(list_result.data) >= limit:
+            error_msg = (
+                "MCP configuration limit reached. "
+                f"You may only have {limit} MCP configurations. "
+                "You can delete some MCP configurations to create new ones. "
+            )
+            raise LimitReachedError(error_msg)
+
     def create(self, params: McpConfigCreateParams) -> McpConfig:
+        self._check_limit()
         mcp_config = McpConfig.create(params)
         self._save(mcp_config, new=True)
         return mcp_config

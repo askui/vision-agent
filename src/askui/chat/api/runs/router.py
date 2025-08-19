@@ -1,7 +1,15 @@
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Annotated, cast
+from typing import Annotated
 
-from fastapi import APIRouter, Body, HTTPException, Path, Response, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    HTTPException,
+    Path,
+    Response,
+    status,
+)
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -13,29 +21,22 @@ from .dependencies import RunServiceDep
 from .models import Run
 from .service import RunService
 
-if TYPE_CHECKING:
-    from .runner.events import Events
-
-
 router = APIRouter(prefix="/threads/{thread_id}/runs", tags=["runs"])
 
 
 @router.post("")
-def create_run(
+async def create_run(
     thread_id: Annotated[ThreadId, Path(...)],
     request: Annotated[CreateRunRequest, Body(...)],
+    background_tasks: BackgroundTasks,
     run_service: RunService = RunServiceDep,
 ) -> Response:
     """
     Create a new run for a given thread.
     """
     stream = request.stream
-    run_or_async_generator = run_service.create(thread_id, stream, request)
+    run, async_generator = await run_service.create(thread_id, request)
     if stream:
-        async_generator = cast(
-            "AsyncGenerator[Events, None]",
-            run_or_async_generator,
-        )
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
             async for event in async_generator:
@@ -51,7 +52,12 @@ def create_run(
             content=sse_event_stream(),
             media_type="text/event-stream",
         )
-    run = cast("Run", run_or_async_generator)
+
+    async def _run_async_generator() -> None:
+        async for _ in async_generator:
+            pass
+
+    background_tasks.add_task(_run_async_generator)
     return JSONResponse(status_code=status.HTTP_201_CREATED, content=run.model_dump())
 
 
