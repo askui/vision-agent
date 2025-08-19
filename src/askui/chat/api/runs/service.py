@@ -64,7 +64,7 @@ class RunService:
                 # Start the runner in a background task
                 async def run_runner() -> None:
                     try:
-                        await runner.run(send_stream)
+                        await runner.run(send_stream)  # type: ignore[arg-type]
                     finally:
                         await send_stream.aclose()
 

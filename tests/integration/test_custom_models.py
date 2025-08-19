@@ -22,7 +22,7 @@ from askui.models import ModelComposition, ModelDefinition, ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool
+from askui.models.shared.tools import ToolCollection
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
@@ -41,7 +41,7 @@ class SimpleActModel(ActModel):
         messages: list[MessageParam],
         model_choice: str,
         on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
+        tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         self.goals.append([message.model_dump(mode="json") for message in messages])
@@ -230,7 +230,7 @@ class TestCustomModels:
                 messages: list[MessageParam],
                 model_choice: str,
                 on_message: OnMessageCb | None = None,
-                tools: list[Tool] | None = None,
+                tools: ToolCollection | None = None,
                 settings: ActSettings | None = None,
             ) -> None:
                 pass

@@ -1,6 +1,8 @@
+from typing import Any
+
 from fastmcp import FastMCP
 
-mcp = FastMCP("Test StdIO MCP App")
+mcp: FastMCP[Any] = FastMCP("Test StdIO MCP App")
 
 
 @mcp.tool

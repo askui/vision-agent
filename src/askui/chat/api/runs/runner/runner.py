@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Sequence
 
+import anyio
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 from fastmcp import Client
@@ -113,7 +114,7 @@ class Runner:
         )
         self._agent_os.start_listening()
         screenshot = self._agent_os.screenshot()
-        time.sleep(0.1)
+        await anyio.sleep(0.1)
         recorded_events: list[InputEvent] = []
         while True:
             updated_run = self._retrieve_run()
@@ -159,7 +160,7 @@ class Runner:
                         )
                     )
             screenshot = self._agent_os.screenshot()
-            time.sleep(0.1)
+            await anyio.sleep(0.1)
         self._agent_os.stop_listening()
         if len(recorded_events) == 0:
             text = "Nevermind, I didn't do anything."
