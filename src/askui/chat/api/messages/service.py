@@ -64,7 +64,9 @@ class MessageService:
         messages: list[Message] = []
         for message_file in message_paths:
             try:
-                msg = Message.model_validate_json(message_file.read_text())
+                msg = Message.model_validate_json(
+                    message_file.read_text(encoding="utf-8")
+                )
                 messages.append(msg)
             except ValidationError:  # noqa: PERF203
                 continue
