@@ -54,7 +54,7 @@ class AssistantService:
         assistant_files = list(self._assistants_dir.glob("*.json"))
         assistants: list[Assistant] = []
         for f in assistant_files:
-            with f.open("r") as file:
+            with f.open("r", encoding="utf-8") as file:
                 assistants.append(Assistant.model_validate_json(file.read()))
 
         # Sort by creation date
@@ -95,7 +95,7 @@ class AssistantService:
             error_msg = f"Assistant {assistant_id} not found"
             raise FileNotFoundError(error_msg)
 
-        with assistant_file.open("r") as f:
+        with assistant_file.open("r", encoding="utf-8") as f:
             return Assistant.model_validate_json(f.read())
 
     def create(self, request: CreateAssistantRequest) -> Assistant:
@@ -118,7 +118,7 @@ class AssistantService:
         """Save an assistant to the file system."""
         self._assistants_dir.mkdir(parents=True, exist_ok=True)
         assistant_file = self._assistants_dir / f"{assistant.id}.json"
-        with assistant_file.open("w") as f:
+        with assistant_file.open("w", encoding="utf-8") as f:
             f.write(assistant.model_dump_json())
 
     def modify(self, assistant_id: str, request: AssistantModifyRequest) -> Assistant:
@@ -142,7 +142,7 @@ class AssistantService:
         if not isinstance(request.avatar, DoNotPatch):
             assistant.avatar = request.avatar
         assistant_file = self._assistants_dir / f"{assistant_id}.json"
-        with assistant_file.open("w") as f:
+        with assistant_file.open("w", encoding="utf-8") as f:
             f.write(assistant.model_dump_json())
         return assistant
 

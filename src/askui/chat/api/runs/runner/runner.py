@@ -397,10 +397,10 @@ class Runner:
 
     def _update_run_file(self, run: Run) -> None:
         run_file = self._runs_dir / f"{run.thread_id}__{run.id}.json"
-        with run_file.open("w") as f:
+        with run_file.open("w", encoding="utf-8") as f:
             f.write(run.model_dump_json())
 
     def _retrieve_run(self) -> Run:
         run_file = self._runs_dir / f"{self._run.thread_id}__{self._run.id}.json"
-        with run_file.open("r") as f:
+        with run_file.open("r", encoding="utf-8") as f:
             return Run.model_validate_json(f.read())

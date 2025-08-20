@@ -58,7 +58,7 @@ class ThreadService:
         thread = Thread(name=request.name)
         self._threads_dir.mkdir(parents=True, exist_ok=True)
         thread_file = self._threads_dir / f"{thread.id}.json"
-        thread_file.write_text(thread.model_dump_json())
+        thread_file.write_text(thread.model_dump_json(), encoding="utf-8")
         if request.messages:
             for message in request.messages:
                 self._message_service.create(
@@ -83,7 +83,7 @@ class ThreadService:
         thread_files = list(self._threads_dir.glob("*.json"))
         threads: list[Thread] = []
         for f in thread_files:
-            thread = Thread.model_validate_json(f.read_text())
+            thread = Thread.model_validate_json(f.read_text(encoding="utf-8"))
             threads.append(thread)
 
         # Sort by creation date
@@ -123,7 +123,7 @@ class ThreadService:
         if not thread_file.exists():
             error_msg = f"Thread {thread_id} not found"
             raise FileNotFoundError(error_msg)
-        return Thread.model_validate_json(thread_file.read_text())
+        return Thread.model_validate_json(thread_file.read_text(encoding="utf-8"))
 
     def delete(self, thread_id: ThreadId) -> None:
         """Delete a thread and all its associated files.
@@ -156,5 +156,5 @@ class ThreadService:
         if not isinstance(request.name, DoNotPatch):
             thread.name = request.name
         thread_file = self._threads_dir / f"{thread_id}.json"
-        thread_file.write_text(thread.model_dump_json())
+        thread_file.write_text(thread.model_dump_json(), encoding="utf-8")
         return thread

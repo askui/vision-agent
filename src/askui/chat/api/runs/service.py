@@ -91,13 +91,13 @@ class RunService:
 
     def _update_run_file(self, run: Run) -> None:
         run_file = self._run_path(run.thread_id, run.id)
-        with run_file.open("w") as f:
+        with run_file.open("w", encoding="utf-8") as f:
             f.write(run.model_dump_json())
 
     def retrieve(self, run_id: RunId) -> Run:
         # Find the file by run_id
         for f in self._runs_dir.glob(f"*__{run_id}.json"):
-            with f.open("r") as file:
+            with f.open("r", encoding="utf-8") as file:
                 return Run.model_validate_json(file.read())
         error_msg = f"Run {run_id} not found"
         raise FileNotFoundError(error_msg)
@@ -119,7 +119,7 @@ class RunService:
 
         runs: list[Run] = []
         for f in run_files:
-            with f.open("r") as file:
+            with f.open("r", encoding="utf-8") as file:
                 runs.append(Run.model_validate_json(file.read()))
 
         # Sort by creation date
@@ -151,7 +151,7 @@ class RunService:
             return run
         run.tried_cancelling_at = datetime.now(tz=timezone.utc)
         for f in self._runs_dir.glob(f"*__{run_id}.json"):
-            with f.open("w") as file:
+            with f.open("w", encoding="utf-8") as file:
                 file.write(run.model_dump_json())
             return run
         # Find the file by run_id

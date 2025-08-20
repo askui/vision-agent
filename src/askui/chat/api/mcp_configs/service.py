@@ -36,7 +36,9 @@ class McpConfigService:
         mcp_configs: list[McpConfig] = []
         for f in mcp_config_paths:
             try:
-                mcp_config = McpConfig.model_validate_json(f.read_text())
+                mcp_config = McpConfig.model_validate_json(
+                    f.read_text(encoding="utf-8")
+                )
                 mcp_configs.append(mcp_config)
             except ValidationError:  # noqa: PERF203
                 continue
@@ -54,7 +56,9 @@ class McpConfigService:
         if not mcp_config_file.exists():
             error_msg = f"MCP configuration {mcp_config_id} not found"
             raise NotFoundError(error_msg)
-        return McpConfig.model_validate_json(mcp_config_file.read_text())
+        return McpConfig.model_validate_json(
+            mcp_config_file.read_text(encoding="utf-8")
+        )
 
     def _check_limit(self) -> None:
         limit = LIST_LIMIT_MAX
