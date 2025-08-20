@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "chat", "dev", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:92e20634d0e9af0b445ae2f2054e81ef3c19d3aff759bc9f776a255de7705ff9"
+content_hash = "sha256:0ca715599b1575a162ce51176bd474c59544297145f8d4ecd862bd7c14223775"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
