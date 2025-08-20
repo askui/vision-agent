@@ -1,11 +1,8 @@
-import asyncio
-import queue
-import threading
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, overload
 
+import anyio
 from pydantic import BaseModel
 
 from askui.chat.api.models import AssistantId, RunId, ThreadId
@@ -42,32 +39,15 @@ class RunService:
         self._update_run_file(run)
         return run
 
-    @overload
-    def create(
-        self, thread_id: ThreadId, stream: Literal[False], request: CreateRunRequest
-    ) -> Run: ...
-
-    @overload
-    def create(
-        self, thread_id: ThreadId, stream: Literal[True], request: CreateRunRequest
-    ) -> AsyncGenerator[Events, None]: ...
-
-    @overload
-    def create(
-        self, thread_id: ThreadId, stream: bool, request: CreateRunRequest
-    ) -> Run | AsyncGenerator[Events, None]: ...
-
-    def create(
-        self, thread_id: ThreadId, stream: bool, request: CreateRunRequest
-    ) -> Run | AsyncGenerator[Events, None]:
+    async def create(
+        self, thread_id: ThreadId, request: CreateRunRequest
+    ) -> tuple[Run, AsyncGenerator[Events, None]]:
         run = self._create_run(thread_id, request)
-        event_queue: queue.Queue[Events] = queue.Queue()
+        send_stream, receive_stream = anyio.create_memory_object_stream[Events]()
         runner = Runner(run, self._base_dir)
-        thread = threading.Thread(target=runner.run, args=(event_queue,), daemon=True)
-        thread.start()
-        if stream:
 
-            async def event_stream() -> AsyncGenerator[Events, None]:
+        async def event_generator() -> AsyncGenerator[Events, None]:
+            try:
                 yield RunEvent(
                     # run already in progress instead of queued which is
                     # different from OpenAI
@@ -80,15 +60,34 @@ class RunService:
                     data=run,
                     event="thread.run.queued",
                 )
-                loop = asyncio.get_event_loop()
-                while True:
-                    event = await loop.run_in_executor(None, event_queue.get)
-                    yield event
-                    if isinstance(event, DoneEvent) or isinstance(event, ErrorEvent):
-                        break
 
-            return event_stream()
-        return run
+                # Start the runner in a background task
+                async def run_runner() -> None:
+                    try:
+                        await runner.run(send_stream)  # type: ignore[arg-type]
+                    finally:
+                        await send_stream.aclose()
+
+                # Create a task group to manage the runner and event processing
+                async with anyio.create_task_group() as tg:
+                    # Start the runner in the background
+                    tg.start_soon(run_runner)
+
+                    # Process events from the stream
+                    while True:
+                        try:
+                            event = await receive_stream.receive()
+                            yield event
+                            if isinstance(event, DoneEvent) or isinstance(
+                                event, ErrorEvent
+                            ):
+                                break
+                        except anyio.EndOfStream:
+                            break
+            finally:
+                await send_stream.aclose()
+
+        return run, event_generator()
 
     def _update_run_file(self, run: Run) -> None:
         run_file = self._run_path(run.thread_id, run.id)
