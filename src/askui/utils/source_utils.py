@@ -14,7 +14,9 @@ from askui.utils.image_utils import ImageSource
 from askui.utils.pdf_utils import PdfSource
 
 InputSource = Union[str, Path, PILImage.Image]
-"""Type of the input images for `askui.VisionAgent.get()`, `askui.VisionAgent.locate()`, etc.
+"""
+Type of the input images for `askui.VisionAgent.get()`, `askui.VisionAgent.locate()`,
+etc.
 
 Accepts:
 - `PIL.Image.Image`

@@ -207,7 +207,10 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
-            err_msg = f"PDF or Office Document processing is not supported for the model {model_choice}"
+            err_msg = (
+                f"PDF or Office Document processing is not supported for the model: "
+                f"{model_choice}"
+            )
             raise NotImplementedError(err_msg)
         json: dict[str, Any] = {
             "image": source.to_data_url(),

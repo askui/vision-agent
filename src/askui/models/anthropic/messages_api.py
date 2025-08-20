@@ -244,7 +244,10 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         model_choice: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
-            err_msg = f"PDF or Office Document processing is not supported for the model {model_choice}"
+            err_msg = (
+                f"PDF or Office Document processing is not supported for the model: "
+                f"{model_choice}"
+            )
             raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:

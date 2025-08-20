@@ -219,9 +219,10 @@ class AgentBase(ABC):  # noqa: B024
 
         Args:
             query (str): The query describing what information to retrieve.
-            source (InputSource | None, optional): The source to extract information from.
-                Can be a path to an image file, a PIL Image object or a data URL.
-                Defaults to a screenshot of the current screen.
+            source (InputSource | None, optional): The source to extract information
+                from. Can be a path to an image, PDF, or office document file,
+                a PIL Image object or a data URL. Defaults to a screenshot of the
+                current screen.
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.
@@ -388,9 +389,10 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             locator (str | Locator): The identifier or description of the element to
                 locate.
-            screenshot (InputSource | None, optional): The screenshot to use for locating the
-                element. Can be a path to an image file, a PIL Image object or a data
-                URL. If `None`, takes a screenshot of the currently selected display.
+            screenshot (InputSource | None, optional): The screenshot to use for
+                locating the element. Can be a path to an image file, a PIL Image object
+                or a data URL. If `None`, takes a screenshot of the currently
+                selected display.
             model (ModelComposition | str | None, optional): The composition or name
                 of the model(s) to be used for locating the element using the `locator`.
 
@@ -430,9 +432,10 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             locator (str | Locator): The identifier or description of the element to
                 locate.
-            screenshot (InputSource | None, optional): The screenshot to use for locating the
-                element. Can be a path to an image file, a PIL Image object or a data
-                URL. If `None`, takes a screenshot of the currently selected display.
+            screenshot (InputSource | None, optional): The screenshot to use for
+                locating the element. Can be a path to an image file, a PIL Image object
+                or a data URL. If `None`, takes a screenshot of the currently
+                selected display.
             model (ModelComposition | str | None, optional): The composition or name
                 of the model(s) to be used for locating the element using the `locator`.
 
