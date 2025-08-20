@@ -64,7 +64,7 @@ McpClient = Client[MCPConfigTransport]
 
 def get_mcp_client(
     base_dir: Path,
-) -> McpClient:
+) -> McpClient | None:
     """Get an MCP client from all available MCP configs.
 
     *Important*: This function can only handle up to 100 MCP server configs. Tool names
@@ -80,7 +80,7 @@ def get_mcp_client(
     mcp_config_service = McpConfigService(base_dir)
     mcp_configs = mcp_config_service.list_(ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
     fast_mcp_config = build_fast_mcp_config(mcp_configs.data)
-    return Client(fast_mcp_config)
+    return Client(fast_mcp_config) if fast_mcp_config.mcpServers else None
 
 
 class Runner:
@@ -184,7 +184,7 @@ class Runner:
             )
 
     async def _run_askui_android_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient
+        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
     ) -> None:
         await self._run_agent(
             agent_type="android",
@@ -193,7 +193,7 @@ class Runner:
         )
 
     async def _run_askui_vision_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient
+        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
     ) -> None:
         await self._run_agent(
             agent_type="vision",
@@ -202,7 +202,7 @@ class Runner:
         )
 
     async def _run_askui_web_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient
+        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
     ) -> None:
         await self._run_agent(
             agent_type="web",
@@ -211,7 +211,7 @@ class Runner:
         )
 
     async def _run_askui_web_testing_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient
+        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
     ) -> None:
         await self._run_agent(
             agent_type="web_testing",
@@ -223,7 +223,7 @@ class Runner:
         self,
         agent_type: Literal["android", "vision", "web", "web_testing"],
         send_stream: ObjectStream[Events],
-        mcp_client: McpClient,
+        mcp_client: McpClient | None,
     ) -> None:
         tools = ToolCollection(mcp_client=mcp_client)
         messages: list[MessageParam] = [
