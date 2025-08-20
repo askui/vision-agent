@@ -158,7 +158,6 @@ class ToolCollection:
         _tools = tools or []
         self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
         self._mcp_client = mcp_client
-        self._mcp_tools_cache: dict[str, McpTool] | None = None
 
     def to_params(self) -> list[BetaToolUnionParam]:
         tool_map = {
