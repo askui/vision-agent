@@ -189,12 +189,6 @@ class AskUiGoogleGenAiApi(GetModel):
         if isinstance(source, OfficeDocumentSource):
             with source.reader as r:
                 data = r.read()
-                if len(data) > MAX_FILE_SIZE_BYTES:
-                    _err_msg = (
-                        "Office document file size exceeds the limit of "
-                        f"{MAX_FILE_SIZE_BYTES} bytes."
-                    )
-                    raise ValueError(_err_msg)
                 return genai_types.Part.from_text(text=data.decode())
         with source.reader as r:
             data = r.read()
