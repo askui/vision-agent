@@ -53,6 +53,18 @@ def path_fixtures_dummy_excel(path_fixtures_excel: pathlib.Path) -> pathlib.Path
 
 
 @pytest.fixture
+def path_fixtures_docs(path_fixtures: pathlib.Path) -> pathlib.Path:
+    """Fixture providing the path to the docs directory."""
+    return path_fixtures / "docs"
+
+
+@pytest.fixture
+def path_fixtures_dummy_doc(path_fixtures_docs: pathlib.Path) -> pathlib.Path:
+    """Fixture providing the path to the dummy doc."""
+    return path_fixtures_docs / "dummy.docx"
+
+
+@pytest.fixture
 def github_login_screenshot(path_fixtures_screenshots: pathlib.Path) -> Image.Image:
     """Fixture providing the GitHub login screenshot."""
     screenshot_path = path_fixtures_screenshots / "macos__chrome__github_com__login.png"

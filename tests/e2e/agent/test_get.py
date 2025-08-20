@@ -166,6 +166,17 @@ def test_get_with_xlsx_with_default_model_with_chart_data(
     assert "10000" in response.lower()
 
 
+def test_get_with_docs_with_default_model(
+    vision_agent: VisionAgent, path_fixtures_dummy_doc: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "At what time in 24h format does the person sleeps?",
+        source=path_fixtures_dummy_doc,
+    )
+    assert isinstance(response, str)
+    assert "22:00" in response.lower()
+
+
 def test_get_with_model_composition_should_use_default_model(
     agent_toolbox_mock: AgentToolbox,
     askui_facade: ModelFacade,
