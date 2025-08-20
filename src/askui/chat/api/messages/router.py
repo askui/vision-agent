@@ -7,7 +7,7 @@ from askui.chat.api.messages.service import (
     MessageService,
 )
 from askui.chat.api.models import ListQueryDep, MessageId, ThreadId
-from askui.utils.api_utils import ListQuery, ListResponse
+from askui.utils.api_utils import ListQuery, ListResponse, NotFoundError
 
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 
@@ -20,13 +20,7 @@ def list_messages(
 ) -> ListResponse[Message]:
     """List all messages in a thread."""
     try:
-        messages = message_service.list_(thread_id, query=query)
-        return ListResponse(
-            data=messages,
-            first_id=messages[0].id if messages else None,
-            last_id=messages[-1].id if messages else None,
-            has_more=len(messages) > query.limit,
-        )
+        return message_service.list_(thread_id, query=query)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
@@ -52,13 +46,8 @@ def retrieve_message(
 ) -> Message:
     """Get a specific message from a thread."""
     try:
-        messages = message_service.list_(thread_id=thread_id, query=ListQuery(limit=1))
-        for msg in messages:
-            if msg.id == message_id:
-                return msg
-        error_msg = f"Message {message_id} not found in thread {thread_id}"
-        raise HTTPException(status_code=404, detail=error_msg)
-    except FileNotFoundError as e:
+        return message_service.retrieve(thread_id, message_id)
+    except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
@@ -71,5 +60,5 @@ def delete_message(
     """Delete a message from a thread."""
     try:
         message_service.delete(thread_id, message_id)
-    except FileNotFoundError as e:
+    except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
