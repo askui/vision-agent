@@ -6,7 +6,13 @@ from pydantic import Field, ValidationError
 
 from askui.chat.api.models import AssistantId, MessageId, RunId, ThreadId
 from askui.models.shared.agent_message_param import MessageParam
-from askui.utils.api_utils import ListQuery, ListResponse, list_resource_paths
+from askui.utils.api_utils import (
+    ConflictError,
+    ListQuery,
+    ListResponse,
+    NotFoundError,
+    list_resource_paths,
+)
 from askui.utils.datetime_utils import UnixDatetime
 from askui.utils.id_utils import generate_time_ordered_id
 
@@ -45,14 +51,11 @@ class MessageService:
             **request.model_dump(),
             thread_id=thread_id,
         )
-        self._save(new_message)
+        self._save(new_message, new=True)
         return new_message
 
     def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
         message_file = self._get_message_path(thread_id, message_id)
-        if not message_file.exists():
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise ValueError(error_msg)
         message_file.unlink()
 
     def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
@@ -79,17 +82,30 @@ class MessageService:
             has_more=has_more,
         )
 
+    def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
+        message_file = self._get_message_path(thread_id, message_id)
+        return Message.model_validate_json(message_file.read_text(encoding="utf-8"))
+
     def get_thread_messages_dir(self, thread_id: ThreadId) -> Path:
         """Get the directory path for a specific message."""
         return self._base_messages_dir / thread_id
 
-    def _get_message_path(self, thread_id: ThreadId, message_id: MessageId) -> Path:
+    def _get_message_path(
+        self, thread_id: ThreadId, message_id: MessageId, new: bool = False
+    ) -> Path:
         """Get the file path for a specific message."""
-        return self.get_thread_messages_dir(thread_id) / f"{message_id}.json"
+        message_path = self.get_thread_messages_dir(thread_id) / f"{message_id}.json"
+        if new and message_path.exists():
+            error_msg = f"Message {message_id} already exists in thread {thread_id}"
+            raise ConflictError(error_msg)
+        if not new and not message_path.exists():
+            error_msg = f"Message {message_id} not found in thread {thread_id}"
+            raise NotFoundError(error_msg)
+        return message_path
 
-    def _save(self, message: Message) -> None:
+    def _save(self, message: Message, new: bool = False) -> None:
         """Save a single message to its own JSON file."""
         messages_dir = self.get_thread_messages_dir(message.thread_id)
         messages_dir.mkdir(parents=True, exist_ok=True)
-        message_file = self._get_message_path(message.thread_id, message.id)
+        message_file = self._get_message_path(message.thread_id, message.id, new=new)
         message_file.write_text(message.model_dump_json(), encoding="utf-8")

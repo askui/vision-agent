@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Sequence
@@ -234,8 +233,8 @@ class Runner:
             )
             for msg in self._msg_service.list_(
                 thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
-            )
+                query=ListQuery(limit=LIST_LIMIT_MAX),
+            ).data
         ]
 
         async def async_on_message(
