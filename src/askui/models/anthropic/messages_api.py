@@ -42,6 +42,7 @@ from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.dict_utils import IdentityDefaultDict
+from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import (
     ImageSource,
     image_to_base64,
@@ -242,8 +243,11 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
-        if isinstance(source, PdfSource):
-            err_msg = f"PDF processing is not supported for the model {model_choice}"
+        if isinstance(source, (PdfSource, OfficeDocumentSource)):
+            err_msg = (
+                f"PDF or Office Document processing is not supported for the model: "
+                f"{model_choice}"
+            )
             raise NotImplementedError(err_msg)
         try:
             if response_schema is not None:

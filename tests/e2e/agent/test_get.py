@@ -125,6 +125,92 @@ def test_get_with_pdf_too_large_with_default_model(
         )
 
 
+def test_get_with_xlsx_with_non_gemini_model_raises_not_implemented(
+    vision_agent: VisionAgent, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    with pytest.raises(NotImplementedError):
+        vision_agent.get(
+            "What is in the xlsx?",
+            source=path_fixtures_dummy_excel,
+            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+        )
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_xlsx_with_gemini_model(
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is the salary of Doe?",
+        source=path_fixtures_dummy_excel,
+        model=model,
+    )
+    assert isinstance(response, str)
+    assert "20000" in response.lower()
+
+
+class Salary(ResponseSchemaBase):
+    salary: int
+    name: str
+
+
+class SalaryResponse(ResponseSchemaBase):
+    salaries: list[Salary]
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_xlsx_with_gemini_model_with_response_schema(
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is the salary of Everyone?",
+        source=path_fixtures_dummy_excel,
+        model=model,
+        response_schema=SalaryResponse,
+    )
+    assert isinstance(response, SalaryResponse)
+    # sort salaries by name for easier assertion
+    response.salaries.sort(key=lambda x: x.name)
+    assert response.salaries[0].name == "Doe"
+    assert response.salaries[0].salary == 20000
+    assert response.salaries[1].name == "John"
+    assert response.salaries[1].salary == 10000
+
+
+def test_get_with_xlsx_with_default_model_with_chart_data(
+    vision_agent: VisionAgent, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is the salary of John?",
+        source=path_fixtures_dummy_excel,
+    )
+    assert isinstance(response, str)
+    assert "10000" in response.lower()
+
+
+def test_get_with_docs_with_default_model(
+    vision_agent: VisionAgent, path_fixtures_dummy_doc: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "At what time in 24h format does the person sleeps?",
+        source=path_fixtures_dummy_doc,
+    )
+    assert isinstance(response, str)
+    assert "22:00" in response.lower()
+
+
 def test_get_with_model_composition_should_use_default_model(
     agent_toolbox_mock: AgentToolbox,
     askui_facade: ModelFacade,

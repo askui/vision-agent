@@ -26,6 +26,7 @@ dependencies = [
     "protobuf>=6.31.1",
     "google-genai>=1.20.0",
     "filetype>=1.2.0",
+    "markitdown[xls,xlsx,docx]>=0.1.2",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

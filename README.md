@@ -756,6 +756,17 @@ with VisionAgent() as agent:
   as we try different models under the hood with your schema to see which one works best.
 - PDF processing is only supported for Gemini models hosted on AskUI and for PDFs up to 20MB.
 
+### 📄 Document Processing with `markitdown`
+
+When extracting data from documents like Docs or Excel files, we use the `markitdown` library to convert them into markdown format. We chose `markitdown` over other tools for several reasons:
+
+- **LLM-Friendly Output:** The markdown output is optimized for token usage, which is efficient for subsequent processing with large language models.
+- **Includes Sheet Names:** When converting Excel files, the name of the sheet is included in the generated markdown, providing better context.
+- **Enhanced Image Descriptions:** It can use an OpenAI client (`llm_client` and `llm_model`) to generate more descriptive captions for images within documents.
+- **No Local Inference:** No model inference is performed on the client machine, which means no need to install and maintain heavy packages like `torch`.
+- **Optional Dependencies:** It allows for optional imports, meaning you only need to install the dependencies for the file types you are working with. This reduces the number of packages to manage.
+- **Microsoft Maintained:** Being maintained by Microsoft, it offers robust support for converting Office documents.
+
 ## What is AskUI Vision Agent?
 
 **AskUI Vision Agent** is a versatile AI powered framework that enables you to automate computer tasks in Python.

@@ -9,15 +9,33 @@ from typing import Literal, Union
 from filetype import guess  # type: ignore[import-untyped]
 from PIL import Image as PILImage
 
+from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource
 from askui.utils.pdf_utils import PdfSource
 
-Source = Union[ImageSource, PdfSource]
+InputSource = Union[str, Path, PILImage.Image]
+"""
+Type of the input images and files for `askui.VisionAgent.get()` and images for 
+`askui.VisionAgent.locate()`, etc.
+
+Accepts:
+- `PIL.Image.Image`
+- Relative or absolute file path (`str` or `pathlib.Path`)
+- Data URL (e.g., `"data:image/png;base64,..."`)
+"""
+
+Source = Union[ImageSource, PdfSource, OfficeDocumentSource]
 
 _DATA_URL_WITH_MIMETYPE_RE = re.compile(r"^data:([^;,]+)([^,]*)?,(.*)$", re.DOTALL)
 
 _SupportedImageMimeTypes = Literal["image/png", "image/jpeg", "image/gif", "image/webp"]
-_SupportedApplicationMimeTypes = Literal["application/pdf"]
+_SupportedApplicationMimeTypes = Literal[
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]
 _SupportedMimeTypes = _SupportedImageMimeTypes | _SupportedApplicationMimeTypes
 
 _SUPPORTED_MIME_TYPES: list[_SupportedMimeTypes] = [
@@ -26,6 +44,10 @@ _SUPPORTED_MIME_TYPES: list[_SupportedMimeTypes] = [
     "image/gif",
     "image/webp",
     "application/pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 
 
@@ -48,6 +70,15 @@ class _SourceAnalysis:
     @property
     def is_pdf(self) -> bool:
         return self.mime == "application/pdf"
+
+    @property
+    def is_supported_office_document(self) -> bool:
+        return self.mime in [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ]
 
     @property
     def is_image(self) -> bool:
@@ -133,6 +164,8 @@ def load_source(source: Union[str, Path, PILImage.Image]) -> Source:
         raise ValueError(msg)
     if source_analysis.is_pdf:
         return PdfSource(source_analysis.content)
+    if source_analysis.is_supported_office_document:
+        return OfficeDocumentSource(source_analysis.content)
     if source_analysis.is_image:
         return ImageSource(
             PILImage.open(
@@ -167,4 +200,4 @@ def load_image_source(source: Union[str, Path, PILImage.Image]) -> ImageSource:
     return result
 
 
-__all__ = ["Source", "load_source", "load_image_source"]
+__all__ = ["Source", "load_source", "load_image_source", "InputSource"]
