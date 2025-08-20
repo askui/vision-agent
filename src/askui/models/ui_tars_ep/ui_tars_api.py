@@ -21,9 +21,10 @@ from askui.models.models import (
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import ToolCollection
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
+from askui.tools.computer import Computer20241022Tool
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource, image_to_base64
 from askui.utils.pdf_utils import PdfSource
@@ -229,11 +230,11 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             raise ValueError(error_msg)  # noqa: TRY004
 
         # Find the computer tool
-        computer_tool = None
+        computer_tool: Computer20241022Tool | None = None
         if tools:
             for tool in tools:
                 if tool.name == "computer":
-                    computer_tool = tool
+                    computer_tool: Computer20241022Tool = tool
                     break
 
         if computer_tool is None:
@@ -261,7 +262,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         self.execute_act(self.act_history, computer_tool)
 
     def add_screenshot_to_history(
-        self, message_history: list[dict[str, Any]], computer_tool: Tool
+        self, message_history: list[dict[str, Any]], computer_tool: Computer20241022Tool
     ) -> None:
         screenshot = computer_tool(action="screenshot")
         message_history.append(

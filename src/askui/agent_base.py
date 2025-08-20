@@ -135,8 +135,8 @@ class AgentBase(ABC):  # noqa: B024
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message.
-            tools (list[Tool] | ToolCollection | None, optional): The tools for the agent.
-                Defaults to default tools depending on the selected model.
+            tools (list[Tool] | ToolCollection | None, optional): The tools for the
+                agent. Defaults to default tools depending on the selected model.
             settings (AgentSettings | None, optional): The settings for the agent.
                 Defaults to a default settings depending on the selected model.
 
