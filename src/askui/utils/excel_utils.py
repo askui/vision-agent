@@ -21,7 +21,7 @@ class ExcelSource(RootModel):
     - A file path (str or pathlib.Path)
 
     Attributes:
-        root (bytes): The underlying Excel bytes.
+        root (bytes | Path): The underlying Excel bytes or file path.
 
     Args:
         root (Excel): The Excel source to load from.
