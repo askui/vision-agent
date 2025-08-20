@@ -159,11 +159,11 @@ def test_get_with_xlsx_with_default_model_with_chart_data(
     vision_agent: VisionAgent, path_fixtures_dummy_excel: pathlib.Path
 ) -> None:
     response = vision_agent.get(
-        "What does the chart show?",
+        "What is the salary of John?",
         source=path_fixtures_dummy_excel,
     )
     assert isinstance(response, str)
-    assert "count of names" in response.lower()
+    assert "10000" in response.lower()
 
 
 def test_get_with_model_composition_should_use_default_model(
