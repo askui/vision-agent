@@ -40,7 +40,7 @@
   def locate(
       self,
       locator: str | Locator,
-      screenshot: Img | None = None,
+      screenshot: InputSource | None = None,
       model: ModelComposition | str | None = None,
   ) -> Point:
       """
@@ -48,7 +48,7 @@
 
       Args:
           locator (str | Locator): The identifier or description of the element to locate.
-          screenshot (Img | None, optional): The screenshot to use for locating the
+          screenshot (InputSource | None, optional): The screenshot to use for locating the
               element. Can be a path to an image file, a PIL Image object or a data URL.
               If `None`, takes a screenshot of the currently selected screen.
           model (ModelComposition | str | None, optional): The composition or name of

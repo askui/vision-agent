@@ -16,10 +16,8 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
-from askui.utils.excel_utils import Excel
-from askui.utils.image_utils import ImageSource, Img
-from askui.utils.pdf_utils import Pdf
-from askui.utils.source_utils import load_image_source, load_source
+from askui.utils.image_utils import ImageSource
+from askui.utils.source_utils import InputSource, load_image_source, load_source
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
@@ -194,7 +192,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
         model: str | None = None,
-        source: Optional[Img | Pdf | Excel] = None,
+        source: Optional[InputSource] = None,
     ) -> str: ...
     @overload
     def get(
@@ -202,7 +200,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
         model: str | None = None,
-        source: Optional[Img | Pdf | Excel] = None,
+        source: Optional[InputSource] = None,
     ) -> ResponseSchema: ...
 
     @telemetry.record_call(exclude={"query", "source", "response_schema"})
@@ -212,7 +210,7 @@ class AgentBase(ABC):  # noqa: B024
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema] | None = None,
         model: str | None = None,
-        source: Optional[Img | Pdf | Excel] = None,
+        source: Optional[InputSource] = None,
     ) -> ResponseSchema | str:
         """
         Retrieves information from an image or PDF based on the provided `query`.
@@ -221,10 +219,9 @@ class AgentBase(ABC):  # noqa: B024
 
         Args:
             query (str): The query describing what information to retrieve.
-            source (Img | Pdf | Excel | None, optional): The source to extract
-                information from. Can be a path to a PDF file, a path to an image file,
-                a path to an Excel file, a PIL Image object or a data URL. Defaults to a
-                screenshot of the current screen.
+            source (InputSource | None, optional): The source to extract information from.
+                Can be a path to an image file, a PIL Image object or a data URL.
+                Defaults to a screenshot of the current screen.
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.
@@ -359,7 +356,7 @@ class AgentBase(ABC):  # noqa: B024
     def _locate(
         self,
         locator: str | Locator,
-        screenshot: Optional[Img] = None,
+        screenshot: Optional[InputSource] = None,
         model: ModelComposition | str | None = None,
     ) -> PointList:
         def locate_with_screenshot() -> PointList:
@@ -382,7 +379,7 @@ class AgentBase(ABC):  # noqa: B024
     def locate(
         self,
         locator: str | Locator,
-        screenshot: Optional[Img] = None,
+        screenshot: Optional[InputSource] = None,
         model: ModelComposition | str | None = None,
     ) -> Point:
         """
@@ -391,7 +388,7 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             locator (str | Locator): The identifier or description of the element to
                 locate.
-            screenshot (Img | None, optional): The screenshot to use for locating the
+            screenshot (InputSource | None, optional): The screenshot to use for locating the
                 element. Can be a path to an image file, a PIL Image object or a data
                 URL. If `None`, takes a screenshot of the currently selected display.
             model (ModelComposition | str | None, optional): The composition or name
@@ -421,7 +418,7 @@ class AgentBase(ABC):  # noqa: B024
     def locate_all(
         self,
         locator: str | Locator,
-        screenshot: Optional[Img] = None,
+        screenshot: Optional[InputSource] = None,
         model: ModelComposition | str | None = None,
     ) -> PointList:
         """
@@ -433,7 +430,7 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             locator (str | Locator): The identifier or description of the element to
                 locate.
-            screenshot (Img | None, optional): The screenshot to use for locating the
+            screenshot (InputSource | None, optional): The screenshot to use for locating the
                 element. Can be a path to an image file, a PIL Image object or a data
                 URL. If `None`, takes a screenshot of the currently selected display.
             model (ModelComposition | str | None, optional): The composition or name

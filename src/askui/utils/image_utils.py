@@ -310,16 +310,6 @@ def scale_coordinates(
     return result
 
 
-Img = Union[str, Path, PILImage.Image]
-"""Type of the input images for `askui.VisionAgent.get()`, `askui.VisionAgent.locate()`, etc.
-
-Accepts:
-- `PIL.Image.Image`
-- Relative or absolute file path (`str` or `pathlib.Path`)
-- Data URL (e.g., `"data:image/png;base64,..."`)
-"""
-
-
 class ImageSource(RootModel):
     """A class that represents an image source and provides methods to convert it to different formats.
 
@@ -375,5 +365,4 @@ __all__ = [
     "scale_coordinates",
     "ScalingResults",
     "ImageSource",
-    "Img",
 ]

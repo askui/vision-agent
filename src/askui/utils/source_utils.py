@@ -13,6 +13,15 @@ from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource
 from askui.utils.pdf_utils import PdfSource
 
+InputSource = Union[str, Path, PILImage.Image]
+"""Type of the input images for `askui.VisionAgent.get()`, `askui.VisionAgent.locate()`, etc.
+
+Accepts:
+- `PIL.Image.Image`
+- Relative or absolute file path (`str` or `pathlib.Path`)
+- Data URL (e.g., `"data:image/png;base64,..."`)
+"""
+
 Source = Union[ImageSource, PdfSource, OfficeDocumentSource]
 
 _DATA_URL_WITH_MIMETYPE_RE = re.compile(r"^data:([^;,]+)([^,]*)?,(.*)$", re.DOTALL)
@@ -189,4 +198,4 @@ def load_image_source(source: Union[str, Path, PILImage.Image]) -> ImageSource:
     return result
 
 
-__all__ = ["Source", "load_source", "load_image_source"]
+__all__ = ["Source", "load_source", "load_image_source", "InputSource"]

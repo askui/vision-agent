@@ -37,7 +37,8 @@ from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
-from .utils.image_utils import ImageSource, Img
+from .utils.image_utils import ImageSource
+from .utils.source_utils import InputSource
 
 try:
     from .android_agent import AndroidVisionAgent
@@ -67,7 +68,7 @@ __all__ = [
     "GetModel",
     "ImageBlockParam",
     "ImageSource",
-    "Img",
+    "InputSource",
     "LocateModel",
     "Locator",
     "MessageParam",

@@ -1,17 +1,9 @@
 from io import BytesIO
 from pathlib import Path
-from typing import Union
 
 from pydantic import ConfigDict, RootModel
 
 from askui.utils.markdown_utils import convert_to_markdown
-
-Excel = Union[str, Path]
-"""Type of the input Excel for `askui.VisionAgent.get()`, etc.
-
-Accepts:
-- Relative or absolute file path (`str` or `pathlib.Path`)
-"""
 
 
 class OfficeDocumentSource(RootModel):
@@ -37,6 +29,5 @@ class OfficeDocumentSource(RootModel):
 
 
 __all__ = [
-    "Excel",
     "OfficeDocumentSource",
 ]
