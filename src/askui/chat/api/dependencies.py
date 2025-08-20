@@ -1,7 +1,8 @@
 import os
+from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, HTTPException
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import UUID4
 
@@ -55,3 +56,17 @@ def set_env_from_headers(
 
 
 SetEnvFromHeadersDep = Depends(set_env_from_headers)
+
+
+def get_workspace_dir(
+    settings: Settings = SettingsDep,
+    askui_workspace: Annotated[str | None, Header()] = None,
+) -> Path:
+    if not askui_workspace:
+        raise HTTPException(
+            status_code=400, detail="AskUI-Workspace header is required"
+        )
+    return settings.data_dir / "workspaces" / askui_workspace
+
+
+WorkspaceDirDep = Depends(get_workspace_dir)
