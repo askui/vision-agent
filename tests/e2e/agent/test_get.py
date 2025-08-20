@@ -147,12 +147,46 @@ def test_get_with_xlsx_with_gemini_model(
     vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
 ) -> None:
     response = vision_agent.get(
-        "What is in the salary of Doe?",
+        "What is the salary of Doe?",
         source=path_fixtures_dummy_excel,
         model=model,
     )
     assert isinstance(response, str)
     assert "20000" in response.lower()
+
+
+class Salary(ResponseSchemaBase):
+    salary: int
+    name: str
+
+
+class SalaryResponse(ResponseSchemaBase):
+    salaries: list[Salary]
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        ModelName.ASKUI__GEMINI__2_5__FLASH,
+        ModelName.ASKUI__GEMINI__2_5__PRO,
+    ],
+)
+def test_get_with_xlsx_with_gemini_model_with_response_schema(
+    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+) -> None:
+    response = vision_agent.get(
+        "What is the salary of Everyone?",
+        source=path_fixtures_dummy_excel,
+        model=model,
+        response_schema=SalaryResponse,
+    )
+    assert isinstance(response, SalaryResponse)
+    # sort salaries by name for easier assertion
+    response.salaries.sort(key=lambda x: x.name)
+    assert response.salaries[0].name == "Doe"
+    assert response.salaries[0].salary == 20000
+    assert response.salaries[1].name == "John"
+    assert response.salaries[1].salary == 10000
 
 
 def test_get_with_xlsx_with_default_model_with_chart_data(
