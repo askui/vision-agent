@@ -21,7 +21,7 @@ from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedRespons
 from askui.models.models import GetModel, ModelName
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
-from askui.utils.excel_utils import ExcelSource
+from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
@@ -186,12 +186,12 @@ class AskUiGoogleGenAiApi(GetModel):
                 data=data,
                 mime_type="image/png",
             )
-        if isinstance(source, ExcelSource):
+        if isinstance(source, OfficeDocumentSource):
             with source.reader as r:
                 data = r.read()
                 if len(data) > MAX_FILE_SIZE_BYTES:
                     _err_msg = (
-                        "Excel file size exceeds the limit of "
+                        "Office document file size exceeds the limit of "
                         f"{MAX_FILE_SIZE_BYTES} bytes."
                     )
                     raise ValueError(_err_msg)

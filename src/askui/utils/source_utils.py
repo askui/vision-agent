@@ -9,11 +9,11 @@ from typing import Literal, Union
 from filetype import guess  # type: ignore[import-untyped]
 from PIL import Image as PILImage
 
-from askui.utils.excel_utils import ExcelSource
+from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource
 from askui.utils.pdf_utils import PdfSource
 
-Source = Union[ImageSource, PdfSource, ExcelSource]
+Source = Union[ImageSource, PdfSource, OfficeDocumentSource]
 
 _DATA_URL_WITH_MIMETYPE_RE = re.compile(r"^data:([^;,]+)([^,]*)?,(.*)$", re.DOTALL)
 
@@ -22,6 +22,8 @@ _SupportedApplicationMimeTypes = Literal[
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 _SupportedMimeTypes = _SupportedImageMimeTypes | _SupportedApplicationMimeTypes
 
@@ -33,6 +35,8 @@ _SUPPORTED_MIME_TYPES: list[_SupportedMimeTypes] = [
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 
 
@@ -57,10 +61,12 @@ class _SourceAnalysis:
         return self.mime == "application/pdf"
 
     @property
-    def is_excel(self) -> bool:
+    def is_supported_office_document(self) -> bool:
         return self.mime in [
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         ]
 
     @property
@@ -147,8 +153,8 @@ def load_source(source: Union[str, Path, PILImage.Image]) -> Source:
         raise ValueError(msg)
     if source_analysis.is_pdf:
         return PdfSource(source_analysis.content)
-    if source_analysis.is_excel:
-        return ExcelSource(source_analysis.content)
+    if source_analysis.is_supported_office_document:
+        return OfficeDocumentSource(source_analysis.content)
     if source_analysis.is_image:
         return ImageSource(
             PILImage.open(

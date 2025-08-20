@@ -14,7 +14,7 @@ Accepts:
 """
 
 
-class ExcelSource(RootModel):
+class OfficeDocumentSource(RootModel):
     """Represents an Excel source that can be read as markdown.
 
     The class can be initialized with:
@@ -38,5 +38,5 @@ class ExcelSource(RootModel):
 
 __all__ = [
     "Excel",
-    "ExcelSource",
+    "OfficeDocumentSource",
 ]

@@ -10,7 +10,7 @@ from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
-from askui.utils.excel_utils import ExcelSource
+from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
 
@@ -175,10 +175,8 @@ class OpenRouterModel(GetModel):
         response_schema: Type[ResponseSchema] | None,
         model_choice: str,
     ) -> ResponseSchema | str:
-        if isinstance(source, (PdfSource, ExcelSource)):
-            err_msg = (
-                f"PDF or Excel processing is not supported for the model {model_choice}"
-            )
+        if isinstance(source, (PdfSource, OfficeDocumentSource)):
+            err_msg = f"PDF or Office Document processing is not supported for the model {model_choice}"
             raise NotImplementedError(err_msg)
         response = self._predict(
             image_url=source.to_data_url(),
