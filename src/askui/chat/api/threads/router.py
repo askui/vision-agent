@@ -1,13 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 
 from askui.chat.api.models import ListQueryDep, ThreadId
 from askui.chat.api.threads.dependencies import ThreadServiceDep
-from askui.chat.api.threads.service import (
-    Thread,
-    ThreadCreateRequest,
-    ThreadModifyRequest,
-    ThreadService,
-)
+from askui.chat.api.threads.models import Thread, ThreadCreateParams, ThreadModifyParams
+from askui.chat.api.threads.service import ThreadService
 from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/threads", tags=["threads"])
@@ -18,17 +14,15 @@ def list_threads(
     query: ListQuery = ListQueryDep,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> ListResponse[Thread]:
-    """List all threads."""
     return thread_service.list_(query=query)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_thread(
-    request: ThreadCreateRequest,
+    params: ThreadCreateParams,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
-    """Create a new thread."""
-    return thread_service.create(request=request)
+    return thread_service.create(params)
 
 
 @router.get("/{thread_id}")
@@ -36,11 +30,16 @@ def retrieve_thread(
     thread_id: ThreadId,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> Thread:
-    """Get a thread by ID."""
-    try:
-        return thread_service.retrieve(thread_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return thread_service.retrieve(thread_id)
+
+
+@router.post("/{thread_id}")
+def modify_thread(
+    thread_id: ThreadId,
+    params: ThreadModifyParams,
+    thread_service: ThreadService = ThreadServiceDep,
+) -> Thread:
+    return thread_service.modify(thread_id, params)
 
 
 @router.delete("/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -48,18 +47,4 @@ def delete_thread(
     thread_id: ThreadId,
     thread_service: ThreadService = ThreadServiceDep,
 ) -> None:
-    """Delete a thread."""
-    try:
-        thread_service.delete(thread_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-
-
-@router.post("/{thread_id}")
-def modify_thread(
-    thread_id: ThreadId,
-    request: ThreadModifyRequest,
-    thread_service: ThreadService = ThreadServiceDep,
-) -> Thread:
-    """Modify a thread."""
-    return thread_service.modify(thread_id, request)
+    thread_service.delete(thread_id)

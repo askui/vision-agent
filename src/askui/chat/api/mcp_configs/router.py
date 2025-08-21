@@ -18,7 +18,6 @@ def list_mcp_configs(
     query: ListQuery = ListQueryDep,
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> ListResponse[McpConfig]:
-    """List all MCP configurations."""
     return mcp_config_service.list_(query=query)
 
 
@@ -40,7 +39,7 @@ def retrieve_mcp_config(
     return mcp_config_service.retrieve(mcp_config_id)
 
 
-@router.patch("/{mcp_config_id}", response_model_exclude_none=True)
+@router.post("/{mcp_config_id}", response_model_exclude_none=True)
 def modify_mcp_config(
     mcp_config_id: McpConfigId,
     params: McpConfigModifyParams,

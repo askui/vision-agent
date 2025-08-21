@@ -12,10 +12,3 @@ ThreadId = str
 
 
 ListQueryDep = Depends(ListQuery)
-
-
-class DoNotPatch(BaseModel):
-    pass
-
-
-DO_NOT_PATCH = DoNotPatch()

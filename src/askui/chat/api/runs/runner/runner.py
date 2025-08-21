@@ -21,7 +21,9 @@ from askui.chat.api.assistants.seeds import (
 )
 from askui.chat.api.mcp_configs.models import McpConfig
 from askui.chat.api.mcp_configs.service import McpConfigService
-from askui.chat.api.messages.service import MessageCreateRequest, MessageService
+from askui.chat.api.messages.models import MessageCreateParams
+from askui.chat.api.messages.service import MessageService
+from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import (
@@ -41,7 +43,12 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.pynput_agent_os import PynputAgentOs
-from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
+from askui.utils.api_utils import (
+    LIST_LIMIT_MAX,
+    ConflictError,
+    ListQuery,
+    NotFoundError,
+)
 from askui.utils.image_utils import ImageSource
 from askui.web_agent import WebVisionAgent
 from askui.web_testing_agent import WebTestingAgent
@@ -87,14 +94,38 @@ class Runner:
     def __init__(self, run: Run, base_dir: Path) -> None:
         self._run = run
         self._base_dir = base_dir
-        self._runs_dir = base_dir / "runs"
         self._msg_service = MessageService(self._base_dir)
         self._agent_os = PynputAgentOs()
+
+    def get_runs_dir(self, thread_id: ThreadId) -> Path:
+        return self._base_dir / "threads" / thread_id / "runs"
+
+    def _get_run_path(
+        self, thread_id: ThreadId, run_id: RunId, new: bool = False
+    ) -> Path:
+        run_path = self.get_runs_dir(thread_id) / f"{run_id}.json"
+        if new and run_path.exists():
+            error_msg = f"Run {run_id} already exists in thread {thread_id}"
+            raise ConflictError(error_msg)
+        if not new and not run_path.exists():
+            error_msg = f"Run {run_id} not found in thread {thread_id}"
+            raise NotFoundError(error_msg)
+        return run_path
+
+    def _save(self, run: Run, new: bool = False) -> None:
+        runs_dir = self.get_runs_dir(run.thread_id)
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        run_file = self._get_run_path(run.thread_id, run.id, new=new)
+        run_file.write_text(run.model_dump_json(), encoding="utf-8")
+
+    def _retrieve(self) -> Run:
+        run_file = self._get_run_path(self._run.thread_id, self._run.id)
+        return Run.model_validate_json(run_file.read_text(encoding="utf-8"))
 
     async def _run_human_agent(self, send_stream: ObjectStream[Events]) -> None:
         message = self._msg_service.create(
             thread_id=self._run.thread_id,
-            request=MessageCreateRequest(
+            params=MessageCreateParams(
                 role="user",
                 content=[
                     TextBlockParam(
@@ -116,7 +147,7 @@ class Runner:
         await anyio.sleep(0.1)
         recorded_events: list[InputEvent] = []
         while True:
-            updated_run = self._retrieve_run()
+            updated_run = self._retrieve()
             if self._should_abort(updated_run):
                 break
             while event := self._agent_os.poll_event():
@@ -131,7 +162,7 @@ class Runner:
                     )
                     message = self._msg_service.create(
                         thread_id=self._run.thread_id,
-                        request=MessageCreateRequest(
+                        params=MessageCreateParams(
                             role="user",
                             content=[
                                 ImageBlockParam(
@@ -165,7 +196,7 @@ class Runner:
             text = "Nevermind, I didn't do anything."
             message = self._msg_service.create(
                 thread_id=self._run.thread_id,
-                request=MessageCreateRequest(
+                params=MessageCreateParams(
                     role="user",
                     content=[
                         TextBlockParam(
@@ -242,7 +273,7 @@ class Runner:
         ) -> MessageParam | None:
             message = self._msg_service.create(
                 thread_id=self._run.thread_id,
-                request=MessageCreateRequest(
+                params=MessageCreateParams(
                     assistant_id=self._run.assistant_id
                     if on_message_cb_param.message.role == "assistant"
                     else None,
@@ -257,7 +288,7 @@ class Runner:
                     event="thread.message.created",
                 )
             )
-            updated_run = self._retrieve_run()
+            updated_run = self._retrieve()
             if self._should_abort(updated_run):
                 return None
             return on_message_cb_param.message
@@ -336,10 +367,10 @@ class Runner:
                     send_stream,
                     mcp_client,
                 )
-            updated_run = self._retrieve_run()
+            updated_run = self._retrieve()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)
-                self._update_run_file(updated_run)
+                self._save(updated_run)
                 await send_stream.send(
                     RunEvent(
                         data=updated_run,
@@ -354,7 +385,7 @@ class Runner:
                     )
                 )
                 updated_run.cancelled_at = datetime.now(tz=timezone.utc)
-                self._update_run_file(updated_run)
+                self._save(updated_run)
                 await send_stream.send(
                     RunEvent(
                         data=updated_run,
@@ -371,10 +402,10 @@ class Runner:
             await send_stream.send(DoneEvent())
         except Exception as e:  # noqa: BLE001
             logger.exception("Exception in runner")
-            updated_run = self._retrieve_run()
+            updated_run = self._retrieve()
             updated_run.failed_at = datetime.now(tz=timezone.utc)
             updated_run.last_error = RunError(message=str(e), code="server_error")
-            self._update_run_file(updated_run)
+            self._save(updated_run)
             await send_stream.send(
                 RunEvent(
                     data=updated_run,
@@ -389,17 +420,7 @@ class Runner:
 
     def _mark_run_as_started(self) -> None:
         self._run.started_at = datetime.now(tz=timezone.utc)
-        self._update_run_file(self._run)
+        self._save(self._run)
 
     def _should_abort(self, run: Run) -> bool:
         return run.status in ("cancelled", "cancelling", "expired")
-
-    def _update_run_file(self, run: Run) -> None:
-        run_file = self._runs_dir / f"{run.thread_id}__{run.id}.json"
-        with run_file.open("w", encoding="utf-8") as f:
-            f.write(run.model_dump_json())
-
-    def _retrieve_run(self) -> Run:
-        run_file = self._runs_dir / f"{self._run.thread_id}__{self._run.id}.json"
-        with run_file.open("r", encoding="utf-8") as f:
-            return Run.model_validate_json(f.read())

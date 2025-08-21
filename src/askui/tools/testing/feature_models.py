@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from fastapi import Query
 from pydantic import BaseModel, Field
 
-from askui.utils.api_utils import ListQuery
+from askui.utils.api_utils import ListQuery, Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import IdField, generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -37,7 +37,7 @@ class FeatureListQuery(ListQuery):
     tags: Annotated[list[str] | NotGiven, Query()] = NOT_GIVEN
 
 
-class Feature(BaseModel):
+class Feature(Resource):
     """
     A structured representation of a feature used for BDD test automation.
 

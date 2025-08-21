@@ -7,7 +7,8 @@ from typing import Generator
 
 import pytest
 
-from askui.chat.api.messages.service import MessageCreateRequest, MessageService
+from askui.chat.api.messages.models import MessageCreateParams
+from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import ThreadId
 
 
@@ -37,12 +38,12 @@ class TestMessageServiceJSONPersistence:
         self, message_service: MessageService, thread_id: ThreadId
     ) -> None:
         """Test that creating a message creates an individual JSON file."""
-        request = MessageCreateRequest(role="user", content="Hello, world!")
+        request = MessageCreateParams(role="user", content="Hello, world!")
 
         message = message_service.create(thread_id, request)
 
         # Check that the message directory was created
-        messages_dir = message_service.get_thread_messages_dir(thread_id)
+        messages_dir = message_service.get_messages_dir(thread_id)
         assert messages_dir.exists()
 
         # Check that the message file was created
@@ -64,7 +65,7 @@ class TestMessageServiceJSONPersistence:
         # Create multiple messages
         messages = []
         for i in range(3):
-            request = MessageCreateRequest(
+            request = MessageCreateParams(
                 role="user" if i % 2 == 0 else "assistant", content=f"Message {i}"
             )
             message = message_service.create(thread_id, request)
@@ -87,7 +88,7 @@ class TestMessageServiceJSONPersistence:
         self, message_service: MessageService, thread_id: ThreadId
     ) -> None:
         """Test that deleting a message removes its JSON file."""
-        request = MessageCreateRequest(role="user", content="Delete me")
+        request = MessageCreateParams(role="user", content="Delete me")
 
         message = message_service.create(thread_id, request)
         message_file = message_service._get_message_path(thread_id, message.id)
@@ -103,12 +104,11 @@ class TestMessageServiceJSONPersistence:
         self, message_service: MessageService, thread_id: ThreadId
     ) -> None:
         """Test that the directory structure follows the expected pattern."""
-        request = MessageCreateRequest(role="user", content="Test message")
+        request = MessageCreateParams(role="user", content="Test message")
 
         message_service.create(thread_id, request)
 
-        # Check directory structure - messages are stored in base_dir/messages/thread_id/
-        messages_dir = message_service.get_thread_messages_dir(thread_id)
+        messages_dir = message_service.get_messages_dir(thread_id)
 
         assert messages_dir.exists()
 

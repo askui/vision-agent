@@ -1,167 +1,77 @@
 from pathlib import Path
 
-from pydantic import BaseModel, Field
-
-from askui.chat.api.assistants.models import Assistant
+from askui.chat.api.assistants.models import (
+    Assistant,
+    AssistantCreateParams,
+    AssistantModifyParams,
+)
 from askui.chat.api.assistants.seeds import SEEDS
-from askui.chat.api.models import DO_NOT_PATCH, DoNotPatch
-from askui.utils.api_utils import ListQuery, ListResponse
-
-
-class CreateAssistantRequest(BaseModel):
-    """Request model for creating an assistant."""
-
-    name: str | None = None
-    description: str | None = None
-    avatar: str | None = Field(default=None, description="URL of the avatar image")
-
-
-class AssistantModifyRequest(BaseModel):
-    """Request model for updating an assistant."""
-
-    name: str | None | DoNotPatch = DO_NOT_PATCH
-    description: str | None | DoNotPatch = DO_NOT_PATCH
-    avatar: str | None | DoNotPatch = Field(
-        default=DO_NOT_PATCH, description="URL of the avatar image"
-    )
+from askui.chat.api.models import AssistantId
+from askui.utils.api_utils import (
+    ConflictError,
+    ListQuery,
+    ListResponse,
+    NotFoundError,
+    list_resources,
+)
 
 
 class AssistantService:
-    """Service for managing assistants."""
-
     def __init__(self, base_dir: Path) -> None:
-        """Initialize assistant service.
-
-        Args:
-            base_dir: Base directory to store assistant data
-        """
         self._base_dir = base_dir
         self._assistants_dir = base_dir / "assistants"
 
+    def _get_assistant_path(self, assistant_id: AssistantId, new: bool = False) -> Path:
+        assistant_path = self._assistants_dir / f"{assistant_id}.json"
+        exists = assistant_path.exists()
+        if new and exists:
+            error_msg = f"Assistant {assistant_id} already exists"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Assistant {assistant_id} not found"
+            raise NotFoundError(error_msg)
+        return assistant_path
+
     def list_(self, query: ListQuery) -> ListResponse[Assistant]:
-        """List all available assistants.
+        return list_resources(self._assistants_dir, query, Assistant)
 
-        Args:
-            query (ListQuery): Query parameters for listing assistants
-
-        Returns:
-            ListResponse[Assistant]: ListResponse containing assistants sorted by
-                creation date
-        """
-        if not self._assistants_dir.exists():
-            return ListResponse(data=[])
-
-        assistant_files = list(self._assistants_dir.glob("*.json"))
-        assistants: list[Assistant] = []
-        for f in assistant_files:
-            with f.open("r", encoding="utf-8") as file:
-                assistants.append(Assistant.model_validate_json(file.read()))
-
-        # Sort by creation date
-        assistants = sorted(
-            assistants, key=lambda a: a.created_at, reverse=(query.order == "desc")
-        )
-
-        # Apply before/after filters
-        if query.after:
-            assistants = [a for a in assistants if a.id > query.after]
-        if query.before:
-            assistants = [a for a in assistants if a.id < query.before]
-
-        # Apply limit
-        assistants = assistants[: query.limit]
-
-        return ListResponse(
-            data=assistants,
-            first_id=assistants[0].id if assistants else None,
-            last_id=assistants[-1].id if assistants else None,
-            has_more=len(assistant_files) > query.limit,
-        )
-
-    def retrieve(self, assistant_id: str) -> Assistant:
-        """Retrieve an assistant by ID.
-
-        Args:
-            assistant_id: ID of assistant to retrieve
-
-        Returns:
-            Assistant object
-
-        Raises:
-            FileNotFoundError: If assistant doesn't exist
-        """
-        assistant_file = self._assistants_dir / f"{assistant_id}.json"
-        if not assistant_file.exists():
+    def retrieve(self, assistant_id: AssistantId) -> Assistant:
+        try:
+            assistant_path = self._get_assistant_path(assistant_id)
+            return Assistant.model_validate_json(assistant_path.read_text())
+        except FileNotFoundError as e:
             error_msg = f"Assistant {assistant_id} not found"
-            raise FileNotFoundError(error_msg)
+            raise NotFoundError(error_msg) from e
 
-        with assistant_file.open("r", encoding="utf-8") as f:
-            return Assistant.model_validate_json(f.read())
-
-    def create(self, request: CreateAssistantRequest) -> Assistant:
-        """Create a new assistant.
-
-        Args:
-            request: Assistant creation request
-
-        Returns:
-            Created assistant object
-        """
-        assistant = Assistant(
-            name=request.name,
-            description=request.description,
-        )
-        self._save(assistant)
+    def create(self, params: AssistantCreateParams) -> Assistant:
+        assistant = Assistant.create(params)
+        self._save(assistant, new=True)
         return assistant
 
-    def _save(self, assistant: Assistant) -> None:
-        """Save an assistant to the file system."""
-        self._assistants_dir.mkdir(parents=True, exist_ok=True)
-        assistant_file = self._assistants_dir / f"{assistant.id}.json"
-        with assistant_file.open("w", encoding="utf-8") as f:
-            f.write(assistant.model_dump_json())
-
-    def modify(self, assistant_id: str, request: AssistantModifyRequest) -> Assistant:
-        """Update an existing assistant.
-
-        Args:
-            assistant_id: ID of assistant to modify
-            request: Assistant modify request
-
-        Returns:
-            Updated assistant object
-
-        Raises:
-            FileNotFoundError: If assistant doesn't exist
-        """
+    def modify(
+        self, assistant_id: AssistantId, params: AssistantModifyParams
+    ) -> Assistant:
         assistant = self.retrieve(assistant_id)
-        if not isinstance(request.name, DoNotPatch):
-            assistant.name = request.name
-        if not isinstance(request.description, DoNotPatch):
-            assistant.description = request.description
-        if not isinstance(request.avatar, DoNotPatch):
-            assistant.avatar = request.avatar
-        assistant_file = self._assistants_dir / f"{assistant_id}.json"
-        with assistant_file.open("w", encoding="utf-8") as f:
-            f.write(assistant.model_dump_json())
-        return assistant
+        modified = assistant.modify(params)
+        self._save(modified)
+        return modified
 
-    def delete(self, assistant_id: str) -> None:
-        """Delete an assistant.
-
-        Args:
-            assistant_id: ID of assistant to delete
-
-        Raises:
-            FileNotFoundError: If assistant doesn't exist
-        """
-        assistant_file = self._assistants_dir / f"{assistant_id}.json"
-        if not assistant_file.exists():
+    def delete(self, assistant_id: AssistantId) -> None:
+        try:
+            self._get_assistant_path(assistant_id).unlink()
+        except FileNotFoundError as e:
             error_msg = f"Assistant {assistant_id} not found"
-            raise FileNotFoundError(error_msg)
-        assistant_file.unlink()
+            raise NotFoundError(error_msg) from e
+
+    def _save(self, assistant: Assistant, new: bool = False) -> None:
+        self._assistants_dir.mkdir(parents=True, exist_ok=True)
+        assistant_file = self._get_assistant_path(assistant.id, new=new)
+        assistant_file.write_text(assistant.model_dump_json(), encoding="utf-8")
 
     def seed(self) -> None:
         """Seed the assistant service with default assistants."""
         for seed in SEEDS:
-            self._save(seed)
+            try:
+                self._save(seed, new=True)
+            except ConflictError:  # noqa: PERF203
+                self._save(seed)

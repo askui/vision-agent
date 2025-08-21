@@ -4,7 +4,8 @@ from typing import Literal
 from pydantic import BaseModel, Field, computed_field
 
 from askui.chat.api.models import AssistantId, RunId, ThreadId
-from askui.utils.datetime_utils import UnixDatetime
+from askui.utils.api_utils import Resource
+from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
 RunStatus = Literal[
@@ -19,27 +20,48 @@ RunStatus = Literal[
 
 
 class RunError(BaseModel):
+    """Error information for a failed run."""
+
     message: str
     code: Literal["server_error", "rate_limit_exceeded", "invalid_prompt"]
 
 
-class Run(BaseModel):
+class RunBase(BaseModel):
+    """Base run model."""
+
     assistant_id: AssistantId
-    cancelled_at: UnixDatetime | None = None
-    completed_at: UnixDatetime | None = None
-    created_at: UnixDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc)
-    )
-    expires_at: UnixDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc) + timedelta(minutes=10)
-    )
-    failed_at: UnixDatetime | None = None
-    id: RunId = Field(default_factory=lambda: generate_time_ordered_id("run"))
-    last_error: RunError | None = None
+
+
+class RunCreateParams(RunBase):
+    """Parameters for creating a run."""
+
+    stream: bool = False
+
+
+class Run(RunBase, Resource):
+    """A run execution within a thread."""
+
+    id: RunId
     object: Literal["thread.run"] = "thread.run"
-    started_at: UnixDatetime | None = None
     thread_id: ThreadId
+    created_at: UnixDatetime
+    expires_at: UnixDatetime
+    started_at: UnixDatetime | None = None
+    completed_at: UnixDatetime | None = None
+    failed_at: UnixDatetime | None = None
+    cancelled_at: UnixDatetime | None = None
     tried_cancelling_at: UnixDatetime | None = None
+    last_error: RunError | None = None
+
+    @classmethod
+    def create(cls, thread_id: ThreadId, params: RunCreateParams) -> "Run":
+        return cls(
+            id=generate_time_ordered_id("run"),
+            thread_id=thread_id,
+            created_at=now(),
+            expires_at=datetime.now(tz=timezone.utc) + timedelta(minutes=10),
+            **params.model_dump(exclude={"stream"}),
+        )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

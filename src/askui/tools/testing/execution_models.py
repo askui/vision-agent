@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from askui.tools.testing.feature_models import FeatureId
 from askui.tools.testing.scenario_models import ExampleIndex, ScenarioId
-from askui.utils.api_utils import ListQuery
+from askui.utils.api_utils import ListQuery, Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import IdField, generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -72,7 +72,7 @@ class ModifyExecutionStepParams(BaseModelWithNotGiven):
     status: ExecutionStatus | NotGiven = NOT_GIVEN
 
 
-class Execution(BaseModel):
+class Execution(Resource):
     """
     A structured representation of an execution result for a scenario or scenario
     outline example.

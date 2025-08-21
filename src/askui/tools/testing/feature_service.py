@@ -1,12 +1,11 @@
 from pathlib import Path
-
-from pydantic import ValidationError
+from typing import Callable
 
 from askui.utils.api_utils import (
     ConflictError,
     ListResponse,
     NotFoundError,
-    list_resource_paths,
+    list_resources,
 )
 from askui.utils.not_given import NOT_GIVEN
 
@@ -19,69 +18,69 @@ from .feature_models import (
 )
 
 
+def _build_feature_filter_fn(
+    query: FeatureListQuery,
+) -> Callable[[Feature], bool]:
+    def filter_fn(feature: Feature) -> bool:
+        return query.tags == NOT_GIVEN or any(tag in feature.tags for tag in query.tags)
+
+    return filter_fn
+
+
 class FeatureService:
-    """
-    Service for managing Feature resources with filesystem persistence.
-
-    Args:
-        base_dir (Path): Base directory for storing feature data.
-    """
-
     def __init__(self, base_dir: Path) -> None:
         self._base_dir = base_dir
         self._features_dir = base_dir / "features"
-        self._features_dir.mkdir(parents=True, exist_ok=True)
+
+    def _get_feature_path(self, feature_id: FeatureId, new: bool = False) -> Path:
+        feature_path = self._features_dir / f"{feature_id}.json"
+        exists = feature_path.exists()
+        if new and exists:
+            error_msg = f"Feature {feature_id} already exists"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Feature {feature_id} not found"
+            raise NotFoundError(error_msg)
+        return feature_path
 
     def list_(
         self,
         query: FeatureListQuery,
     ) -> ListResponse[Feature]:
-        feature_paths = list_resource_paths(self._features_dir, query)
-        features: list[Feature] = []
-        for f in feature_paths:
-            try:
-                feature = Feature.model_validate_json(f.read_text())
-                if query.tags == NOT_GIVEN or any(
-                    tag in feature.tags for tag in query.tags
-                ):
-                    features.append(feature)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(features) > query.limit
-        features = features[: query.limit]
-        return ListResponse(
-            data=features,
-            first_id=features[0].id if features else None,
-            last_id=features[-1].id if features else None,
-            has_more=has_more,
+        return list_resources(
+            base_dir=self._features_dir,
+            query=query,
+            resource_type=Feature,
+            filter_fn=_build_feature_filter_fn(query),
         )
 
     def retrieve(self, feature_id: FeatureId) -> Feature:
-        feature_file = self._features_dir / f"{feature_id}.json"
-        if not feature_file.exists():
+        try:
+            feature_path = self._get_feature_path(feature_id)
+            return Feature.model_validate_json(feature_path.read_text())
+        except FileNotFoundError as e:
             error_msg = f"Feature {feature_id} not found"
-            raise NotFoundError(error_msg)
-        return Feature.model_validate_json(feature_file.read_text())
+            raise NotFoundError(error_msg) from e
 
     def create(self, params: FeatureCreateParams) -> Feature:
         feature = Feature.create(params)
-        feature_file = self._features_dir / f"{feature.id}.json"
-        if feature_file.exists():
-            error_msg = f"Feature {feature.id} already exists"
-            raise ConflictError(error_msg)
-        feature_file.write_text(feature.model_dump_json())
+        self._save(feature, new=True)
         return feature
 
     def modify(self, feature_id: FeatureId, params: FeatureModifyParams) -> Feature:
         feature = self.retrieve(feature_id)
         modified = feature.modify(params)
-        feature_file = self._features_dir / f"{feature_id}.json"
-        feature_file.write_text(modified.model_dump_json())
+        self._save(modified)
         return modified
 
     def delete(self, feature_id: FeatureId) -> None:
-        feature_file = self._features_dir / f"{feature_id}.json"
-        if not feature_file.exists():
+        try:
+            self._get_feature_path(feature_id).unlink()
+        except FileNotFoundError as e:
             error_msg = f"Feature {feature_id} not found"
-            raise NotFoundError(error_msg)
-        feature_file.unlink()
+            raise NotFoundError(error_msg) from e
+
+    def _save(self, feature: Feature, new: bool = False) -> None:
+        self._features_dir.mkdir(parents=True, exist_ok=True)
+        feature_file = self._get_feature_path(feature.id, new=new)
+        feature_file.write_text(feature.model_dump_json(), encoding="utf-8")

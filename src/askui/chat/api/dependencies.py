@@ -59,13 +59,9 @@ SetEnvFromHeadersDep = Depends(set_env_from_headers)
 
 
 def get_workspace_dir(
+    askui_workspace: Annotated[str, Header()],
     settings: Settings = SettingsDep,
-    askui_workspace: Annotated[str | None, Header()] = None,
 ) -> Path:
-    if not askui_workspace:
-        raise HTTPException(
-            status_code=400, detail="AskUI-Workspace header is required"
-        )
     return settings.data_dir / "workspaces" / askui_workspace
 
 

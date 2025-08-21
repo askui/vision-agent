@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
@@ -12,6 +13,7 @@ from askui.chat.api.mcp_configs.router import router as mcp_configs_router
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
+from askui.utils.api_utils import ConflictError, LimitReachedError, NotFoundError
 
 
 @asynccontextmanager
@@ -37,6 +39,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(NotFoundError)
+def not_found_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: NotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(ConflictError)
+def conflict_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: ConflictError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(LimitReachedError)
+def limit_reached_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: LimitReachedError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+    )
+
 
 # Include routers
 v1_router = APIRouter(prefix="/v1")
