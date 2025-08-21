@@ -62,33 +62,27 @@ async def create_run(
 
 
 @router.get("/{run_id}")
-def retrieve_run(
-    run_id: Annotated[RunId, Path(...)],
+async def retrieve_run(
+    thread_id: ThreadId,
+    run_id: RunId,
     run_service: RunService = RunServiceDep,
 ) -> Run:
-    """
-    Retrieve a run by its ID.
-    """
-    try:
-        return run_service.retrieve(run_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    """Get a run by ID."""
+    return await run_service.find_one(thread_id=thread_id, run_id=run_id)
 
 
 @router.get("")
-def list_runs(
-    thread_id: Annotated[ThreadId, Path(...)],
+async def list_runs(
+    thread_id: ThreadId,
     query: ListQuery = ListQueryDep,
     run_service: RunService = RunServiceDep,
 ) -> ListResponse[Run]:
-    """
-    List runs, optionally filtered by thread.
-    """
-    return run_service.list_(thread_id, query=query)
+    """List runs for a thread."""
+    return await run_service.find(thread_id=thread_id, query=query)
 
 
 @router.post("/{run_id}/cancel")
-def cancel_run(
+async def cancel_run(
     run_id: Annotated[RunId, Path(...)],
     run_service: RunService = RunServiceDep,
 ) -> Run:
@@ -96,6 +90,6 @@ def cancel_run(
     Cancel a run by its ID.
     """
     try:
-        return run_service.cancel(run_id)
+        return await run_service.cancel(run_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e

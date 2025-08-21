@@ -13,39 +13,34 @@ from askui.utils.api_utils import LimitReachedError, ListQuery, ListResponse
 router = APIRouter(prefix="/mcp-configs", tags=["mcp-configs"])
 
 
-@router.get("", response_model_exclude_none=True)
+@router.get("")
 def list_mcp_configs(
     query: ListQuery = ListQueryDep,
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> ListResponse[McpConfig]:
-    """List all MCP configurations."""
-    return mcp_config_service.list_(query=query)
+    """List all MCP configs."""
+    return mcp_config_service.find(query=query)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model_exclude_none=True)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_mcp_config(
-    params: McpConfigCreateParams,
+    request: CreateMcpConfigRequest,
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> McpConfig:
-    """Create a new MCP configuration."""
-    try:
-        return mcp_config_service.create(params)
-    except LimitReachedError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+    """Create a new MCP config."""
+    return mcp_config_service.create(request=request)
 
 
-@router.get("/{mcp_config_id}", response_model_exclude_none=True)
+@router.get("/{mcp_config_id}")
 def retrieve_mcp_config(
     mcp_config_id: McpConfigId,
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> McpConfig:
-    """Get an MCP configuration by ID."""
+    """Get an MCP config by ID."""
     try:
-        return mcp_config_service.retrieve(mcp_config_id)
+        return mcp_config_service.find_one(mcp_config_id)
     except FileNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.patch("/{mcp_config_id}", response_model_exclude_none=True)

@@ -60,30 +60,19 @@ class RetrieveScenarioTool(Tool):
     @override
     @validate_call
     def __call__(self, scenario_id: ScenarioId) -> Scenario:
-        return self._service.retrieve(scenario_id=scenario_id)
+        """Retrieve a scenario by ID."""
+        return self._service.find_one(scenario_id=scenario_id)
 
 
-class ListScenariosToolInput(BaseModel):
-    query: ScenarioListQuery
+class ListScenarioTool:
+    """Tool for listing scenarios."""
 
-
-class ListScenarioTool(Tool):
     def __init__(self, base_dir: Path) -> None:
-        super().__init__(
-            name="list_scenarios",
-            description="List scenarios with optional filtering",
-            input_schema=jsonref.replace_refs(
-                ListScenariosToolInput.model_json_schema(),
-                lazy_load=False,
-                proxies=False,
-            ),
-        )
-        self._service = ScenarioService(base_dir)
+        self._service = ScenarioService(base_dir=base_dir)
 
-    @override
-    @validate_call
     def __call__(self, query: ScenarioListQuery) -> ListResponse[Scenario]:
-        return self._service.list_(query=query)
+        """List scenarios."""
+        return self._service.find(query=query)
 
 
 class ModifyScenarioToolInput(BaseModel):

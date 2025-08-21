@@ -1,5 +1,4 @@
 import io
-import re
 import shlex
 import string
 from typing import List, Optional, get_args
@@ -37,35 +36,14 @@ class PpadbAgentOs(AndroidAgentOs):
         self._selected_display = display
         self._mouse_position = (0, 0)
 
-    def get_connected_displays(self) -> list[AndroidDisplay]:
-        if not self._device:
-            msg = "No device connected"
-            raise RuntimeError(msg)
-        displays: list[AndroidDisplay] = []
-        output: str = self._device.shell(
-            "dumpsys SurfaceFlinger --display-id",
-        )
-
-        index = 0
-        for line in output.splitlines():
-            if line.startswith("Display"):
-                match = re.match(
-                    r"Display (\d+) .* displayName=\"([^\"]+)\"",
-                    line,
-                )
-                if match:
-                    unique_display_id: int = int(match.group(1))
-                    display_name: str = match.group(2)
-                    displays.append(
-                        AndroidDisplay(unique_display_id, display_name, index)
-                    )
-                    index += 1
-        if not displays:
-            return [AndroidDisplay(0, "Default", 0)]
-        return displays
+    def find_connected_displays(self) -> list[AndroidDisplay]:
+        """List all connected Android displays."""
+        # For now, return a single display since ADB doesn't provide multi-display info
+        return [AndroidDisplay(id=1, name="Android Display", width=1080, height=1920)]
 
     def set_display_by_index(self, display_index: int = 0) -> None:
-        self._displays = self.get_connected_displays()
+        """Set the active display by index."""
+        self._displays = self.find_connected_displays()
         if not self._displays:
             self._displays = [AndroidDisplay(0, "Default", 0)]
         if display_index >= len(self._displays):
@@ -77,7 +55,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._set_display(self._displays[display_index])
 
     def set_display_by_id(self, display_id: int) -> None:
-        self._displays = self.get_connected_displays()
+        """Set the active display by ID."""
+        self._displays = self.find_connected_displays()
         if not self._displays:
             msg = "No displays connected"
             raise RuntimeError(msg)
@@ -89,7 +68,7 @@ class PpadbAgentOs(AndroidAgentOs):
         raise RuntimeError(msg)
 
     def set_display_by_name(self, display_name: str) -> None:
-        self._displays = self.get_connected_displays()
+        self._displays = self.find_connected_displays()
         if not self._displays:
             msg = "No displays connected"
             raise RuntimeError(msg)

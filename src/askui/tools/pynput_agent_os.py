@@ -18,14 +18,7 @@ from typing_extensions import override
 
 from askui.logger import logger
 from askui.reporting import CompositeReporter, Reporter
-from askui.tools.agent_os import (
-    AgentOs,
-    Display,
-    DisplaySize,
-    InputEvent,
-    ModifierKey,
-    PcKey,
-)
+from askui.tools.agent_os import AgentOs, Display, InputEvent, ModifierKey, PcKey
 from askui.utils.image_utils import draw_point_on_image
 
 if platform.system() == "Windows":
@@ -423,17 +416,12 @@ class PynputAgentOs(AgentOs):
         while not self._input_event_queue.empty():
             self._input_event_queue.get()
 
-    @override
-    def retrieve_active_display(self) -> Display:
-        """
-        Retrieve the currently active display/screen.
-        """
-        monitor = self._sct.monitors[self._display]
-
+    def find_one_active_display(self) -> Display:
+        """Retrieve the currently active display."""
         return Display(
-            id=self._display,
-            size=DisplaySize(
-                width=monitor["width"],
-                height=monitor["height"],
-            ),
+            id=1,
+            name="Pynput Display",
+            width=self._sct.monitors[0]["width"],
+            height=self._sct.monitors[0]["height"],
+            is_primary=True,
         )

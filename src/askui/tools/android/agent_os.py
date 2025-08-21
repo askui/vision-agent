@@ -382,8 +382,6 @@ class AndroidAgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_connected_displays(self) -> list[AndroidDisplay]:
-        """
-        Gets the connected displays for screen interactions.
-        """
-        raise NotImplementedError
+    def find_connected_displays(self) -> list[AndroidDisplay]:
+        """List all connected Android displays."""
+        raise NotImplementedError("Subclasses must implement find_connected_displays")

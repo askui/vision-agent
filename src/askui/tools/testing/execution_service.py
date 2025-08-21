@@ -1,14 +1,6 @@
 from pathlib import Path
 
-from pydantic import ValidationError
-
-from askui.utils.api_utils import (
-    ConflictError,
-    ListResponse,
-    NotFoundError,
-    list_resource_paths,
-)
-from askui.utils.not_given import NOT_GIVEN
+from askui.utils.api_utils import ConflictError, ListResponse, NotFoundError
 
 from .execution_models import (
     Execution,
@@ -31,43 +23,65 @@ class ExecutionService:
         self._executions_dir = base_dir / "executions"
         self._executions_dir.mkdir(parents=True, exist_ok=True)
 
-    def list_(
-        self,
-        query: ExecutionListQuery,
-    ) -> ListResponse[Execution]:
-        execution_paths = list_resource_paths(self._executions_dir, query)
+    def find(self, query: ExecutionListQuery) -> ListResponse[Execution]:
+        """List all available executions.
+
+        Args:
+            query (ExecutionListQuery): Query parameters for listing executions
+
+        Returns:
+            ListResponse[Execution]: ListResponse containing executions sorted by
+                creation date
+        """
+        if not self._executions_dir.exists():
+            return ListResponse(data=[])
+
+        execution_files = list(self._executions_dir.glob("*.json"))
         executions: list[Execution] = []
-        for f in execution_paths:
-            try:
-                execution = Execution.model_validate_json(f.read_text())
-                if (
-                    (query.feature == NOT_GIVEN or execution.feature == query.feature)
-                    and (
-                        query.scenario == NOT_GIVEN
-                        or execution.scenario == query.scenario
-                    )
-                    and (
-                        query.example == NOT_GIVEN or execution.example == query.example
-                    )
-                ):
-                    executions.append(execution)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(executions) > query.limit
+        for f in execution_files:
+            with f.open("r", encoding="utf-8") as file:
+                executions.append(Execution.model_validate_json(file.read()))
+
+        # Sort by creation date
+        executions = sorted(
+            executions, key=lambda e: e.created_at, reverse=(query.order == "desc")
+        )
+
+        # Apply before/after filters
+        if query.after:
+            executions = [e for e in executions if e.id > query.after]
+        if query.before:
+            executions = [e for e in executions if e.id < query.before]
+
+        # Apply limit
         executions = executions[: query.limit]
+
         return ListResponse(
             data=executions,
             first_id=executions[0].id if executions else None,
             last_id=executions[-1].id if executions else None,
-            has_more=has_more,
+            has_more=len(execution_files) > query.limit,
         )
 
-    def retrieve(self, execution_id: ExecutionId) -> Execution:
+    def find_one(self, execution_id: ExecutionId) -> Execution:
+        """Retrieve an execution by ID.
+
+        Args:
+            execution_id: ID of execution to retrieve
+
+        Returns:
+            Execution object
+
+        Raises:
+            FileNotFoundError: If execution doesn't exist
+        """
         execution_file = self._executions_dir / f"{execution_id}.json"
         if not execution_file.exists():
             error_msg = f"Execution {execution_id} not found"
-            raise NotFoundError(error_msg)
-        return Execution.model_validate_json(execution_file.read_text())
+            raise FileNotFoundError(error_msg)
+
+        with execution_file.open("r", encoding="utf-8") as f:
+            return Execution.model_validate_json(f.read())
 
     def create(self, execution: Execution) -> Execution:
         execution_file = self._executions_dir / f"{execution.id}.json"
@@ -80,9 +94,13 @@ class ExecutionService:
     def modify(
         self, execution_id: ExecutionId, params: ExecutionModifyParams
     ) -> Execution:
-        execution = self.retrieve(execution_id)
+        """Modify an existing execution."""
+        execution = self.find_one(execution_id)
         modified = execution.modify(params)
-        return self._save(modified)
+        execution_file = self._executions_dir / f"{execution_id}.json"
+        with execution_file.open("w", encoding="utf-8") as f:
+            f.write(modified.model_dump_json())
+        return modified
 
     def _save(self, execution: Execution) -> Execution:
         execution_file = self._executions_dir / f"{execution.id}.json"

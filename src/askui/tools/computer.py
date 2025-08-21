@@ -349,7 +349,7 @@ class ComputerToolBase(Tool, ABC):
         return scale_image_to_fit(screenshot, (self._width, self._height))
 
     def _retrieve_cursor_position(self) -> str:
-        mouse_position: Coordinate = self._agent_os.get_mouse_position()
+        mouse_position: Coordinate = self._agent_os.find_mouse_position()
         real_screen_width, real_screen_height = self._get_real_screen_resolution()
         x, y = scale_coordinates(
             (mouse_position.x, mouse_position.y),

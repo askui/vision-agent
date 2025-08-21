@@ -28,13 +28,15 @@ def create_tool(tmp_path: Path) -> CreateExecutionTool:
 
 
 @pytest.fixture
-def retrieve_tool(tmp_path: Path) -> RetrieveExecutionTool:
-    return RetrieveExecutionTool(tmp_path)
+def find_one_tool(tmp_path: Path) -> RetrieveExecutionTool:
+    """Create a retrieve execution tool for testing."""
+    return RetrieveExecutionTool(base_dir=tmp_path)
 
 
 @pytest.fixture
-def list_tool(tmp_path: Path) -> ListExecutionTool:
-    return ListExecutionTool(tmp_path)
+def find_tool(tmp_path: Path) -> ListExecutionTool:
+    """Create a list execution tool for testing."""
+    return ListExecutionTool(base_dir=tmp_path)
 
 
 @pytest.fixture
@@ -95,31 +97,31 @@ def test_create_execution_long_text(
     assert execution.steps[0].text == long_text
 
 
-def test_retrieve_execution(
+def test_find_one_execution(
     create_tool: CreateExecutionTool,
-    retrieve_tool: RetrieveExecutionTool,
+    find_one_tool: RetrieveExecutionTool,
     scenario: Scenario,
     feature: Feature,
 ) -> None:
     execution_obj = _create_execution(scenario, feature.id)
     execution = create_tool(execution_obj)
-    retrieved = retrieve_tool(execution.id)
+    retrieved = find_one_tool(execution.id)
     assert retrieved.model_dump() == execution.model_dump()
 
 
 @pytest.mark.parametrize(
     "invalid_id", ["", "notanexecid", "exec_", "123", "exec-123", "exec_!@#"]
 )
-def test_retrieve_invalid_id(
-    retrieve_tool: RetrieveExecutionTool, invalid_id: str
+def test_find_one_invalid_id(
+    find_one_tool: RetrieveExecutionTool, invalid_id: str
 ) -> None:
     with pytest.raises(ValueError):
-        retrieve_tool(invalid_id)
+        find_one_tool(invalid_id)
 
 
-def test_retrieve_deleted_id(
+def test_find_one_deleted_id(
     create_tool: CreateExecutionTool,
-    retrieve_tool: RetrieveExecutionTool,
+    find_one_tool: RetrieveExecutionTool,
     delete_tool: DeleteExecutionTool,
     scenario: Scenario,
     feature: Feature,
@@ -128,31 +130,31 @@ def test_retrieve_deleted_id(
     execution = create_tool(execution_obj)
     delete_tool(execution.id)
     with pytest.raises(NotFoundError):
-        retrieve_tool(execution.id)
+        find_one_tool(execution.id)
 
 
-def test_list_executions_empty(list_tool: ListExecutionTool) -> None:
-    result = list_tool(ExecutionListQuery())
+def test_find_executions_empty(find_tool: ListExecutionTool) -> None:
+    result = find_tool(ExecutionListQuery())
     assert result.object == "list"
     assert len(result.data) == 0
 
 
-def test_list_executions_multiple(
+def test_find_executions_multiple(
     create_tool: CreateExecutionTool,
-    list_tool: ListExecutionTool,
+    find_tool: ListExecutionTool,
     scenario: Scenario,
     feature: Feature,
 ) -> None:
     e1 = create_tool(_create_execution(scenario, feature.id, status="pending"))
     e2 = create_tool(_create_execution(scenario, feature.id, status="passed"))
-    result = list_tool(ExecutionListQuery())
+    result = find_tool(ExecutionListQuery())
     ids = [e.id for e in result.data]
     assert e1.id in ids and e2.id in ids
 
 
-def test_list_executions_filter_by_feature(
+def test_find_executions_filter_by_feature(
     create_tool: CreateExecutionTool,
-    list_tool: ListExecutionTool,
+    find_tool: ListExecutionTool,
     scenario: Scenario,
     feature: Feature,
 ) -> None:
@@ -160,7 +162,7 @@ def test_list_executions_filter_by_feature(
     # Create an execution for a different feature
     other_feature_id = "feat_other"
     create_tool(_create_execution(scenario, other_feature_id, status="pending"))
-    result = list_tool(ExecutionListQuery(feature=feature.id))
+    result = find_tool(ExecutionListQuery(feature=feature.id))
     assert all(e.feature == feature.id for e in result.data)
     assert any(e.id == e1.id for e in result.data)
 
@@ -205,14 +207,14 @@ def test_modify_execution_noop(
 def test_delete_execution(
     create_tool: CreateExecutionTool,
     delete_tool: DeleteExecutionTool,
-    retrieve_tool: RetrieveExecutionTool,
+    find_one_tool: RetrieveExecutionTool,
     scenario: Scenario,
     feature: Feature,
 ) -> None:
     execution = create_tool(_create_execution(scenario, feature.id))
     delete_tool(execution.id)
     with pytest.raises(NotFoundError):
-        retrieve_tool(execution.id)
+        find_one_tool(execution.id)
 
 
 def test_delete_execution_nonexistent(delete_tool: DeleteExecutionTool) -> None:

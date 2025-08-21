@@ -5,8 +5,8 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
-        RenderObjectStyle,
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+        RenderObjectStyle,  # noqa: E501
     )
 
 
@@ -343,21 +343,13 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    def list_displays(self) -> DisplaysListResponse:
-        """
-        List all the available displays.
-        """
-        raise NotImplementedError
+    def find_displays(self) -> DisplaysListResponse:
+        """List all available displays."""
+        raise NotImplementedError("Subclasses must implement find_displays")
 
-    @abstractmethod
-    def retrieve_active_display(self) -> Display:
-        """
-        Retrieve the currently active display/screen.
-
-        Returns:
-            Display: The currently active display/screen.
-        """
-        raise NotImplementedError
+    def find_one_active_display(self) -> Display:
+        """Retrieve the currently active display."""
+        raise NotImplementedError("Subclasses must implement find_one_active_display")
 
     def set_display(self, display: int = 1) -> None:
         """
@@ -407,14 +399,9 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    def get_mouse_position(self) -> Coordinate:
-        """
-        Get the current mouse cursor position.
-
-        Returns:
-            The current mouse position data.
-        """
-        raise NotImplementedError
+    def find_mouse_position(self) -> Coordinate:
+        """Get the current mouse position."""
+        raise NotImplementedError("Subclasses must implement find_mouse_position")
 
     def set_mouse_position(self, x: int, y: int) -> None:
         """

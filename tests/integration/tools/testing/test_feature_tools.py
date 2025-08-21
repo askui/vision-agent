@@ -42,6 +42,16 @@ def delete_tool(tmp_path: Path) -> DeleteFeatureTool:
     return DeleteFeatureTool(tmp_path)
 
 
+def find_tool(tmp_path: Path) -> ListFeatureTool:
+    """Create a list feature tool for testing."""
+    return ListFeatureTool(base_dir=tmp_path)
+
+
+def find_one_tool(tmp_path: Path) -> RetrieveFeatureTool:
+    """Create a retrieve feature tool for testing."""
+    return RetrieveFeatureTool(base_dir=tmp_path)
+
+
 def _create_params(
     name: str = "Test Feature",
     description: str | None = "desc",

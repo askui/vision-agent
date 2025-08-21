@@ -9,6 +9,7 @@ import pytest
 
 from askui.chat.api.messages.service import MessageCreateRequest, MessageService
 from askui.chat.api.models import ThreadId
+from askui.chat.api.repositories.file_repositories import FileMessageRepository
 
 
 @pytest.fixture
@@ -21,7 +22,8 @@ def temp_base_dir() -> Generator[Path, None, None]:
 @pytest.fixture
 def message_service(temp_base_dir: Path) -> MessageService:
     """Create a MessageService instance with temporary storage."""
-    return MessageService(temp_base_dir)
+    repository = FileMessageRepository(temp_base_dir)
+    return MessageService(repository)
 
 
 @pytest.fixture
@@ -33,20 +35,21 @@ def thread_id() -> ThreadId:
 class TestMessageServiceJSONPersistence:
     """Test MessageService with JSON file persistence."""
 
-    def test_create_message_creates_individual_json_file(
-        self, message_service: MessageService, thread_id: ThreadId
+    @pytest.mark.asyncio
+    async def test_create_message_creates_individual_json_file(
+        self, message_service: MessageService, thread_id: ThreadId, temp_base_dir: Path
     ) -> None:
         """Test that creating a message creates an individual JSON file."""
         request = MessageCreateRequest(role="user", content="Hello, world!")
 
-        message = message_service.create(thread_id, request)
+        message = await message_service.create(thread_id, request)
 
         # Check that the message directory was created
-        messages_dir = message_service.get_thread_messages_dir(thread_id)
+        messages_dir = temp_base_dir / "threads" / thread_id / "messages"
         assert messages_dir.exists()
 
         # Check that the message file was created
-        message_file = message_service._get_message_path(thread_id, message.id)
+        message_file = messages_dir / f"{message.id}.json"
         assert message_file.exists()
 
         # Verify the file contains the correct JSON data
@@ -57,7 +60,8 @@ class TestMessageServiceJSONPersistence:
             assert data["id"] == message.id
             assert data["thread_id"] == thread_id
 
-    def test_list_messages_reads_from_json_files(
+    @pytest.mark.asyncio
+    async def test_list_messages_reads_from_json_files(
         self, message_service: MessageService, thread_id: ThreadId
     ) -> None:
         """Test that listing messages reads from individual JSON files."""
@@ -67,14 +71,15 @@ class TestMessageServiceJSONPersistence:
             request = MessageCreateRequest(
                 role="user" if i % 2 == 0 else "assistant", content=f"Message {i}"
             )
-            message = message_service.create(thread_id, request)
+            message = await message_service.create(thread_id, request)
             messages.append(message)
 
         # List messages
         from askui.utils.api_utils import ListQuery
 
         query = ListQuery(limit=10, order="asc")
-        response = message_service.list_(thread_id, query)
+        # Test listing messages
+        response = await message_service.find(thread_id, query)
 
         # Verify all messages were found
         assert len(response.data) == 3
@@ -83,32 +88,36 @@ class TestMessageServiceJSONPersistence:
         assert response.data[0].created_at <= response.data[1].created_at
         assert response.data[1].created_at <= response.data[2].created_at
 
-    def test_delete_message_removes_json_file(
-        self, message_service: MessageService, thread_id: ThreadId
+    @pytest.mark.asyncio
+    async def test_delete_message_removes_json_file(
+        self, message_service: MessageService, thread_id: ThreadId, temp_base_dir: Path
     ) -> None:
         """Test that deleting a message removes its JSON file."""
         request = MessageCreateRequest(role="user", content="Delete me")
 
-        message = message_service.create(thread_id, request)
-        message_file = message_service._get_message_path(thread_id, message.id)
+        message = await message_service.create(thread_id, request)
+        message_file = (
+            temp_base_dir / "threads" / thread_id / "messages" / f"{message.id}.json"
+        )
         assert message_file.exists()
 
         # Delete the message
-        message_service.delete(thread_id, message.id)
+        await message_service.delete(thread_id, message.id)
 
         # Verify the file was removed
         assert not message_file.exists()
 
-    def test_directory_structure_is_correct(
-        self, message_service: MessageService, thread_id: ThreadId
+    @pytest.mark.asyncio
+    async def test_directory_structure_is_correct(
+        self, message_service: MessageService, thread_id: ThreadId, temp_base_dir: Path
     ) -> None:
         """Test that the directory structure follows the expected pattern."""
         request = MessageCreateRequest(role="user", content="Test message")
 
-        message_service.create(thread_id, request)
+        await message_service.create(thread_id, request)
 
-        # Check directory structure - messages are stored in base_dir/messages/thread_id/
-        messages_dir = message_service.get_thread_messages_dir(thread_id)
+        # Check directory structure - messages are stored in base_dir/threads/thread_id/messages/
+        messages_dir = temp_base_dir / "threads" / thread_id / "messages"
 
         assert messages_dir.exists()
 

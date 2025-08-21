@@ -78,7 +78,7 @@ def get_mcp_client(
         McpClient: A MCP client.
     """
     mcp_config_service = McpConfigService(base_dir)
-    mcp_configs = mcp_config_service.list_(ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
+    mcp_configs = mcp_config_service.find(ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
     fast_mcp_config = build_fast_mcp_config(mcp_configs.data)
     return Client(fast_mcp_config) if fast_mcp_config.mcpServers else None
 
@@ -231,7 +231,7 @@ class Runner:
                 role=msg.role,
                 content=msg.content,
             )
-            for msg in self._msg_service.list_(
+            for msg in self._msg_service.find(
                 thread_id=self._run.thread_id,
                 query=ListQuery(limit=LIST_LIMIT_MAX),
             ).data

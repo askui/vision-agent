@@ -26,13 +26,15 @@ def create_tool(tmp_path: Path) -> CreateScenarioTool:
 
 
 @pytest.fixture
-def retrieve_tool(tmp_path: Path) -> RetrieveScenarioTool:
-    return RetrieveScenarioTool(tmp_path)
+def find_one_tool(tmp_path: Path) -> RetrieveScenarioTool:
+    """Create a retrieve scenario tool for testing."""
+    return RetrieveScenarioTool(base_dir=tmp_path)
 
 
 @pytest.fixture
-def list_tool(tmp_path: Path) -> ListScenarioTool:
-    return ListScenarioTool(tmp_path)
+def find_tool(tmp_path: Path) -> ListScenarioTool:
+    """Create a list scenario tool for testing."""
+    return ListScenarioTool(base_dir=tmp_path)
 
 
 @pytest.fixture
@@ -140,11 +142,11 @@ def test_create_scenario_multiple_steps(
 
 def test_retrieve_scenario(
     create_tool: CreateScenarioTool,
-    retrieve_tool: RetrieveScenarioTool,
+    find_one_tool: RetrieveScenarioTool,
     feature: Feature,
 ) -> None:
     scenario = create_tool(_create_params(feature.id))
-    retrieved = retrieve_tool(scenario.id)
+    retrieved = find_one_tool(scenario.id)
     assert retrieved.model_dump() == scenario.model_dump()
 
 
@@ -152,58 +154,58 @@ def test_retrieve_scenario(
     "invalid_id", ["", "notascenid", "scen_", "123", "scen-123", "scen_!@#"]
 )
 def test_retrieve_invalid_id(
-    retrieve_tool: RetrieveScenarioTool, invalid_id: str
+    find_one_tool: RetrieveScenarioTool, invalid_id: str
 ) -> None:
     with pytest.raises(ValueError):
-        retrieve_tool(invalid_id)
+        find_one_tool(invalid_id)
 
 
 def test_retrieve_deleted_id(
     create_tool: CreateScenarioTool,
-    retrieve_tool: RetrieveScenarioTool,
+    find_one_tool: RetrieveScenarioTool,
     delete_tool: DeleteScenarioTool,
     feature: Feature,
 ) -> None:
     scenario = create_tool(_create_params(feature.id))
     delete_tool(scenario.id)
     with pytest.raises(NotFoundError):
-        retrieve_tool(scenario.id)
+        find_one_tool(scenario.id)
 
 
-def test_list_scenarios_empty(list_tool: ListScenarioTool) -> None:
-    result = list_tool(ScenarioListQuery())
+def test_list_scenarios_empty(find_tool: ListScenarioTool) -> None:
+    result = find_tool(ScenarioListQuery())
     assert result.object == "list"
     assert len(result.data) == 0
 
 
 def test_list_scenarios_multiple(
-    create_tool: CreateScenarioTool, list_tool: ListScenarioTool, feature: Feature
+    create_tool: CreateScenarioTool, find_tool: ListScenarioTool, feature: Feature
 ) -> None:
     s1 = create_tool(_create_params(feature.id, name="A", tags=["x"]))
     s2 = create_tool(_create_params(feature.id, name="B", tags=["y"]))
-    result = list_tool(ScenarioListQuery())
+    result = find_tool(ScenarioListQuery())
     ids = [s.id for s in result.data]
     assert s1.id in ids and s2.id in ids
 
 
 def test_list_scenarios_filter_by_tag(
-    create_tool: CreateScenarioTool, list_tool: ListScenarioTool, feature: Feature
+    create_tool: CreateScenarioTool, find_tool: ListScenarioTool, feature: Feature
 ) -> None:
     create_tool(_create_params(feature.id, name="A", tags=["x"]))
     s2 = create_tool(_create_params(feature.id, name="B", tags=["y"]))
-    result = list_tool(ScenarioListQuery(tags=["y"]))
+    result = find_tool(ScenarioListQuery(tags=["y"]))
     assert all("y" in s.tags for s in result.data)
     assert any(s.id == s2.id for s in result.data)
 
 
 def test_list_scenarios_filter_by_feature(
-    create_tool: CreateScenarioTool, list_tool: ListScenarioTool, feature: Feature
+    create_tool: CreateScenarioTool, find_tool: ListScenarioTool, feature: Feature
 ) -> None:
     s1 = create_tool(_create_params(feature.id, name="A"))
     # Create a scenario for a different feature
     other_feature_id = "feat_other"
     create_tool(_create_params(other_feature_id, name="B"))
-    result = list_tool(ScenarioListQuery(feature=feature.id))
+    result = find_tool(ScenarioListQuery(feature=feature.id))
     assert all(s.feature == feature.id for s in result.data)
     assert any(s.id == s1.id for s in result.data)
 
@@ -248,13 +250,13 @@ def test_modify_scenario_noop(
 def test_delete_scenario(
     create_tool: CreateScenarioTool,
     delete_tool: DeleteScenarioTool,
-    retrieve_tool: RetrieveScenarioTool,
+    find_one_tool: RetrieveScenarioTool,
     feature: Feature,
 ) -> None:
     scenario = create_tool(_create_params(feature.id))
     delete_tool(scenario.id)
     with pytest.raises(NotFoundError):
-        retrieve_tool(scenario.id)
+        find_one_tool(scenario.id)
 
 
 def test_delete_scenario_nonexistent(delete_tool: DeleteScenarioTool) -> None:

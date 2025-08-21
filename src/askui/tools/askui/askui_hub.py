@@ -111,25 +111,19 @@ class AskUIHub:
         self._schedules_api = SchedulesApi(api_client)
         self._tools_api = ToolsApi(api_client)
 
-    def retrieve_agent(self, agent_id: UUID | str) -> Agent:
-        response = self._agents_api.list_agents_api_v1_agents_get(
-            agent_id=[str(agent_id)]
-        )
-        if not response.data:
-            error_msg = f"Agent {agent_id} not found"
-            raise ValueError(error_msg)
-        return response.data[0]
+    def find_one_agent(self, agent_id: UUID | str) -> Agent:
+        """Retrieve an agent by ID."""
+        if isinstance(agent_id, str):
+            agent_id = UUID(agent_id)
+        return self._agents[agent_id]
 
-    def retrieve_agent_execution(
+    def find_one_agent_execution(
         self, agent_execution_id: UUID | str
     ) -> AgentExecution:
-        response = self._agent_executions_api.list_agent_executions_api_v1_agent_executions_get(  # noqa: E501
-            agent_execution_id=[str(agent_execution_id)]
-        )
-        if not response.data:
-            error_msg = f"Agent execution {agent_execution_id} not found"
-            raise ValueError(error_msg)
-        return response.data[0]
+        """Retrieve an agent execution by ID."""
+        if isinstance(agent_execution_id, str):
+            agent_execution_id = UUID(agent_execution_id)
+        return self._agent_executions[agent_execution_id]
 
     def update_agent_execution(
         self,

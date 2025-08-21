@@ -16,7 +16,7 @@ from playwright.sync_api import (
 )
 from typing_extensions import override
 
-from ..agent_os import AgentOs, Display, DisplaySize, InputEvent, ModifierKey, PcKey
+from ..agent_os import AgentOs, Display, InputEvent, ModifierKey, PcKey
 
 
 class PlaywrightAgentOs(AgentOs):
@@ -357,25 +357,14 @@ class PlaywrightAgentOs(AgentOs):
                     self._page.keyboard.up(self._convert_key(modifier))
 
     @override
-    def retrieve_active_display(self) -> Display:
-        """
-        Retrieve the currently active display/screen.
-        """
-        if not self._page:
-            error_msg = "No active page. Call connect() first."
-            raise RuntimeError(error_msg)
-
-        viewport_size = self._page.viewport_size
-        if viewport_size is None:
-            error_msg = "No viewport size."
-            raise RuntimeError(error_msg)
-
+    def find_one_active_display(self) -> Display:
+        """Retrieve the currently active display."""
         return Display(
             id=1,
-            size=DisplaySize(
-                width=viewport_size["width"],
-                height=viewport_size["height"],
-            ),
+            name="Playwright Display",
+            width=self._browser.contexts[0].pages[0].viewport["width"],
+            height=self._browser.contexts[0].pages[0].viewport["height"],
+            is_primary=True,
         )
 
     def _convert_key(self, key: PcKey | ModifierKey) -> str:
@@ -457,28 +446,16 @@ class PlaywrightAgentOs(AgentOs):
 
         self._page.go_forward()
 
-    def get_page_title(self) -> str:
-        """
-        Get the title of the current page.
-
-        Returns:
-            str: The page title.
-        """
+    def find_page_title(self) -> str:
+        """Get the current page title."""
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
-
         return self._page.title()
 
-    def get_page_url(self) -> str:
-        """
-        Get the URL of the current page.
-
-        Returns:
-            str: The current page URL.
-        """
+    def find_page_url(self) -> str:
+        """Get the current page URL."""
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
-
         return self._page.url

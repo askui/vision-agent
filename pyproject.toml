@@ -219,6 +219,7 @@ chat = [
     "askui[android,pynput,web]",
     "uvicorn>=0.34.3",
     "anyio>=4.10.0",
+    "aiofiles>=24.1.0",
 ]
 pynput = [
     "mss>=10.0.0",

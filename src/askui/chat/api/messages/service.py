@@ -1,18 +1,12 @@
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, ValidationError
+from pydantic import Field
 
 from askui.chat.api.models import AssistantId, MessageId, RunId, ThreadId
+from askui.chat.api.repositories.interfaces import MessageRepository
 from askui.models.shared.agent_message_param import MessageParam
-from askui.utils.api_utils import (
-    ConflictError,
-    ListQuery,
-    ListResponse,
-    NotFoundError,
-    list_resource_paths,
-)
+from askui.utils.api_utils import ListQuery, ListResponse
 from askui.utils.datetime_utils import UnixDatetime
 from askui.utils.id_utils import generate_time_ordered_id
 
@@ -37,75 +31,34 @@ class MessageCreateRequest(MessageBase):
 
 
 class MessageService:
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(self, repository: MessageRepository) -> None:
         """Initialize message service.
 
         Args:
-            base_dir: Base directory to store message data
+            repository: Message repository for data persistence
         """
-        self._base_dir = base_dir
-        self._base_messages_dir = base_dir / "messages"
+        self._repository = repository
 
-    def create(self, thread_id: ThreadId, request: MessageCreateRequest) -> Message:
+    async def create(
+        self, thread_id: ThreadId, request: MessageCreateRequest
+    ) -> Message:
         new_message = Message(
             **request.model_dump(),
             thread_id=thread_id,
         )
-        self._save(new_message, new=True)
-        return new_message
+        return await self._repository.create(new_message)
 
-    def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
-        message_file = self._get_message_path(thread_id, message_id)
-        message_file.unlink()
+    async def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
+        await self._repository.delete(message_id, thread_id)
 
-    def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
-        messages_dir = self.get_thread_messages_dir(thread_id)
-        if not messages_dir.exists():
-            return ListResponse(data=[])
+    async def find(
+        self, thread_id: ThreadId, query: ListQuery
+    ) -> ListResponse[Message]:
+        """List messages for a thread."""
+        return await self._repository.find(query=query, thread_id=thread_id)
 
-        message_paths = list_resource_paths(messages_dir, query)
-        messages: list[Message] = []
-        for message_file in message_paths:
-            try:
-                msg = Message.model_validate_json(
-                    message_file.read_text(encoding="utf-8")
-                )
-                messages.append(msg)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(messages) > query.limit
-        messages = messages[: query.limit]
-        return ListResponse(
-            data=messages,
-            first_id=messages[0].id if messages else None,
-            last_id=messages[-1].id if messages else None,
-            has_more=has_more,
+    async def find_one(self, thread_id: ThreadId, message_id: MessageId) -> Message:
+        """Retrieve a message by ID."""
+        return await self._repository.find_one(
+            message_id=message_id, thread_id=thread_id
         )
-
-    def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
-        message_file = self._get_message_path(thread_id, message_id)
-        return Message.model_validate_json(message_file.read_text(encoding="utf-8"))
-
-    def get_thread_messages_dir(self, thread_id: ThreadId) -> Path:
-        """Get the directory path for a specific message."""
-        return self._base_messages_dir / thread_id
-
-    def _get_message_path(
-        self, thread_id: ThreadId, message_id: MessageId, new: bool = False
-    ) -> Path:
-        """Get the file path for a specific message."""
-        message_path = self.get_thread_messages_dir(thread_id) / f"{message_id}.json"
-        if new and message_path.exists():
-            error_msg = f"Message {message_id} already exists in thread {thread_id}"
-            raise ConflictError(error_msg)
-        if not new and not message_path.exists():
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg)
-        return message_path
-
-    def _save(self, message: Message, new: bool = False) -> None:
-        """Save a single message to its own JSON file."""
-        messages_dir = self.get_thread_messages_dir(message.thread_id)
-        messages_dir.mkdir(parents=True, exist_ok=True)
-        message_file = self._get_message_path(message.thread_id, message.id, new=new)
-        message_file.write_text(message.model_dump_json(), encoding="utf-8")

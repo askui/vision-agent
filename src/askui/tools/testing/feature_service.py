@@ -1,14 +1,6 @@
 from pathlib import Path
 
-from pydantic import ValidationError
-
-from askui.utils.api_utils import (
-    ConflictError,
-    ListResponse,
-    NotFoundError,
-    list_resource_paths,
-)
-from askui.utils.not_given import NOT_GIVEN
+from askui.utils.api_utils import ConflictError, ListResponse, NotFoundError
 
 from .feature_models import (
     Feature,
@@ -32,36 +24,65 @@ class FeatureService:
         self._features_dir = base_dir / "features"
         self._features_dir.mkdir(parents=True, exist_ok=True)
 
-    def list_(
-        self,
-        query: FeatureListQuery,
-    ) -> ListResponse[Feature]:
-        feature_paths = list_resource_paths(self._features_dir, query)
+    def find(self, query: FeatureListQuery) -> ListResponse[Feature]:
+        """List all available features.
+
+        Args:
+            query (FeatureListQuery): Query parameters for listing features
+
+        Returns:
+            ListResponse[Feature]: ListResponse containing features sorted by
+                creation date
+        """
+        if not self._features_dir.exists():
+            return ListResponse(data=[])
+
+        feature_files = list(self._features_dir.glob("*.json"))
         features: list[Feature] = []
-        for f in feature_paths:
-            try:
-                feature = Feature.model_validate_json(f.read_text())
-                if query.tags == NOT_GIVEN or any(
-                    tag in feature.tags for tag in query.tags
-                ):
-                    features.append(feature)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(features) > query.limit
+        for f in feature_files:
+            with f.open("r", encoding="utf-8") as file:
+                features.append(Feature.model_validate_json(file.read()))
+
+        # Sort by creation date
+        features = sorted(
+            features, key=lambda f: f.created_at, reverse=(query.order == "desc")
+        )
+
+        # Apply before/after filters
+        if query.after:
+            features = [f for f in features if f.id > query.after]
+        if query.before:
+            features = [f for f in features if f.id < query.before]
+
+        # Apply limit
         features = features[: query.limit]
+
         return ListResponse(
             data=features,
             first_id=features[0].id if features else None,
             last_id=features[-1].id if features else None,
-            has_more=has_more,
+            has_more=len(feature_files) > query.limit,
         )
 
-    def retrieve(self, feature_id: FeatureId) -> Feature:
+    def find_one(self, feature_id: FeatureId) -> Feature:
+        """Retrieve a feature by ID.
+
+        Args:
+            feature_id: ID of feature to retrieve
+
+        Returns:
+            Feature object
+
+        Raises:
+            FileNotFoundError: If feature doesn't exist
+        """
         feature_file = self._features_dir / f"{feature_id}.json"
         if not feature_file.exists():
             error_msg = f"Feature {feature_id} not found"
-            raise NotFoundError(error_msg)
-        return Feature.model_validate_json(feature_file.read_text())
+            raise FileNotFoundError(error_msg)
+
+        with feature_file.open("r", encoding="utf-8") as f:
+            return Feature.model_validate_json(f.read())
 
     def create(self, params: FeatureCreateParams) -> Feature:
         feature = Feature.create(params)
@@ -73,7 +94,7 @@ class FeatureService:
         return feature
 
     def modify(self, feature_id: FeatureId, params: FeatureModifyParams) -> Feature:
-        feature = self.retrieve(feature_id)
+        feature = self.find_one(feature_id)
         modified = feature.modify(params)
         feature_file = self._features_dir / f"{feature_id}.json"
         feature_file.write_text(modified.model_dump_json())

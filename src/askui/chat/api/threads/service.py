@@ -1,12 +1,11 @@
-import shutil
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from askui.chat.api.messages.service import MessageCreateRequest, MessageService
 from askui.chat.api.models import DoNotPatch, ThreadId
+from askui.chat.api.repositories.interfaces import ThreadRepository
 from askui.utils.api_utils import ListQuery, ListResponse
 from askui.utils.datetime_utils import UnixDatetime
 from askui.utils.id_utils import generate_time_ordered_id
@@ -37,124 +36,49 @@ class ThreadService:
 
     def __init__(
         self,
-        base_dir: Path,
+        repository: ThreadRepository,
         message_service: MessageService,
     ) -> None:
         """Initialize thread service.
 
         Args:
-            base_dir: Base directory to store thread data
+            repository: Thread repository for data persistence
+            message_service: Message service for creating initial messages
         """
-        self._base_dir = base_dir
-        self._threads_dir = base_dir / "threads"
+        self._repository = repository
         self._message_service = message_service
 
-    def create(self, request: ThreadCreateRequest) -> Thread:
-        """Create a new thread.
+    async def find(self, query: ListQuery) -> ListResponse[Thread]:
+        """List threads."""
+        return await self._repository.find(query=query)
 
-        Returns:
-            Created thread object
-        """
-        thread = Thread(name=request.name)
-        self._threads_dir.mkdir(parents=True, exist_ok=True)
-        thread_file = self._threads_dir / f"{thread.id}.json"
-        thread_file.write_text(thread.model_dump_json(), encoding="utf-8")
-        if request.messages:
-            for message in request.messages:
-                self._message_service.create(
-                    thread_id=thread.id,
-                    request=message,
-                )
-        return thread
-
-    def list_(self, query: ListQuery) -> ListResponse[Thread]:
-        """List all available threads.
-
-        Args:
-            query (ListQuery): Query parameters for listing threads
-
-        Returns:
-            ListResponse[Thread]: ListResponse containing threads sorted by creation
-                date
-        """
-        if not self._threads_dir.exists():
-            return ListResponse(data=[])
-
-        thread_files = list(self._threads_dir.glob("*.json"))
-        threads: list[Thread] = []
-        for f in thread_files:
-            thread = Thread.model_validate_json(f.read_text(encoding="utf-8"))
-            threads.append(thread)
-
-        # Sort by creation date
-        threads = sorted(
-            threads, key=lambda t: t.created_at, reverse=(query.order == "desc")
+    async def create(self, request: CreateThreadRequest) -> Thread:
+        """Create a new thread."""
+        thread = Thread(
+            title=request.title,
+            metadata=request.metadata,
         )
+        return await self._repository.create(thread)
 
-        # Apply before/after filters
-        if query.after:
-            threads = [t for t in threads if t.id > query.after]
-        if query.before:
-            threads = [t for t in threads if t.id < query.before]
+    async def find_one(self, thread_id: ThreadId) -> Thread:
+        """Retrieve a thread by ID."""
+        return await self._repository.find_one(thread_id=thread_id)
 
-        # Apply limit
-        threads = threads[: query.limit]
+    async def delete(self, thread_id: ThreadId) -> None:
+        """Delete a thread and its associated data."""
+        thread = await self.find_one(thread_id=thread_id)
+        await self._repository.delete(thread_id=thread_id)
+        await self._message_service.delete_all(thread_id=thread_id)
+        await self._run_service.delete_all(thread_id=thread_id)
 
-        return ListResponse(
-            data=threads,
-            first_id=threads[0].id if threads else None,
-            last_id=threads[-1].id if threads else None,
-            has_more=len(thread_files) > query.limit,
-        )
-
-    def retrieve(self, thread_id: ThreadId) -> Thread:
-        """Retrieve a thread by ID.
-
-        Args:
-            thread_id: ID of thread to retrieve
-
-        Returns:
-            Thread object
-
-        Raises:
-            FileNotFoundError: If thread doesn't exist
-        """
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-        return Thread.model_validate_json(thread_file.read_text(encoding="utf-8"))
-
-    def delete(self, thread_id: ThreadId) -> None:
-        """Delete a thread and all its associated files.
-
-        Args:
-            thread_id (ThreadId): ID of thread to delete
-
-        Raises:
-            FileNotFoundError: If thread doesn't exist
-        """
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-
-        messages_dir = self._message_service.get_thread_messages_dir(thread_id)
-        if messages_dir.exists():
-            shutil.rmtree(messages_dir)
-
-        thread_file.unlink()
-
-    def modify(self, thread_id: ThreadId, request: ThreadModifyRequest) -> Thread:
+    async def modify(self, thread_id: ThreadId, request: ThreadModifyRequest) -> Thread:
         """Modify a thread.
 
         Args:
             thread_id (ThreadId): ID of thread to modify
             request (ThreadModifyRequest): Request containing the new name
         """
-        thread = self.retrieve(thread_id)
+        thread = await self.find_one(thread_id)
         if not isinstance(request.name, DoNotPatch):
             thread.name = request.name
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        thread_file.write_text(thread.model_dump_json(), encoding="utf-8")
-        return thread
+        return await self._repository.update(thread)

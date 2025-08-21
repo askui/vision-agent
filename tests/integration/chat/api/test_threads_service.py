@@ -7,6 +7,10 @@ from typing import Generator
 import pytest
 
 from askui.chat.api.messages.service import MessageCreateRequest, MessageService
+from askui.chat.api.repositories.file_repositories import (
+    FileMessageRepository,
+    FileThreadRepository,
+)
 from askui.chat.api.threads.service import ThreadCreateRequest, ThreadService
 
 
@@ -20,7 +24,8 @@ def temp_base_dir() -> Generator[Path, None, None]:
 @pytest.fixture
 def message_service(temp_base_dir: Path) -> MessageService:
     """Create a MessageService instance with temporary storage."""
-    return MessageService(temp_base_dir)
+    repository = FileMessageRepository(temp_base_dir)
+    return MessageService(repository)
 
 
 @pytest.fixture
@@ -28,32 +33,33 @@ def thread_service(
     temp_base_dir: Path, message_service: MessageService
 ) -> ThreadService:
     """Create a ThreadService instance with temporary storage."""
-    return ThreadService(temp_base_dir, message_service)
+    repository = FileThreadRepository(temp_base_dir)
+    return ThreadService(repository, message_service)
 
 
 class TestThreadServiceJSONPersistence:
     """Test ThreadService with JSON file persistence."""
 
-    def test_create_thread_creates_directory_structure(
-        self, thread_service: ThreadService
+    @pytest.mark.asyncio
+    async def test_create_thread_creates_directory_structure(
+        self, thread_service: ThreadService, temp_base_dir: Path
     ) -> None:
         """Test that creating a thread creates the proper directory structure."""
         request = ThreadCreateRequest(name="Test Thread")
 
-        thread = thread_service.create(request)
+        thread = await thread_service.create(request)
 
         # Check that thread metadata file was created
-        thread_file = thread_service._base_dir / "threads" / f"{thread.id}.json"
+        thread_file = temp_base_dir / "threads" / f"{thread.id}.json"
         assert thread_file.exists()
 
         # Check that messages directory was created (by creating a message)
-        # The ThreadService doesn't create the messages directory until a message is added
+        # Create a message separately to verify the directory structure
+        message_service = thread_service._message_service
         message_request = MessageCreateRequest(role="user", content="Test message")
-        thread_service._message_service.create(thread.id, message_request)
+        await message_service.create(thread.id, message_request)
 
-        thread_messages_dir = thread_service._message_service.get_thread_messages_dir(
-            thread.id
-        )
+        thread_messages_dir = temp_base_dir / "threads" / thread.id / "messages"
         assert thread_messages_dir.exists()
 
         # Verify thread metadata content
@@ -64,7 +70,8 @@ class TestThreadServiceJSONPersistence:
             assert data["name"] == "Test Thread"
             assert data["id"] == thread.id
 
-    def test_create_thread_with_messages(self, thread_service: ThreadService) -> None:
+    @pytest.mark.asyncio
+    async def test_create_thread_with_messages(self, thread_service: ThreadService, temp_base_dir: Path) -> None:
         """Test that creating a thread with messages works correctly."""
         messages = [
             MessageCreateRequest(role="user", content="Hello"),
@@ -72,12 +79,10 @@ class TestThreadServiceJSONPersistence:
         ]
         request = ThreadCreateRequest(name="Thread with Messages", messages=messages)
 
-        thread = thread_service.create(request)
+        thread = await thread_service.create(request)
 
         # Check that messages were created
-        thread_messages_dir = thread_service._message_service.get_thread_messages_dir(
-            thread.id
-        )
+        thread_messages_dir = temp_base_dir / "threads" / thread.id / "messages"
         json_files = list(thread_messages_dir.glob("*.json"))
         assert len(json_files) == 2
 
@@ -90,29 +95,29 @@ class TestThreadServiceJSONPersistence:
                 assert data["thread_id"] == thread.id
                 assert data["role"] in ["user", "assistant"]
 
-    def test_delete_thread_removes_all_files(
-        self, thread_service: ThreadService
+    @pytest.mark.asyncio
+    async def test_delete_thread_removes_all_files(
+        self, thread_service: ThreadService, temp_base_dir: Path
     ) -> None:
         """Test that deleting a thread removes all associated files."""
         request = ThreadCreateRequest(name="Thread to Delete")
-        thread = thread_service.create(request)
+        thread = await thread_service.create(request)
 
         # Add a message
+        message_service = thread_service._message_service
         message_request = MessageCreateRequest(role="user", content="Test message")
-        thread_service._message_service.create(thread.id, message_request)
+        await message_service.create(thread.id, message_request)
 
         # Verify files exist
-        thread_file = thread_service._base_dir / "threads" / f"{thread.id}.json"
+        thread_file = temp_base_dir / "threads" / f"{thread.id}.json"
         assert thread_file.exists()
 
         # The thread directory itself doesn't exist, only the messages directory
-        messages_dir = thread_service._message_service.get_thread_messages_dir(
-            thread.id
-        )
+        messages_dir = temp_base_dir / "threads" / thread.id / "messages"
         assert messages_dir.exists()
 
         # Delete thread
-        thread_service.delete(thread.id)
+        await thread_service.delete(thread.id)
 
         # Verify all files were removed
         assert not thread_file.exists()

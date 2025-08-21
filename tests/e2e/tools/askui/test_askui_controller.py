@@ -129,17 +129,33 @@ def test_get_display_information(controller_client: AskUiControllerClient) -> No
 def test_get_process_list(controller_client: AskUiControllerClient) -> None:
     """Test retrieving running processes"""
     with controller_client:
-        processes = controller_client.get_process_list()
-        assert processes is not None
+        # Test process listing
+        processes = controller_client.find_processes()
+        assert len(processes) > 0
+        assert all(hasattr(p, "id") for p in processes)
+        assert all(hasattr(p, "name") for p in processes)
 
-        processes_extended = controller_client.get_process_list(get_extended_info=True)
-        assert processes_extended is not None
+        # Test automation target listing
+        targets = controller_client.find_automation_targets()
+        assert len(targets) >= 0  # Can be empty
+        if targets:
+            assert all(hasattr(t, "id") for t in targets)
+            assert all(hasattr(t, "name") for t in targets)
+
+        # Test action counting
+        count = controller_client.find_action_count()
+        assert hasattr(count, "actionCount")
+
+        # Test mouse position
+        position = controller_client.find_mouse_position()
+        assert hasattr(position, "x")
+        assert hasattr(position, "y")
 
 
 def test_get_automation_target_list(controller_client: AskUiControllerClient) -> None:
     """Test retrieving automation targets"""
     with controller_client:
-        targets = controller_client.get_automation_target_list()
+        targets = controller_client.find_automation_targets()
         assert targets is not None
 
 
@@ -170,7 +186,7 @@ def test_run_command(controller_client: AskUiControllerClient) -> None:
 def test_get_action_count(controller_client: AskUiControllerClient) -> None:
     """Test getting count of batched actions"""
     with controller_client:
-        count = controller_client.get_action_count()
+        count = controller_client.find_action_count()
         assert count is not None
 
 
@@ -197,7 +213,7 @@ def test_set_mouse_position(controller_client: AskUiControllerClient) -> None:
 def test_get_mouse_position(controller_client: AskUiControllerClient) -> None:
     """Test getting current mouse coordinates"""
     with controller_client:
-        position = controller_client.get_mouse_position()
+        position = controller_client.find_mouse_position()
         assert position is not None
         assert hasattr(position, "x")
         assert hasattr(position, "y")

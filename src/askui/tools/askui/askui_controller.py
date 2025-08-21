@@ -7,7 +7,6 @@ import uuid
 from typing import Literal, Type
 
 import grpc
-from google.protobuf.json_format import MessageToDict
 from PIL import Image
 from typing_extensions import Self, override
 
@@ -29,16 +28,15 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
-    RenderObjectStyle,
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (
+    RenderObjectStyle,  # noqa: E501
 )
-from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
-    AskuiAgentosSendResponseSchema,
+from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (
+    AskuiAgentosSendResponseSchema,  # noqa: E501
 )
 from askui.tools.askui.command_helpers import (
     create_clear_render_objects_command,
     create_delete_render_object_command,
-    create_get_mouse_position_command,
     create_image_command,
     create_line_command,
     create_quad_command,
@@ -634,127 +632,86 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
-    @override
-    def retrieve_active_display(self) -> Display:
-        """
-        Retrieve the currently active display/screen.
-
-        Returns:
-            Display: The currently active display/screen.
-        """
-        self._reporter.add_message("AgentOS", "retrieve_active_display()")
-        displays_list_response = self.list_displays()
-        for display in displays_list_response.data:
-            if display.id == self._display:
-                return display
-        error_msg = f"Display {self._display} not found"
-        raise ValueError(error_msg)
+    def find_one_active_display(self) -> Display:
+        """Retrieve the currently active display."""
+        response = self._stub.GetDisplayInformation(
+            controller_v1_pbs.Request_GetDisplayInformation()
+        )
+        return Display(
+            id=response.displayID,
+            name=response.displayName,
+            width=response.width,
+            height=response.height,
+            is_primary=response.isPrimary,
+        )
 
     @telemetry.record_call()
-    @override
-    def list_displays(
-        self,
-    ) -> DisplaysListResponse:
-        """
-        List all available displays including virtual screens.
-
-        Returns:
-            DisplaysListResponse
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
+    def find_displays(self) -> DisplaysListResponse:
+        """List all available displays."""
+        response = self._stub.GetDisplayInformation(
+            controller_v1_pbs.Request_GetDisplayInformation()
         )
-
-        self._reporter.add_message("AgentOS", "list_displays()")
-
-        response: controller_v1_pbs.Response_GetDisplayInformation = (
-            self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+        display = Display(
+            id=response.displayID,
+            name=response.displayName,
+            width=response.width,
+            height=response.height,
+            is_primary=response.isPrimary,
         )
+        return DisplaysListResponse(displays=[display])
 
-        response_dict = MessageToDict(
-            response,
-            preserving_proto_field_name=True,
-        )
+    def find_processes(self) -> list[Process]:
+        """List all running processes."""
+        response = self._stub.GetProcessList(controller_v1_pbs.Request_Void())
+        processes = []
+        for proc in response.processes:
+            processes.append(
+                Process(
+                    id=proc.processID,
+                    name=proc.processName,
+                    window_count=proc.windowCount,
+                )
+            )
+        return processes
 
-        return DisplaysListResponse.model_validate(response_dict)
+    def find_windows(self) -> list[Window]:
+        """List all windows."""
+        response = self._stub.GetWindowList(controller_v1_pbs.Request_Void())
+        windows = []
+        for win in response.windows:
+            windows.append(
+                Window(
+                    id=win.windowID,
+                    title=win.windowTitle,
+                    process_id=win.processID,
+                    process_name=win.processName,
+                    is_visible=win.isVisible,
+                    is_minimized=win.isMinimized,
+                    is_maximized=win.isMaximized,
+                    bounds=Bounds(
+                        x=win.bounds.x,
+                        y=win.bounds.y,
+                        width=win.bounds.width,
+                        height=win.bounds.height,
+                    ),
+                )
+            )
+        return windows
 
-    @telemetry.record_call()
-    def get_process_list(
-        self, get_extended_info: bool = False
-    ) -> controller_v1_pbs.Response_GetProcessList:
-        """
-        Get a list of running processes.
-
-        Args:
-            get_extended_info (bool, optional): Whether to include
-                extended process information.
-                Defaults to `False`.
-
-        Returns:
-            controller_v1_pbs.Response_GetProcessList: Process list response containing:
-                - processes: List of ProcessInfo objects
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", f"get_process_list({get_extended_info})")
-
-        response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
-            controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
-        )
-
-        return response
-
-    @telemetry.record_call()
-    def get_window_list(
-        self, process_id: int
-    ) -> controller_v1_pbs.Response_GetWindowList:
-        """
-        Get a list of windows for a specific process.
-
-        Args:
-            process_id (int): The ID of the process to get windows for.
-
-        Returns:
-            controller_v1_pbs.Response_GetWindowList: Window list response containing:
-                - windows: List of WindowInfo objects with ID and name
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", f"get_window_list({process_id})")
-
-        response: controller_v1_pbs.Response_GetWindowList = self._stub.GetWindowList(
-            controller_v1_pbs.Request_GetWindowList(processID=process_id)
-        )
-
-        return response
-
-    @telemetry.record_call()
-    def get_automation_target_list(
-        self,
-    ) -> controller_v1_pbs.Response_GetAutomationTargetList:
-        """
-        Get a list of available automation targets.
-
-        Returns:
-            controller_v1_pbs.Response_GetAutomationTargetList:
-                Automation target list response:
-                - targets: List of AutomationTarget objects
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", "get_automation_target_list()")
-
-        response: controller_v1_pbs.Response_GetAutomationTargetList = (
-            self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
-        )
-
-        return response
+    def find_automation_targets(self) -> list[AutomationTarget]:
+        """List all automation targets."""
+        response = self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+        targets = []
+        for target in response.targets:
+            targets.append(
+                AutomationTarget(
+                    id=target.targetID,
+                    name=target.targetName,
+                    type=target.targetType,
+                    is_available=target.isAvailable,
+                )
+            )
+        return targets
 
     @telemetry.record_call()
     def set_mouse_delay(self, delay_ms: int) -> None:
@@ -909,53 +866,17 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_StopBatchRun(sessionInfo=self._session_info)
         )
 
-    @telemetry.record_call()
-    def get_action_count(self) -> controller_v1_pbs.Response_GetActionCount:
-        """
-        Get the count of recorded or batched actions.
-
-        Returns:
-            controller_v1_pbs.Response_GetActionCount: Response
-                containing the action count.
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", "get_action_count()")
-
-        response: controller_v1_pbs.Response_GetActionCount = self._stub.GetActionCount(
-            controller_v1_pbs.Request_GetActionCount(sessionInfo=self._session_info)
-        )
-
+    def find_action_count(self) -> controller_v1_pbs.Response_GetActionCount:
+        """Get the count of actions."""
+        response = self._stub.GetActionCount(controller_v1_pbs.Request_Void())
         return response
 
-    @telemetry.record_call()
-    def get_action(self, action_index: int) -> controller_v1_pbs.Response_GetAction:
-        """
-        Get a specific action by its index.
-
-        Args:
-            action_index (int): The index of the action to retrieve.
-
-        Returns:
-            controller_v1_pbs.Response_GetAction: Action information containing:
-                - actionID: The action ID
-                - actionClassID: The action class ID
-                - actionParameters: The action parameters
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-
-        self._reporter.add_message("AgentOS", f"get_action({action_index})")
-
-        response: controller_v1_pbs.Response_GetAction = self._stub.GetAction(
-            controller_v1_pbs.Request_GetAction(
-                sessionInfo=self._session_info, actionIndex=action_index
-            )
-        )
-
+    def find_one_action(
+        self, action_index: int
+    ) -> controller_v1_pbs.Response_GetAction:
+        """Get a specific action by index."""
+        request = controller_v1_pbs.Request_GetAction(actionIndex=action_index)
+        response = self._stub.GetAction(request)
         return response
 
     @telemetry.record_call()
@@ -1017,26 +938,10 @@ class AskUiControllerClient(AgentOs):
         return response
 
     @telemetry.record_call()
-    def get_mouse_position(self) -> Coordinate:
-        """
-        Get the mouse cursor position
-
-        Returns:
-            Coordinate: Response containing the result of the mouse position change.
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-        req_json = create_get_mouse_position_command(
-            self._session_guid
-        ).model_dump_json(exclude_unset=True)
-        self._reporter.add_message("AgentOS", "get_mouse_position()")
-        res = self._send_message(req_json)
-        parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
-        return Coordinate(
-            x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
-            y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
-        )
+    def find_mouse_position(self) -> Coordinate:
+        """Get the current mouse position."""
+        response = self._stub.GetMousePosition(controller_v1_pbs.Request_Void())
+        return Coordinate(x=response.x, y=response.y)
 
     @telemetry.record_call()
     def set_mouse_position(self, x: int, y: int) -> None:

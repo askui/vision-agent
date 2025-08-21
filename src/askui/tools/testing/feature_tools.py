@@ -60,7 +60,8 @@ class RetrieveFeatureTool(Tool):
     @override
     @validate_call
     def __call__(self, feature_id: FeatureId) -> Feature:
-        return self._service.retrieve(feature_id=feature_id)
+        """Retrieve a feature by ID."""
+        return self._service.find_one(feature_id=feature_id)
 
 
 class ListFeatureToolInput(BaseModel):
@@ -68,22 +69,16 @@ class ListFeatureToolInput(BaseModel):
 
 
 class ListFeatureTool(Tool):
+    """Tool for listing features."""
+
     def __init__(self, base_dir: Path) -> None:
-        super().__init__(
-            name="list_features",
-            description="List features with optional filtering",
-            input_schema=jsonref.replace_refs(
-                ListFeatureToolInput.model_json_schema(),
-                lazy_load=False,
-                proxies=False,
-            ),
-        )
-        self._service = FeatureService(base_dir)
+        self._service = FeatureService(base_dir=base_dir)
 
     @override
     @validate_call
     def __call__(self, query: FeatureListQuery) -> ListResponse[Feature]:
-        return self._service.list_(query=query)
+        """List features."""
+        return self._service.find(query=query)
 
 
 class ModifyFeatureToolInput(BaseModel):

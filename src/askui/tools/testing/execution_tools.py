@@ -5,7 +5,7 @@ from pydantic import BaseModel, validate_call
 from typing_extensions import override
 
 from askui.models.shared.tools import Tool
-from askui.utils.api_utils import ListResponse, NotFoundError
+from askui.utils.api_utils import ListResponse
 
 from .execution_models import (
     Execution,
@@ -36,19 +36,8 @@ class ListExecutionTool(Tool):
     @override
     @validate_call
     def __call__(self, query: ExecutionListQuery) -> ListResponse[Execution]:
-        """
-        List executions with optional filtering.
-
-        Args:
-            query (ExecutionListQuery): Query parameters for filtering executions.
-
-        Returns:
-            ListResponse[Execution]: List of executions matching the query.
-        """
-        try:
-            return self._service.list_(query=query)
-        except NotFoundError as e:
-            raise ValueError(str(e)) from e
+        """List executions."""
+        return self._service.find(query=query)
 
 
 class RetrieveExecutionToolInput(BaseModel):
@@ -71,16 +60,8 @@ class RetrieveExecutionTool(Tool):
     @override
     @validate_call
     def __call__(self, execution_id: ExecutionId) -> Execution:
-        """
-        Retrieve an execution by id.
-
-        Args:
-            execution_id (str): The id of the execution to retrieve.
-
-        Returns:
-            Execution: The execution object.
-        """
-        return self._service.retrieve(execution_id=execution_id)
+        """Retrieve an execution by ID."""
+        return self._service.find_one(execution_id=execution_id)
 
 
 class CreateExecutionToolInput(BaseModel):

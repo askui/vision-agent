@@ -112,8 +112,8 @@ class PlaywrightGetPageTitleTool(Tool):
 
     @override
     def __call__(self) -> str:
-        title = self._agent_os.get_page_title()
-        return f"Page title: {title}"
+        title = self._agent_os.find_page_title()
+        return title
 
 
 class PlaywrightGetPageUrlTool(Tool):
@@ -136,5 +136,5 @@ class PlaywrightGetPageUrlTool(Tool):
 
     @override
     def __call__(self) -> str:
-        url = self._agent_os.get_page_url()
-        return f"Current page URL: {url}"
+        url = self._agent_os.find_page_url()
+        return url

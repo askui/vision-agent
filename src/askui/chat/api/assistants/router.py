@@ -18,7 +18,7 @@ def list_assistants(
     assistant_service: AssistantService = AssistantServiceDep,
 ) -> ListResponse[Assistant]:
     """List all assistants."""
-    return assistant_service.list_(query=query)
+    return assistant_service.find(query=query)
 
 
 # @router.post("", status_code=status.HTTP_201_CREATED)
@@ -37,7 +37,7 @@ def retrieve_assistant(
 ) -> Assistant:
     """Get an assistant by ID."""
     try:
-        return assistant_service.retrieve(assistant_id)
+        return assistant_service.find_one(assistant_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 

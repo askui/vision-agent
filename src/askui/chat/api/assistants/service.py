@@ -38,7 +38,7 @@ class AssistantService:
         self._base_dir = base_dir
         self._assistants_dir = base_dir / "assistants"
 
-    def list_(self, query: ListQuery) -> ListResponse[Assistant]:
+    def find(self, query: ListQuery) -> ListResponse[Assistant]:
         """List all available assistants.
 
         Args:
@@ -78,7 +78,7 @@ class AssistantService:
             has_more=len(assistant_files) > query.limit,
         )
 
-    def retrieve(self, assistant_id: str) -> Assistant:
+    def find_one(self, assistant_id: str) -> Assistant:
         """Retrieve an assistant by ID.
 
         Args:
@@ -134,7 +134,7 @@ class AssistantService:
         Raises:
             FileNotFoundError: If assistant doesn't exist
         """
-        assistant = self.retrieve(assistant_id)
+        assistant = self.find_one(assistant_id)
         if not isinstance(request.name, DoNotPatch):
             assistant.name = request.name
         if not isinstance(request.description, DoNotPatch):

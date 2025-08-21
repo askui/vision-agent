@@ -101,13 +101,9 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         self._reporter.add_message("AndroidAgentOS", f"Ran shell command: {command}")
         return shell_output
 
-    def get_connected_displays(self) -> list[AndroidDisplay]:
-        displays = self._agent_os.get_connected_displays()
-        self._reporter.add_message(
-            "AndroidAgentOS",
-            f"Retrieved connected displays, length: {len(displays)}",
-        )
-        return displays
+    def find_connected_displays(self) -> list[AndroidDisplay]:
+        """List all connected Android displays."""
+        return self._agent_os.find_connected_displays()
 
     def set_display_by_index(self, display_index: int = 0) -> None:
         self._agent_os.set_display_by_index(display_index)
