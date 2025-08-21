@@ -1,8 +1,3 @@
-from io import BytesIO
-from pathlib import Path
-
-from fastapi import UploadFile
-from fastapi.datastructures import Headers
 from PIL import Image
 
 from askui.chat.api.files.service import FileService
@@ -13,7 +8,6 @@ from askui.chat.api.messages.models import (
     MessageParam,
     ToolResultBlockParam,
 )
-from askui.logger import logger
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     TextBlockParam,
@@ -31,7 +25,7 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.agent_message_param import (
     ToolResultBlockParam as AnthropicToolResultBlockParam,
 )
-from askui.utils.image_utils import base64_to_image, image_to_base64
+from askui.utils.image_utils import image_to_base64
 
 
 class ImageBlockParamSourceTranslator:
@@ -44,26 +38,28 @@ class ImageBlockParamSourceTranslator:
         if source.type == "url":
             return source
         if source.type == "base64":  # noqa: RET503
-            try:
-                image = base64_to_image(source.data)
-                bytes_io = BytesIO()
-                image.save(bytes_io, format="PNG")
-                bytes_io.seek(0)
-                file = await self._file_service.upload_file(
-                    file=UploadFile(
-                        file=bytes_io,
-                        headers=Headers(
-                            {
-                                "Content-Type": "image/png",
-                            }
-                        ),
-                    )
-                )
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"Failed to save image: {e}", exc_info=True)
-                return source
-            else:
-                return FileImageSourceParam(id=file.id, type="file")
+            # Readd translation to FileImageSourceParam as soon as we support it in frontend
+            return source
+            # try:
+            #     image = base64_to_image(source.data)
+            #     bytes_io = BytesIO()
+            #     image.save(bytes_io, format="PNG")
+            #     bytes_io.seek(0)
+            #     file = await self._file_service.upload_file(
+            #         file=UploadFile(
+            #             file=bytes_io,
+            #             headers=Headers(
+            #                 {
+            #                     "Content-Type": "image/png",
+            #                 }
+            #             ),
+            #         )
+            #     )
+            # except Exception as e:  # noqa: BLE001
+            #     logger.warning(f"Failed to save image: {e}", exc_info=True)
+            #     return source
+            # else:
+            #     return FileImageSourceParam(id=file.id, type="file")
 
     async def to_anthropic(
         self,
