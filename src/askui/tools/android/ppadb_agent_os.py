@@ -1,3 +1,4 @@
+import base64
 import io
 import re
 import shlex
@@ -128,12 +129,11 @@ class PpadbAgentOs(AndroidAgentOs):
         connection_to_device = self._device.create_connection()
         selected_device_id = self._selected_display.unique_display_id
         connection_to_device.send(
-            f"shell:/system/bin/screencap -p -d {selected_device_id}"
+            f"shell:/system/bin/screencap -p -d {selected_device_id} | base64"
         )
         response = connection_to_device.read_all()
-        if response and len(response) > 5 and response[5] == 0x0D:
-            response = response.replace(b"\r\n", b"\n")
-        return Image.open(io.BytesIO(response))
+        image_bytes = base64.b64decode(response)
+        return Image.open(io.BytesIO(image_bytes))
 
     def shell(self, command: str) -> str:
         self._check_if_device_is_connected()
