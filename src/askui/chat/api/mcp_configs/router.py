@@ -1,5 +1,6 @@
 from fastapi import APIRouter, status
 
+from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.mcp_configs.dependencies import McpConfigServiceDep
 from askui.chat.api.mcp_configs.models import (
     McpConfig,
@@ -7,7 +8,7 @@ from askui.chat.api.mcp_configs.models import (
     McpConfigModifyParams,
 )
 from askui.chat.api.mcp_configs.service import McpConfigService
-from askui.chat.api.models import ListQueryDep, McpConfigId
+from askui.chat.api.models import McpConfigId
 from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/mcp-configs", tags=["mcp-configs"])

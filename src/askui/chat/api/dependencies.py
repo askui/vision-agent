@@ -2,11 +2,12 @@ import os
 from pathlib import Path
 from typing import Annotated, Optional
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import UUID4
 
 from askui.chat.api.settings import Settings
+from askui.utils.api_utils import ListQuery
 
 
 def get_settings() -> Settings:
@@ -66,3 +67,6 @@ def get_workspace_dir(
 
 
 WorkspaceDirDep = Depends(get_workspace_dir)
+
+
+ListQueryDep = Depends(ListQuery)

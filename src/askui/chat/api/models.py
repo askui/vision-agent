@@ -1,14 +1,10 @@
-from fastapi import Depends
-from pydantic import BaseModel
+from typing import Annotated
 
-from askui.utils.api_utils import ListQuery
+from askui.utils.id_utils import IdField
 
-AssistantId = str
-McpConfigId = str
-FileId = str
-MessageId = str
-RunId = str
-ThreadId = str
-
-
-ListQueryDep = Depends(ListQuery)
+AssistantId = Annotated[str, IdField("asst")]
+McpConfigId = Annotated[str, IdField("mcpcnf")]
+FileId = Annotated[str, IdField("file")]
+MessageId = Annotated[str, IdField("msg")]
+RunId = Annotated[str, IdField("run")]
+ThreadId = Annotated[str, IdField("thread")]

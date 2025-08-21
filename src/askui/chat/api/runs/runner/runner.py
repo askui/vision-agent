@@ -23,6 +23,7 @@ from askui.chat.api.mcp_configs.models import McpConfig
 from askui.chat.api.mcp_configs.service import McpConfigService
 from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.messages.service import MessageService
+from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
@@ -91,14 +92,22 @@ def get_mcp_client(
 
 
 class Runner:
-    def __init__(self, run: Run, base_dir: Path) -> None:
+    def __init__(
+        self,
+        run: Run,
+        base_dir: Path,
+        message_service: MessageService,
+        message_translator: MessageTranslator,
+    ) -> None:
         self._run = run
         self._base_dir = base_dir
-        self._msg_service = MessageService(self._base_dir)
+        self._message_service = message_service
+        self._message_translator = message_translator
+        self._message_content_translator = message_translator.content_translator
         self._agent_os = PynputAgentOs()
 
     def get_runs_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "threads" / thread_id / "runs"
+        return self._base_dir / "runs" / thread_id
 
     def _get_run_path(
         self, thread_id: ThreadId, run_id: RunId, new: bool = False
@@ -123,7 +132,7 @@ class Runner:
         return Run.model_validate_json(run_file.read_text(encoding="utf-8"))
 
     async def _run_human_agent(self, send_stream: ObjectStream[Events]) -> None:
-        message = self._msg_service.create(
+        message = self._message_service.create(
             thread_id=self._run.thread_id,
             params=MessageCreateParams(
                 role="user",
@@ -160,26 +169,28 @@ class Runner:
                         if event.button != "unknown"
                         else "a mouse button"
                     )
-                    message = self._msg_service.create(
+                    message = self._message_service.create(
                         thread_id=self._run.thread_id,
                         params=MessageCreateParams(
                             role="user",
-                            content=[
-                                ImageBlockParam(
-                                    type="image",
-                                    source=Base64ImageSourceParam(
-                                        data=ImageSource(screenshot).to_base64(),
-                                        media_type="image/png",
+                            content=await self._message_content_translator.from_anthropic(
+                                [
+                                    ImageBlockParam(
+                                        type="image",
+                                        source=Base64ImageSourceParam(
+                                            data=ImageSource(screenshot).to_base64(),
+                                            media_type="image/png",
+                                        ),
                                     ),
-                                ),
-                                TextBlockParam(
-                                    type="text",
-                                    text=(
-                                        f"I moved the mouse to x={event.x}, "
-                                        f"y={event.y} and clicked {button}."
+                                    TextBlockParam(
+                                        type="text",
+                                        text=(
+                                            f"I moved the mouse to x={event.x}, "
+                                            f"y={event.y} and clicked {button}."
+                                        ),
                                     ),
-                                ),
-                            ],
+                                ]
+                            ),
                             run_id=self._run.id,
                         ),
                     )
@@ -194,7 +205,7 @@ class Runner:
         self._agent_os.stop_listening()
         if len(recorded_events) == 0:
             text = "Nevermind, I didn't do anything."
-            message = self._msg_service.create(
+            message = self._message_service.create(
                 thread_id=self._run.thread_id,
                 params=MessageCreateParams(
                     role="user",
@@ -258,11 +269,8 @@ class Runner:
     ) -> None:
         tools = ToolCollection(mcp_client=mcp_client)
         messages: list[MessageParam] = [
-            MessageParam(
-                role=msg.role,
-                content=msg.content,
-            )
-            for msg in self._msg_service.list_(
+            await self._message_translator.to_anthropic(msg)
+            for msg in self._message_service.list_(
                 thread_id=self._run.thread_id,
                 query=ListQuery(limit=LIST_LIMIT_MAX),
             ).data
@@ -271,14 +279,16 @@ class Runner:
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._msg_service.create(
+            message = self._message_service.create(
                 thread_id=self._run.thread_id,
                 params=MessageCreateParams(
                     assistant_id=self._run.assistant_id
                     if on_message_cb_param.message.role == "assistant"
                     else None,
                     role=on_message_cb_param.message.role,
-                    content=on_message_cb_param.message.content,
+                    content=await self._message_content_translator.from_anthropic(
+                        on_message_cb_param.message.content
+                    ),
                     run_id=self._run.id,
                 ),
             )

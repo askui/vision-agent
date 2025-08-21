@@ -48,6 +48,12 @@ class NotFoundError(ApiError):
     pass
 
 
+class FileTooLargeError(ApiError):
+    def __init__(self, max_size: int):
+        self.max_size = max_size
+        super().__init__(f"File too large. Maximum size is {max_size} bytes.")
+
+
 def list_resource_paths(base_dir: Path, list_query: ListQuery) -> list[Path]:
     paths: list[Path] = []
     after_name = f"{list_query.after}.json"

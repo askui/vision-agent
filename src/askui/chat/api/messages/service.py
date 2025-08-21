@@ -16,7 +16,7 @@ class MessageService:
         self._base_dir = base_dir
 
     def get_messages_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "threads" / thread_id / "messages"
+        return self._base_dir / "messages" / thread_id
 
     def _get_message_path(
         self, thread_id: ThreadId, message_id: MessageId, new: bool = False

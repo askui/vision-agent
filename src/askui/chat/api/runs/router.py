@@ -1,11 +1,12 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Path, Response, status
+from fastapi import APIRouter, BackgroundTasks, Path, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from askui.chat.api.models import ListQueryDep, RunId, ThreadId
+from askui.chat.api.dependencies import ListQueryDep
+from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.models import RunCreateParams
 from askui.utils.api_utils import ListQuery, ListResponse
 

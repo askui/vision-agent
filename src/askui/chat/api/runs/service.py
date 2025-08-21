@@ -4,6 +4,8 @@ from pathlib import Path
 
 import anyio
 
+from askui.chat.api.messages.service import MessageService
+from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.models import Run, RunCreateParams
 from askui.chat.api.runs.runner.events import Events
@@ -23,11 +25,18 @@ from askui.utils.api_utils import (
 class RunService:
     """Service for managing Run resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        message_service: MessageService,
+        message_translator: MessageTranslator,
+    ) -> None:
         self._base_dir = base_dir
+        self._message_service = message_service
+        self._message_translator = message_translator
 
     def get_runs_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "threads" / thread_id / "runs"
+        return self._base_dir / "runs" / thread_id
 
     def _get_run_path(
         self, thread_id: ThreadId, run_id: RunId, new: bool = False
@@ -52,7 +61,9 @@ class RunService:
     ) -> tuple[Run, AsyncGenerator[Events, None]]:
         run = self._create(thread_id, params)
         send_stream, receive_stream = anyio.create_memory_object_stream[Events]()
-        runner = Runner(run, self._base_dir)
+        runner = Runner(
+            run, self._base_dir, self._message_service, self._message_translator
+        )
 
         async def event_generator() -> AsyncGenerator[Events, None]:
             try:

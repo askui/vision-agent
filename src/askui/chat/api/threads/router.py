@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status
 
-from askui.chat.api.models import ListQueryDep, ThreadId
+from askui.chat.api.dependencies import ListQueryDep
+from askui.chat.api.models import ThreadId
 from askui.chat.api.threads.dependencies import ThreadServiceDep
 from askui.chat.api.threads.models import Thread, ThreadCreateParams, ThreadModifyParams
 from askui.chat.api.threads.service import ThreadService

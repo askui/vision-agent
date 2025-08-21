@@ -1,9 +1,9 @@
 import shutil
 from pathlib import Path
 
-from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import ThreadId
+from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.models import Thread, ThreadCreateParams, ThreadModifyParams
 from askui.utils.api_utils import (
     ConflictError,
@@ -17,10 +17,13 @@ from askui.utils.api_utils import (
 class ThreadService:
     """Service for managing Thread resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path, message_service: MessageService) -> None:
+    def __init__(
+        self, base_dir: Path, message_service: MessageService, run_service: RunService
+    ) -> None:
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
         self._message_service = message_service
+        self._run_service = run_service
 
     def _get_thread_path(self, thread_id: ThreadId, new: bool = False) -> Path:
         thread_path = self._threads_dir / f"{thread_id}.json"
@@ -64,7 +67,8 @@ class ThreadService:
 
     def delete(self, thread_id: ThreadId) -> None:
         try:
-            shutil.rmtree(self._threads_dir / thread_id)
+            shutil.rmtree(self._message_service.get_messages_dir(thread_id))
+            shutil.rmtree(self._run_service.get_runs_dir(thread_id))
             self._get_thread_path(thread_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"Thread {thread_id} not found"

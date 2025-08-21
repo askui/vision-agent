@@ -7,7 +7,8 @@ from askui.chat.api.assistants.models import (
     AssistantModifyParams,
 )
 from askui.chat.api.assistants.service import AssistantService
-from askui.chat.api.models import AssistantId, ListQueryDep
+from askui.chat.api.dependencies import ListQueryDep
+from askui.chat.api.models import AssistantId
 from askui.utils.api_utils import ListQuery, ListResponse
 
 router = APIRouter(prefix="/assistants", tags=["assistants"])
