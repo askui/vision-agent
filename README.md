@@ -9,15 +9,16 @@ Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
 ## Table of Contents
 
-
-- [Introduction](#-introduction)
-- [Installation](#-installation)
-  - [AskUI Python Package](#-askui-python-package)
-  - [AskUI Agent OS](#-askui-agent-os)
-- [Quickstart](#-quickstart)
-    - [Control your devices](#-control-your-devices)
-    - [Let AI agents control your devices](#-let-ai-agents-control-your-devices)
-- [Further Documentation](#-further-documentation)
+- [📖 Introduction](#-introduction)
+- [📦 Installation](#-installation)
+  - [AskUI Python Package](#askui-python-package)
+  - [AskUI Agent OS](#askui-agent-os)
+- [🚀 Quickstart](#-quickstart)
+    - [🧑 Control your devices](#-control-your-devices)
+    - [🤖 Let AI agents control your devices](#-let-ai-agents-control-your-devices)
+- [📚 Further Documentation](#-further-documentation)
+- [🤝 Contributing](#-contributing)
+- [📜 License](#-license)
 
 ## 📖 Introduction
 
@@ -123,13 +124,13 @@ In order to let AI agents control your devices, you need to be able to connect t
 
 For this example, we will us AskUI as the model provider to easily get started.
 
-#### Sign up with AskUI
+#### 🔐 Sign up with AskUI
 
 Sign up at [hub.askui.com](https://hub.askui.com) to:
 - Activate your **free trial** by signing up (no credit card required)
 - Get your workspace ID and access token
 
-#### Configure environment variables
+#### ⚙️ Configure environment variables
 
 <details>
 <summary>Linux & MacOS</summary>
@@ -150,7 +151,7 @@ $env:ASKUI_TOKEN="<your-token-here>"
 
 </details>
 
-#### Example
+#### 💻 Example
 
 ```python
 from askui import VisionAgent
@@ -196,3 +197,12 @@ Aside from our [official documentation](https://docs.askui.com), we also have so
 - **[Observability](docs/observability.md)** - Logging and reporting
 - **[Telemetry](docs/telemetry.md)** - Which data we gather and how to disable it
 - **[Using Models](docs/using-models.md)** - How to use different models including how to register your own custom models
+
+## 🤝 Contributing
+
+We'd love your help! Contributions, ideas, and feedback are always welcome. A proper contribution guide is coming soon—stay tuned!
+
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
