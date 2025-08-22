@@ -8,6 +8,8 @@ from pydantic import BaseModel
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.models import RunCreateParams
+from askui.chat.api.threads.dependencies import ThreadFacadeDep
+from askui.chat.api.threads.facade import ThreadFacade
 from askui.utils.api_utils import ListQuery, ListResponse
 
 from .dependencies import RunServiceDep
@@ -22,10 +24,10 @@ async def create_run(
     thread_id: Annotated[ThreadId, Path(...)],
     params: RunCreateParams,
     background_tasks: BackgroundTasks,
-    run_service: RunService = RunServiceDep,
+    thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> Response:
     stream = params.stream
-    run, async_generator = await run_service.create(thread_id, params)
+    run, async_generator = await thread_facade.create_run(thread_id, params)
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
@@ -64,9 +66,9 @@ def retrieve_run(
 def list_runs(
     thread_id: Annotated[ThreadId, Path(...)],
     query: ListQuery = ListQueryDep,
-    run_service: RunService = RunServiceDep,
+    thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> ListResponse[Run]:
-    return run_service.list_(thread_id, query=query)
+    return thread_facade.list_runs(thread_id, query=query)
 
 
 @router.post("/{run_id}/cancel")

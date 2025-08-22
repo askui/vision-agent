@@ -147,7 +147,7 @@ class TestFilesAPI:
         files = {"file": ("test", io.BytesIO(file_content), "text/plain")}
 
         # Create a test app with overridden dependencies
-        from integration.chat.api.conftest import create_test_app_with_overrides
+        from .conftest import create_test_app_with_overrides
 
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)

@@ -40,7 +40,7 @@ class McpConfig(McpConfigBase, Resource):
     @classmethod
     def create(cls, params: McpConfigCreateParams) -> "McpConfig":
         return cls(
-            id=generate_time_ordered_id("mcp_config"),
+            id=generate_time_ordered_id("mcpcnf"),
             created_at=now(),
             **params.model_dump(),
         )
