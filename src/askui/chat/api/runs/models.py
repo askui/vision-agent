@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, computed_field
 
 from askui.chat.api.models import AssistantId, RunId, ThreadId
+from askui.chat.api.threads.models import ThreadCreateParams
 from askui.utils.api_utils import Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
@@ -36,6 +37,10 @@ class RunCreateParams(RunBase):
     """Parameters for creating a run."""
 
     stream: bool = False
+
+
+class ThreadAndRunCreateParams(RunCreateParams):
+    thread: ThreadCreateParams
 
 
 class Run(RunBase, Resource):
