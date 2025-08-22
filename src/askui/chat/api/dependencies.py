@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Annotated, Optional
 
 from fastapi import Depends, Header
@@ -6,6 +7,7 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from pydantic import UUID4
 
 from askui.chat.api.settings import Settings
+from askui.utils.api_utils import ListQuery
 
 
 def get_settings() -> Settings:
@@ -55,3 +57,16 @@ def set_env_from_headers(
 
 
 SetEnvFromHeadersDep = Depends(set_env_from_headers)
+
+
+def get_workspace_dir(
+    askui_workspace: Annotated[str, Header()],
+    settings: Settings = SettingsDep,
+) -> Path:
+    return settings.data_dir / "workspaces" / askui_workspace
+
+
+WorkspaceDirDep = Depends(get_workspace_dir)
+
+
+ListQueryDep = Depends(ListQuery)

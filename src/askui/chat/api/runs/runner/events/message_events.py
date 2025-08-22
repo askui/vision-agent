@@ -1,6 +1,6 @@
 from typing import Literal
 
-from askui.chat.api.messages.service import Message
+from askui.chat.api.messages.models import Message
 from askui.chat.api.runs.runner.events.event_base import EventBase
 
 

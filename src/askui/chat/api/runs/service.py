@@ -3,77 +3,88 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import anyio
-from pydantic import BaseModel
 
-from askui.chat.api.models import AssistantId, RunId, ThreadId
-from askui.chat.api.runs.models import Run
+from askui.chat.api.messages.service import MessageService
+from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.models import RunId, ThreadId
+from askui.chat.api.runs.models import Run, RunCreateParams
 from askui.chat.api.runs.runner.events import Events
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import ErrorEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
 from askui.chat.api.runs.runner.runner import Runner
-from askui.utils.api_utils import ListQuery, ListResponse
-
-
-class CreateRunRequest(BaseModel):
-    assistant_id: AssistantId
-    stream: bool = True
+from askui.utils.api_utils import (
+    ConflictError,
+    ListQuery,
+    ListResponse,
+    NotFoundError,
+    list_resources,
+)
 
 
 class RunService:
-    """
-    Service for managing runs. Handles creation, retrieval, listing, and
-    cancellation of runs.
-    """
+    """Service for managing Run resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        message_service: MessageService,
+        message_translator: MessageTranslator,
+    ) -> None:
         self._base_dir = base_dir
-        self._runs_dir = base_dir / "runs"
+        self._message_service = message_service
+        self._message_translator = message_translator
 
-    def _run_path(self, thread_id: ThreadId, run_id: RunId) -> Path:
-        return self._runs_dir / f"{thread_id}__{run_id}.json"
+    def get_runs_dir(self, thread_id: ThreadId) -> Path:
+        return self._base_dir / "runs" / thread_id
 
-    def _create_run(self, thread_id: ThreadId, request: CreateRunRequest) -> Run:
-        run = Run(thread_id=thread_id, assistant_id=request.assistant_id)
-        self._runs_dir.mkdir(parents=True, exist_ok=True)
-        self._update_run_file(run)
+    def _get_run_path(
+        self, thread_id: ThreadId, run_id: RunId, new: bool = False
+    ) -> Path:
+        run_path = self.get_runs_dir(thread_id) / f"{run_id}.json"
+        exists = run_path.exists()
+        if new and exists:
+            error_msg = f"Run {run_id} already exists in thread {thread_id}"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Run {run_id} not found in thread {thread_id}"
+            raise NotFoundError(error_msg)
+        return run_path
+
+    def _create(self, thread_id: ThreadId, params: RunCreateParams) -> Run:
+        run = Run.create(thread_id, params)
+        self._save(run, new=True)
         return run
 
     async def create(
-        self, thread_id: ThreadId, request: CreateRunRequest
+        self, thread_id: ThreadId, params: RunCreateParams
     ) -> tuple[Run, AsyncGenerator[Events, None]]:
-        run = self._create_run(thread_id, request)
+        run = self._create(thread_id, params)
         send_stream, receive_stream = anyio.create_memory_object_stream[Events]()
-        runner = Runner(run, self._base_dir)
+        runner = Runner(
+            run, self._base_dir, self._message_service, self._message_translator
+        )
 
         async def event_generator() -> AsyncGenerator[Events, None]:
             try:
                 yield RunEvent(
-                    # run already in progress instead of queued which is
-                    # different from OpenAI
                     data=run,
                     event="thread.run.created",
                 )
                 yield RunEvent(
-                    # run already in progress instead of queued which is
-                    # different from OpenAI
                     data=run,
                     event="thread.run.queued",
                 )
 
-                # Start the runner in a background task
                 async def run_runner() -> None:
                     try:
                         await runner.run(send_stream)  # type: ignore[arg-type]
                     finally:
                         await send_stream.aclose()
 
-                # Create a task group to manage the runner and event processing
                 async with anyio.create_task_group() as tg:
-                    # Start the runner in the background
                     tg.start_soon(run_runner)
 
-                    # Process events from the stream
                     while True:
                         try:
                             event = await receive_stream.receive()
@@ -89,71 +100,28 @@ class RunService:
 
         return run, event_generator()
 
-    def _update_run_file(self, run: Run) -> None:
-        run_file = self._run_path(run.thread_id, run.id)
-        with run_file.open("w") as f:
-            f.write(run.model_dump_json())
-
-    def retrieve(self, run_id: RunId) -> Run:
-        # Find the file by run_id
-        for f in self._runs_dir.glob(f"*__{run_id}.json"):
-            with f.open("r") as file:
-                return Run.model_validate_json(file.read())
-        error_msg = f"Run {run_id} not found"
-        raise FileNotFoundError(error_msg)
+    def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
+        try:
+            run_file = self._get_run_path(thread_id, run_id)
+            return Run.model_validate_json(run_file.read_text())
+        except FileNotFoundError as e:
+            error_msg = f"Run {run_id} not found in thread {thread_id}"
+            raise NotFoundError(error_msg) from e
 
     def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Run]:
-        """List runs, optionally filtered by thread.
+        runs_dir = self.get_runs_dir(thread_id)
+        return list_resources(runs_dir, query, Run)
 
-        Args:
-            thread_id (ThreadId): ID of thread to filter runs by
-            query (ListQuery): Query parameters for listing runs
-
-        Returns:
-            ListResponse[Run]: ListResponse containing runs sorted by creation date
-        """
-        if not self._runs_dir.exists():
-            return ListResponse(data=[])
-
-        run_files = list(self._runs_dir.glob(f"{thread_id}__*.json"))
-
-        runs: list[Run] = []
-        for f in run_files:
-            with f.open("r") as file:
-                runs.append(Run.model_validate_json(file.read()))
-
-        # Sort by creation date
-        runs = sorted(
-            runs,
-            key=lambda r: r.created_at,
-            reverse=(query.order == "desc"),
-        )
-
-        # Apply before/after filters
-        if query.after:
-            runs = [r for r in runs if r.id > query.after]
-        if query.before:
-            runs = [r for r in runs if r.id < query.before]
-
-        # Apply limit
-        runs = runs[: query.limit]
-
-        return ListResponse(
-            data=runs,
-            first_id=runs[0].id if runs else None,
-            last_id=runs[-1].id if runs else None,
-            has_more=len(run_files) > query.limit,
-        )
-
-    def cancel(self, run_id: RunId) -> Run:
-        run = self.retrieve(run_id)
+    def cancel(self, thread_id: ThreadId, run_id: RunId) -> Run:
+        run = self.retrieve(thread_id, run_id)
         if run.status in ("cancelled", "cancelling", "completed", "failed", "expired"):
             return run
         run.tried_cancelling_at = datetime.now(tz=timezone.utc)
-        for f in self._runs_dir.glob(f"*__{run_id}.json"):
-            with f.open("w") as file:
-                file.write(run.model_dump_json())
-            return run
-        # Find the file by run_id
-        error_msg = f"Run {run_id} not found"
-        raise FileNotFoundError(error_msg)
+        self._save(run)
+        return run
+
+    def _save(self, run: Run, new: bool = False) -> None:
+        runs_dir = self.get_runs_dir(run.thread_id)
+        runs_dir.mkdir(parents=True, exist_ok=True)
+        run_file = self._get_run_path(run.thread_id, run.id, new=new)
+        run_file.write_text(run.model_dump_json(), encoding="utf-8")

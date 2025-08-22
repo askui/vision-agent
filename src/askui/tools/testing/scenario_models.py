@@ -5,7 +5,7 @@ from fastapi import Query
 from pydantic import BaseModel, Field
 
 from askui.tools.testing.feature_models import FeatureId
-from askui.utils.api_utils import ListQuery
+from askui.utils.api_utils import ListQuery, Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import IdField, generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -62,7 +62,7 @@ class ScenarioListQuery(ListQuery):
     tags: Annotated[list[str] | NotGiven, Query()] = NOT_GIVEN
 
 
-class Scenario(BaseModel):
+class Scenario(Resource):
     """
     A structured representation of a scenario or scenario outline for BDD test
     automation.

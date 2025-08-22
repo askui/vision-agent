@@ -1,9 +1,10 @@
 from typing import Literal
 
 from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 from askui.chat.api.models import McpConfigId
+from askui.utils.api_utils import Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -11,35 +12,35 @@ from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
 McpServer = StdioMCPServer | RemoteMCPServer
 
 
-class McpConfigCreateParams(BaseModel):
-    """Parameters for creating an MCP configuration."""
+class McpConfigBase(BaseModel):
+    """Base MCP configuration model."""
 
     name: str
     mcp_server: McpServer
+
+
+class McpConfigCreateParams(McpConfigBase):
+    """Parameters for creating an MCP configuration."""
 
 
 class McpConfigModifyParams(BaseModelWithNotGiven):
     """Parameters for modifying an MCP configuration."""
 
     name: str | NotGiven = NOT_GIVEN
-    mcp_server: McpServer | NotGiven = Field(default=NOT_GIVEN)
+    mcp_server: McpServer | NotGiven = NOT_GIVEN
 
 
-class McpConfig(BaseModel):
+class McpConfig(McpConfigBase, Resource):
     """An MCP configuration that can be stored and managed."""
 
-    id: McpConfigId = Field(
-        default_factory=lambda: generate_time_ordered_id("mcp_config")
-    )
-    created_at: UnixDatetime = Field(default_factory=now)
-    name: str
+    id: McpConfigId
     object: Literal["mcp_config"] = "mcp_config"
-    mcp_server: McpServer = Field(description="The MCP server configuration")
+    created_at: UnixDatetime
 
     @classmethod
     def create(cls, params: McpConfigCreateParams) -> "McpConfig":
         return cls(
-            id=generate_time_ordered_id("mcp_config"),
+            id=generate_time_ordered_id("mcpcnf"),
             created_at=now(),
             **params.model_dump(),
         )

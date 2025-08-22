@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "chat", "dev", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:0ca715599b1575a162ce51176bd474c59544297145f8d4ecd862bd7c14223775"
+content_hash = "sha256:d3a2688df580a571a134c1a518396bcf1106a9e725e9466b90a3edc64473bcdf"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -26,7 +26,7 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.54.0"
+version = "0.64.0"
 requires_python = ">=3.8"
 summary = "The official Python library for the anthropic API"
 groups = ["default"]
@@ -40,8 +40,8 @@ dependencies = [
     "typing-extensions<5,>=4.10",
 ]
 files = [
-    {file = "anthropic-0.54.0-py3-none-any.whl", hash = "sha256:c1062a0a905daeec17ca9c06c401e4b3f24cb0495841d29d752568a1d4018d56"},
-    {file = "anthropic-0.54.0.tar.gz", hash = "sha256:5e6f997d97ce8e70eac603c3ec2e7f23addeff953fbbb76b19430562bb6ba815"},
+    {file = "anthropic-0.64.0-py3-none-any.whl", hash = "sha256:6f5f7d913a6a95eb7f8e1bda4e75f76670e8acd8d4cd965e02e2a256b0429dd1"},
+    {file = "anthropic-0.64.0.tar.gz", hash = "sha256:3d496c91a63dff64f451b3e8e4b238a9640bf87b0c11d0b74ddc372ba5a3fe58"},
 ]
 
 [[package]]
@@ -184,6 +184,19 @@ files = [
     {file = "black-25.1.0-cp313-cp313-win_amd64.whl", hash = "sha256:a22f402b410566e2d1c950708c77ebf5ebd5d0d88a6a2e87c86d9fb48afa0d18"},
     {file = "black-25.1.0-py3-none-any.whl", hash = "sha256:95e8176dae143ba9097f351d174fdaf0ccd29efb414b362ae3fd72bf0f710717"},
     {file = "black-25.1.0.tar.gz", hash = "sha256:33496d5cd1222ad73391352b4ae8da15253c5de89b93a80b3e2c8d9a19ec2666"},
+]
+
+[[package]]
+name = "bson"
+version = "0.5.10"
+summary = "BSON codec for Python"
+groups = ["default"]
+dependencies = [
+    "python-dateutil>=2.4.0",
+    "six>=1.9.0",
+]
+files = [
+    {file = "bson-0.5.10.tar.gz", hash = "sha256:d6511b2ab051139a9123c184de1a04227262173ad593429d21e443d6462d6590"},
 ]
 
 [[package]]

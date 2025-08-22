@@ -1,12 +1,11 @@
 from pathlib import Path
-
-from pydantic import ValidationError
+from typing import Callable
 
 from askui.utils.api_utils import (
     ConflictError,
     ListResponse,
     NotFoundError,
-    list_resource_paths,
+    list_resources,
 )
 from askui.utils.not_given import NOT_GIVEN
 
@@ -19,76 +18,74 @@ from .scenario_models import (
 )
 
 
-class ScenarioService:
-    """
-    Service for managing Scenario resources with filesystem persistence.
+def _build_scenario_filter_fn(
+    query: ScenarioListQuery,
+) -> Callable[[Scenario], bool]:
+    def filter_fn(scenario: Scenario) -> bool:
+        tags_matched = query.tags == NOT_GIVEN or any(
+            tag in scenario.tags for tag in query.tags
+        )
+        feature_matched = (
+            query.feature is NOT_GIVEN or scenario.feature == query.feature
+        )
+        return tags_matched and feature_matched
 
-    Args:
-        base_dir (Path): Base directory for storing scenario data.
-    """
+    return filter_fn
+
+
+class ScenarioService:
+    """Service for managing Scenario resources with filesystem persistence."""
 
     def __init__(self, base_dir: Path) -> None:
         self._base_dir = base_dir
         self._scenarios_dir = base_dir / "scenarios"
-        self._scenarios_dir.mkdir(parents=True, exist_ok=True)
 
-    def list_(
-        self,
-        query: ScenarioListQuery,
-    ) -> ListResponse[Scenario]:
-        scenario_paths = list_resource_paths(self._scenarios_dir, query)
-        scenarios: list[Scenario] = []
-        for f in scenario_paths:
-            try:
-                scenario = Scenario.model_validate_json(f.read_text())
-                tags_matched = query.tags == NOT_GIVEN or any(
-                    tag in scenario.tags for tag in query.tags
-                )
-                feature_matched = (
-                    query.feature is NOT_GIVEN or scenario.feature == query.feature
-                )
-                if tags_matched and feature_matched:
-                    scenarios.append(scenario)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(scenarios) > query.limit
-        scenarios = scenarios[: query.limit]
-        return ListResponse(
-            data=scenarios,
-            first_id=scenarios[0].id if scenarios else None,
-            last_id=scenarios[-1].id if scenarios else None,
-            has_more=has_more,
+    def _get_scenario_path(self, scenario_id: ScenarioId, new: bool = False) -> Path:
+        scenario_path = self._scenarios_dir / f"{scenario_id}.json"
+        exists = scenario_path.exists()
+        if new and exists:
+            error_msg = f"Scenario {scenario_id} already exists"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Scenario {scenario_id} not found"
+            raise NotFoundError(error_msg)
+        return scenario_path
+
+    def list_(self, query: ScenarioListQuery) -> ListResponse[Scenario]:
+        return list_resources(
+            base_dir=self._scenarios_dir,
+            query=query,
+            resource_type=Scenario,
+            filter_fn=_build_scenario_filter_fn(query),
         )
 
     def retrieve(self, scenario_id: ScenarioId) -> Scenario:
-        scenario_file = self._scenarios_dir / f"{scenario_id}.json"
-        if not scenario_file.exists():
+        try:
+            scenario_path = self._get_scenario_path(scenario_id)
+            return Scenario.model_validate_json(scenario_path.read_text())
+        except FileNotFoundError as e:
             error_msg = f"Scenario {scenario_id} not found"
-            raise NotFoundError(error_msg)
-        return Scenario.model_validate_json(scenario_file.read_text())
+            raise NotFoundError(error_msg) from e
 
     def create(self, params: ScenarioCreateParams) -> Scenario:
         scenario = Scenario.create(params)
-        scenario_file = self._scenarios_dir / f"{scenario.id}.json"
-        if scenario_file.exists():
-            error_msg = f"Scenario {scenario.id} already exists"
-            raise ConflictError(error_msg)
-        scenario_file.write_text(scenario.model_dump_json())
+        self._save(scenario, new=True)
         return scenario
 
     def modify(self, scenario_id: ScenarioId, params: ScenarioModifyParams) -> Scenario:
         scenario = self.retrieve(scenario_id)
-        updated = scenario.modify(params)
-        return self._save(updated)
-
-    def _save(self, scenario: Scenario) -> Scenario:
-        scenario_file = self._scenarios_dir / f"{scenario.id}.json"
-        scenario_file.write_text(scenario.model_dump_json())
-        return scenario
+        modified = scenario.modify(params)
+        return self._save(modified)
 
     def delete(self, scenario_id: ScenarioId) -> None:
-        scenario_file = self._scenarios_dir / f"{scenario_id}.json"
-        if not scenario_file.exists():
+        try:
+            self._get_scenario_path(scenario_id).unlink()
+        except FileNotFoundError as e:
             error_msg = f"Scenario {scenario_id} not found"
-            raise NotFoundError(error_msg)
-        scenario_file.unlink()
+            raise NotFoundError(error_msg) from e
+
+    def _save(self, scenario: Scenario, new: bool = False) -> Scenario:
+        self._scenarios_dir.mkdir(parents=True, exist_ok=True)
+        scenario_file = self._get_scenario_path(scenario.id, new=new)
+        scenario_file.write_text(scenario.model_dump_json(), encoding="utf-8")
+        return scenario

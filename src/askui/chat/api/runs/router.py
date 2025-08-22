@@ -1,20 +1,15 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    HTTPException,
-    Path,
-    Response,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Path, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from askui.chat.api.models import ListQueryDep, RunId, ThreadId
-from askui.chat.api.runs.service import CreateRunRequest
+from askui.chat.api.dependencies import ListQueryDep
+from askui.chat.api.models import RunId, ThreadId
+from askui.chat.api.runs.models import RunCreateParams
+from askui.chat.api.threads.dependencies import ThreadFacadeDep
+from askui.chat.api.threads.facade import ThreadFacade
 from askui.utils.api_utils import ListQuery, ListResponse
 
 from .dependencies import RunServiceDep
@@ -27,15 +22,12 @@ router = APIRouter(prefix="/threads/{thread_id}/runs", tags=["runs"])
 @router.post("")
 async def create_run(
     thread_id: Annotated[ThreadId, Path(...)],
-    request: Annotated[CreateRunRequest, Body(...)],
+    params: RunCreateParams,
     background_tasks: BackgroundTasks,
-    run_service: RunService = RunServiceDep,
+    thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> Response:
-    """
-    Create a new run for a given thread.
-    """
-    stream = request.stream
-    run, async_generator = await run_service.create(thread_id, request)
+    stream = params.stream
+    run, async_generator = await thread_facade.create_run(thread_id, params)
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
@@ -63,39 +55,26 @@ async def create_run(
 
 @router.get("/{run_id}")
 def retrieve_run(
+    thread_id: Annotated[ThreadId, Path(...)],
     run_id: Annotated[RunId, Path(...)],
     run_service: RunService = RunServiceDep,
 ) -> Run:
-    """
-    Retrieve a run by its ID.
-    """
-    try:
-        return run_service.retrieve(run_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return run_service.retrieve(thread_id, run_id)
 
 
 @router.get("")
 def list_runs(
     thread_id: Annotated[ThreadId, Path(...)],
     query: ListQuery = ListQueryDep,
-    run_service: RunService = RunServiceDep,
+    thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> ListResponse[Run]:
-    """
-    List runs, optionally filtered by thread.
-    """
-    return run_service.list_(thread_id, query=query)
+    return thread_facade.list_runs(thread_id, query=query)
 
 
 @router.post("/{run_id}/cancel")
 def cancel_run(
+    thread_id: Annotated[ThreadId, Path(...)],
     run_id: Annotated[RunId, Path(...)],
     run_service: RunService = RunServiceDep,
 ) -> Run:
-    """
-    Cancel a run by its ID.
-    """
-    try:
-        return run_service.cancel(run_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
+    return run_service.cancel(thread_id, run_id)

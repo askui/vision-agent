@@ -1,12 +1,11 @@
 from pathlib import Path
-
-from pydantic import ValidationError
+from typing import Callable
 
 from askui.utils.api_utils import (
     ConflictError,
     ListResponse,
     NotFoundError,
-    list_resource_paths,
+    list_resources,
 )
 from askui.utils.not_given import NOT_GIVEN
 
@@ -18,63 +17,55 @@ from .execution_models import (
 )
 
 
-class ExecutionService:
-    """
-    Service for managing Execution resources with filesystem persistence.
+def _build_execution_filter_fn(
+    query: ExecutionListQuery,
+) -> Callable[[Execution], bool]:
+    def filter_fn(execution: Execution) -> bool:
+        return (
+            (query.feature == NOT_GIVEN or execution.feature == query.feature)
+            and (query.scenario == NOT_GIVEN or execution.scenario == query.scenario)
+            and (query.example == NOT_GIVEN or execution.example == query.example)
+        )
 
-    Args:
-        base_dir (Path): Base directory for storing execution data.
-    """
+    return filter_fn
+
+
+class ExecutionService:
+    """Service for managing Execution resources with filesystem persistence."""
 
     def __init__(self, base_dir: Path) -> None:
         self._base_dir = base_dir
         self._executions_dir = base_dir / "executions"
-        self._executions_dir.mkdir(parents=True, exist_ok=True)
 
-    def list_(
-        self,
-        query: ExecutionListQuery,
-    ) -> ListResponse[Execution]:
-        execution_paths = list_resource_paths(self._executions_dir, query)
-        executions: list[Execution] = []
-        for f in execution_paths:
-            try:
-                execution = Execution.model_validate_json(f.read_text())
-                if (
-                    (query.feature == NOT_GIVEN or execution.feature == query.feature)
-                    and (
-                        query.scenario == NOT_GIVEN
-                        or execution.scenario == query.scenario
-                    )
-                    and (
-                        query.example == NOT_GIVEN or execution.example == query.example
-                    )
-                ):
-                    executions.append(execution)
-            except ValidationError:  # noqa: PERF203
-                continue
-        has_more = len(executions) > query.limit
-        executions = executions[: query.limit]
-        return ListResponse(
-            data=executions,
-            first_id=executions[0].id if executions else None,
-            last_id=executions[-1].id if executions else None,
-            has_more=has_more,
+    def _get_execution_path(self, execution_id: ExecutionId, new: bool = False) -> Path:
+        execution_path = self._executions_dir / f"{execution_id}.json"
+        exists = execution_path.exists()
+        if new and exists:
+            error_msg = f"Execution {execution_id} already exists"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Execution {execution_id} not found"
+            raise NotFoundError(error_msg)
+        return execution_path
+
+    def list_(self, query: ExecutionListQuery) -> ListResponse[Execution]:
+        return list_resources(
+            base_dir=self._executions_dir,
+            query=query,
+            resource_type=Execution,
+            filter_fn=_build_execution_filter_fn(query),
         )
 
     def retrieve(self, execution_id: ExecutionId) -> Execution:
-        execution_file = self._executions_dir / f"{execution_id}.json"
-        if not execution_file.exists():
+        try:
+            execution_path = self._get_execution_path(execution_id)
+            return Execution.model_validate_json(execution_path.read_text())
+        except FileNotFoundError as e:
             error_msg = f"Execution {execution_id} not found"
-            raise NotFoundError(error_msg)
-        return Execution.model_validate_json(execution_file.read_text())
+            raise NotFoundError(error_msg) from e
 
     def create(self, execution: Execution) -> Execution:
-        execution_file = self._executions_dir / f"{execution.id}.json"
-        if execution_file.exists():
-            error_msg = f"Execution {execution.id} already exists"
-            raise ConflictError(error_msg)
-        execution_file.write_text(execution.model_dump_json())
+        self._save(execution, new=True)
         return execution
 
     def modify(
@@ -84,14 +75,15 @@ class ExecutionService:
         modified = execution.modify(params)
         return self._save(modified)
 
-    def _save(self, execution: Execution) -> Execution:
-        execution_file = self._executions_dir / f"{execution.id}.json"
-        execution_file.write_text(execution.model_dump_json())
-        return execution
-
     def delete(self, execution_id: ExecutionId) -> None:
-        execution_file = self._executions_dir / f"{execution_id}.json"
-        if not execution_file.exists():
+        try:
+            self._get_execution_path(execution_id).unlink()
+        except FileNotFoundError as e:
             error_msg = f"Execution {execution_id} not found"
-            raise NotFoundError(error_msg)
-        execution_file.unlink()
+            raise NotFoundError(error_msg) from e
+
+    def _save(self, execution: Execution, new: bool = False) -> Execution:
+        self._executions_dir.mkdir(parents=True, exist_ok=True)
+        execution_file = self._get_execution_path(execution.id, new=new)
+        execution_file.write_text(execution.model_dump_json(), encoding="utf-8")
+        return execution

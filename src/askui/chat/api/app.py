@@ -1,17 +1,25 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
+from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
 from askui.chat.api.mcp_configs.router import router as mcp_configs_router
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
+from askui.utils.api_utils import (
+    ConflictError,
+    FileTooLargeError,
+    LimitReachedError,
+    NotFoundError,
+)
 
 
 @asynccontextmanager
@@ -38,6 +46,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(NotFoundError)
+def not_found_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: NotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(ConflictError)
+def conflict_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: ConflictError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(LimitReachedError)
+def limit_reached_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: LimitReachedError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(FileTooLargeError)
+def file_too_large_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: FileTooLargeError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(Exception)
+def catch_all_exception_handler(
+    request: Request,  # noqa: ARG001
+    exc: Exception,
+) -> JSONResponse:
+    if isinstance(exc, HTTPException):
+        raise exc
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"},
+    )
+
+
 # Include routers
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(assistants_router)
@@ -45,5 +109,6 @@ v1_router.include_router(threads_router)
 v1_router.include_router(messages_router)
 v1_router.include_router(runs_router)
 v1_router.include_router(mcp_configs_router)
+v1_router.include_router(files_router)
 v1_router.include_router(health_router)
 app.include_router(v1_router)

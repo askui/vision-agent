@@ -1,159 +1,80 @@
-from datetime import datetime, timezone
+import shutil
 from pathlib import Path
-from typing import Literal
 
-from pydantic import BaseModel, Field
-
-from askui.chat.api.messages.service import MessageCreateRequest, MessageService
-from askui.chat.api.models import DoNotPatch, ThreadId
-from askui.utils.api_utils import ListQuery, ListResponse
-from askui.utils.datetime_utils import UnixDatetime
-from askui.utils.id_utils import generate_time_ordered_id
-
-
-class Thread(BaseModel):
-    """A chat thread/session."""
-
-    id: ThreadId = Field(default_factory=lambda: generate_time_ordered_id("thread"))
-    created_at: UnixDatetime = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc)
-    )
-    name: str | None = None
-    object: Literal["thread"] = "thread"
-
-
-class ThreadCreateRequest(BaseModel):
-    name: str | None = None
-    messages: list[MessageCreateRequest] | None = None
-
-
-class ThreadModifyRequest(BaseModel):
-    name: str | None | DoNotPatch = DoNotPatch()
+from askui.chat.api.messages.service import MessageService
+from askui.chat.api.models import ThreadId
+from askui.chat.api.runs.service import RunService
+from askui.chat.api.threads.models import Thread, ThreadCreateParams, ThreadModifyParams
+from askui.utils.api_utils import (
+    ConflictError,
+    ListQuery,
+    ListResponse,
+    NotFoundError,
+    list_resources,
+)
 
 
 class ThreadService:
-    """Service for managing chat threads/sessions."""
+    """Service for managing Thread resources with filesystem persistence."""
 
     def __init__(
-        self,
-        base_dir: Path,
-        message_service: MessageService,
+        self, base_dir: Path, message_service: MessageService, run_service: RunService
     ) -> None:
-        """Initialize thread service.
-
-        Args:
-            base_dir: Base directory to store thread data
-        """
         self._base_dir = base_dir
         self._threads_dir = base_dir / "threads"
         self._message_service = message_service
+        self._run_service = run_service
 
-    def create(self, request: ThreadCreateRequest) -> Thread:
-        """Create a new thread.
+    def _get_thread_path(self, thread_id: ThreadId, new: bool = False) -> Path:
+        thread_path = self._threads_dir / f"{thread_id}.json"
+        exists = thread_path.exists()
+        if new and exists:
+            error_msg = f"Thread {thread_id} already exists"
+            raise ConflictError(error_msg)
+        if not new and not exists:
+            error_msg = f"Thread {thread_id} not found"
+            raise NotFoundError(error_msg)
+        return thread_path
 
-        Returns:
-            Created thread object
-        """
-        thread = Thread(name=request.name)
-        self._threads_dir.mkdir(parents=True, exist_ok=True)
-        thread_file = self._threads_dir / f"{thread.id}.json"
-        thread_file.write_text(thread.model_dump_json())
-        thread_messages_file = self._threads_dir / f"{thread.id}.jsonl"
-        thread_messages_file.touch()
-        if request.messages:
-            for message in request.messages:
+    def list_(self, query: ListQuery) -> ListResponse[Thread]:
+        return list_resources(self._threads_dir, query, Thread)
+
+    def retrieve(self, thread_id: ThreadId) -> Thread:
+        try:
+            thread_path = self._get_thread_path(thread_id)
+            return Thread.model_validate_json(thread_path.read_text())
+        except FileNotFoundError as e:
+            error_msg = f"Thread {thread_id} not found"
+            raise NotFoundError(error_msg) from e
+
+    def create(self, params: ThreadCreateParams) -> Thread:
+        thread = Thread.create(params)
+        self._save(thread, new=True)
+
+        if params.messages:
+            for message in params.messages:
                 self._message_service.create(
                     thread_id=thread.id,
-                    request=message,
+                    params=message,
                 )
         return thread
 
-    def list_(self, query: ListQuery) -> ListResponse[Thread]:
-        """List all available threads.
-
-        Args:
-            query (ListQuery): Query parameters for listing threads
-
-        Returns:
-            ListResponse[Thread]: ListResponse containing threads sorted by creation
-                date
-        """
-        if not self._threads_dir.exists():
-            return ListResponse(data=[])
-
-        thread_files = list(self._threads_dir.glob("*.json"))
-        threads: list[Thread] = []
-        for f in thread_files:
-            thread = Thread.model_validate_json(f.read_text())
-            threads.append(thread)
-
-        # Sort by creation date
-        threads = sorted(
-            threads, key=lambda t: t.created_at, reverse=(query.order == "desc")
-        )
-
-        # Apply before/after filters
-        if query.after:
-            threads = [t for t in threads if t.id > query.after]
-        if query.before:
-            threads = [t for t in threads if t.id < query.before]
-
-        # Apply limit
-        threads = threads[: query.limit]
-
-        return ListResponse(
-            data=threads,
-            first_id=threads[0].id if threads else None,
-            last_id=threads[-1].id if threads else None,
-            has_more=len(thread_files) > query.limit,
-        )
-
-    def retrieve(self, thread_id: ThreadId) -> Thread:
-        """Retrieve a thread by ID.
-
-        Args:
-            thread_id: ID of thread to retrieve
-
-        Returns:
-            Thread object
-
-        Raises:
-            FileNotFoundError: If thread doesn't exist
-        """
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        if not thread_file.exists():
-            error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-        return Thread.model_validate_json(thread_file.read_text())
+    def modify(self, thread_id: ThreadId, params: ThreadModifyParams) -> Thread:
+        thread = self.retrieve(thread_id)
+        modified = thread.modify(params)
+        self._save(modified)
+        return modified
 
     def delete(self, thread_id: ThreadId) -> None:
-        """Delete a thread and all its associated files.
-
-        Args:
-            thread_id (ThreadId): ID of thread to delete
-
-        Raises:
-            FileNotFoundError: If thread doesn't exist
-        """
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        if not thread_file.exists():
+        try:
+            shutil.rmtree(self._message_service.get_messages_dir(thread_id))
+            shutil.rmtree(self._run_service.get_runs_dir(thread_id))
+            self._get_thread_path(thread_id).unlink()
+        except FileNotFoundError as e:
             error_msg = f"Thread {thread_id} not found"
-            raise FileNotFoundError(error_msg)
-        thread_messages_file = self._threads_dir / f"{thread_id}.jsonl"
-        if thread_messages_file.exists():
-            thread_messages_file.unlink()
-        thread_file.unlink()
+            raise NotFoundError(error_msg) from e
 
-    def modify(self, thread_id: ThreadId, request: ThreadModifyRequest) -> Thread:
-        """Modify a thread.
-
-        Args:
-            thread_id (ThreadId): ID of thread to modify
-            request (ThreadModifyRequest): Request containing the new name
-        """
-        thread = self.retrieve(thread_id)
-        if not isinstance(request.name, DoNotPatch):
-            thread.name = request.name
-        thread_file = self._threads_dir / f"{thread_id}.json"
-        thread_file.write_text(thread.model_dump_json())
-        return thread
+    def _save(self, thread: Thread, new: bool = False) -> None:
+        self._threads_dir.mkdir(parents=True, exist_ok=True)
+        thread_file = self._get_thread_path(thread.id, new=new)
+        thread_file.write_text(thread.model_dump_json(), encoding="utf-8")

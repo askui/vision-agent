@@ -29,6 +29,7 @@ dependencies = [
     "filetype>=1.2.0",
     "markitdown[xls,xlsx,docx]>=0.1.2",
     "asyncer==0.0.8",
+    "bson>=0.5.10",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -102,6 +103,7 @@ python_files = ["test_*.py"]
 python_functions = ["test_*"]
 testpaths = ["tests"]
 timeout = 60
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
