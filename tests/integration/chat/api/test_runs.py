@@ -367,6 +367,304 @@ class TestRunsAPI:
         finally:
             app.dependency_overrides.clear()
 
+    def test_create_thread_and_run(self, test_headers: dict[str, str]) -> None:
+        """Test creating a thread and run in one request."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                thread_and_run_data = {
+                    "assistant_id": "asst_test123",
+                    "stream": False,
+                    "thread": {
+                        "name": "Test Thread",
+                        "messages": [
+                            {"role": "user", "content": "Hello, how are you?"}
+                        ],
+                    },
+                    "metadata": {"key": "value", "number": 42},
+                }
+                response = client.post(
+                    "/v1/runs",
+                    json=thread_and_run_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["assistant_id"] == "asst_test123"
+                assert data["object"] == "thread.run"
+                assert "id" in data
+                assert "created_at" in data
+                assert "thread_id" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_thread_and_run_minimal(self, test_headers: dict[str, str]) -> None:
+        """Test creating a thread and run with minimal data."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                thread_and_run_data = {"assistant_id": "asst_test123", "thread": {}}
+                response = client.post(
+                    "/v1/runs",
+                    json=thread_and_run_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["object"] == "thread.run"
+                assert data["assistant_id"] == "asst_test123"
+                assert "id" in data
+                assert "thread_id" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_thread_and_run_streaming(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a streaming thread and run."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                thread_and_run_data = {
+                    "assistant_id": "asst_test123",
+                    "stream": True,
+                    "thread": {
+                        "name": "Streaming Thread",
+                        "messages": [{"role": "user", "content": "Tell me a story"}],
+                    },
+                }
+                response = client.post(
+                    "/v1/runs",
+                    json=thread_and_run_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                assert "text/event-stream" in response.headers["content-type"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_thread_and_run_with_messages(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a thread and run with initial messages."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                thread_and_run_data = {
+                    "assistant_id": "asst_test123",
+                    "stream": False,
+                    "thread": {
+                        "name": "Conversation Thread",
+                        "messages": [
+                            {"role": "user", "content": "What is the weather like?"},
+                            {
+                                "role": "assistant",
+                                "content": (
+                                    "I don't have access to real-time weather data."
+                                ),
+                            },
+                            {"role": "user", "content": "Can you help me plan my day?"},
+                        ],
+                    },
+                }
+                response = client.post(
+                    "/v1/runs",
+                    json=thread_and_run_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["assistant_id"] == "asst_test123"
+                assert data["object"] == "thread.run"
+                assert "id" in data
+                assert "thread_id" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_thread_and_run_validation_error(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating thread and run with invalid data."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                # Missing required assistant_id
+                invalid_data = {"thread": {}}  # type: ignore[var-annotated]
+                response = client.post(
+                    "/v1/runs",
+                    json=invalid_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+                data = response.json()
+                assert "detail" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_thread_and_run_empty_thread(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating thread and run with completely empty thread object."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        from askui.chat.api.app import app
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            return RunService(
+                workspace_path, mock_message_service, mock_message_translator
+            )
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+
+        try:
+            with TestClient(app) as client:
+                thread_and_run_data = {"assistant_id": "asst_test123", "thread": {}}
+                response = client.post(
+                    "/v1/runs",
+                    json=thread_and_run_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["assistant_id"] == "asst_test123"
+                assert "thread_id" in data
+        finally:
+            app.dependency_overrides.clear()
+
     def test_create_run_invalid_thread(
         self, test_client: TestClient, test_headers: dict[str, str]
     ) -> None:
@@ -478,13 +776,16 @@ class TestRunsAPI:
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
 
         # Create a mock run
+        import time
+
+        current_time = int(time.time())
         mock_run = Run(
             id="run_test123",
             object="thread.run",
-            created_at=1234567890,
+            created_at=current_time,
             thread_id="thread_test123",
             assistant_id="asst_test123",
-            expires_at=1755846718,  # 10 minutes later
+            expires_at=current_time + 600,  # 10 minutes later
         )
         (runs_dir / "run_test123.json").write_text(mock_run.model_dump_json())
 
