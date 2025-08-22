@@ -1,5 +1,13 @@
 # MCP
 
+## Table of Contents
+
+- [What is MCP?](#what-is-mcp)
+- [Our MCP Support](#our-mcp-support)
+- [How to Use MCP with AskUI](#how-to-use-mcp-with-askui)
+  - [With the Library](#with-the-library)
+  - [With Chat](#with-chat)
+
 ## What is MCP?
 
 The Model Context Protocol (MCP) is a standardized way to provide context and tools to Large Language Models (LLMs). It acts as a universal interface - often described as "the USB-C port for AI" - that allows LLMs to connect to external resources and functionality in a secure, standardized manner.
