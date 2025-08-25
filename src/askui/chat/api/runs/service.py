@@ -4,6 +4,7 @@ from pathlib import Path
 
 import anyio
 
+from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import RunId, ThreadId
@@ -28,10 +29,12 @@ class RunService:
     def __init__(
         self,
         base_dir: Path,
+        assistant_service: AssistantService,
         message_service: MessageService,
         message_translator: MessageTranslator,
     ) -> None:
         self._base_dir = base_dir
+        self._assistant_service = assistant_service
         self._message_service = message_service
         self._message_translator = message_translator
 
@@ -59,10 +62,15 @@ class RunService:
     async def create(
         self, thread_id: ThreadId, params: RunCreateParams
     ) -> tuple[Run, AsyncGenerator[Events, None]]:
+        assistant = self._assistant_service.retrieve(params.assistant_id)
         run = self._create(thread_id, params)
         send_stream, receive_stream = anyio.create_memory_object_stream[Events]()
         runner = Runner(
-            run, self._base_dir, self._message_service, self._message_translator
+            assistant,
+            run,
+            self._base_dir,
+            self._message_service,
+            self._message_translator,
         )
 
         async def event_generator() -> AsyncGenerator[Events, None]:
