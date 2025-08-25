@@ -11,5 +11,10 @@ def test_stdio_tool() -> str:
     return "I am a test stdio tool"
 
 
+@mcp.tool
+def list_values() -> list[str]:
+    return ["Optimism", "Creativity", "Intelligence"]
+
+
 if __name__ == "__main__":
     mcp.run(transport="stdio", show_banner=False)
