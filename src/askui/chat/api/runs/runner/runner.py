@@ -274,7 +274,8 @@ class Runner:
         mcp_client: McpClient | None,
     ) -> None:
         tools = ToolCollection(
-            mcp_client=mcp_client, include=set(self._assistant.tools)
+            mcp_client=mcp_client,
+            include=set(self._assistant.tools) if self._assistant.tools else None,
         )
         messages: list[MessageParam] = [
             await self._message_translator.to_anthropic(msg)
@@ -350,11 +351,15 @@ class Runner:
                     )
                 return
 
+            _tools = ToolCollection(
+                mcp_client=mcp_client,
+                include=set(self._assistant.tools),
+            )
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
                 on_message=on_message,
-                tools=tools,
+                tools=_tools,
                 settings=ActSettings(
                     messages=MessageSettings(
                         system=self._assistant.system or anthropic.NOT_GIVEN,
