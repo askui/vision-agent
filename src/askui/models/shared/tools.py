@@ -154,10 +154,12 @@ class ToolCollection:
         self,
         tools: list[Tool] | None = None,
         mcp_client: Client[ClientTransportT] | None = None,
+        include: set[str] | None = None,
     ) -> None:
         _tools = tools or []
         self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
         self._mcp_client = mcp_client
+        self._include = include
 
     def to_params(self) -> list[BetaToolUnionParam]:
         tool_map = {
@@ -167,7 +169,12 @@ class ToolCollection:
                 for tool_name, tool in self._tool_map.items()
             },
         }
-        return list(tool_map.values())
+        filtered_tool_map = {
+            tool_name: tool
+            for tool_name, tool in tool_map.items()
+            if self._include is None or tool_name in self._include
+        }
+        return list(filtered_tool_map.values())
 
     def _get_mcp_tool_params(self) -> dict[str, BetaToolUnionParam]:
         if not self._mcp_client:

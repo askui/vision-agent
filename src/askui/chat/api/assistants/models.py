@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from askui.chat.api.models import AssistantId
 from askui.utils.api_utils import Resource
@@ -15,6 +15,8 @@ class AssistantBase(BaseModel):
     name: str | None = None
     description: str | None = None
     avatar: str | None = None
+    tools: list[str] = Field(default_factory=list)
+    system: str | None = None
 
 
 class AssistantCreateParams(AssistantBase):
@@ -27,6 +29,8 @@ class AssistantModifyParams(BaseModelWithNotGiven):
     name: str | NotGiven = NOT_GIVEN
     description: str | NotGiven = NOT_GIVEN
     avatar: str | NotGiven = NOT_GIVEN
+    tools: list[str] | NotGiven = NOT_GIVEN
+    system: str | NotGiven = NOT_GIVEN
 
 
 class Assistant(AssistantBase, Resource):

@@ -185,6 +185,82 @@ class TestAssistantsAPI:
         finally:
             app.dependency_overrides.clear()
 
+    def test_create_assistant_with_tools_and_system(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a new assistant with tools and system prompt."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        # Create a test app with overridden dependencies
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/v1/assistants",
+                    headers=test_headers,
+                    json={
+                        "name": "Custom Assistant",
+                        "description": "A custom assistant with tools",
+                        "tools": ["tool1", "tool2", "tool3"],
+                        "system": "You are a helpful custom assistant.",
+                    },
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["name"] == "Custom Assistant"
+                assert data["description"] == "A custom assistant with tools"
+                assert data["tools"] == ["tool1", "tool2", "tool3"]
+                assert data["system"] == "You are a helpful custom assistant."
+                assert "id" in data
+                assert "created_at" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_assistant_with_empty_tools(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a new assistant with empty tools list."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+
+        # Create a test app with overridden dependencies
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/v1/assistants",
+                    headers=test_headers,
+                    json={
+                        "name": "Empty Tools Assistant",
+                        "tools": [],
+                    },
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["name"] == "Empty Tools Assistant"
+                assert data["tools"] == []
+                assert "id" in data
+                assert "created_at" in data
+        finally:
+            app.dependency_overrides.clear()
+
     def test_retrieve_assistant(self, test_headers: dict[str, str]) -> None:
         """Test retrieving an existing assistant."""
         temp_dir = tempfile.mkdtemp()
@@ -279,6 +355,57 @@ class TestAssistantsAPI:
                 data = response.json()
                 assert data["name"] == "Modified Name"
                 assert data["description"] == "Modified description"
+                assert data["id"] == "asst_test123"
+                assert data["created_at"] == 1234567890
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_modify_assistant_with_tools_and_system(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test modifying an assistant with tools and system prompt."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        mock_assistant = Assistant(
+            id="asst_test123",
+            object="assistant",
+            created_at=1234567890,
+            name="Original Name",
+            description="Original description",
+        )
+        (assistants_dir / "asst_test123.json").write_text(
+            mock_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                modify_data = {
+                    "name": "Modified Name",
+                    "tools": ["new_tool1", "new_tool2"],
+                    "system": "You are a modified custom assistant.",
+                }
+                response = client.post(
+                    "/v1/assistants/asst_test123",
+                    json=modify_data,
+                    headers=test_headers,
+                )
+
+                assert response.status_code == status.HTTP_200_OK
+                data = response.json()
+                assert data["name"] == "Modified Name"
+                assert data["tools"] == ["new_tool1", "new_tool2"]
+                assert data["system"] == "You are a modified custom assistant."
                 assert data["id"] == "asst_test123"
                 assert data["created_at"] == 1234567890
         finally:
