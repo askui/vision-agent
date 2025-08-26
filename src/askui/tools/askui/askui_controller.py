@@ -74,10 +74,10 @@ class AskUiControllerServer:
         path: pathlib.Path,
         args: str | None = None,
     ) -> None:
-        starting_command = [path]
+        commands = [str(path)]
         if args:
-            starting_command.extend(args.split())
-        self._process = subprocess.Popen(starting_command)
+            commands.extend(args.split())
+        self._process = subprocess.Popen(commands)
         wait_for_port(23000)
 
     def start(self, clean_up: bool = False) -> None:
