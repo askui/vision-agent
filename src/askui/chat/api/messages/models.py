@@ -18,6 +18,20 @@ from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
 
+class BetaFileDocumentSourceParam(BaseModel):
+    file_id: str
+    type: Literal["file"] = "file"
+
+
+Source = BetaFileDocumentSourceParam
+
+
+class RequestDocumentBlockParam(BaseModel):
+    source: Source
+    type: Literal["document"] = "document"
+    cache_control: CacheControlEphemeralParam | None = None
+
+
 class FileImageSourceParam(BaseModel):
     """Image source that references a saved file."""
 
@@ -46,6 +60,7 @@ ContentBlockParam = (
     | ToolUseBlockParam
     | BetaThinkingBlock
     | BetaRedactedThinkingBlock
+    | RequestDocumentBlockParam
 )
 
 
