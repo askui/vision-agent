@@ -183,7 +183,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "src/askui/web_agent.py" = ["E501"]
 "src/askui/models/shared/android_agent.py" = ["E501"]
 "src/askui/chat/*" = ["E501", "F401", "F403"]
-"src/askui/tools/askui/askui_workspaces/*" = ["ALL"]
 "src/askui/tools/askui/askui_ui_controller_grpc/*" = ["ALL"]
 "src/askui/locators/locators.py" = ["E501"]
 "src/askui/locators/relatable.py" = ["E501", "SLF001"]
