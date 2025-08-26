@@ -396,3 +396,34 @@ class TestAskUiControllerSettings:
                     AssertionError, match="No AskUI Remote Device Controller found"
                 ):
                     _ = settings.controller_path
+
+    def test_controller_args_default_value(self) -> None:
+        """Test that controller_args is set correctly with default value."""
+        settings = AskUiControllerSettings(component_registry_file="/dummy")
+        assert settings.controller_args == "--showOverlay true"
+
+    def test_controller_args_constructor(self) -> None:
+        """Test that controller_args is set correctly with constructor."""
+        settings = AskUiControllerSettings(
+            controller_args="--showOverlay false", component_registry_file="/dummy"
+        )
+        assert settings.controller_args == "--showOverlay false"
+
+    def test_controller_args_with_environment_variable(self) -> None:
+        """Test that controller_args is set correctly with environment variable."""
+        with patch.dict(
+            "os.environ",
+            {
+                "ASKUI_CONTROLLER_ARGS": "--showOverlay false",
+            },
+            clear=True,
+        ):
+            settings = AskUiControllerSettings(component_registry_file="/dummy")
+            assert settings.controller_args == "--showOverlay false"
+
+    def test_controller_args_with_invalid_arg(self) -> None:
+        """Test that controller_args validation raises ValueError."""
+        with pytest.raises(
+            ValueError, match="--showOverlay must be followed by 'true' or 'false'"
+        ):
+            AskUiControllerSettings(controller_args="--showOverlay")

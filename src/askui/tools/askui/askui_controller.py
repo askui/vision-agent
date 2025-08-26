@@ -69,8 +69,15 @@ class AskUiControllerServer:
         self._process: subprocess.Popen[bytes] | None = None
         self._settings = settings or AskUiControllerSettings()
 
-    def _start_process(self, path: pathlib.Path) -> None:
-        self._process = subprocess.Popen(path)
+    def _start_process(
+        self,
+        path: pathlib.Path,
+        args: str | None = None,
+    ) -> None:
+        commands = [str(path)]
+        if args:
+            commands.extend(args.split())
+        self._process = subprocess.Popen(commands)
         wait_for_port(23000)
 
     def start(self, clean_up: bool = False) -> None:
@@ -91,7 +98,9 @@ class AskUiControllerServer:
             "Starting AskUI Remote Device Controller: %s",
             self._settings.controller_path,
         )
-        self._start_process(self._settings.controller_path)
+        self._start_process(
+            self._settings.controller_path, self._settings.controller_args
+        )
         time.sleep(0.5)
 
     def clean_up(self) -> None:
