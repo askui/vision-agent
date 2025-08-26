@@ -399,12 +399,14 @@ class TestAskUiControllerSettings:
 
     def test_controller_args_default_value(self) -> None:
         """Test that controller_args is set correctly with default value."""
-        settings = AskUiControllerSettings()
+        settings = AskUiControllerSettings(component_registry_file="/dummy")
         assert settings.controller_args == "--showOverlay true"
 
     def test_controller_args_constructor(self) -> None:
         """Test that controller_args is set correctly with constructor."""
-        settings = AskUiControllerSettings(controller_args="--showOverlay false")
+        settings = AskUiControllerSettings(
+            controller_args="--showOverlay false", component_registry_file="/dummy"
+        )
         assert settings.controller_args == "--showOverlay false"
 
     def test_controller_args_with_environment_variable(self) -> None:
@@ -413,11 +415,10 @@ class TestAskUiControllerSettings:
             "os.environ",
             {
                 "ASKUI_CONTROLLER_ARGS": "--showOverlay false",
-                "ASKUI_COMPONENT_REGISTRY_FILE": "dummy",
             },
             clear=True,
         ):
-            settings = AskUiControllerSettings()
+            settings = AskUiControllerSettings(component_registry_file="/dummy")
             assert settings.controller_args == "--showOverlay false"
 
     def test_controller_args_with_invalid_arg(self) -> None:
