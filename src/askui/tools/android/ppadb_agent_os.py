@@ -50,7 +50,7 @@ class PpadbAgentOs(AndroidAgentOs):
         for line in output.splitlines():
             if line.startswith("Display"):
                 match = re.match(
-                    r"Display (\d+) .* displayName=\"([^\"]+)\"",
+                    r"Display (\d+) .* displayName=\"([^\"]*?)\"",
                     line,
                 )
                 if match:
