@@ -281,7 +281,7 @@ class Runner:
             await self._message_translator.to_anthropic(msg)
             for msg in self._message_service.list_(
                 thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX),
+                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
             ).data
         ]
 

@@ -6,8 +6,11 @@ from askui.chat.api.messages.models import (
     FileImageSourceParam,
     ImageBlockParam,
     MessageParam,
+    RequestDocumentBlockParam,
     ToolResultBlockParam,
 )
+from askui.data_extractor import DataExtractor
+from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     TextBlockParam,
@@ -25,7 +28,72 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.agent_message_param import (
     ToolResultBlockParam as AnthropicToolResultBlockParam,
 )
-from askui.utils.image_utils import image_to_base64
+from askui.utils.excel_utils import OfficeDocumentSource
+from askui.utils.image_utils import ImageSource, image_to_base64
+from askui.utils.source_utils import Source, load_source
+
+
+class RequestDocumentBlockParamTranslator:
+    """Translator for RequestDocumentBlockParam to/from Anthropic format."""
+
+    def __init__(self, file_service: FileService) -> None:
+        self._file_service = file_service
+        self._data_extractor = DataExtractor()
+
+    def extract_content(
+        self, source: Source, block: RequestDocumentBlockParam
+    ) -> list[AnthropicContentBlockParam]:
+        if isinstance(source, ImageSource):
+            return [
+                AnthropicImageBlockParam(
+                    source=Base64ImageSourceParam(
+                        data=source.to_base64(),
+                        media_type="image/png",
+                    ),
+                    type="image",
+                    cache_control=block.cache_control,
+                )
+            ]
+        if isinstance(source, OfficeDocumentSource):
+            with source.reader as r:
+                data = r.read()
+                return [
+                    TextBlockParam(
+                        text=data.decode(),
+                        type="text",
+                        cache_control=block.cache_control,
+                    )
+                ]
+        text = self._data_extractor.get(
+            query="""Extract all the content of the PDF to Markdown format.
+            Preserve layout and formatting as much as possible, e.g., representing
+            tables as HTML tables. For all images, videos, figures, extract text
+            from it and describe what you are seeing, e.g., what is shown in the
+            image or figure, and include that description.""",
+            source=source,
+            model=ModelName.ASKUI,
+        )
+        return [
+            TextBlockParam(
+                text=text,
+                type="text",
+                cache_control=block.cache_control,
+            )
+        ]
+
+    async def to_anthropic(
+        self, block: RequestDocumentBlockParam
+    ) -> list[AnthropicContentBlockParam]:
+        file, path = self._file_service.retrieve_file_content(block.source.file_id)
+        source = load_source(path)
+        content = self.extract_content(source, block)
+        return [
+            TextBlockParam(
+                text=file.model_dump_json(),
+                type="text",
+                cache_control=block.cache_control,
+            ),
+        ] + content
 
 
 class ImageBlockParamSourceTranslator:
@@ -172,24 +240,29 @@ class MessageContentBlockParamTranslator:
     def __init__(self, file_service: FileService) -> None:
         self.image_translator = ImageBlockParamTranslator(file_service)
         self.tool_result_translator = ToolResultBlockParamTranslator(file_service)
+        self.request_document_translator = RequestDocumentBlockParamTranslator(
+            file_service
+        )
 
     async def from_anthropic(
         self, block: AnthropicContentBlockParam
-    ) -> ContentBlockParam:
+    ) -> list[ContentBlockParam]:
         if block.type == "image":
-            return await self.image_translator.from_anthropic(block)
+            return [await self.image_translator.from_anthropic(block)]
         if block.type == "tool_result":
-            return await self.tool_result_translator.from_anthropic(block)
-        return block
+            return [await self.tool_result_translator.from_anthropic(block)]
+        return [block]
 
     async def to_anthropic(
         self, block: ContentBlockParam
-    ) -> AnthropicContentBlockParam:
+    ) -> list[AnthropicContentBlockParam]:
         if block.type == "image":
-            return await self.image_translator.to_anthropic(block)
+            return [await self.image_translator.to_anthropic(block)]
         if block.type == "tool_result":
-            return await self.tool_result_translator.to_anthropic(block)
-        return block
+            return [await self.tool_result_translator.to_anthropic(block)]
+        if block.type == "document":
+            return await self.request_document_translator.to_anthropic(block)
+        return [block]
 
 
 class MessageContentTranslator:
@@ -201,18 +274,20 @@ class MessageContentTranslator:
     ) -> list[ContentBlockParam] | str:
         if isinstance(content, str):
             return content
-        return [
+        lists_of_blocks = [
             await self.block_param_translator.from_anthropic(block) for block in content
         ]
+        return [block for sublist in lists_of_blocks for block in sublist]
 
     async def to_anthropic(
         self, content: list[ContentBlockParam] | str
     ) -> list[AnthropicContentBlockParam] | str:
         if isinstance(content, str):
             return content
-        return [
+        lists_of_blocks = [
             await self.block_param_translator.to_anthropic(block) for block in content
         ]
+        return [block for sublist in lists_of_blocks for block in sublist]
 
 
 class MessageTranslator:
