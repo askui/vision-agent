@@ -38,14 +38,32 @@ app = FastAPI(
     dependencies=[SetEnvFromHeadersDep],
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+# Include routers
+v1_router = APIRouter(prefix="/v1")
+v1_router.include_router(assistants_router)
+v1_router.include_router(threads_router)
+v1_router.include_router(messages_router)
+v1_router.include_router(runs_router)
+v1_router.include_router(mcp_configs_router)
+v1_router.include_router(files_router)
+v1_router.include_router(health_router)
+app.include_router(v1_router)
+
+mcp = FastMCP.from_fastapi(app=app, name="AskUI Chat MCP")
+mcp_app = mcp.http_app("/sse", transport="sse")
+
+
+@asynccontextmanager
+async def combined_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async with lifespan(app):
+        async with mcp_app.lifespan(app):
+            yield
+
+
+app = FastAPI(title=app.title, version=app.version, lifespan=combined_lifespan)
+app.mount("/mcp", mcp_app)
+app.include_router(v1_router)
 
 
 @app.exception_handler(NotFoundError)
@@ -103,13 +121,10 @@ def catch_all_exception_handler(
     )
 
 
-# Include routers
-v1_router = APIRouter(prefix="/v1")
-v1_router.include_router(assistants_router)
-v1_router.include_router(threads_router)
-v1_router.include_router(messages_router)
-v1_router.include_router(runs_router)
-v1_router.include_router(mcp_configs_router)
-v1_router.include_router(files_router)
-v1_router.include_router(health_router)
-app.include_router(v1_router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
