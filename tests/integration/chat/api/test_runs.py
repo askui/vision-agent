@@ -7,6 +7,7 @@ from unittest.mock import Mock
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.runs.models import Run
 from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.models import Thread
@@ -44,10 +45,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -110,10 +115,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -177,10 +186,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -227,10 +240,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -287,10 +304,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -341,10 +362,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -384,10 +409,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -439,10 +468,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -485,10 +518,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -534,10 +571,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -596,10 +637,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -640,10 +685,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -721,10 +770,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -801,10 +854,14 @@ class TestRunsAPI:
             return ThreadService(workspace_path, mock_message_service, mock_run_service)
 
         def override_runs_service() -> RunService:
+            mock_assistant_service = Mock()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path, mock_message_service, mock_message_translator
+                workspace_path,
+                mock_assistant_service,
+                mock_message_service,
+                mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -836,3 +893,175 @@ class TestRunsAPI:
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_create_run_with_custom_assistant(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a run with a custom assistant."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        threads_dir = workspace_path / "threads"
+        threads_dir.mkdir(parents=True, exist_ok=True)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a mock thread
+        mock_thread = Thread(
+            id="thread_test123",
+            object="thread",
+            created_at=1234567890,
+            name="Test Thread",
+        )
+        (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Create a mock custom assistant
+        from askui.chat.api.assistants.models import Assistant
+
+        mock_assistant = Assistant(
+            id="asst_custom123",
+            object="assistant",
+            created_at=1234567890,
+            name="Custom Assistant",
+            tools=["tool1", "tool2"],
+            system="You are a custom assistant.",
+        )
+        (assistants_dir / "asst_custom123.json").write_text(
+            mock_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            from askui.chat.api.assistants.service import AssistantService
+
+            return RunService(
+                workspace_path,
+                AssistantService(workspace_path),
+                mock_message_service,
+                mock_message_translator,
+            )
+
+        def override_assistant_service() -> AssistantService:
+            from askui.chat.api.assistants.service import AssistantService
+
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/v1/threads/thread_test123/runs",
+                    headers=test_headers,
+                    json={"assistant_id": "asst_custom123"},
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["assistant_id"] == "asst_custom123"
+                assert data["thread_id"] == "thread_test123"
+                assert data["status"] == "queued"
+                assert "id" in data
+                assert "created_at" in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_create_run_with_custom_assistant_empty_tools(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test creating a run with a custom assistant that has empty tools."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        threads_dir = workspace_path / "threads"
+        threads_dir.mkdir(parents=True, exist_ok=True)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a mock thread
+        mock_thread = Thread(
+            id="thread_test123",
+            object="thread",
+            created_at=1234567890,
+            name="Test Thread",
+        )
+        (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Create a mock custom assistant with empty tools
+        from askui.chat.api.assistants.models import Assistant
+
+        mock_assistant = Assistant(
+            id="asst_customempty123",
+            object="assistant",
+            created_at=1234567890,
+            name="Empty Tools Assistant",
+            tools=[],
+            system="You are an assistant with no tools.",
+        )
+        (assistants_dir / "asst_customempty123.json").write_text(
+            mock_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+        from askui.chat.api.runs.dependencies import get_runs_service
+        from askui.chat.api.threads.dependencies import get_thread_service
+
+        def override_thread_service() -> ThreadService:
+            from askui.chat.api.threads.service import ThreadService
+
+            mock_message_service = Mock()
+            mock_run_service = Mock()
+            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+
+        def override_runs_service() -> RunService:
+            mock_message_service = Mock()
+            mock_message_translator = Mock()
+            from askui.chat.api.assistants.service import AssistantService
+
+            return RunService(
+                workspace_path,
+                AssistantService(workspace_path),
+                mock_message_service,
+                mock_message_translator,
+            )
+
+        def override_assistant_service() -> AssistantService:
+            from askui.chat.api.assistants.service import AssistantService
+
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_thread_service] = override_thread_service
+        app.dependency_overrides[get_runs_service] = override_runs_service
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/v1/threads/thread_test123/runs",
+                    headers=test_headers,
+                    json={"assistant_id": "asst_customempty123"},
+                )
+
+                assert response.status_code == status.HTTP_201_CREATED
+                data = response.json()
+                assert data["assistant_id"] == "asst_customempty123"
+                assert data["thread_id"] == "thread_test123"
+                assert data["status"] == "queued"
+                assert "id" in data
+                assert "created_at" in data
+        finally:
+            app.dependency_overrides.clear()

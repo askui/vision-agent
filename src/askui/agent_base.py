@@ -1,7 +1,6 @@
 import time
 import types
 from abc import ABC
-from pathlib import Path
 from typing import Annotated, Optional, Type, overload
 
 from dotenv import load_dotenv
@@ -9,6 +8,7 @@ from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import Self
 
 from askui.container import telemetry
+from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
@@ -17,7 +17,7 @@ from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource
-from askui.utils.source_utils import InputSource, load_image_source, load_source
+from askui.utils.source_utils import InputSource, load_image_source
 
 from .logger import configure_logging, logger
 from .models import ModelComposition
@@ -65,6 +65,9 @@ class AgentBase(ABC):  # noqa: B024
             on_exception_types=(ElementNotFoundError,),
         )
         self._model_choice = self._init_model_choice(model)
+        self._data_extractor = DataExtractor(
+            reporter=self._reporter, models=models or {}
+        )
 
     def _init_model_router(
         self,
@@ -333,36 +336,14 @@ class AgentBase(ABC):  # noqa: B024
                 print(text)
             ```
         """
-        logger.debug("VisionAgent received instruction to get '%s'", query)
-        _source = (
-            ImageSource(self._agent_os.screenshot())
-            if source is None
-            else load_source(source)
-        )
-
-        # Prepare message content with file path if available
-        user_message_content = f'get: "{query}"' + (
-            f" from '{source}'" if isinstance(source, (str, Path)) else ""
-        )
-
-        self._reporter.add_message(
-            "User",
-            user_message_content,
-            image=_source.root if isinstance(_source, ImageSource) else None,
-        )
-        response = self._model_router.get(
-            source=_source,
+        _source = source or ImageSource(self._agent_os.screenshot())
+        _model = model or self._model_choice["get"]
+        return self._data_extractor.get(
             query=query,
+            source=_source,
+            model=_model,
             response_schema=response_schema,
-            model_choice=model or self._model_choice["get"],
         )
-        message_content = (
-            str(response)
-            if isinstance(response, (str, bool, int, float))
-            else response.model_dump()
-        )
-        self._reporter.add_message("Agent", message_content)
-        return response
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def _locate(

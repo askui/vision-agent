@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Sequence
 
+import anthropic
 import anyio
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
@@ -12,6 +13,7 @@ from fastmcp.mcp_config import MCPConfig
 
 from askui.agent import VisionAgent
 from askui.android_agent import AndroidVisionAgent
+from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import (
     ANDROID_VISION_AGENT,
     ASKUI_VISION_AGENT,
@@ -35,6 +37,7 @@ from askui.chat.api.runs.runner.events.error_events import (
 from askui.chat.api.runs.runner.events.events import Events
 from askui.chat.api.runs.runner.events.message_events import MessageEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
+from askui.custom_agent import CustomAgent
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ImageBlockParam,
@@ -42,6 +45,7 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
 )
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
+from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.pynput_agent_os import PynputAgentOs
 from askui.utils.api_utils import (
@@ -94,11 +98,13 @@ def get_mcp_client(
 class Runner:
     def __init__(
         self,
+        assistant: Assistant,
         run: Run,
         base_dir: Path,
         message_service: MessageService,
         message_translator: MessageTranslator,
     ) -> None:
+        self._assistant = assistant
         self._run = run
         self._base_dir = base_dir
         self._message_service = message_service
@@ -263,16 +269,19 @@ class Runner:
 
     async def _run_agent(
         self,
-        agent_type: Literal["android", "vision", "web", "web_testing"],
+        agent_type: Literal["android", "vision", "web", "web_testing", "custom"],
         send_stream: ObjectStream[Events],
         mcp_client: McpClient | None,
     ) -> None:
-        tools = ToolCollection(mcp_client=mcp_client)
+        tools = ToolCollection(
+            mcp_client=mcp_client,
+            include=set(self._assistant.tools) if self._assistant.tools else None,
+        )
         messages: list[MessageParam] = [
             await self._message_translator.to_anthropic(msg)
             for msg in self._message_service.list_(
                 thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX),
+                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
             ).data
         ]
 
@@ -333,12 +342,31 @@ class Runner:
                     )
                 return
 
-            with VisionAgent() as agent:
-                agent.act(
-                    messages,
-                    on_message=on_message,
-                    tools=tools,
-                )
+            if agent_type == "vision":
+                with VisionAgent() as agent:
+                    agent.act(
+                        messages,
+                        on_message=on_message,
+                        tools=tools,
+                    )
+                return
+
+            _tools = ToolCollection(
+                mcp_client=mcp_client,
+                include=set(self._assistant.tools),
+            )
+            custom_agent = CustomAgent()
+            custom_agent.act(
+                messages,
+                on_message=on_message,
+                tools=_tools,
+                settings=ActSettings(
+                    messages=MessageSettings(
+                        system=self._assistant.system or anthropic.NOT_GIVEN,
+                        thinking={"type": "enabled", "budget_tokens": 2048},
+                    ),
+                ),
+            )
 
         await asyncify(_run_agent_inner)()
 
@@ -376,6 +404,12 @@ class Runner:
                 await self._run_askui_web_testing_agent(
                     send_stream,
                     mcp_client,
+                )
+            else:
+                await self._run_agent(
+                    agent_type="custom",
+                    send_stream=send_stream,
+                    mcp_client=mcp_client,
                 )
             updated_run = self._retrieve()
             if updated_run.status == "in_progress":
