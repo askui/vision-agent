@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 
 from askui.chat.api.messages.models import Message, MessageCreateParams
 from askui.chat.api.messages.service import MessageService
-from askui.chat.api.models import ThreadId
+from askui.chat.api.models import ThreadId, WorkspaceId
 from askui.chat.api.runs.models import Run, RunCreateParams, ThreadAndRunCreateParams
 from askui.chat.api.runs.runner.events.events import Events
 from askui.chat.api.runs.service import RunService
@@ -37,18 +37,26 @@ class ThreadFacade:
         return self._message_service.create(thread_id, params)
 
     async def create_run(
-        self, thread_id: ThreadId, params: RunCreateParams
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, params: RunCreateParams
     ) -> tuple[Run, AsyncGenerator[Events, None]]:
         """Create a run, ensuring the thread exists first."""
         self._ensure_thread_exists(thread_id)
-        return await self._run_service.create(thread_id, params)
+        return await self._run_service.create(
+            workspace_id=workspace_id,
+            thread_id=thread_id,
+            params=params,
+        )
 
     async def create_thread_and_run(
-        self, params: ThreadAndRunCreateParams
+        self, workspace_id: WorkspaceId, params: ThreadAndRunCreateParams
     ) -> tuple[Run, AsyncGenerator[Events, None]]:
         """Create a thread and a run, ensuring the thread exists first."""
         thread = self._thread_service.create(params.thread)
-        return await self._run_service.create(thread.id, params)
+        return await self._run_service.create(
+            workspace_id=workspace_id,
+            thread_id=thread.id,
+            params=params,
+        )
 
     def list_messages(
         self, thread_id: ThreadId, query: ListQuery

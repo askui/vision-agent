@@ -33,12 +33,14 @@ class TestMcpConfigsAPI:
         mcp_configs_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock MCP config
+        workspace_id = test_headers["askui-workspace"]
         mock_config = McpConfig(
             id="mcpcnf_test123",
             object="mcp_config",
             created_at=1234567890,
             name="Test MCP Config",
             mcp_server={"type": "stdio", "command": "test_command"},
+            workspace_id=workspace_id,
         )
         (mcp_configs_dir / "mcpcnf_test123.json").write_text(
             mock_config.model_dump_json()
@@ -76,6 +78,7 @@ class TestMcpConfigsAPI:
         mcp_configs_dir.mkdir(parents=True, exist_ok=True)
 
         # Create multiple mock MCP configs
+        workspace_id = test_headers["askui-workspace"]
         for i in range(5):
             mock_config = McpConfig(
                 id=f"mcpcnf_test{i}",
@@ -83,6 +86,7 @@ class TestMcpConfigsAPI:
                 created_at=1234567890 + i,
                 name=f"Test MCP Config {i}",
                 mcp_server={"type": "stdio", "command": f"test_command_{i}"},
+                workspace_id=workspace_id,
             )
             (mcp_configs_dir / f"mcpcnf_test{i}.json").write_text(
                 mock_config.model_dump_json()
@@ -231,12 +235,14 @@ class TestMcpConfigsAPI:
         mcp_configs_dir = workspace_path / "mcp_configs"
         mcp_configs_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_config = McpConfig(
             id="mcpcnf_test123",
             object="mcp_config",
             created_at=1234567890,
             name="Original Name",
             mcp_server={"type": "stdio", "command": "original_command"},
+            workspace_id=workspace_id,
         )
         (mcp_configs_dir / "mcpcnf_test123.json").write_text(
             mock_config.model_dump_json()
@@ -277,12 +283,14 @@ class TestMcpConfigsAPI:
         mcp_configs_dir = workspace_path / "mcp_configs"
         mcp_configs_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_config = McpConfig(
             id="mcpcnf_test123",
             object="mcp_config",
             created_at=1234567890,
             name="Original Name",
             mcp_server={"type": "stdio", "command": "original_command"},
+            workspace_id=workspace_id,
         )
         (mcp_configs_dir / "mcpcnf_test123.json").write_text(
             mock_config.model_dump_json()
@@ -332,12 +340,14 @@ class TestMcpConfigsAPI:
         mcp_configs_dir = workspace_path / "mcp_configs"
         mcp_configs_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_config = McpConfig(
             id="mcpcnf_test123",
             object="mcp_config",
             created_at=1234567890,
             name="Test MCP Config",
             mcp_server={"type": "stdio", "command": "test_command"},
+            workspace_id=workspace_id,
         )
         (mcp_configs_dir / "mcpcnf_test123.json").write_text(
             mock_config.model_dump_json()
@@ -371,3 +381,266 @@ class TestMcpConfigsAPI:
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_modify_default_mcp_config_forbidden(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that modifying a default MCP configuration returns 403 Forbidden."""
+        # Create a default MCP config (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        mcp_configs_dir = workspace_path / "mcp_configs"
+        mcp_configs_dir.mkdir(parents=True, exist_ok=True)
+
+        default_config = McpConfig(
+            id="mcpcnf_default123",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Default MCP Config",
+            mcp_server={"type": "stdio", "command": "default_command"},
+            workspace_id=None,  # No workspace_id = default
+        )
+        (mcp_configs_dir / "mcpcnf_default123.json").write_text(
+            default_config.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                # Try to modify the default MCP config
+                response = client.post(
+                    "/v1/mcp-configs/mcpcnf_default123",
+                    headers=test_headers,
+                    json={"name": "Modified Name"},
+                )
+                assert response.status_code == 403
+                assert "cannot be modified" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_delete_default_mcp_config_forbidden(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that deleting a default MCP configuration returns 403 Forbidden."""
+        # Create a default MCP config (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        mcp_configs_dir = workspace_path / "mcp_configs"
+        mcp_configs_dir.mkdir(parents=True, exist_ok=True)
+
+        default_config = McpConfig(
+            id="mcpcnf_default456",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Default MCP Config",
+            mcp_server={"type": "stdio", "command": "default_command"},
+            workspace_id=None,  # No workspace_id = default
+        )
+        (mcp_configs_dir / "mcpcnf_default456.json").write_text(
+            default_config.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                # Try to delete the default MCP config
+                response = client.delete(
+                    "/v1/mcp-configs/mcpcnf_default456",
+                    headers=test_headers,
+                )
+                assert response.status_code == 403
+                assert "cannot be deleted" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_list_mcp_configs_includes_default_and_workspace(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that listing MCP configs includes both default and workspace-scoped
+        ones."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        mcp_configs_dir = workspace_path / "mcp_configs"
+        mcp_configs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a default MCP config (no workspace_id)
+        default_config = McpConfig(
+            id="mcpcnf_default789",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Default MCP Config",
+            mcp_server={"type": "stdio", "command": "default_command"},
+            workspace_id=None,  # No workspace_id = default
+        )
+        (mcp_configs_dir / "mcpcnf_default789.json").write_text(
+            default_config.model_dump_json()
+        )
+
+        # Create a workspace-scoped MCP config
+        workspace_id = test_headers["askui-workspace"]
+        workspace_config = McpConfig(
+            id="mcpcnf_workspace123",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Workspace MCP Config",
+            mcp_server={"type": "stdio", "command": "workspace_command"},
+            workspace_id=workspace_id,
+        )
+        (mcp_configs_dir / "mcpcnf_workspace123.json").write_text(
+            workspace_config.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                # List MCP configs - should include both
+                response = client.get("/v1/mcp-configs", headers=test_headers)
+                assert response.status_code == 200
+
+                data = response.json()
+                config_ids = [config["id"] for config in data["data"]]
+
+                # Should include both default and workspace configs
+                assert "mcpcnf_default789" in config_ids
+                assert "mcpcnf_workspace123" in config_ids
+
+                # Verify workspace_id fields
+                default_config_data = next(
+                    c for c in data["data"] if c["id"] == "mcpcnf_default789"
+                )
+                workspace_config_data = next(
+                    c for c in data["data"] if c["id"] == "mcpcnf_workspace123"
+                )
+
+                # Default config should not have workspace_id field (excluded when None)
+                assert "workspace_id" not in default_config_data
+                assert workspace_config_data["workspace_id"] == workspace_id
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_retrieve_default_mcp_config_success(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that retrieving a default MCP configuration works."""
+        # Create a default MCP config (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        mcp_configs_dir = workspace_path / "mcp_configs"
+        mcp_configs_dir.mkdir(parents=True, exist_ok=True)
+
+        default_config = McpConfig(
+            id="mcpcnf_defaultretrieve",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Default MCP Config",
+            mcp_server={"type": "stdio", "command": "default_command"},
+            workspace_id=None,  # No workspace_id = default
+        )
+        (mcp_configs_dir / "mcpcnf_defaultretrieve.json").write_text(
+            default_config.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                # Retrieve the default MCP config
+                response = client.get(
+                    "/v1/mcp-configs/mcpcnf_defaultretrieve",
+                    headers=test_headers,
+                )
+                assert response.status_code == 200
+
+                data = response.json()
+                assert data["id"] == "mcpcnf_defaultretrieve"
+                # Default config should not have workspace_id field (excluded when None)
+                assert "workspace_id" not in data
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_workspace_scoped_mcp_config_operations_success(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that workspace-scoped MCP configs can be modified and deleted."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        mcp_configs_dir = workspace_path / "mcp_configs"
+        mcp_configs_dir.mkdir(parents=True, exist_ok=True)
+
+        workspace_id = test_headers["askui-workspace"]
+        workspace_config = McpConfig(
+            id="mcpcnf_workspaceops",
+            object="mcp_config",
+            created_at=1234567890,
+            name="Workspace MCP Config",
+            mcp_server={"type": "stdio", "command": "workspace_command"},
+            workspace_id=workspace_id,
+        )
+        (mcp_configs_dir / "mcpcnf_workspaceops.json").write_text(
+            workspace_config.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                # Modify the workspace MCP config
+                response = client.post(
+                    "/v1/mcp-configs/mcpcnf_workspaceops",
+                    headers=test_headers,
+                    json={"name": "Modified Workspace MCP Config"},
+                )
+                assert response.status_code == 200
+
+                data = response.json()
+                assert data["name"] == "Modified Workspace MCP Config"
+                assert data["workspace_id"] == workspace_id
+
+                # Delete the workspace MCP config
+                response = client.delete(
+                    "/v1/mcp-configs/mcpcnf_workspaceops",
+                    headers=test_headers,
+                )
+                assert response.status_code == 204
+
+                # Verify it's deleted
+                response = client.get(
+                    "/v1/mcp-configs/mcpcnf_workspaceops",
+                    headers=test_headers,
+                )
+                assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()

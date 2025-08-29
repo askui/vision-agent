@@ -18,6 +18,7 @@ from askui.chat.api.threads.router import router as threads_router
 from askui.utils.api_utils import (
     ConflictError,
     FileTooLargeError,
+    ForbiddenError,
     LimitReachedError,
     NotFoundError,
 )
@@ -103,6 +104,17 @@ def file_too_large_error_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ForbiddenError)
+def forbidden_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: ForbiddenError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
         content={"detail": str(exc)},
     )
 

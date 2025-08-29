@@ -14,6 +14,14 @@ from askui.chat.api.threads.models import Thread
 from askui.chat.api.threads.service import ThreadService
 
 
+def create_mock_mcp_config_service() -> Mock:
+    """Create a properly configured mock MCP config service."""
+    mock_service = Mock()
+    # Configure mock to return proper data structure
+    mock_service.list_.return_value.data = []
+    return mock_service
+
+
 class TestRunsAPI:
     """Test suite for the runs API endpoints."""
 
@@ -46,13 +54,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -116,13 +126,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -187,13 +199,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -241,13 +255,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -305,13 +321,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -363,13 +381,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -410,13 +430,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -469,13 +491,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -519,13 +543,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -572,13 +598,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -638,13 +666,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -686,13 +716,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -771,13 +803,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -855,13 +889,15 @@ class TestRunsAPI:
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             mock_message_service = Mock()
             mock_message_translator = Mock()
             return RunService(
-                workspace_path,
-                mock_assistant_service,
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=mock_assistant_service,
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -944,13 +980,15 @@ class TestRunsAPI:
         def override_runs_service() -> RunService:
             mock_message_service = Mock()
             mock_message_translator = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             from askui.chat.api.assistants.service import AssistantService
 
             return RunService(
-                workspace_path,
-                AssistantService(workspace_path),
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=AssistantService(workspace_path),
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         def override_assistant_service() -> AssistantService:
@@ -1009,7 +1047,7 @@ class TestRunsAPI:
             created_at=1234567890,
             name="Empty Tools Assistant",
             tools=[],
-            system="You are an assistant with no tools.",
+            system="You are a assistant with no tools.",
         )
         (assistants_dir / "asst_customempty123.json").write_text(
             mock_assistant.model_dump_json()
@@ -1030,13 +1068,15 @@ class TestRunsAPI:
         def override_runs_service() -> RunService:
             mock_message_service = Mock()
             mock_message_translator = Mock()
+            mock_mcp_config_service = create_mock_mcp_config_service()
             from askui.chat.api.assistants.service import AssistantService
 
             return RunService(
-                workspace_path,
-                AssistantService(workspace_path),
-                mock_message_service,
-                mock_message_translator,
+                base_dir=workspace_path,
+                assistant_service=AssistantService(workspace_path),
+                mcp_config_service=mock_mcp_config_service,
+                message_service=mock_message_service,
+                message_translator=mock_message_translator,
             )
 
         def override_assistant_service() -> AssistantService:

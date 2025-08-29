@@ -1,12 +1,12 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Path, Response, status
+from fastapi import APIRouter, BackgroundTasks, Header, Path, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from askui.chat.api.dependencies import ListQueryDep
-from askui.chat.api.models import RunId, ThreadId
+from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import RunCreateParams
 from askui.chat.api.threads.dependencies import ThreadFacadeDep
 from askui.chat.api.threads.facade import ThreadFacade
@@ -21,13 +21,16 @@ router = APIRouter(tags=["runs"])
 
 @router.post("/threads/{thread_id}/runs")
 async def create_run(
+    askui_workspace: Annotated[WorkspaceId, Header()],
     thread_id: Annotated[ThreadId, Path(...)],
     params: RunCreateParams,
     background_tasks: BackgroundTasks,
     thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> Response:
     stream = params.stream
-    run, async_generator = await thread_facade.create_run(thread_id, params)
+    run, async_generator = await thread_facade.create_run(
+        workspace_id=askui_workspace, thread_id=thread_id, params=params
+    )
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
@@ -55,12 +58,15 @@ async def create_run(
 
 @router.post("/runs")
 async def create_thread_and_run(
+    askui_workspace: Annotated[WorkspaceId, Header()],
     params: ThreadAndRunCreateParams,
     background_tasks: BackgroundTasks,
     thread_facade: ThreadFacade = ThreadFacadeDep,
 ) -> Response:
     stream = params.stream
-    run, async_generator = await thread_facade.create_thread_and_run(params)
+    run, async_generator = await thread_facade.create_thread_and_run(
+        workspace_id=askui_workspace, params=params
+    )
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:

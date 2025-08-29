@@ -3,8 +3,7 @@ from typing import Literal
 from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
 from pydantic import BaseModel
 
-from askui.chat.api.models import McpConfigId
-from askui.utils.api_utils import Resource
+from askui.chat.api.models import McpConfigId, WorkspaceId, WorkspaceResource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -30,7 +29,7 @@ class McpConfigModifyParams(BaseModelWithNotGiven):
     mcp_server: McpServer | NotGiven = NOT_GIVEN
 
 
-class McpConfig(McpConfigBase, Resource):
+class McpConfig(McpConfigBase, WorkspaceResource):
     """An MCP configuration that can be stored and managed."""
 
     id: McpConfigId
@@ -38,10 +37,13 @@ class McpConfig(McpConfigBase, Resource):
     created_at: UnixDatetime
 
     @classmethod
-    def create(cls, params: McpConfigCreateParams) -> "McpConfig":
+    def create(
+        cls, workspace_id: WorkspaceId, params: McpConfigCreateParams
+    ) -> "McpConfig":
         return cls(
             id=generate_time_ordered_id("mcpcnf"),
             created_at=now(),
+            workspace_id=workspace_id,
             **params.model_dump(),
         )
 
