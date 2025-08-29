@@ -49,6 +49,7 @@ class TestAssistantsAPI:
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock assistant
+        workspace_id = test_headers["askui-workspace"]
         mock_assistant = Assistant(
             id="asst_test123",
             object="assistant",
@@ -56,6 +57,7 @@ class TestAssistantsAPI:
             name="Test Assistant",
             description="A test assistant",
             avatar="test_avatar.png",
+            workspace_id=workspace_id,
         )
         (assistants_dir / "asst_test123.json").write_text(
             mock_assistant.model_dump_json()
@@ -93,6 +95,7 @@ class TestAssistantsAPI:
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
         # Create multiple mock assistants
+        workspace_id = test_headers["askui-workspace"]
         for i in range(5):
             mock_assistant = Assistant(
                 id=f"asst_test{i}",
@@ -100,6 +103,7 @@ class TestAssistantsAPI:
                 created_at=1234567890 + i,
                 name=f"Test Assistant {i}",
                 description=f"Test assistant {i}",
+                workspace_id=workspace_id,
             )
             (assistants_dir / f"asst_test{i}.json").write_text(
                 mock_assistant.model_dump_json()
@@ -320,12 +324,14 @@ class TestAssistantsAPI:
         assistants_dir = workspace_path / "assistants"
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_assistant = Assistant(
             id="asst_test123",
             object="assistant",
             created_at=1234567890,
             name="Original Name",
             description="Original description",
+            workspace_id=workspace_id,
         )
         (assistants_dir / "asst_test123.json").write_text(
             mock_assistant.model_dump_json()
@@ -369,12 +375,14 @@ class TestAssistantsAPI:
         assistants_dir = workspace_path / "assistants"
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_assistant = Assistant(
             id="asst_test123",
             object="assistant",
             created_at=1234567890,
             name="Original Name",
             description="Original description",
+            workspace_id=workspace_id,
         )
         (assistants_dir / "asst_test123.json").write_text(
             mock_assistant.model_dump_json()
@@ -418,12 +426,14 @@ class TestAssistantsAPI:
         assistants_dir = workspace_path / "assistants"
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_assistant = Assistant(
             id="asst_test123",
             object="assistant",
             created_at=1234567890,
             name="Original Name",
             description="Original description",
+            workspace_id=workspace_id,
         )
         (assistants_dir / "asst_test123.json").write_text(
             mock_assistant.model_dump_json()
@@ -471,11 +481,13 @@ class TestAssistantsAPI:
         assistants_dir = workspace_path / "assistants"
         assistants_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = test_headers["askui-workspace"]
         mock_assistant = Assistant(
             id="asst_test123",
             object="assistant",
             created_at=1234567890,
             name="Test Assistant",
+            workspace_id=workspace_id,
         )
         (assistants_dir / "asst_test123.json").write_text(
             mock_assistant.model_dump_json()
@@ -509,3 +521,265 @@ class TestAssistantsAPI:
         )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_modify_default_assistant_forbidden(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that modifying a default assistant returns 403 Forbidden."""
+        # Create a default assistant (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        default_assistant = Assistant(
+            id="asst_default123",
+            object="assistant",
+            created_at=1234567890,
+            name="Default Assistant",
+            description="This is a default assistant",
+            workspace_id=None,  # No workspace_id = default
+        )
+        (assistants_dir / "asst_default123.json").write_text(
+            default_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                # Try to modify the default assistant
+                response = client.post(
+                    "/v1/assistants/asst_default123",
+                    headers=test_headers,
+                    json={"name": "Modified Name"},
+                )
+                assert response.status_code == 403
+                assert "cannot be modified" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_delete_default_assistant_forbidden(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that deleting a default assistant returns 403 Forbidden."""
+        # Create a default assistant (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        default_assistant = Assistant(
+            id="asst_default456",
+            object="assistant",
+            created_at=1234567890,
+            name="Default Assistant",
+            description="This is a default assistant",
+            workspace_id=None,  # No workspace_id = default
+        )
+        (assistants_dir / "asst_default456.json").write_text(
+            default_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                # Try to delete the default assistant
+                response = client.delete(
+                    "/v1/assistants/asst_default456",
+                    headers=test_headers,
+                )
+                assert response.status_code == 403
+                assert "cannot be deleted" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_list_assistants_includes_default_and_workspace(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that listing assistants includes both default and
+        workspace-scoped ones.
+        """
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a default assistant (no workspace_id)
+        default_assistant = Assistant(
+            id="asst_default789",
+            object="assistant",
+            created_at=1234567890,
+            name="Default Assistant",
+            description="This is a default assistant",
+            workspace_id=None,  # No workspace_id = default
+        )
+        (assistants_dir / "asst_default789.json").write_text(
+            default_assistant.model_dump_json()
+        )
+
+        # Create a workspace-scoped assistant
+        workspace_id = test_headers["askui-workspace"]
+        workspace_assistant = Assistant(
+            id="asst_workspace123",
+            object="assistant",
+            created_at=1234567890,
+            name="Workspace Assistant",
+            description="This is a workspace assistant",
+            workspace_id=workspace_id,
+        )
+        (assistants_dir / "asst_workspace123.json").write_text(
+            workspace_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                # List assistants - should include both
+                response = client.get("/v1/assistants", headers=test_headers)
+                assert response.status_code == 200
+
+                data = response.json()
+                assistant_ids = [assistant["id"] for assistant in data["data"]]
+
+                # Should include both default and workspace assistants
+                assert "asst_default789" in assistant_ids
+                assert "asst_workspace123" in assistant_ids
+
+                # Verify workspace_id fields
+                default_assistant_data = next(
+                    a for a in data["data"] if a["id"] == "asst_default789"
+                )
+                workspace_assistant_data = next(
+                    a for a in data["data"] if a["id"] == "asst_workspace123"
+                )
+
+                assert default_assistant_data["workspace_id"] is None
+                assert workspace_assistant_data["workspace_id"] == workspace_id
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_retrieve_default_assistant_success(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that retrieving a default assistant works."""
+        # Create a default assistant (no workspace_id)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        default_assistant = Assistant(
+            id="asst_defaultretrieve",
+            object="assistant",
+            created_at=1234567890,
+            name="Default Assistant",
+            description="This is a default assistant",
+            workspace_id=None,  # No workspace_id = default
+        )
+        (assistants_dir / "asst_defaultretrieve.json").write_text(
+            default_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                # Retrieve the default assistant
+                response = client.get(
+                    "/v1/assistants/asst_defaultretrieve",
+                    headers=test_headers,
+                )
+                assert response.status_code == 200
+
+                data = response.json()
+                assert data["id"] == "asst_defaultretrieve"
+                assert data["workspace_id"] is None
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_workspace_scoped_assistant_operations_success(
+        self, test_headers: dict[str, str]
+    ) -> None:
+        """Test that workspace-scoped assistants can be modified and deleted."""
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
+        assistants_dir = workspace_path / "assistants"
+        assistants_dir.mkdir(parents=True, exist_ok=True)
+
+        workspace_id = test_headers["askui-workspace"]
+        workspace_assistant = Assistant(
+            id="asst_workspaceops",
+            object="assistant",
+            created_at=1234567890,
+            name="Workspace Assistant",
+            description="This is a workspace assistant",
+            workspace_id=workspace_id,
+        )
+        (assistants_dir / "asst_workspaceops.json").write_text(
+            workspace_assistant.model_dump_json()
+        )
+
+        from askui.chat.api.app import app
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+
+        def override_assistant_service() -> AssistantService:
+            return AssistantService(workspace_path)
+
+        app.dependency_overrides[get_assistant_service] = override_assistant_service
+
+        try:
+            with TestClient(app) as client:
+                # Modify the workspace assistant
+                response = client.post(
+                    "/v1/assistants/asst_workspaceops",
+                    headers=test_headers,
+                    json={"name": "Modified Workspace Assistant"},
+                )
+                assert response.status_code == 200
+
+                data = response.json()
+                assert data["name"] == "Modified Workspace Assistant"
+                assert data["workspace_id"] == workspace_id
+
+                # Delete the workspace assistant
+                response = client.delete(
+                    "/v1/assistants/asst_workspaceops",
+                    headers=test_headers,
+                )
+                assert response.status_code == 204
+
+                # Verify it's deleted
+                response = client.get(
+                    "/v1/assistants/asst_workspaceops",
+                    headers=test_headers,
+                )
+                assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()

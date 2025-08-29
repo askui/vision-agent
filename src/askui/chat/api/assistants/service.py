@@ -6,9 +6,11 @@ from askui.chat.api.assistants.models import (
     AssistantModifyParams,
 )
 from askui.chat.api.assistants.seeds import SEEDS
-from askui.chat.api.models import AssistantId
+from askui.chat.api.models import AssistantId, WorkspaceId
+from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
     ConflictError,
+    ForbiddenError,
     ListQuery,
     ListResponse,
     NotFoundError,
@@ -32,32 +34,62 @@ class AssistantService:
             raise NotFoundError(error_msg)
         return assistant_path
 
-    def list_(self, query: ListQuery) -> ListResponse[Assistant]:
-        return list_resources(self._assistants_dir, query, Assistant)
+    def list_(
+        self, workspace_id: WorkspaceId | None, query: ListQuery
+    ) -> ListResponse[Assistant]:
+        return list_resources(
+            self._assistants_dir,
+            query,
+            Assistant,
+            filter_fn=build_workspace_filter_fn(workspace_id, Assistant),
+        )
 
-    def retrieve(self, assistant_id: AssistantId) -> Assistant:
+    def retrieve(
+        self, workspace_id: WorkspaceId | None, assistant_id: AssistantId
+    ) -> Assistant:
         try:
             assistant_path = self._get_assistant_path(assistant_id)
-            return Assistant.model_validate_json(assistant_path.read_text())
+            assistant = Assistant.model_validate_json(assistant_path.read_text())
+            if not (
+                assistant.workspace_id is None or assistant.workspace_id == workspace_id
+            ):
+                error_msg = f"Assistant {assistant_id} not found"
+                raise NotFoundError(error_msg)
         except FileNotFoundError as e:
             error_msg = f"Assistant {assistant_id} not found"
             raise NotFoundError(error_msg) from e
+        else:
+            return assistant
 
-    def create(self, params: AssistantCreateParams) -> Assistant:
-        assistant = Assistant.create(params)
+    def create(
+        self, workspace_id: WorkspaceId, params: AssistantCreateParams
+    ) -> Assistant:
+        assistant = Assistant.create(workspace_id, params)
         self._save(assistant, new=True)
         return assistant
 
     def modify(
-        self, assistant_id: AssistantId, params: AssistantModifyParams
+        self,
+        workspace_id: WorkspaceId | None,
+        assistant_id: AssistantId,
+        params: AssistantModifyParams,
     ) -> Assistant:
-        assistant = self.retrieve(assistant_id)
+        assistant = self.retrieve(workspace_id, assistant_id)
+        if assistant.workspace_id is None:
+            error_msg = f"Default assistant {assistant_id} cannot be modified"
+            raise ForbiddenError(error_msg)
         modified = assistant.modify(params)
         self._save(modified)
         return modified
 
-    def delete(self, assistant_id: AssistantId) -> None:
+    def delete(
+        self, workspace_id: WorkspaceId | None, assistant_id: AssistantId
+    ) -> None:
         try:
+            assistant = self.retrieve(workspace_id, assistant_id)
+            if assistant.workspace_id is None:
+                error_msg = f"Default assistant {assistant_id} cannot be deleted"
+                raise ForbiddenError(error_msg)
             self._get_assistant_path(assistant_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"Assistant {assistant_id} not found"

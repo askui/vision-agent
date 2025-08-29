@@ -1,6 +1,6 @@
 import logging
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Sequence
 
 import anthropic
@@ -26,7 +26,7 @@ from askui.chat.api.mcp_configs.service import McpConfigService
 from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
-from askui.chat.api.models import RunId, ThreadId
+from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
 from askui.chat.api.runs.runner.events.error_events import (
@@ -48,12 +48,7 @@ from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.pynput_agent_os import PynputAgentOs
-from askui.utils.api_utils import (
-    LIST_LIMIT_MAX,
-    ConflictError,
-    ListQuery,
-    NotFoundError,
-)
+from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
 from askui.utils.image_utils import ImageSource
 from askui.web_agent import WebVisionAgent
 from askui.web_testing_agent import WebTestingAgent
@@ -74,68 +69,50 @@ def build_fast_mcp_config(mcp_configs: Sequence[McpConfig]) -> MCPConfig:
 McpClient = Client[MCPConfigTransport]
 
 
-def get_mcp_client(
-    base_dir: Path,
-) -> McpClient | None:
-    """Get an MCP client from all available MCP configs.
+class RunnerRunService(ABC):
+    @abstractmethod
+    def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
+        raise NotImplementedError
 
-    *Important*: This function can only handle up to 100 MCP server configs. Tool names
-    are prefixed with the `McpConfigId` (used as the FastMCP MCP server name) to avoid
-    conflicts.
-
-    Args:
-        base_dir: The base directory of the MCP configs.
-
-    Returns:
-        McpClient: A MCP client.
-    """
-    mcp_config_service = McpConfigService(base_dir)
-    mcp_configs = mcp_config_service.list_(ListQuery(limit=LIST_LIMIT_MAX, order="asc"))
-    fast_mcp_config = build_fast_mcp_config(mcp_configs.data)
-    return Client(fast_mcp_config) if fast_mcp_config.mcpServers else None
+    @abstractmethod
+    def save(self, run: Run, new: bool = False) -> None:
+        raise NotImplementedError
 
 
 class Runner:
     def __init__(
         self,
+        workspace_id: WorkspaceId,
         assistant: Assistant,
         run: Run,
-        base_dir: Path,
         message_service: MessageService,
         message_translator: MessageTranslator,
+        mcp_config_service: McpConfigService,
+        run_service: RunnerRunService,
     ) -> None:
+        self._workspace_id = workspace_id
         self._assistant = assistant
         self._run = run
-        self._base_dir = base_dir
         self._message_service = message_service
         self._message_translator = message_translator
         self._message_content_translator = message_translator.content_translator
+        self._mcp_config_service = mcp_config_service
+        self._run_service = run_service
         self._agent_os = PynputAgentOs()
 
-    def get_runs_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "runs" / thread_id
-
-    def _get_run_path(
-        self, thread_id: ThreadId, run_id: RunId, new: bool = False
-    ) -> Path:
-        run_path = self.get_runs_dir(thread_id) / f"{run_id}.json"
-        if new and run_path.exists():
-            error_msg = f"Run {run_id} already exists in thread {thread_id}"
-            raise ConflictError(error_msg)
-        if not new and not run_path.exists():
-            error_msg = f"Run {run_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg)
-        return run_path
-
-    def _save(self, run: Run, new: bool = False) -> None:
-        runs_dir = self.get_runs_dir(run.thread_id)
-        runs_dir.mkdir(parents=True, exist_ok=True)
-        run_file = self._get_run_path(run.thread_id, run.id, new=new)
-        run_file.write_text(run.model_dump_json(), encoding="utf-8")
+    def _get_mcp_client(self) -> McpClient | None:
+        mcp_configs = self._mcp_config_service.list_(
+            workspace_id=self._workspace_id,
+            query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
+        )
+        fast_mcp_config = build_fast_mcp_config(mcp_configs.data)
+        return Client(fast_mcp_config) if fast_mcp_config.mcpServers else None
 
     def _retrieve(self) -> Run:
-        run_file = self._get_run_path(self._run.thread_id, self._run.id)
-        return Run.model_validate_json(run_file.read_text(encoding="utf-8"))
+        return self._run_service.retrieve(
+            thread_id=self._run.thread_id,
+            run_id=self._run.id,
+        )
 
     async def _run_human_agent(self, send_stream: ObjectStream[Events]) -> None:
         message = self._message_service.create(
@@ -374,7 +351,7 @@ class Runner:
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
-        mcp_client = get_mcp_client(self._base_dir)
+        mcp_client = self._get_mcp_client()
         self._mark_run_as_started()
         await send_stream.send(
             RunEvent(
@@ -414,7 +391,7 @@ class Runner:
             updated_run = self._retrieve()
             if updated_run.status == "in_progress":
                 updated_run.completed_at = datetime.now(tz=timezone.utc)
-                self._save(updated_run)
+                self._run_service.save(updated_run)
                 await send_stream.send(
                     RunEvent(
                         data=updated_run,
@@ -429,7 +406,7 @@ class Runner:
                     )
                 )
                 updated_run.cancelled_at = datetime.now(tz=timezone.utc)
-                self._save(updated_run)
+                self._run_service.save(updated_run)
                 await send_stream.send(
                     RunEvent(
                         data=updated_run,
@@ -449,7 +426,7 @@ class Runner:
             updated_run = self._retrieve()
             updated_run.failed_at = datetime.now(tz=timezone.utc)
             updated_run.last_error = RunError(message=str(e), code="server_error")
-            self._save(updated_run)
+            self._run_service.save(updated_run)
             await send_stream.send(
                 RunEvent(
                     data=updated_run,
@@ -464,7 +441,7 @@ class Runner:
 
     def _mark_run_as_started(self) -> None:
         self._run.started_at = datetime.now(tz=timezone.utc)
-        self._save(self._run)
+        self._run_service.save(self._run)
 
     def _should_abort(self, run: Run) -> bool:
         return run.status in ("cancelled", "cancelling", "expired")
