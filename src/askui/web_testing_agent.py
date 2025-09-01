@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
@@ -11,6 +10,7 @@ from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
 )
+from askui.prompts.system import TESTING_AGENT_SYSTEM_PROMPT
 from askui.tools.testing.execution_tools import (
     CreateExecutionTool,
     DeleteExecutionTool,
@@ -38,37 +38,10 @@ from .models.models import ModelChoice, ModelComposition, ModelName, ModelRegist
 from .reporting import Reporter
 from .retry import Retry
 
-_TESTING_SYSTEM_PROMPT = f"""
-<SYSTEM_CAPABILITY>
-* You are an autonomous exploratory web testing agent. Your job is to:
-  - Analyze the application under test (AUT) at the given URL.
-  - Use the provided user instructions to guide your testing focus.
-  - Discover features and scenarios of the AUT, create and update test features and
-    scenarios as you explore.
-  - Execute scenarios and create/update test executions, recording results.
-  - Identify gaps in feature/scenario coverage and prioritize the next most important
-    feature/scenario for testing.
-  - Use all available tools to create, retrieve, list, modify, and delete features,
-    scenarios, and executions.
-  - Use browser navigation and information tools to explore the AUT.
-  - Be thorough, systematic, and creative in your exploration. Prioritize critical
-    paths and user flows.
-* You are utilizing a webbrowser in full-screen mode. So you are only seeing the
-  content of the currently opened webpage (tab).
-* It can be helpful to zoom in/out or scroll down/up so that you can see everything
-  on the page. Make sure to that before deciding something isn't available.
-* When using your function calls, they take a while to run and send back to you.
-  Where possible/feasible, try to chain multiple of these calls all into one function
-  calls request.
-* The current date and time is \
-  {datetime.now(timezone.utc).strftime("%A, %B %d, %Y %H:%M:%S %z")}.
-</SYSTEM_CAPABILITY>
-"""
-
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=_TESTING_SYSTEM_PROMPT,
+        system=TESTING_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20241022_BETA_FLAG],
     ),
 )
@@ -76,7 +49,7 @@ _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=_TESTING_SYSTEM_PROMPT,
+        system=TESTING_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20250124_BETA_FLAG],
         thinking={"type": "enabled", "budget_tokens": 2048},
     ),

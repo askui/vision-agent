@@ -15,11 +15,11 @@ from askui.agent import VisionAgent
 from askui.android_agent import AndroidVisionAgent
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import (
-    ANDROID_VISION_AGENT,
-    ASKUI_VISION_AGENT,
-    ASKUI_WEB_AGENT,
-    ASKUI_WEB_TESTING_AGENT,
+    ANDROID_AGENT,
+    COMPUTER_AGENT,
     HUMAN_DEMONSTRATION_AGENT,
+    TESTING_AGENT,
+    WEB_AGENT,
 )
 from askui.chat.api.mcp_configs.models import McpConfig
 from askui.chat.api.mcp_configs.service import McpConfigService
@@ -362,22 +362,22 @@ class Runner:
         try:
             if self._run.assistant_id == HUMAN_DEMONSTRATION_AGENT.id:
                 await self._run_human_agent(send_stream)
-            elif self._run.assistant_id == ASKUI_VISION_AGENT.id:
+            elif self._run.assistant_id == COMPUTER_AGENT.id:
                 await self._run_askui_vision_agent(
                     send_stream,
                     mcp_client,
                 )
-            elif self._run.assistant_id == ANDROID_VISION_AGENT.id:
+            elif self._run.assistant_id == ANDROID_AGENT.id:
                 await self._run_askui_android_agent(
                     send_stream,
                     mcp_client,
                 )
-            elif self._run.assistant_id == ASKUI_WEB_AGENT.id:
+            elif self._run.assistant_id == WEB_AGENT.id:
                 await self._run_askui_web_agent(
                     send_stream,
                     mcp_client,
                 )
-            elif self._run.assistant_id == ASKUI_WEB_TESTING_AGENT.id:
+            elif self._run.assistant_id == TESTING_AGENT.id:
                 await self._run_askui_web_testing_agent(
                     send_stream,
                     mcp_client,
