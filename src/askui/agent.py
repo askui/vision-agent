@@ -1,7 +1,4 @@
 import logging
-import platform
-import sys
-from datetime import datetime, timezone
 from typing import Annotated, Literal, Optional
 
 from pydantic import ConfigDict, Field, validate_call
@@ -17,6 +14,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
+from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
 from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.list_displays_tool import ListDisplaysTool
@@ -31,25 +29,10 @@ from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
 
-_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
-* You are utilising a {sys.platform} machine using {platform.machine()} architecture with internet access.
-* When you cannot find something (application window, ui element etc.) on the currently selected/active displa/screen, check the other available displays by listing them and checking which one is currently active and then going through the other displays one by one until you find it or you have checked all of them.
-* When asked to perform web tasks try to open the browser (firefox, chrome, safari, ...) if not already open. Often you can find the browser icons in the toolbars of the operating systems.
-* When viewing a page it can be helpful to zoom out/in so that you can see everything on the page. Either that, or make sure you scroll down/up to see everything before deciding something isn't available.
-* When using your function calls, they take a while to run and send back to you. Where possible/feasible, try to chain multiple of these calls all into one function calls request.
-* The current date and time is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y %H:%M:%S %z")}.
-</SYSTEM_CAPABILITY>
-
-<IMPORTANT>
-* When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
-* If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
-</IMPORTANT>"""  # noqa: DTZ002, E501
-
-
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=_SYSTEM_PROMPT,
+        system=COMPUTER_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20241022_BETA_FLAG],
     ),
 )
@@ -57,7 +40,7 @@ _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=_SYSTEM_PROMPT,
+        system=COMPUTER_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20250124_BETA_FLAG],
         thinking={"type": "enabled", "budget_tokens": 2048},
     ),

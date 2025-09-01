@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timezone
 
 from pydantic import ConfigDict, validate_call
 from typing_extensions import override
@@ -12,6 +11,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
+from askui.prompts.system import WEB_AGENT_SYSTEM_PROMPT
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 from askui.tools.playwright.tools import (
@@ -28,19 +28,10 @@ from .models.models import ModelChoice, ModelName, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
 
-_SYSTEM_PROMPT = f"""
-<SYSTEM_CAPABILITY>
-* You are utilizing a webbrowser in full-screen mode. So you are only seeing the content of the currently opened webpage (tab).
-* It can be helpful to zoom in/out or scroll down/up so that you can see everything on the page. Make sure to that before deciding something isn't available.
-* When using your function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
-* The current date and time is {datetime.now(timezone.utc).strftime("%A, %B %d, %Y %H:%M:%S %z")}.
-</SYSTEM_CAPABILITY>
-"""
-
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=_SYSTEM_PROMPT,
+        system=WEB_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20241022_BETA_FLAG],
     ),
 )
@@ -48,7 +39,7 @@ _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=_SYSTEM_PROMPT,
+        system=WEB_AGENT_SYSTEM_PROMPT,
         betas=[COMPUTER_USE_20250124_BETA_FLAG],
         thinking={"type": "enabled", "budget_tokens": 2048},
     ),
