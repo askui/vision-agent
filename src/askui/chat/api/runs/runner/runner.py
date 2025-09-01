@@ -1,6 +1,5 @@
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Literal, Sequence
 
 import anthropic
@@ -142,6 +141,8 @@ class Runner:
             updated_run = self._retrieve()
             if self._should_abort(updated_run):
                 break
+            updated_run.ping()
+            self._run_service.save(updated_run)
             while event := self._agent_os.poll_event():
                 if self._should_abort(updated_run):
                     break
@@ -287,6 +288,8 @@ class Runner:
             updated_run = self._retrieve()
             if self._should_abort(updated_run):
                 return None
+            updated_run.ping()
+            self._run_service.save(updated_run)
             return on_message_cb_param.message
 
         on_message = syncify(async_on_message)
@@ -390,7 +393,7 @@ class Runner:
                 )
             updated_run = self._retrieve()
             if updated_run.status == "in_progress":
-                updated_run.completed_at = datetime.now(tz=timezone.utc)
+                updated_run.complete()
                 self._run_service.save(updated_run)
                 await send_stream.send(
                     RunEvent(
@@ -405,7 +408,7 @@ class Runner:
                         event="thread.run.cancelling",
                     )
                 )
-                updated_run.cancelled_at = datetime.now(tz=timezone.utc)
+                updated_run.cancel()
                 self._run_service.save(updated_run)
                 await send_stream.send(
                     RunEvent(
@@ -424,8 +427,7 @@ class Runner:
         except Exception as e:  # noqa: BLE001
             logger.exception("Exception in runner")
             updated_run = self._retrieve()
-            updated_run.failed_at = datetime.now(tz=timezone.utc)
-            updated_run.last_error = RunError(message=str(e), code="server_error")
+            updated_run.fail(RunError(message=str(e), code="server_error"))
             self._run_service.save(updated_run)
             await send_stream.send(
                 RunEvent(
@@ -440,7 +442,7 @@ class Runner:
             )
 
     def _mark_run_as_started(self) -> None:
-        self._run.started_at = datetime.now(tz=timezone.utc)
+        self._run.start()
         self._run_service.save(self._run)
 
     def _should_abort(self, run: Run) -> bool:

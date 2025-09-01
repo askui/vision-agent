@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Literal
 
 from pydantic import BaseModel, computed_field
@@ -64,7 +64,7 @@ class Run(RunBase, Resource):
             id=generate_time_ordered_id("run"),
             thread_id=thread_id,
             created_at=now(),
-            expires_at=datetime.now(tz=timezone.utc) + timedelta(minutes=10),
+            expires_at=now() + timedelta(minutes=10),
             **params.model_dump(exclude={"stream"}),
         )
 
@@ -77,10 +77,27 @@ class Run(RunBase, Resource):
             return "failed"
         if self.completed_at:
             return "completed"
-        if self.expires_at and self.expires_at < datetime.now(tz=timezone.utc):
+        if self.expires_at and self.expires_at < now():
             return "expired"
         if self.tried_cancelling_at:
             return "cancelling"
         if self.started_at:
             return "in_progress"
         return "queued"
+
+    def start(self) -> None:
+        self.started_at = now()
+        self.expires_at = now() + timedelta(minutes=10)
+
+    def ping(self) -> None:
+        self.expires_at = now() + timedelta(minutes=10)
+
+    def complete(self) -> None:
+        self.completed_at = now()
+
+    def cancel(self) -> None:
+        self.cancelled_at = now()
+
+    def fail(self, error: RunError) -> None:
+        self.failed_at = now()
+        self.last_error = error
