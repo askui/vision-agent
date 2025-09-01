@@ -67,8 +67,10 @@ class ThreadService:
 
     def delete(self, thread_id: ThreadId) -> None:
         try:
-            shutil.rmtree(self._message_service.get_messages_dir(thread_id))
-            shutil.rmtree(self._run_service.get_runs_dir(thread_id))
+            shutil.rmtree(
+                self._message_service.get_messages_dir(thread_id), ignore_errors=True
+            )
+            shutil.rmtree(self._run_service.get_runs_dir(thread_id), ignore_errors=True)
             self._get_thread_path(thread_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"Thread {thread_id} not found"
