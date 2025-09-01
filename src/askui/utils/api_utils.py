@@ -48,6 +48,10 @@ class NotFoundError(ApiError):
     pass
 
 
+class ForbiddenError(ApiError):
+    pass
+
+
 class FileTooLargeError(ApiError):
     def __init__(self, max_size: int):
         self.max_size = max_size

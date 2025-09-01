@@ -2,8 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import AssistantId
-from askui.utils.api_utils import Resource
+from askui.chat.api.models import AssistantId, WorkspaceId, WorkspaceResource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -33,7 +32,7 @@ class AssistantModifyParams(BaseModelWithNotGiven):
     system: str | NotGiven = NOT_GIVEN
 
 
-class Assistant(AssistantBase, Resource):
+class Assistant(AssistantBase, WorkspaceResource):
     """An assistant that can be used in a thread."""
 
     id: AssistantId
@@ -41,10 +40,13 @@ class Assistant(AssistantBase, Resource):
     created_at: UnixDatetime
 
     @classmethod
-    def create(cls, params: AssistantCreateParams) -> "Assistant":
+    def create(
+        cls, workspace_id: WorkspaceId, params: AssistantCreateParams
+    ) -> "Assistant":
         return cls(
             id=generate_time_ordered_id("asst"),
             created_at=now(),
+            workspace_id=workspace_id,
             **params.model_dump(),
         )
 

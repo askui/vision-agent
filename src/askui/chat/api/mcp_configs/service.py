@@ -1,18 +1,23 @@
 from pathlib import Path
 
-from pydantic import ValidationError
-
+from askui.chat.api.mcp_configs.models import (
+    McpConfig,
+    McpConfigCreateParams,
+    McpConfigId,
+    McpConfigModifyParams,
+)
+from askui.chat.api.models import WorkspaceId
+from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
     LIST_LIMIT_MAX,
     ConflictError,
+    ForbiddenError,
     LimitReachedError,
     ListQuery,
     ListResponse,
     NotFoundError,
     list_resources,
 )
-
-from .models import McpConfig, McpConfigCreateParams, McpConfigId, McpConfigModifyParams
 
 
 class McpConfigService:
@@ -35,20 +40,37 @@ class McpConfigService:
             raise NotFoundError(error_msg)
         return mcp_config_path
 
-    def list_(self, query: ListQuery) -> ListResponse[McpConfig]:
-        return list_resources(self._mcp_configs_dir, query, McpConfig)
+    def list_(
+        self, workspace_id: WorkspaceId | None, query: ListQuery
+    ) -> ListResponse[McpConfig]:
+        return list_resources(
+            self._mcp_configs_dir,
+            query,
+            McpConfig,
+            filter_fn=build_workspace_filter_fn(workspace_id, McpConfig),
+        )
 
-    def retrieve(self, mcp_config_id: McpConfigId) -> McpConfig:
+    def retrieve(
+        self, workspace_id: WorkspaceId | None, mcp_config_id: McpConfigId
+    ) -> McpConfig:
         try:
             mcp_config_path = self._get_mcp_config_path(mcp_config_id)
-            return McpConfig.model_validate_json(mcp_config_path.read_text())
+            mcp_config = McpConfig.model_validate_json(mcp_config_path.read_text())
+            if not (
+                mcp_config.workspace_id is None
+                or mcp_config.workspace_id == workspace_id
+            ):
+                error_msg = f"MCP configuration {mcp_config_id} not found"
+                raise NotFoundError(error_msg)
         except FileNotFoundError as e:
             error_msg = f"MCP configuration {mcp_config_id} not found"
             raise NotFoundError(error_msg) from e
+        else:
+            return mcp_config
 
-    def _check_limit(self) -> None:
+    def _check_limit(self, workspace_id: WorkspaceId | None) -> None:
         limit = LIST_LIMIT_MAX
-        list_result = self.list_(ListQuery(limit=limit))
+        list_result = self.list_(workspace_id, ListQuery(limit=limit))
         if len(list_result.data) >= limit:
             error_msg = (
                 "MCP configuration limit reached. "
@@ -57,22 +79,38 @@ class McpConfigService:
             )
             raise LimitReachedError(error_msg)
 
-    def create(self, params: McpConfigCreateParams) -> McpConfig:
-        self._check_limit()
-        mcp_config = McpConfig.create(params)
+    def create(
+        self, workspace_id: WorkspaceId, params: McpConfigCreateParams
+    ) -> McpConfig:
+        self._check_limit(workspace_id)
+        mcp_config = McpConfig.create(workspace_id, params)
         self._save(mcp_config, new=True)
         return mcp_config
 
     def modify(
-        self, mcp_config_id: McpConfigId, params: McpConfigModifyParams
+        self,
+        workspace_id: WorkspaceId | None,
+        mcp_config_id: McpConfigId,
+        params: McpConfigModifyParams,
     ) -> McpConfig:
-        mcp_config = self.retrieve(mcp_config_id)
+        mcp_config = self.retrieve(workspace_id, mcp_config_id)
+        if mcp_config.workspace_id is None:
+            error_msg = f"Default MCP configuration {mcp_config_id} cannot be modified"
+            raise ForbiddenError(error_msg)
         modified = mcp_config.modify(params)
         self._save(modified)
         return modified
 
-    def delete(self, mcp_config_id: McpConfigId) -> None:
+    def delete(
+        self, workspace_id: WorkspaceId | None, mcp_config_id: McpConfigId
+    ) -> None:
         try:
+            mcp_config = self.retrieve(workspace_id, mcp_config_id)
+            if mcp_config.workspace_id is None:
+                error_msg = (
+                    f"Default MCP configuration {mcp_config_id} cannot be deleted"
+                )
+                raise ForbiddenError(error_msg)
             self._get_mcp_config_path(mcp_config_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"MCP configuration {mcp_config_id} not found"

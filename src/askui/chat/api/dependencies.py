@@ -6,6 +6,7 @@ from fastapi import Depends, Header
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import UUID4
 
+from askui.chat.api.models import WorkspaceId
 from askui.chat.api.settings import Settings
 from askui.utils.api_utils import ListQuery
 
@@ -60,10 +61,10 @@ SetEnvFromHeadersDep = Depends(set_env_from_headers)
 
 
 def get_workspace_dir(
-    askui_workspace: Annotated[str, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     settings: Settings = SettingsDep,
 ) -> Path:
-    return settings.data_dir / "workspaces" / askui_workspace
+    return settings.data_dir / "workspaces" / str(askui_workspace)
 
 
 WorkspaceDirDep = Depends(get_workspace_dir)
