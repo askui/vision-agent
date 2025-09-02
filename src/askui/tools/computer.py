@@ -459,11 +459,13 @@ class Computer20250124Tool(ComputerToolBase):
         scroll_direction: ScrollDirection | None = None,
         scroll_amount: Annotated[int, Field(ge=0)] | None = None,
         duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
-        key: str | None = None,  # maybe not all keys supported
+        key: str | None = None,
     ) -> Image.Image | None | str:
         match action:
             case "hold_key":
                 self._hold_key(keystroke=text, duration=duration)  # type: ignore[arg-type]
+            case "key":
+                return super().__call__(action, key, coordinate)
             case "left_mouse_down":
                 self._agent_os.mouse_down("left")
             case "left_mouse_up":
