@@ -12,6 +12,7 @@ from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
 from askui.chat.api.mcp_configs.router import router as mcp_configs_router
+from askui.chat.api.mcps.computer import mcp as computer_mcp
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
@@ -52,6 +53,7 @@ v1_router.include_router(health_router)
 app.include_router(v1_router)
 
 mcp = FastMCP.from_fastapi(app=app, name="AskUI Chat MCP")
+mcp.mount(computer_mcp)
 mcp_app = mcp.http_app("/sse", transport="sse")
 
 
