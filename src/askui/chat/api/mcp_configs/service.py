@@ -6,6 +6,7 @@ from askui.chat.api.mcp_configs.models import (
     McpConfigId,
     McpConfigModifyParams,
 )
+from askui.chat.api.mcp_configs.seeds import SEEDS
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
@@ -125,3 +126,11 @@ class McpConfigService:
             ),
             encoding="utf-8",
         )
+
+    def seed(self) -> None:
+        """Seed the MCP configuration service with default MCP configurations."""
+        for seed in SEEDS:
+            try:
+                self._save(seed, new=True)
+            except ConflictError:  # noqa: PERF203
+                self._save(seed)
