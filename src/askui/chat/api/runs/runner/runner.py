@@ -10,12 +10,10 @@ from fastmcp import Client
 from fastmcp.client.transports import MCPConfigTransport
 from fastmcp.mcp_config import MCPConfig
 
-from askui.agent import VisionAgent
 from askui.android_agent import AndroidVisionAgent
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import (
     ANDROID_AGENT,
-    COMPUTER_AGENT,
     HUMAN_DEMONSTRATION_AGENT,
     TESTING_AGENT,
     WEB_AGENT,
@@ -322,15 +320,6 @@ class Runner:
                     )
                 return
 
-            if agent_type == "vision":
-                with VisionAgent() as agent:
-                    agent.act(
-                        messages,
-                        on_message=on_message,
-                        tools=tools,
-                    )
-                return
-
             _tools = ToolCollection(
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
@@ -365,11 +354,6 @@ class Runner:
         try:
             if self._run.assistant_id == HUMAN_DEMONSTRATION_AGENT.id:
                 await self._run_human_agent(send_stream)
-            elif self._run.assistant_id == COMPUTER_AGENT.id:
-                await self._run_askui_vision_agent(
-                    send_stream,
-                    mcp_client,
-                )
             elif self._run.assistant_id == ANDROID_AGENT.id:
                 await self._run_askui_android_agent(
                     send_stream,
