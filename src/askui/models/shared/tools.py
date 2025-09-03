@@ -59,7 +59,7 @@ def _convert_to_content(
                         ImageBlockParam(
                             source=Base64ImageSourceParam(
                                 media_type=media_type,
-                                data=result.data,
+                                data=block.data,  # type: ignore[union-attr]
                             )
                         )
                     )

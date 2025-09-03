@@ -13,7 +13,7 @@ from typing_extensions import Self, override
 
 from askui.container import telemetry
 from askui.logger import logger
-from askui.reporting import Reporter
+from askui.reporting import NULL_REPORTER, Reporter
 from askui.tools.agent_os import (
     AgentOs,
     Coordinate,
@@ -150,7 +150,7 @@ class AskUiControllerClient(AgentOs):
     @telemetry.record_call(exclude={"reporter", "controller_server"})
     def __init__(
         self,
-        reporter: Reporter,
+        reporter: Reporter = NULL_REPORTER,
         display: int = 1,
         controller_server: AskUiControllerServer | None = None,
     ) -> None:
