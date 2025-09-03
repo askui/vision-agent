@@ -77,10 +77,11 @@ class WorkflowService:
                 error_msg = f"Workflow {workflow_id} not found"
                 raise NotFoundError(error_msg)
 
-            return workflow
         except FileNotFoundError as e:
             error_msg = f"Workflow {workflow_id} not found"
             raise NotFoundError(error_msg) from e
+        else:
+            return workflow
 
     def create(
         self, workspace_id: WorkspaceId | None, params: WorkflowCreateParams
