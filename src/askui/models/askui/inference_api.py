@@ -20,7 +20,13 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
 from askui.logger import logger
 from askui.models.exceptions import ElementNotFoundError
-from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
+from askui.models.models import (
+    GetModel,
+    LocateModel,
+    ModelComposition,
+    ModelName,
+    PointList,
+)
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import MessageSettings
@@ -245,7 +251,9 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             ],
             "tools": tools.to_params() if tools else NOT_GIVEN,
             "max_tokens": max_tokens or self._settings.messages.max_tokens,
-            "model": model,
+            "model": ModelName.CLAUDE__SONNET__4__20250514
+            if model == ModelName.ASKUI
+            else model,
             "betas": betas
             if not isinstance(betas, NotGiven)
             else self._settings.messages.betas,
