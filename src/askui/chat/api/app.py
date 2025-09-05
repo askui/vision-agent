@@ -40,7 +40,6 @@ app = FastAPI(
     title="AskUI Chat API",
     version="0.1.0",
     lifespan=lifespan,
-    dependencies=[SetEnvFromHeadersDep],
 )
 
 
@@ -67,7 +66,12 @@ async def combined_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             yield
 
 
-app = FastAPI(title=app.title, version=app.version, lifespan=combined_lifespan)
+app = FastAPI(
+    title=app.title,
+    version=app.version,
+    lifespan=combined_lifespan,
+    dependencies=[SetEnvFromHeadersDep],
+)
 app.mount("/mcp", mcp_app)
 app.include_router(v1_router)
 
