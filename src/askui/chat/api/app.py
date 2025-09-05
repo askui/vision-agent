@@ -11,6 +11,8 @@ from askui.chat.api.assistants.router import router as assistants_router
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
+from askui.chat.api.mcp_clients.dependencies import get_mcp_client_manager_manager
+from askui.chat.api.mcp_clients.manager import McpServerConnectionError
 from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 from askui.chat.api.mcp_configs.router import router as mcp_configs_router
 from askui.chat.api.mcps.computer import mcp as computer_mcp
@@ -34,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     mcp_config_service = get_mcp_config_service(settings=settings)
     mcp_config_service.seed()
     yield
+    await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
 
 
 app = FastAPI(
@@ -139,6 +142,17 @@ def catch_all_exception_handler(
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"},
+    )
+
+
+@app.exception_handler(McpServerConnectionError)
+def mcp_server_connection_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: McpServerConnectionError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": str(exc)},
     )
 
 
