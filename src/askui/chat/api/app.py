@@ -9,6 +9,7 @@ from fastmcp import FastMCP
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
+from askui.chat.api.executions.router import router as executions_router
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
 from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
@@ -48,6 +49,7 @@ app = FastAPI(
 # Include routers
 v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(assistants_router)
+v1_router.include_router(executions_router)
 v1_router.include_router(threads_router)
 v1_router.include_router(messages_router)
 v1_router.include_router(runs_router)
