@@ -35,6 +35,7 @@ from askui.chat.api.runs.runner.events.events import Events
 from askui.chat.api.runs.runner.events.message_events import MessageEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
 from askui.custom_agent import CustomAgent
+from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ImageBlockParam,
@@ -327,10 +328,12 @@ class Runner:
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
+                model=ModelName.ASKUI,
                 on_message=on_message,
                 tools=_tools,
                 settings=ActSettings(
                     messages=MessageSettings(
+                        model=ModelName.CLAUDE__SONNET__4__20250514,
                         system=self._assistant.system or anthropic.NOT_GIVEN,
                         thinking={"type": "enabled", "budget_tokens": 2048},
                     ),
