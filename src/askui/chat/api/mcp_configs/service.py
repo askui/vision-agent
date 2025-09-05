@@ -117,11 +117,14 @@ class McpConfigService:
         return modified
 
     def delete(
-        self, workspace_id: WorkspaceId | None, mcp_config_id: McpConfigId
+        self,
+        workspace_id: WorkspaceId | None,
+        mcp_config_id: McpConfigId,
+        force: bool = False,
     ) -> None:
         try:
             mcp_config = self.retrieve(workspace_id, mcp_config_id)
-            if mcp_config.workspace_id is None:
+            if mcp_config.workspace_id is None and not force:
                 error_msg = (
                     f"Default MCP configuration {mcp_config_id} cannot be deleted"
                 )
@@ -143,6 +146,14 @@ class McpConfigService:
 
     def seed(self) -> None:
         """Seed the MCP configuration service with default MCP configurations."""
+        while True:
+            list_response = self.list_(
+                None, ListQuery(limit=LIST_LIMIT_MAX, order="asc")
+            )
+            for mcp_config in list_response.data:
+                self.delete(None, mcp_config.id, force=True)
+            if not list_response.has_more:
+                break
         for seed in SEEDS:
             try:
                 self._save(seed, new=True)

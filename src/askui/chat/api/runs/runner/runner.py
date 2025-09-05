@@ -1,22 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal
 
 import anthropic
-import anyio
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
-from fastmcp import Client
-from fastmcp.client.transports import MCPConfigTransport
 
-from askui.android_agent import AndroidVisionAgent
 from askui.chat.api.assistants.models import Assistant
-from askui.chat.api.assistants.seeds import (
-    ANDROID_AGENT,
-    HUMAN_DEMONSTRATION_AGENT,
-    TESTING_AGENT,
-    WEB_AGENT,
-)
+from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.messages.service import MessageService
@@ -34,28 +24,41 @@ from askui.chat.api.runs.runner.events.message_events import MessageEvent
 from askui.chat.api.runs.runner.events.run_events import RunEvent
 from askui.custom_agent import CustomAgent
 from askui.models.models import ModelName
-from askui.models.shared.agent_message_param import (
-    Base64ImageSourceParam,
-    ImageBlockParam,
-    MessageParam,
-    TextBlockParam,
-)
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
-from askui.models.shared.tools import ToolCollection
-from askui.tools.pynput_agent_os import PynputAgentOs
+from askui.models.shared.tools import Tool, ToolCollection
 from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
-from askui.utils.image_utils import ImageSource
-from askui.web_agent import WebVisionAgent
-from askui.web_testing_agent import WebTestingAgent
-
-if TYPE_CHECKING:
-    from askui.tools.agent_os import InputEvent
 
 logger = logging.getLogger(__name__)
 
 
-McpClient = Client[MCPConfigTransport]
+def _get_android_tools() -> list[Tool]:
+    from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
+    from askui.tools.android.ppadb_agent_os import PpadbAgentOs
+    from askui.tools.android.tools import (
+        AndroidDragAndDropTool,
+        AndroidKeyCombinationTool,
+        AndroidKeyTapEventTool,
+        AndroidScreenshotTool,
+        AndroidShellTool,
+        AndroidSwipeTool,
+        AndroidTapTool,
+        AndroidTypeTool,
+    )
+
+    agent_os = PpadbAgentOs()
+    act_agent_os_facade = AndroidAgentOsFacade(agent_os)
+    return [
+        AndroidScreenshotTool(act_agent_os_facade),
+        AndroidTapTool(act_agent_os_facade),
+        AndroidTypeTool(act_agent_os_facade),
+        AndroidDragAndDropTool(act_agent_os_facade),
+        AndroidKeyTapEventTool(act_agent_os_facade),
+        AndroidSwipeTool(act_agent_os_facade),
+        AndroidKeyCombinationTool(act_agent_os_facade),
+        AndroidShellTool(act_agent_os_facade),
+    ]
 
 
 class RunnerRunService(ABC):
@@ -87,7 +90,6 @@ class Runner:
         self._message_content_translator = message_translator.content_translator
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
-        self._agent_os = PynputAgentOs()
 
     def _retrieve(self) -> Run:
         return self._run_service.retrieve(
@@ -95,148 +97,10 @@ class Runner:
             run_id=self._run.id,
         )
 
-    async def _run_human_agent(self, send_stream: ObjectStream[Events]) -> None:
-        message = self._message_service.create(
-            thread_id=self._run.thread_id,
-            params=MessageCreateParams(
-                role="user",
-                content=[
-                    TextBlockParam(
-                        type="text",
-                        text="Let me take over and show you what I want you to do...",
-                    ),
-                ],
-                run_id=self._run.id,
-            ),
-        )
-        await send_stream.send(
-            MessageEvent(
-                data=message,
-                event="thread.message.created",
-            )
-        )
-        self._agent_os.start_listening()
-        screenshot = self._agent_os.screenshot()
-        await anyio.sleep(0.1)
-        recorded_events: list[InputEvent] = []
-        while True:
-            updated_run = self._retrieve()
-            if self._should_abort(updated_run):
-                break
-            updated_run.ping()
-            self._run_service.save(updated_run)
-            while event := self._agent_os.poll_event():
-                if self._should_abort(updated_run):
-                    break
-                if not event.pressed:
-                    recorded_events.append(event)
-                    button = (
-                        f'the "{event.button}" mouse button'
-                        if event.button != "unknown"
-                        else "a mouse button"
-                    )
-                    message = self._message_service.create(
-                        thread_id=self._run.thread_id,
-                        params=MessageCreateParams(
-                            role="user",
-                            content=await self._message_content_translator.from_anthropic(
-                                [
-                                    ImageBlockParam(
-                                        type="image",
-                                        source=Base64ImageSourceParam(
-                                            data=ImageSource(screenshot).to_base64(),
-                                            media_type="image/png",
-                                        ),
-                                    ),
-                                    TextBlockParam(
-                                        type="text",
-                                        text=(
-                                            f"I moved the mouse to x={event.x}, "
-                                            f"y={event.y} and clicked {button}."
-                                        ),
-                                    ),
-                                ]
-                            ),
-                            run_id=self._run.id,
-                        ),
-                    )
-                    await send_stream.send(
-                        MessageEvent(
-                            data=message,
-                            event="thread.message.created",
-                        )
-                    )
-            screenshot = self._agent_os.screenshot()
-            await anyio.sleep(0.1)
-        self._agent_os.stop_listening()
-        if len(recorded_events) == 0:
-            text = "Nevermind, I didn't do anything."
-            message = self._message_service.create(
-                thread_id=self._run.thread_id,
-                params=MessageCreateParams(
-                    role="user",
-                    content=[
-                        TextBlockParam(
-                            type="text",
-                            text=text,
-                        )
-                    ],
-                    run_id=self._run.id,
-                ),
-            )
-            await send_stream.send(
-                MessageEvent(
-                    data=message,
-                    event="thread.message.created",
-                )
-            )
-
-    async def _run_askui_android_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
-    ) -> None:
-        await self._run_agent(
-            agent_type="android",
-            send_stream=send_stream,
-            mcp_client=mcp_client,
-        )
-
-    async def _run_askui_vision_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
-    ) -> None:
-        await self._run_agent(
-            agent_type="vision",
-            send_stream=send_stream,
-            mcp_client=mcp_client,
-        )
-
-    async def _run_askui_web_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
-    ) -> None:
-        await self._run_agent(
-            agent_type="web",
-            send_stream=send_stream,
-            mcp_client=mcp_client,
-        )
-
-    async def _run_askui_web_testing_agent(
-        self, send_stream: ObjectStream[Events], mcp_client: McpClient | None
-    ) -> None:
-        await self._run_agent(
-            agent_type="web_testing",
-            send_stream=send_stream,
-            mcp_client=mcp_client,
-        )
-
     async def _run_agent(
         self,
-        agent_type: Literal["android", "vision", "web", "web_testing", "custom"],
         send_stream: ObjectStream[Events],
-        mcp_client: McpClient | None,
     ) -> None:
-        tools = ToolCollection(
-            mcp_client=mcp_client,
-            include=set(self._assistant.tools) if self._assistant.tools else None,
-        )
         messages: list[MessageParam] = [
             await self._message_translator.to_anthropic(msg)
             for msg in self._message_service.list_(
@@ -276,44 +140,27 @@ class Runner:
 
         on_message = syncify(async_on_message)
 
+        mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(  # type: ignore
+            self._workspace_id
+        )
+
         def _run_agent_inner() -> None:
-            if agent_type == "android":
-                with AndroidVisionAgent() as android_agent:
-                    android_agent.act(
-                        messages,
-                        on_message=on_message,
-                        tools=tools,
-                    )
-                return
-
-            if agent_type == "web":
-                with WebVisionAgent() as web_agent:
-                    web_agent.act(
-                        messages,
-                        on_message=on_message,
-                        tools=tools,
-                    )
-                return
-
-            if agent_type == "web_testing":
-                with WebTestingAgent() as web_testing_agent:
-                    web_testing_agent.act(
-                        messages,
-                        on_message=on_message,
-                        tools=tools,
-                    )
-                return
-
-            _tools = ToolCollection(
+            tools = ToolCollection(
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
             )
+            # TODO Remove this after having extracted tools into Android MCP
+            if self._run.assistant_id == ANDROID_AGENT.id:
+                tools.append_tool(*_get_android_tools())
+            import json
+
+            print(json.dumps(tools.to_params()))
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
                 model=ModelName.ASKUI,
                 on_message=on_message,
-                tools=_tools,
+                tools=tools,
                 settings=ActSettings(
                     messages=MessageSettings(
                         model=ModelName.CLAUDE__SONNET__4__20250514,
@@ -325,17 +172,11 @@ class Runner:
 
         await asyncify(_run_agent_inner)()
 
-    async def _get_mcp_client(self) -> McpClient | None:
-        return await self._mcp_client_manager_manager.get_mcp_client_manager(  # type: ignore
-            self._workspace_id
-        )
-
     async def run(
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
         try:
-            mcp_client = await self._get_mcp_client()
             self._mark_run_as_started()
             await send_stream.send(
                 RunEvent(
@@ -343,29 +184,7 @@ class Runner:
                     event="thread.run.in_progress",
                 )
             )
-            if self._run.assistant_id == HUMAN_DEMONSTRATION_AGENT.id:
-                await self._run_human_agent(send_stream)
-            elif self._run.assistant_id == ANDROID_AGENT.id:
-                await self._run_askui_android_agent(
-                    send_stream,
-                    mcp_client,
-                )
-            elif self._run.assistant_id == WEB_AGENT.id:
-                await self._run_askui_web_agent(
-                    send_stream,
-                    mcp_client,
-                )
-            elif self._run.assistant_id == TESTING_AGENT.id:
-                await self._run_askui_web_testing_agent(
-                    send_stream,
-                    mcp_client,
-                )
-            else:
-                await self._run_agent(
-                    agent_type="custom",
-                    send_stream=send_stream,
-                    mcp_client=mcp_client,
-                )
+            await self._run_agent(send_stream=send_stream)
             updated_run = self._retrieve()
             if updated_run.status == "in_progress":
                 updated_run.complete()

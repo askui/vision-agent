@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 
 from PIL import Image
 
-from askui.reporting import Reporter
+from askui.reporting import NULL_REPORTER, Reporter
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
@@ -14,7 +14,9 @@ class AndroidAgentOsFacade(AndroidAgentOs):
     and back to the real screen resolution.
     """
 
-    def __init__(self, agent_os: AndroidAgentOs, reporter: Reporter) -> None:
+    def __init__(
+        self, agent_os: AndroidAgentOs, reporter: Reporter = NULL_REPORTER
+    ) -> None:
         self._agent_os: AndroidAgentOs = agent_os
         self._reporter: Reporter = reporter
         self._target_resolution: Tuple[int, int] = (1280, 800)

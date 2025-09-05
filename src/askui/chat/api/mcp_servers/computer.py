@@ -17,6 +17,7 @@ active_display = 1
 
 @mcp.tool(
     description="Interact with your computer",
+    tags={"computer"},
 )
 def computer(
     action: Action20250124,
@@ -52,7 +53,7 @@ class DisplayListResponse(BaseModel):
     data: list[Display]
 
 
-@mcp.tool(description="List all available displays")
+@mcp.tool(description="List all available displays", tags={"computer"})
 def list_displays() -> DisplayListResponse:
     with AskUiControllerClient(display=active_display) as agent_os:
         return DisplayListResponse(
@@ -61,7 +62,8 @@ def list_displays() -> DisplayListResponse:
 
 
 @mcp.tool(
-    description="Set the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)"
+    description="Set the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)",
+    tags={"computer"},
 )
 def set_active_display(
     display_id: Annotated[int, Field(ge=1)],
@@ -71,7 +73,8 @@ def set_active_display(
 
 
 @mcp.tool(
-    description="Retrieve the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)"
+    description="Retrieve the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)",
+    tags={"computer"},
 )
 def retrieve_active_display() -> Display:
     return Display(id=active_display)
