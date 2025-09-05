@@ -130,21 +130,7 @@ class AgentException(Exception):
 
 
 class McpClientProtocol(Protocol):
-    """
-    Protocol defining the interface for MCP client managers.
-
-    This protocol captures the essential methods for managing MCP tools:
-    listing available tools and calling them with appropriate parameters.
-    """
-
-    async def list_tools(self) -> list[mcp.types.Tool]:
-        """
-        Retrieve all available tools from all connected MCP servers.
-
-        Returns:
-            list[mcp.types.Tool]: A list of all available tools across all servers.
-        """
-        ...
+    async def list_tools(self) -> list[mcp.types.Tool]: ...
 
     async def call_tool(
         self,
@@ -153,21 +139,7 @@ class McpClientProtocol(Protocol):
         timeout: timedelta | float | None = None,  # noqa: ASYNC109
         progress_handler: ProgressHandler | None = None,
         raise_on_error: bool = True,
-    ) -> CallToolResult:
-        """
-        Call a tool by name with the provided arguments.
-
-        Args:
-            name (str): The name of the tool to call.
-            arguments (dict[str, Any] | None, optional): Arguments to pass to the tool.
-            timeout (timedelta | float | None, optional): Timeout for the tool call.
-            progress_handler (ProgressHandler | None, optional): Handler for progress updates.
-            raise_on_error (bool, optional): Whether to raise an exception on error.
-
-        Returns:
-            CallToolResult: The result of the tool call.
-        """
-        ...
+    ) -> CallToolResult: ...
 
     async def __aenter__(self) -> Self: ...
 

@@ -54,7 +54,7 @@ class McpClientManager:
 
     async def list_tools(
         self,
-    ) -> list[mcp.types.Tool]:  # TODO Proper cache and parallelization
+    ) -> list[mcp.types.Tool]:
         tools: list[mcp.types.Tool] = []
         for mcp_server_name, mcp_client in self._mcp_clients.items():
             if mcp_server_name not in self._tools:
@@ -66,7 +66,7 @@ class McpClientManager:
         self,
         name: str,
         arguments: dict[str, Any] | None = None,
-        timeout: timedelta | float | None = None,
+        timeout: timedelta | float | None = None,  # noqa: ASYNC109
         progress_handler: ProgressHandler | None = None,
         raise_on_error: bool = True,
     ) -> CallToolResult:
