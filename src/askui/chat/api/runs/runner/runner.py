@@ -333,6 +333,7 @@ class Runner:
                 tools=_tools,
                 settings=ActSettings(
                     messages=MessageSettings(
+                        model=ModelName.CLAUDE__SONNET__4__20250514,
                         system=self._assistant.system or anthropic.NOT_GIVEN,
                         thinking={"type": "enabled", "budget_tokens": 2048},
                     ),
