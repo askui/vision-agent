@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from fastmcp.mcp_config import MCPConfig
+
 from askui.chat.api.mcp_configs.models import (
     McpConfig,
     McpConfigCreateParams,
@@ -68,6 +70,18 @@ class McpConfigService:
             raise NotFoundError(error_msg) from e
         else:
             return mcp_config
+
+    def retrieve_fast_mcp_config(
+        self, workspace_id: WorkspaceId | None
+    ) -> MCPConfig | None:
+        list_response = self.list_(
+            workspace_id=workspace_id,
+            query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
+        )
+        mcp_servers_dict = {
+            mcp_config.name: mcp_config.mcp_server for mcp_config in list_response.data
+        }
+        return MCPConfig(mcpServers=mcp_servers_dict) if mcp_servers_dict else None
 
     def _check_limit(self, workspace_id: WorkspaceId | None) -> None:
         limit = LIST_LIMIT_MAX
