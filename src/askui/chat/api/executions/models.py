@@ -42,9 +42,8 @@ _STATUS_TRANSITIONS: dict[ExecutionStatus, set[ExecutionStatus]] = {
         ExecutionStatus.FAILED,
         ExecutionStatus.SKIPPED,
     },
-    # INCOMPLETE can transition to final states or back to PENDING
+    # INCOMPLETE can only transition to final states (no going backwards)
     ExecutionStatus.INCOMPLETE: {
-        ExecutionStatus.PENDING,
         ExecutionStatus.PASSED,
         ExecutionStatus.FAILED,
         ExecutionStatus.SKIPPED,
@@ -85,7 +84,6 @@ class ExecutionCreateParams(BaseModel):
 
     workflow: WorkflowId
     thread: ThreadId
-    status: ExecutionStatus = ExecutionStatus.PENDING
 
 
 class ExecutionModifyParams(BaseModelWithNotGiven):
@@ -129,6 +127,7 @@ class Execution(WorkspaceResource):
             id=generate_time_ordered_id("exec"),
             created_at=now(),
             workspace_id=workspace_id,
+            status=ExecutionStatus.PENDING,
             **params.model_dump(),
         )
 

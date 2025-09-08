@@ -40,7 +40,6 @@ class TestStatusTransitionValidation:
     def test_valid_transitions_from_incomplete(self) -> None:
         """Test valid transitions from INCOMPLETE status."""
         valid_targets = [
-            ExecutionStatus.PENDING,
             ExecutionStatus.PASSED,
             ExecutionStatus.FAILED,
             ExecutionStatus.SKIPPED,
@@ -48,6 +47,16 @@ class TestStatusTransitionValidation:
 
         for target in valid_targets:
             _validate_status_transition(ExecutionStatus.INCOMPLETE, target)
+
+    def test_incomplete_cannot_go_back_to_pending(self) -> None:
+        """Test that INCOMPLETE cannot transition back to PENDING."""
+        with pytest.raises(InvalidStatusTransitionError) as exc_info:
+            _validate_status_transition(
+                ExecutionStatus.INCOMPLETE, ExecutionStatus.PENDING
+            )
+
+        assert exc_info.value.from_status == ExecutionStatus.INCOMPLETE
+        assert exc_info.value.to_status == ExecutionStatus.PENDING
 
     def test_no_transitions_from_final_states(self) -> None:
         """Test that final states cannot transition to any other status."""

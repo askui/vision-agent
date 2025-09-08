@@ -36,7 +36,6 @@ class TestExecutionService:
         return ExecutionCreateParams(
             workflow="wf_test123",
             thread="thread_test123",
-            status=ExecutionStatus.PENDING,
         )
 
     @pytest.fixture
@@ -62,7 +61,7 @@ class TestExecutionService:
 
         assert execution.workflow == create_params.workflow
         assert execution.thread == create_params.thread
-        assert execution.status == create_params.status
+        assert execution.status == ExecutionStatus.PENDING
         assert execution.workspace_id == workspace_id
         assert execution.object == "execution"
         assert execution.id.startswith("exec_")
@@ -204,7 +203,6 @@ class TestExecutionService:
         different_params = ExecutionCreateParams(
             workflow="wf_different456",
             thread="thread_different456",
-            status=ExecutionStatus.PENDING,
         )
         execution_service.create(workspace_id=workspace_id, params=different_params)
 
@@ -292,85 +290,176 @@ class TestExecutionService:
         assert retrieved.status == ExecutionStatus.PASSED
 
     @pytest.mark.parametrize(
-        "valid_transition",
+        "target_status",
         [
-            (ExecutionStatus.PENDING, ExecutionStatus.INCOMPLETE),
-            (ExecutionStatus.PENDING, ExecutionStatus.PASSED),
-            (ExecutionStatus.PENDING, ExecutionStatus.FAILED),
-            (ExecutionStatus.PENDING, ExecutionStatus.SKIPPED),
-            (ExecutionStatus.INCOMPLETE, ExecutionStatus.PENDING),
-            (ExecutionStatus.INCOMPLETE, ExecutionStatus.PASSED),
-            (ExecutionStatus.INCOMPLETE, ExecutionStatus.FAILED),
-            (ExecutionStatus.INCOMPLETE, ExecutionStatus.SKIPPED),
+            ExecutionStatus.INCOMPLETE,
+            ExecutionStatus.PASSED,
+            ExecutionStatus.FAILED,
+            ExecutionStatus.SKIPPED,
         ],
     )
-    def test_valid_transitions_parametrized(
+    def test_valid_transitions_from_pending(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        valid_transition: tuple[ExecutionStatus, ExecutionStatus],
+        target_status: ExecutionStatus,
     ) -> None:
-        """Test all valid status transitions (parametrized)."""
-        from_status, to_status = valid_transition
-
-        # Create execution with initial status
+        """Test all valid transitions from PENDING status (parametrized)."""
+        # Create execution (always starts as PENDING)
         create_params = ExecutionCreateParams(
             workflow="wf_test123",
             thread="thread_test123",
-            status=from_status,
         )
         execution = execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
-        # Modify to target status
-        modify_params = ExecutionModifyParams(status=to_status)
+        # Test transition from PENDING to target status
+        modify_params = ExecutionModifyParams(status=target_status)
         modified = execution_service.modify(
             workspace_id=workspace_id,
             execution_id=execution.id,
             params=modify_params,
         )
 
-        assert modified.status == to_status
+        assert modified.status == target_status
 
     @pytest.mark.parametrize(
-        "invalid_transition",
+        "target_status",
         [
-            (ExecutionStatus.PASSED, ExecutionStatus.PENDING),
-            (ExecutionStatus.PASSED, ExecutionStatus.INCOMPLETE),
-            (ExecutionStatus.PASSED, ExecutionStatus.FAILED),
-            (ExecutionStatus.PASSED, ExecutionStatus.SKIPPED),
-            (ExecutionStatus.FAILED, ExecutionStatus.PENDING),
-            (ExecutionStatus.FAILED, ExecutionStatus.INCOMPLETE),
-            (ExecutionStatus.FAILED, ExecutionStatus.PASSED),
-            (ExecutionStatus.FAILED, ExecutionStatus.SKIPPED),
-            (ExecutionStatus.SKIPPED, ExecutionStatus.PENDING),
-            (ExecutionStatus.SKIPPED, ExecutionStatus.INCOMPLETE),
-            (ExecutionStatus.SKIPPED, ExecutionStatus.PASSED),
-            (ExecutionStatus.SKIPPED, ExecutionStatus.FAILED),
+            ExecutionStatus.PASSED,
+            ExecutionStatus.FAILED,
+            ExecutionStatus.SKIPPED,
         ],
     )
-    def test_invalid_transitions_parametrized(
+    def test_valid_transitions_from_incomplete(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        invalid_transition: tuple[ExecutionStatus, ExecutionStatus],
+        target_status: ExecutionStatus,
     ) -> None:
-        """Test all invalid status transitions (parametrized)."""
-        from_status, to_status = invalid_transition
-
-        # Create execution with initial status
+        """Test all valid transitions from INCOMPLETE status (parametrized)."""
+        # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
             workflow="wf_test123",
             thread="thread_test123",
-            status=from_status,
         )
         execution = execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
-        # Try to modify to invalid target status
-        modify_params = ExecutionModifyParams(status=to_status)
+        # First move to INCOMPLETE
+        incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
+        execution = execution_service.modify(
+            workspace_id=workspace_id,
+            execution_id=execution.id,
+            params=incomplete_params,
+        )
+
+        # Test transition from INCOMPLETE to target status
+        modify_params = ExecutionModifyParams(status=target_status)
+        modified = execution_service.modify(
+            workspace_id=workspace_id,
+            execution_id=execution.id,
+            params=modify_params,
+        )
+
+        assert modified.status == target_status
+
+    def test_incomplete_cannot_go_back_to_pending(
+        self,
+        execution_service: ExecutionService,
+        workspace_id: WorkspaceId,
+    ) -> None:
+        """Test that INCOMPLETE cannot transition back to PENDING."""
+        # Create execution and move to INCOMPLETE
+        create_params = ExecutionCreateParams(
+            workflow="wf_test123",
+            thread="thread_test123",
+        )
+        execution = execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
+
+        # Move to INCOMPLETE
+        incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
+        execution = execution_service.modify(
+            workspace_id=workspace_id,
+            execution_id=execution.id,
+            params=incomplete_params,
+        )
+
+        # Try to go back to PENDING (should fail)
+        pending_params = ExecutionModifyParams(status=ExecutionStatus.PENDING)
+        with pytest.raises(InvalidStatusTransitionError) as exc_info:
+            execution_service.modify(
+                workspace_id=workspace_id,
+                execution_id=execution.id,
+                params=pending_params,
+            )
+
+        assert exc_info.value.from_status == ExecutionStatus.INCOMPLETE
+        assert exc_info.value.to_status == ExecutionStatus.PENDING
+
+    @pytest.mark.parametrize(
+        "final_status",
+        [
+            ExecutionStatus.PASSED,
+            ExecutionStatus.FAILED,
+            ExecutionStatus.SKIPPED,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "target_status",
+        [
+            ExecutionStatus.PENDING,
+            ExecutionStatus.INCOMPLETE,
+            ExecutionStatus.PASSED,
+            ExecutionStatus.FAILED,
+            ExecutionStatus.SKIPPED,
+        ],
+    )
+    def test_final_states_cannot_transition(
+        self,
+        execution_service: ExecutionService,
+        workspace_id: WorkspaceId,
+        final_status: ExecutionStatus,
+        target_status: ExecutionStatus,
+    ) -> None:
+        """Test that final states cannot transition to any other status (parametrized)."""
+        # Skip same-status transitions (they're allowed as no-ops)
+        if final_status == target_status:
+            pytest.skip("Same-status transitions are allowed as no-ops")
+
+        # Create execution and move to final state
+        create_params = ExecutionCreateParams(
+            workflow="wf_test123",
+            thread="thread_test123",
+        )
+        execution = execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
+
+        # Move to final status (via INCOMPLETE if needed for realistic flow)
+        if final_status in [ExecutionStatus.PASSED, ExecutionStatus.FAILED]:
+            # Realistic flow: PENDING → INCOMPLETE → PASSED/FAILED
+            incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
+            execution = execution_service.modify(
+                workspace_id=workspace_id,
+                execution_id=execution.id,
+                params=incomplete_params,
+            )
+
+        # Move to final status
+        final_params = ExecutionModifyParams(status=final_status)
+        execution = execution_service.modify(
+            workspace_id=workspace_id,
+            execution_id=execution.id,
+            params=final_params,
+        )
+
+        # Try to transition from final state to target status (should fail)
+        modify_params = ExecutionModifyParams(status=target_status)
         with pytest.raises(InvalidStatusTransitionError) as exc_info:
             execution_service.modify(
                 workspace_id=workspace_id,
@@ -378,5 +467,5 @@ class TestExecutionService:
                 params=modify_params,
             )
 
-        assert exc_info.value.from_status == from_status
-        assert exc_info.value.to_status == to_status
+        assert exc_info.value.from_status == final_status
+        assert exc_info.value.to_status == target_status

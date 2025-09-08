@@ -29,7 +29,6 @@ class TestExecutionRouter:
         return {
             "workflow": "wf_test123",
             "thread": "thread_test123",
-            "status": ExecutionStatus.PENDING.value,
         }
 
     def test_create_execution_success(
