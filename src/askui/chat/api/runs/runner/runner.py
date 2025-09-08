@@ -150,7 +150,7 @@ class Runner:
 
         on_message = syncify(async_on_message)
 
-        mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(  # type: ignore
+        mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(
             self._workspace_id
         )
 
@@ -159,7 +159,7 @@ class Runner:
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
             )
-            # TODO Remove this after having extracted tools into Android MCP
+            # Remove this after having extracted tools into Android MCP
             if self._run.assistant_id == ANDROID_AGENT.id:
                 tools.append_tool(*_get_android_tools())
             custom_agent = CustomAgent()

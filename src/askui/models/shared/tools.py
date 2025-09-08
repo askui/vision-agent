@@ -1,3 +1,4 @@
+import json
 import types
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -154,7 +155,7 @@ class McpClientProtocol(Protocol):
 
 def _replace_refs(tool_name: str, input_schema: InputSchema) -> InputSchema:
     try:
-        return jsonref.replace_refs(
+        return jsonref.replace_refs(  # type: ignore[no-any-return]
             input_schema,
             lazy_load=False,
             proxies=False,
