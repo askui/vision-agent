@@ -17,6 +17,7 @@ from askui.chat.api.mcps.computer import mcp as computer_mcp
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
+from askui.chat.api.workflows.router import router as workflows_router
 from askui.utils.api_utils import (
     ConflictError,
     FileTooLargeError,
@@ -51,6 +52,7 @@ v1_router.include_router(messages_router)
 v1_router.include_router(runs_router)
 v1_router.include_router(mcp_configs_router)
 v1_router.include_router(files_router)
+v1_router.include_router(workflows_router)
 v1_router.include_router(health_router)
 app.include_router(v1_router)
 
