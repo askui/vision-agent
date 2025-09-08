@@ -13,17 +13,30 @@ from askui.chat.api.mcp_configs.service import McpConfigService
 class TestMcpConfigsAPI:
     """Test suite for the MCP configs API endpoints."""
 
-    def test_list_mcp_configs_empty(
-        self, test_client: TestClient, test_headers: dict[str, str]
-    ) -> None:
+    def test_list_mcp_configs_empty(self, test_headers: dict[str, str]) -> None:
         """Test listing MCP configs when no configs exist."""
-        response = test_client.get("/v1/mcp-configs", headers=test_headers)
+        temp_dir = tempfile.mkdtemp()
+        workspace_path = Path(temp_dir)
 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["object"] == "list"
-        assert data["data"] == []
-        assert data["has_more"] is False
+        from askui.chat.api.app import app
+        from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
+
+        def override_mcp_config_service() -> McpConfigService:
+            return McpConfigService(workspace_path)
+
+        app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
+
+        try:
+            with TestClient(app) as client:
+                response = client.get("/v1/mcp-configs", headers=test_headers)
+
+                assert response.status_code == status.HTTP_200_OK
+                data = response.json()
+                assert data["object"] == "list"
+                assert data["data"] == []
+                assert data["has_more"] is False
+        finally:
+            app.dependency_overrides.clear()
 
     def test_list_mcp_configs_with_configs(self, test_headers: dict[str, str]) -> None:
         """Test listing MCP configs when configs exist."""
