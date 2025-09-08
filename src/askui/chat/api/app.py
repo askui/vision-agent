@@ -9,6 +9,7 @@ from fastmcp import FastMCP
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
+from askui.chat.api.executions.models import InvalidStatusTransitionError
 from askui.chat.api.executions.router import router as executions_router
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
@@ -128,6 +129,17 @@ def forbidden_error_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(InvalidStatusTransitionError)
+def invalid_status_transition_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: InvalidStatusTransitionError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": str(exc)},
     )
 

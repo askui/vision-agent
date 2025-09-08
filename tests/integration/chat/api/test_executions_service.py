@@ -255,6 +255,7 @@ class TestExecutionService:
     def test_list_executions_with_filters(
         self,
         execution_service: ExecutionService,
+        workflow_service: WorkflowService,
         workspace_id: WorkspaceId,
         create_params: ExecutionCreateParams,
     ) -> None:
@@ -262,8 +263,17 @@ class TestExecutionService:
         # Create multiple executions with different workflows and threads
         execution_service.create(workspace_id=workspace_id, params=create_params)
 
+        # Create a second workflow for the different execution
+        different_workflow_params = WorkflowCreateParams(
+            name="Different Test Workflow",
+            description="A different test workflow for execution filtering testing",
+        )
+        different_workflow = workflow_service.create(
+            workspace_id=workspace_id, params=different_workflow_params
+        )
+
         different_params = ExecutionCreateParams(
-            workflow="wf_different456",
+            workflow=different_workflow.id,
             thread="thread_different456",
         )
         execution_service.create(workspace_id=workspace_id, params=different_params)
@@ -368,12 +378,13 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
+        test_workflow_id: str,
         target_status: ExecutionStatus,
     ) -> None:
         """Test all valid transitions from PENDING status (parametrized)."""
         # Create execution (always starts as PENDING)
         create_params = ExecutionCreateParams(
-            workflow="wf_test123",
+            workflow=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -402,12 +413,13 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
+        test_workflow_id: str,
         target_status: ExecutionStatus,
     ) -> None:
         """Test all valid transitions from INCOMPLETE status (parametrized)."""
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
-            workflow="wf_test123",
+            workflow=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -436,11 +448,12 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
+        test_workflow_id: str,
     ) -> None:
         """Test that INCOMPLETE cannot transition back to PENDING."""
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
-            workflow="wf_test123",
+            workflow=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -489,6 +502,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
+        test_workflow_id: str,
         final_status: ExecutionStatus,
         target_status: ExecutionStatus,
     ) -> None:
@@ -501,7 +515,7 @@ class TestExecutionService:
 
         # Create execution and move to final state
         create_params = ExecutionCreateParams(
-            workflow="wf_test123",
+            workflow=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(

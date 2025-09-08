@@ -2,23 +2,62 @@
 Integration tests for execution router endpoints with status transition validation.
 """
 
+import tempfile
 import uuid
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from askui.chat.api.app import app
 from askui.chat.api.executions.models import ExecutionStatus
+from askui.chat.api.executions.service import ExecutionService
 from askui.chat.api.models import WorkspaceId
+from askui.chat.api.workflows.models import WorkflowCreateParams
+from askui.chat.api.workflows.service import WorkflowService
 
 
 class TestExecutionRouter:
     """Test execution router endpoints with status transition validation."""
 
     @pytest.fixture
-    def client(self) -> TestClient:
-        """Create a test client for the FastAPI app."""
-        return TestClient(app)
+    def temp_workspace_dir(self) -> Path:
+        """Create a temporary workspace directory for testing."""
+        temp_dir = tempfile.mkdtemp()
+        return Path(temp_dir)
+
+    @pytest.fixture
+    def workflow_service(self, temp_workspace_dir: Path) -> WorkflowService:
+        """Create a workflow service for testing."""
+        return WorkflowService(temp_workspace_dir)
+
+    @pytest.fixture
+    def execution_service(
+        self, temp_workspace_dir: Path, workflow_service: WorkflowService
+    ) -> ExecutionService:
+        """Create an execution service for testing."""
+        return ExecutionService(temp_workspace_dir, workflow_service)
+
+    @pytest.fixture
+    def client(
+        self,
+        temp_workspace_dir: Path,
+        workflow_service: WorkflowService,
+        execution_service: ExecutionService,
+    ) -> TestClient:
+        """Create a test client for the FastAPI app with overridden dependencies."""
+        from askui.chat.api.executions.dependencies import get_execution_service
+        from askui.chat.api.workflows.dependencies import get_workflow_service
+
+        # Override service dependencies directly
+        app.dependency_overrides[get_workflow_service] = lambda: workflow_service
+        app.dependency_overrides[get_execution_service] = lambda: execution_service
+
+        client = TestClient(app)
+
+        # Clean up overrides after test (this will be called when fixture is torn down)
+        yield client
+        app.dependency_overrides.clear()
 
     @pytest.fixture
     def workspace_id(self) -> WorkspaceId:
@@ -26,10 +65,24 @@ class TestExecutionRouter:
         return uuid.uuid4()
 
     @pytest.fixture
-    def execution_data(self) -> dict[str, str]:
+    def test_workflow_id(
+        self, workflow_service: WorkflowService, workspace_id: WorkspaceId
+    ) -> str:
+        """Create a test workflow and return its ID."""
+        workflow_params = WorkflowCreateParams(
+            name="Test Workflow",
+            description="A test workflow for execution testing",
+        )
+        workflow = workflow_service.create(
+            workspace_id=workspace_id, params=workflow_params
+        )
+        return workflow.id
+
+    @pytest.fixture
+    def execution_data(self, test_workflow_id: str) -> dict[str, str]:
         """Create sample execution data."""
         return {
-            "workflow": "wf_test123",
+            "workflow": test_workflow_id,
             "thread": "thread_test123",
         }
 
@@ -41,7 +94,7 @@ class TestExecutionRouter:
     ) -> None:
         """Test successful execution creation."""
         response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -64,7 +117,7 @@ class TestExecutionRouter:
         """Test successful execution modification with valid status transition."""
         # First create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -75,7 +128,7 @@ class TestExecutionRouter:
         # Then modify it with a valid transition (PENDING -> PASSED)
         modify_data = {"status": ExecutionStatus.PASSED.value}
         modify_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -94,7 +147,7 @@ class TestExecutionRouter:
         """Test execution modification with invalid status transition returns 422."""
         # First create an execution and transition it to a final state
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -105,7 +158,7 @@ class TestExecutionRouter:
         # Transition to final state (PENDING -> PASSED)
         modify_data = {"status": ExecutionStatus.PASSED.value}
         modify_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -114,7 +167,7 @@ class TestExecutionRouter:
         # Try to transition from final state to non-final state (PASSED -> PENDING)
         invalid_modify_data = {"status": ExecutionStatus.PENDING.value}
         invalid_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=invalid_modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -138,7 +191,7 @@ class TestExecutionRouter:
         """Test that modifying to the same status is allowed (no-op)."""
         # Create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -149,7 +202,7 @@ class TestExecutionRouter:
         # Modify to the same status (PENDING -> PENDING)
         modify_data = {"status": ExecutionStatus.PENDING.value}
         modify_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -167,7 +220,7 @@ class TestExecutionRouter:
         """Test multiple valid status transitions in sequence."""
         # Create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -184,7 +237,7 @@ class TestExecutionRouter:
         for status, expected_code in transitions:
             modify_data = {"status": status}
             modify_response = client.patch(
-                f"/executions/{execution_id}",
+                f"/v1/executions/{execution_id}",
                 json=modify_data,
                 headers={"askui-workspace": str(workspace_id)},
             )
@@ -200,7 +253,7 @@ class TestExecutionRouter:
         """Test modifying non-existent execution returns 404."""
         modify_data = {"status": ExecutionStatus.PASSED.value}
         response = client.patch(
-            "/executions/exec_nonexistent123",
+            "/v1/executions/exec_nonexistent123",
             json=modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -216,7 +269,7 @@ class TestExecutionRouter:
         """Test successful execution retrieval."""
         # Create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -226,7 +279,7 @@ class TestExecutionRouter:
 
         # Retrieve the execution
         retrieve_response = client.get(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             headers={"askui-workspace": str(workspace_id)},
         )
 
@@ -244,7 +297,7 @@ class TestExecutionRouter:
         """Test successful execution listing."""
         # Create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -252,7 +305,7 @@ class TestExecutionRouter:
 
         # List executions
         list_response = client.get(
-            "/executions/",
+            "/v1/executions/",
             headers={"askui-workspace": str(workspace_id)},
         )
 
@@ -291,7 +344,7 @@ class TestExecutionRouter:
         """
         # Create an execution
         create_response = client.post(
-            "/executions/",
+            "/v1/executions/",
             json=execution_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -302,7 +355,7 @@ class TestExecutionRouter:
         # Transition to final state
         modify_data = {"status": final_status.value}
         modify_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
@@ -311,7 +364,7 @@ class TestExecutionRouter:
         # Try to transition to invalid target
         invalid_modify_data = {"status": invalid_target.value}
         invalid_response = client.patch(
-            f"/executions/{execution_id}",
+            f"/v1/executions/{execution_id}",
             json=invalid_modify_data,
             headers={"askui-workspace": str(workspace_id)},
         )
