@@ -14,6 +14,8 @@ from askui.chat.api.executions.models import (
 )
 from askui.chat.api.executions.service import ExecutionService
 from askui.chat.api.models import WorkspaceId
+from askui.chat.api.workflows.models import WorkflowCreateParams
+from askui.chat.api.workflows.service import WorkflowService
 from askui.utils.api_utils import ListQuery, NotFoundError
 
 
@@ -21,9 +23,16 @@ class TestExecutionService:
     """Test execution service with status transition validation."""
 
     @pytest.fixture
-    def execution_service(self, tmp_path: Path) -> ExecutionService:
+    def workflow_service(self, tmp_path: Path) -> WorkflowService:
+        """Create a workflow service for testing."""
+        return WorkflowService(tmp_path)
+
+    @pytest.fixture
+    def execution_service(
+        self, tmp_path: Path, workflow_service: WorkflowService
+    ) -> ExecutionService:
         """Create an execution service for testing."""
-        return ExecutionService(tmp_path)
+        return ExecutionService(tmp_path, workflow_service)
 
     @pytest.fixture
     def workspace_id(self) -> WorkspaceId:
@@ -31,10 +40,24 @@ class TestExecutionService:
         return uuid.uuid4()
 
     @pytest.fixture
-    def create_params(self) -> ExecutionCreateParams:
+    def test_workflow_id(
+        self, workflow_service: WorkflowService, workspace_id: WorkspaceId
+    ) -> str:
+        """Create a test workflow and return its ID."""
+        workflow_params = WorkflowCreateParams(
+            name="Test Workflow",
+            description="A test workflow for execution testing",
+        )
+        workflow = workflow_service.create(
+            workspace_id=workspace_id, params=workflow_params
+        )
+        return workflow.id
+
+    @pytest.fixture
+    def create_params(self, test_workflow_id: str) -> ExecutionCreateParams:
         """Create sample execution creation parameters."""
         return ExecutionCreateParams(
-            workflow="wf_test123",
+            workflow=test_workflow_id,
             thread="thread_test123",
         )
 
@@ -66,6 +89,45 @@ class TestExecutionService:
         assert execution.object == "execution"
         assert execution.id.startswith("exec_")
         assert execution.created_at is not None
+
+    def test_create_execution_with_nonexistent_workflow_fails(
+        self,
+        execution_service: ExecutionService,
+        workspace_id: WorkspaceId,
+    ) -> None:
+        """Test that creating execution with non-existent workflow raises NotFoundError."""
+        invalid_params = ExecutionCreateParams(
+            workflow="wf_nonexistent123",
+            thread="thread_test123",
+        )
+
+        with pytest.raises(NotFoundError) as exc_info:
+            execution_service.create(workspace_id=workspace_id, params=invalid_params)
+
+        assert "Workflow wf_nonexistent123 not found" in str(exc_info.value)
+
+    def test_create_execution_with_workflow_from_different_workspace_fails(
+        self,
+        tmp_path: Path,
+        test_workflow_id: str,
+    ) -> None:
+        """Test that creating execution with workflow from different workspace fails."""
+        # Create execution service with different workspace
+        different_workspace_id = uuid.uuid4()
+        workflow_service = WorkflowService(tmp_path)
+        execution_service = ExecutionService(tmp_path, workflow_service)
+
+        invalid_params = ExecutionCreateParams(
+            workflow=test_workflow_id,  # This workflow belongs to a different workspace
+            thread="thread_test123",
+        )
+
+        with pytest.raises(NotFoundError) as exc_info:
+            execution_service.create(
+                workspace_id=different_workspace_id, params=invalid_params
+            )
+
+        assert "not found" in str(exc_info.value)
 
     def test_retrieve_execution_success(
         self,
@@ -250,16 +312,16 @@ class TestExecutionService:
         self,
         tmp_path: Path,
         workspace_id: WorkspaceId,
+        execution_service: ExecutionService,
         create_params: ExecutionCreateParams,
     ) -> None:
         """Test that executions persist across service instances."""
-        # Create execution with first service instance
-        service1 = ExecutionService(tmp_path)
-        execution = service1.create(workspace_id=workspace_id, params=create_params)
+        # Create execution with existing service instance
+        execution = execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
 
-        # Retrieve with second service instance
-        service2 = ExecutionService(tmp_path)
-        retrieved = service2.retrieve(
+        retrieved = execution_service.retrieve(
             workspace_id=workspace_id, execution_id=execution.id
         )
 
@@ -269,26 +331,26 @@ class TestExecutionService:
 
     def test_modify_execution_persists_changes(
         self,
-        tmp_path: Path,
         workspace_id: WorkspaceId,
+        execution_service: ExecutionService,
         create_params: ExecutionCreateParams,
     ) -> None:
         """Test that execution modifications are persisted to filesystem."""
-        # Create execution
-        service1 = ExecutionService(tmp_path)
-        execution = service1.create(workspace_id=workspace_id, params=create_params)
+        # Create execution using existing service
+        execution = execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
 
         # Modify execution
         modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
-        service1.modify(
+        execution_service.modify(
             workspace_id=workspace_id,
             execution_id=execution.id,
             params=modify_params,
         )
 
         # Verify changes persist with new service instance
-        service2 = ExecutionService(tmp_path)
-        retrieved = service2.retrieve(
+        retrieved = execution_service.retrieve(
             workspace_id=workspace_id, execution_id=execution.id
         )
         assert retrieved.status == ExecutionStatus.PASSED

@@ -3,11 +3,16 @@ from fastapi import Depends
 from askui.chat.api.dependencies import SettingsDep
 from askui.chat.api.executions.service import ExecutionService
 from askui.chat.api.settings import Settings
+from askui.chat.api.workflows.dependencies import WorkflowServiceDep
+from askui.chat.api.workflows.service import WorkflowService
 
 
-def get_execution_service(settings: Settings = SettingsDep) -> ExecutionService:
+def get_execution_service(
+    settings: Settings = SettingsDep,
+    workflow_service: WorkflowService = WorkflowServiceDep,
+) -> ExecutionService:
     """Get ExecutionService instance."""
-    return ExecutionService(settings.data_dir)
+    return ExecutionService(settings.data_dir, workflow_service)
 
 
 ExecutionServiceDep = Depends(get_execution_service)
