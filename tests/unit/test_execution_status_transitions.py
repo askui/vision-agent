@@ -31,7 +31,9 @@ class TestStatusTransitionValidation:
             _validate_status_transition(ExecutionStatus.PENDING, target)
 
     def test_invalid_transitions_from_pending(self) -> None:
-        """Test that PENDING cannot transition back to PENDING (via validation logic)."""
+        """
+        Test that PENDING cannot transition back to PENDING (via validation logic).
+        """
         # Note: same-status transitions are allowed at the validation level,
         # but this tests the transition map logic
         # PENDING -> PENDING is actually allowed as a no-op
@@ -139,7 +141,10 @@ class TestStatusTransitionValidation:
     def test_specific_invalid_transitions_parametrized(
         self, final_state: ExecutionStatus, target_state: ExecutionStatus
     ) -> None:
-        """Test specific invalid transitions mentioned in requirements using parametrization."""
+        """
+        Test specific invalid transitions mentioned in requirements using
+        parametrization.
+        """
         with pytest.raises(InvalidStatusTransitionError):
             _validate_status_transition(final_state, target_state)
 

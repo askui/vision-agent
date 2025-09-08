@@ -1,4 +1,6 @@
-"""Integration tests for execution router endpoints with status transition validation."""
+"""
+Integration tests for execution router endpoints with status transition validation.
+"""
 
 import uuid
 
@@ -284,7 +286,9 @@ class TestExecutionRouter:
         final_status: ExecutionStatus,
         invalid_target: ExecutionStatus,
     ) -> None:
-        """Test that final states cannot transition to non-final states (parametrized)."""
+        """
+        Test that final states cannot transition to non-final states (parametrized).
+        """
         # Create an execution
         create_response = client.post(
             "/executions/",

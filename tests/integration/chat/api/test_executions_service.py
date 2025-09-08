@@ -216,7 +216,8 @@ class TestExecutionService:
         )
         assert len(workflow_filtered.data) >= 1
         assert all(
-            exec.workflow == create_params.workflow for exec in workflow_filtered.data
+            execution.workflow == create_params.workflow
+            for execution in workflow_filtered.data
         )
 
         # Test thread filter
@@ -226,7 +227,10 @@ class TestExecutionService:
             thread_id=create_params.thread,
         )
         assert len(thread_filtered.data) >= 1
-        assert all(exec.thread == create_params.thread for exec in thread_filtered.data)
+        assert all(
+            execution.thread == create_params.thread
+            for execution in thread_filtered.data
+        )
 
         # Test combined filters
         combined_filtered = execution_service.list_(
@@ -237,9 +241,9 @@ class TestExecutionService:
         )
         assert len(combined_filtered.data) >= 1
         assert all(
-            exec.workflow == create_params.workflow
-            and exec.thread == create_params.thread
-            for exec in combined_filtered.data
+            execution.workflow == create_params.workflow
+            and execution.thread == create_params.thread
+            for execution in combined_filtered.data
         )
 
     def test_persistence_across_service_instances(
@@ -426,7 +430,9 @@ class TestExecutionService:
         final_status: ExecutionStatus,
         target_status: ExecutionStatus,
     ) -> None:
-        """Test that final states cannot transition to any other status (parametrized)."""
+        """
+        Test that final states cannot transition to any other status (parametrized).
+        """
         # Skip same-status transitions (they're allowed as no-ops)
         if final_status == target_status:
             pytest.skip("Same-status transitions are allowed as no-ops")
