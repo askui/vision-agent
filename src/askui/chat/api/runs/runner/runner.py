@@ -1,7 +1,7 @@
+import json
 import logging
 from abc import ABC, abstractmethod
 
-import anthropic
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
@@ -97,6 +97,16 @@ class Runner:
             run_id=self._run.id,
         )
 
+    def _build_system(self) -> str:
+        base_system = self._assistant.system or ""
+        metadata = {
+            "run_id": str(self._run.id),
+            "thread_id": str(self._run.thread_id),
+            "workspace_id": str(self._workspace_id),
+            "assistant_id": str(self._run.assistant_id),
+        }
+        return f"{base_system}\n\nMetadata of current conversation: {json.dumps(metadata)}".strip()
+
     async def _run_agent(
         self,
         send_stream: ObjectStream[Events],
@@ -152,9 +162,6 @@ class Runner:
             # TODO Remove this after having extracted tools into Android MCP
             if self._run.assistant_id == ANDROID_AGENT.id:
                 tools.append_tool(*_get_android_tools())
-            import json
-
-            print(json.dumps(tools.to_params()))
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
@@ -164,7 +171,7 @@ class Runner:
                 settings=ActSettings(
                     messages=MessageSettings(
                         model=ModelName.CLAUDE__SONNET__4__20250514,
-                        system=self._assistant.system or anthropic.NOT_GIVEN,
+                        system=self._build_system(),
                         thinking={"type": "enabled", "budget_tokens": 2048},
                     ),
                 ),
