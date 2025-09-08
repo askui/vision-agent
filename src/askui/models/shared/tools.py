@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Any, Literal, Protocol, Type, cast
 
+import jsonref
 import mcp
 from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
 from anthropic.types.beta.beta_tool_param import InputSchema
@@ -151,6 +152,22 @@ class McpClientProtocol(Protocol):
     ) -> None: ...
 
 
+def _replace_refs(tool_name: str, input_schema: InputSchema) -> InputSchema:
+    try:
+        return jsonref.replace_refs(
+            input_schema,
+            lazy_load=False,
+            proxies=False,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception(
+            f"Failed to replace refs for tool {tool_name}: {json.dumps(input_schema)}. "
+            "Falling back to original "
+            f"input schema which may be invalid or not be supported by the model: {e}"
+        )
+        return input_schema
+
+
 class ToolCollection:
     """A collection of tools.
 
@@ -209,7 +226,7 @@ class ToolCollection:
                 BetaToolParam(
                     name=tool_name,
                     description=tool.description or "",
-                    input_schema=tool.inputSchema,
+                    input_schema=_replace_refs(tool_name, tool.inputSchema),
                 ),
             )
             for tool_name, tool in mcp_tools.items()
