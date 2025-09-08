@@ -27,7 +27,7 @@ class InvalidStatusTransitionError(ValueError):
     def __init__(
         self, from_status: ExecutionStatus, to_status: ExecutionStatus
     ) -> None:
-        error_msg = f"Invalid status transition from '{from_status}' to '{to_status}'"
+        error_msg = f"Invalid status transition from '{from_status.value}' to '{to_status.value}'"
         super().__init__(error_msg)
         self.from_status = from_status
         self.to_status = to_status
