@@ -2,6 +2,7 @@ from askui.chat.api.assistants.models import Assistant
 from askui.prompts.system import (
     ANDROID_AGENT_SYSTEM_PROMPT,
     COMPUTER_AGENT_SYSTEM_PROMPT,
+    ORCHESTRATOR_AGENT_SYSTEM_PROMPT,
     TESTING_AGENT_SYSTEM_PROMPT,
     WEB_AGENT_SYSTEM_PROMPT,
 )
@@ -100,9 +101,24 @@ TESTING_AGENT = Assistant(
         "list_executions",
         "modify_execution",
         "delete_execution",
-        "create_thread_v1_threads_post",
-        "create_message_v1_threads",
-        "create_run_v1_threads",
+        "create_thread_and_run_v1_runs_post",
+        "retrieve_run_v1_threads",
+        "utility_wait",
+        "list_messages_v1_threads",
+    ],
+)
+
+ORCHESTRATOR_AGENT = Assistant(
+    id="asst_68ac2c4edc4b2f27faa5a258",
+    created_at=now(),
+    name="Orchestrator",
+    avatar="data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTIgOFY0SDgiIC8+CiAgPHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjEyIiB4PSI0IiB5PSI4IiByeD0iMiIgLz4KICA8cGF0aCBkPSJNMiAxNGgyIiAvPgogIDxwYXRoIGQ9Ik0yMCAxNGgyIiAvPgogIDxwYXRoIGQ9Ik0xNSAxM3YyIiAvPgogIDxwYXRoIGQ9Ik05IDEzdjIiIC8+Cjwvc3ZnPgo=",
+    system=ORCHESTRATOR_AGENT_SYSTEM_PROMPT,
+    tools=[
+        "list_assistants_v1_assistants_get",
+        "create_thread_and_run_v1_runs_post",
+        "retrieve_run_v1_threads",
+        "utility_wait",
         "list_messages_v1_threads",
     ],
 )
@@ -112,4 +128,5 @@ SEEDS = [
     ANDROID_AGENT,
     WEB_AGENT,
     TESTING_AGENT,
+    ORCHESTRATOR_AGENT,
 ]
