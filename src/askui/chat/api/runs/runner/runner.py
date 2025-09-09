@@ -8,9 +8,7 @@ from asyncer import asyncify, syncify
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
-from askui.chat.api.messages.models import MessageCreateParams
-from askui.chat.api.messages.service import MessageService
-from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
@@ -28,7 +26,6 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool, ToolCollection
-from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
 
 logger = logging.getLogger(__name__)
 
@@ -77,17 +74,14 @@ class Runner:
         workspace_id: WorkspaceId,
         assistant: Assistant,
         run: Run,
-        message_service: MessageService,
-        message_translator: MessageTranslator,
+        chat_history_manager: ChatHistoryManager,
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
     ) -> None:
         self._workspace_id = workspace_id
         self._assistant = assistant
         self._run = run
-        self._message_service = message_service
-        self._message_translator = message_translator
-        self._message_content_translator = message_translator.content_translator
+        self._chat_history_manager = chat_history_manager
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
 
@@ -111,33 +105,22 @@ class Runner:
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
-        messages: list[MessageParam] = [
-            await self._message_translator.to_anthropic(msg)
-            for msg in self._message_service.list_(
-                thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
-            ).data
-        ]
+        messages = await self._chat_history_manager.retrieve(
+            thread_id=self._run.thread_id
+        )
 
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._message_service.create(
+            created_message = await self._chat_history_manager.append(
                 thread_id=self._run.thread_id,
-                params=MessageCreateParams(
-                    assistant_id=self._run.assistant_id
-                    if on_message_cb_param.message.role == "assistant"
-                    else None,
-                    role=on_message_cb_param.message.role,
-                    content=await self._message_content_translator.from_anthropic(
-                        on_message_cb_param.message.content
-                    ),
-                    run_id=self._run.id,
-                ),
+                assistant_id=self._run.assistant_id,
+                run_id=self._run.id,
+                on_message_cb_param=on_message_cb_param,
             )
             await send_stream.send(
                 MessageEvent(
-                    data=message,
+                    data=created_message,
                     event="thread.message.created",
                 )
             )

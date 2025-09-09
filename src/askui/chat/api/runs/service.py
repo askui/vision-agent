@@ -7,8 +7,7 @@ from typing_extensions import override
 
 from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
-from askui.chat.api.messages.service import MessageService
-from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import Run, RunCreateParams
 from askui.chat.api.runs.runner.events.events import (
@@ -35,14 +34,12 @@ class RunService(RunnerRunService):
         base_dir: Path,
         assistant_service: AssistantService,
         mcp_client_manager_manager: McpClientManagerManager,
-        message_service: MessageService,
-        message_translator: MessageTranslator,
+        chat_history_manager: ChatHistoryManager,
     ) -> None:
         self._base_dir = base_dir
         self._assistant_service = assistant_service
         self._mcp_client_manager_manager = mcp_client_manager_manager
-        self._message_service = message_service
-        self._message_translator = message_translator
+        self._chat_history_manager = chat_history_manager
 
     def get_runs_dir(self, thread_id: ThreadId) -> Path:
         return self._base_dir / "runs" / thread_id
@@ -80,8 +77,7 @@ class RunService(RunnerRunService):
             workspace_id=workspace_id,
             assistant=assistant,
             run=run,
-            message_service=self._message_service,
-            message_translator=self._message_translator,
+            chat_history_manager=self._chat_history_manager,
             mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
         )
