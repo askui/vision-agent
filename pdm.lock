@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "chat", "dev", "pynput", "test", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:d3a2688df580a571a134c1a518396bcf1106a9e725e9466b90a3edc64473bcdf"
+content_hash = "sha256:8d52f2c4c18cacc1197a60c1e72602933fecfd465384d5c74083f535c093afae"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -704,7 +704,7 @@ name = "evdev"
 version = "1.9.2"
 requires_python = ">=3.8"
 summary = "Bindings to the Linux input handling subsystem"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "\"linux\" in sys_platform"
 files = [
     {file = "evdev-1.9.2.tar.gz", hash = "sha256:5d3278892ce1f92a74d6bf888cc8525d9f68af85dbe336c95d1c87fb8f423069"},
@@ -1691,7 +1691,7 @@ name = "mss"
 version = "10.0.0"
 requires_python = ">=3.9"
 summary = "An ultra fast cross-platform multiple screenshots module in pure python using ctypes."
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 files = [
     {file = "mss-10.0.0-py3-none-any.whl", hash = "sha256:82cf6460a53d09e79b7b6d871163c982e6c7e9649c426e7b7591b74956d5cb64"},
     {file = "mss-10.0.0.tar.gz", hash = "sha256:d903e0d51262bf0f8782841cf16eaa6d7e3e1f12eae35ab41c2e318837c6637f"},
@@ -2413,7 +2413,7 @@ files = [
 name = "pynput"
 version = "1.8.1"
 summary = "Monitor and control user input devices"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 dependencies = [
     "enum34; python_version == \"2.7\"",
     "evdev>=1.3; \"linux\" in sys_platform",
@@ -2432,7 +2432,7 @@ name = "pyobjc-core"
 version = "11.0"
 requires_python = ">=3.8"
 summary = "Python<->ObjC Interoperability Module"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "sys_platform == \"darwin\""
 files = [
     {file = "pyobjc_core-11.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:10866b3a734d47caf48e456eea0d4815c2c9b21856157db5917b61dee06893a1"},
@@ -2448,7 +2448,7 @@ name = "pyobjc-framework-applicationservices"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework ApplicationServices on macOS"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -2470,7 +2470,7 @@ name = "pyobjc-framework-cocoa"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Cocoa frameworks on macOS"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -2489,7 +2489,7 @@ name = "pyobjc-framework-coretext"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the framework CoreText on macOS"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -2510,7 +2510,7 @@ name = "pyobjc-framework-quartz"
 version = "11.0"
 requires_python = ">=3.9"
 summary = "Wrappers for the Quartz frameworks on macOS"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "sys_platform == \"darwin\""
 dependencies = [
     "pyobjc-core>=11.0",
@@ -2679,7 +2679,7 @@ files = [
 name = "python-xlib"
 version = "0.33"
 summary = "Python X Library"
-groups = ["all", "chat", "pynput"]
+groups = ["all", "pynput"]
 marker = "\"linux\" in sys_platform"
 dependencies = [
     "six>=1.10.0",
@@ -3049,7 +3049,7 @@ name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["default", "all", "chat", "pynput"]
+groups = ["default", "all", "pynput"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},

@@ -9,6 +9,7 @@ from askui.chat.api.assistants.seeds import SEEDS
 from askui.chat.api.models import AssistantId, WorkspaceId
 from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
+    LIST_LIMIT_MAX,
     ConflictError,
     ForbiddenError,
     ListQuery,
@@ -70,24 +71,24 @@ class AssistantService:
 
     def modify(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         assistant_id: AssistantId,
         params: AssistantModifyParams,
     ) -> Assistant:
         assistant = self.retrieve(workspace_id, assistant_id)
-        if assistant.workspace_id is None:
-            error_msg = f"Default assistant {assistant_id} cannot be modified"
-            raise ForbiddenError(error_msg)
         modified = assistant.modify(params)
         self._save(modified)
         return modified
 
     def delete(
-        self, workspace_id: WorkspaceId | None, assistant_id: AssistantId
+        self,
+        workspace_id: WorkspaceId | None,
+        assistant_id: AssistantId,
+        force: bool = False,
     ) -> None:
         try:
             assistant = self.retrieve(workspace_id, assistant_id)
-            if assistant.workspace_id is None:
+            if assistant.workspace_id is None and not force:
                 error_msg = f"Default assistant {assistant_id} cannot be deleted"
                 raise ForbiddenError(error_msg)
             self._get_assistant_path(assistant_id).unlink()
@@ -102,6 +103,14 @@ class AssistantService:
 
     def seed(self) -> None:
         """Seed the assistant service with default assistants."""
+        while True:
+            list_response = self.list_(
+                None, ListQuery(limit=LIST_LIMIT_MAX, order="asc")
+            )
+            for assistant in list_response.data:
+                self.delete(None, assistant.id, force=True)
+            if not list_response.has_more:
+                break
         for seed in SEEDS:
             try:
                 self._save(seed, new=True)
