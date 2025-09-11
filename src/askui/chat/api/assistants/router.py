@@ -48,7 +48,7 @@ def retrieve_assistant(
 @router.post("/{assistant_id}")
 def modify_assistant(
     assistant_id: AssistantId,
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     params: AssistantModifyParams,
     assistant_service: AssistantService = AssistantServiceDep,
 ) -> Assistant:

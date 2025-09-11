@@ -71,14 +71,11 @@ class AssistantService:
 
     def modify(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         assistant_id: AssistantId,
         params: AssistantModifyParams,
     ) -> Assistant:
         assistant = self.retrieve(workspace_id, assistant_id)
-        if assistant.workspace_id is None:
-            error_msg = f"Default assistant {assistant_id} cannot be modified"
-            raise ForbiddenError(error_msg)
         modified = assistant.modify(params)
         self._save(modified)
         return modified

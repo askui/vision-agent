@@ -109,9 +109,6 @@ class McpConfigService:
         params: McpConfigModifyParams,
     ) -> McpConfig:
         mcp_config = self.retrieve(workspace_id, mcp_config_id)
-        if mcp_config.workspace_id is None:
-            error_msg = f"Default MCP configuration {mcp_config_id} cannot be modified"
-            raise ForbiddenError(error_msg)
         modified = mcp_config.modify(params)
         self._save(modified)
         return modified
