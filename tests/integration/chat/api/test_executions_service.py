@@ -14,9 +14,6 @@ from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.facade import ThreadFacade
 from askui.chat.api.threads.service import ThreadService
 from askui.chat.api.workflow_executions.models import (
-    ExecutionModifyParams,
-    ExecutionStatus,
-    InvalidStatusTransitionError,
     WorkflowExecution,
     WorkflowExecutionCreateParams,
 )
@@ -178,8 +175,8 @@ class TestExecutionService:
         assert execution.workflow_id == create_params.workflow_id
         assert execution.thread_id is not None  # Thread is created automatically
         assert execution.workspace_id == workspace_id
-        assert execution.object == "execution"
-        assert execution.id.startswith("exec_")
+        assert execution.object == "workflow_execution"
+        assert execution.id.startswith("wfexec_")
         assert execution.created_at is not None
 
     @pytest.mark.asyncio
@@ -261,88 +258,6 @@ class TestExecutionService:
         assert "not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_modify_execution_valid_transition(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        sample_execution: WorkflowExecution,
-    ) -> None:
-        """Test successful execution modification with valid status transition."""
-        modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
-        modified = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=sample_execution.id,
-            params=modify_params,
-        )
-
-        assert modified.id == sample_execution.id
-        assert modified.workflow_id == sample_execution.workflow_id
-        assert modified.thread_id == sample_execution.thread_id
-
-    @pytest.mark.asyncio
-    async def test_modify_execution_invalid_transition_raises_error(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        sample_execution: WorkflowExecution,
-    ) -> None:
-        """Test that invalid status transition raises InvalidStatusTransitionError."""
-        # First transition to a final state
-        modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
-        execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=sample_execution.id,
-            params=modify_params,
-        )
-
-        # Try to transition from final state to non-final state
-        invalid_params = ExecutionModifyParams(status=ExecutionStatus.PENDING)
-        with pytest.raises(InvalidStatusTransitionError) as exc_info:
-            execution_service.modify(
-                workspace_id=workspace_id,
-                execution_id=sample_execution.id,
-                params=invalid_params,
-            )
-
-        assert exc_info.value.from_status == ExecutionStatus.PASSED
-        assert exc_info.value.to_status == ExecutionStatus.PENDING
-        assert "Invalid status transition from 'passed' to 'pending'" in str(
-            exc_info.value
-        )
-
-    @pytest.mark.asyncio
-    async def test_modify_execution_same_status_allowed(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        sample_execution: WorkflowExecution,
-    ) -> None:
-        """Test that modifying to the same status is allowed (no-op)."""
-        modify_params = ExecutionModifyParams(status=ExecutionStatus.PENDING)
-        modified = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=sample_execution.id,
-            params=modify_params,
-        )
-
-        assert modified.id == sample_execution.id
-
-    def test_modify_execution_not_found(
-        self, execution_service: ExecutionService, workspace_id: WorkspaceId
-    ) -> None:
-        """Test modifying non-existent execution raises NotFoundError."""
-        modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
-
-        with pytest.raises(NotFoundError) as exc_info:
-            execution_service.modify(
-                workspace_id=workspace_id,
-                execution_id="exec_nonexistent123",
-                params=modify_params,
-            )
-
-        assert "not found" in str(exc_info.value)
-
-    @pytest.mark.asyncio
     async def test_list_executions_success(
         self,
         execution_service: ExecutionService,
@@ -385,7 +300,7 @@ class TestExecutionService:
         different_params = WorkflowExecutionCreateParams(
             workflow_id=different_workflow.id,
         )
-        second_execution, _ = await execution_service.create(
+        await execution_service.create(
             workspace_id=workspace_id, params=different_params
         )
 
@@ -448,216 +363,3 @@ class TestExecutionService:
 
         assert retrieved.id == execution.id
         assert retrieved.workflow_id == execution.workflow_id
-
-    @pytest.mark.asyncio
-    async def test_modify_execution_persists_changes(
-        self,
-        workspace_id: WorkspaceId,
-        execution_service: ExecutionService,
-        create_params: WorkflowExecutionCreateParams,
-    ) -> None:
-        """Test that execution modifications are persisted to filesystem."""
-        # Create execution using existing service
-        execution, _ = await execution_service.create(
-            workspace_id=workspace_id, params=create_params
-        )
-
-        # Modify execution
-        modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
-        execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=modify_params,
-        )
-
-        # Verify changes persist with new service instance
-        retrieved = execution_service.retrieve(
-            workspace_id=workspace_id, execution_id=execution.id
-        )
-
-    @pytest.mark.parametrize(
-        "target_status",
-        [
-            ExecutionStatus.INCOMPLETE,
-            ExecutionStatus.PASSED,
-            ExecutionStatus.FAILED,
-            ExecutionStatus.SKIPPED,
-        ],
-    )
-    @pytest.mark.asyncio
-    async def test_valid_transitions_from_pending(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        test_workflow_id: str,
-        target_status: ExecutionStatus,
-    ) -> None:
-        """Test all valid transitions from PENDING status (parametrized)."""
-        # Create execution (always starts as PENDING)
-        create_params = WorkflowExecutionCreateParams(
-            workflow_id=test_workflow_id,
-        )
-        execution, _ = await execution_service.create(
-            workspace_id=workspace_id, params=create_params
-        )
-
-        # Test transition from PENDING to target status
-        modify_params = ExecutionModifyParams(status=target_status)
-        modified = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=modify_params,
-        )
-
-        assert modified.status == target_status
-
-    @pytest.mark.parametrize(
-        "target_status",
-        [
-            ExecutionStatus.PASSED,
-            ExecutionStatus.FAILED,
-            ExecutionStatus.SKIPPED,
-        ],
-    )
-    @pytest.mark.asyncio
-    async def test_valid_transitions_from_incomplete(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        test_workflow_id: str,
-        target_status: ExecutionStatus,
-    ) -> None:
-        """Test all valid transitions from INCOMPLETE status (parametrized)."""
-        # Create execution and move to INCOMPLETE
-        create_params = WorkflowExecutionCreateParams(
-            workflow_id=test_workflow_id,
-        )
-        execution, _ = await execution_service.create(
-            workspace_id=workspace_id, params=create_params
-        )
-
-        # First move to INCOMPLETE
-        incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
-        execution = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=incomplete_params,
-        )
-
-        # Test transition from INCOMPLETE to target status
-        modify_params = ExecutionModifyParams(status=target_status)
-        modified = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=modify_params,
-        )
-
-        assert modified.status == target_status
-
-    @pytest.mark.asyncio
-    async def test_incomplete_cannot_go_back_to_pending(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        test_workflow_id: str,
-    ) -> None:
-        """Test that INCOMPLETE cannot transition back to PENDING."""
-        # Create execution and move to INCOMPLETE
-        create_params = WorkflowExecutionCreateParams(
-            workflow_id=test_workflow_id,
-        )
-        execution, _ = await execution_service.create(
-            workspace_id=workspace_id, params=create_params
-        )
-
-        # Move to INCOMPLETE
-        incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
-        execution = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=incomplete_params,
-        )
-
-        # Try to go back to PENDING (should fail)
-        pending_params = ExecutionModifyParams(status=ExecutionStatus.PENDING)
-        with pytest.raises(InvalidStatusTransitionError) as exc_info:
-            execution_service.modify(
-                workspace_id=workspace_id,
-                execution_id=execution.id,
-                params=pending_params,
-            )
-
-        assert exc_info.value.from_status == ExecutionStatus.INCOMPLETE
-        assert exc_info.value.to_status == ExecutionStatus.PENDING
-
-    @pytest.mark.parametrize(
-        "final_status",
-        [
-            ExecutionStatus.PASSED,
-            ExecutionStatus.FAILED,
-            ExecutionStatus.SKIPPED,
-        ],
-    )
-    @pytest.mark.parametrize(
-        "target_status",
-        [
-            ExecutionStatus.PENDING,
-            ExecutionStatus.INCOMPLETE,
-            ExecutionStatus.PASSED,
-            ExecutionStatus.FAILED,
-            ExecutionStatus.SKIPPED,
-        ],
-    )
-    @pytest.mark.asyncio
-    async def test_final_states_cannot_transition(
-        self,
-        execution_service: ExecutionService,
-        workspace_id: WorkspaceId,
-        test_workflow_id: str,
-        final_status: ExecutionStatus,
-        target_status: ExecutionStatus,
-    ) -> None:
-        """
-        Test that final states cannot transition to any other status (parametrized).
-        """
-        # Skip same-status transitions (they're allowed as no-ops)
-        if final_status == target_status:
-            pytest.skip("Same-status transitions are allowed as no-ops")
-
-        # Create execution and move to final state
-        create_params = WorkflowExecutionCreateParams(
-            workflow_id=test_workflow_id,
-        )
-        execution, _ = await execution_service.create(
-            workspace_id=workspace_id, params=create_params
-        )
-
-        # Move to final status (via INCOMPLETE if needed for realistic flow)
-        if final_status in [ExecutionStatus.PASSED, ExecutionStatus.FAILED]:
-            # Realistic flow: PENDING → INCOMPLETE → PASSED/FAILED
-            incomplete_params = ExecutionModifyParams(status=ExecutionStatus.INCOMPLETE)
-            execution = execution_service.modify(
-                workspace_id=workspace_id,
-                execution_id=execution.id,
-                params=incomplete_params,
-            )
-
-        # Move to final status
-        final_params = ExecutionModifyParams(status=final_status)
-        execution = execution_service.modify(
-            workspace_id=workspace_id,
-            execution_id=execution.id,
-            params=final_params,
-        )
-
-        # Try to transition from final state to target status (should fail)
-        modify_params = ExecutionModifyParams(status=target_status)
-        with pytest.raises(InvalidStatusTransitionError) as exc_info:
-            execution_service.modify(
-                workspace_id=workspace_id,
-                execution_id=execution.id,
-                params=modify_params,
-            )
-
-        assert exc_info.value.from_status == final_status
-        assert exc_info.value.to_status == target_status

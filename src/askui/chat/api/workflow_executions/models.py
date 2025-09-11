@@ -39,7 +39,7 @@ class WorkflowExecution(WorkspaceResource):
     """
 
     id: WorkflowExecutionId
-    object: Literal["execution"] = "execution"
+    object: Literal["workflow_execution"] = "workflow_execution"
     created_at: datetime.datetime
     workflow_id: WorkflowId
     thread_id: ThreadId
@@ -54,7 +54,7 @@ class WorkflowExecution(WorkspaceResource):
         thread_id: ThreadId,
     ) -> "WorkflowExecution":
         return cls(
-            id=generate_time_ordered_id("exec"),
+            id=generate_time_ordered_id("wfexec"),
             created_at=now(),
             workspace_id=workspace_id,
             run_id=run_id,
