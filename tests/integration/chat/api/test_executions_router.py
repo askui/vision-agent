@@ -111,7 +111,6 @@ class TestExecutionRouter:
     @pytest.fixture
     def client(
         self,
-        temp_workspace_dir: Path,
         workflow_service: WorkflowService,
         execution_service: ExecutionService,
     ) -> TestClient:

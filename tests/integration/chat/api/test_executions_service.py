@@ -189,7 +189,9 @@ class TestExecutionService:
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
     ) -> None:
-        """Test that creating execution with non-existent workflow raises NotFoundError."""
+        """
+        Test that creating execution with non-existent workflow raises NotFoundError.
+        """
         invalid_params = ExecutionCreateParams(
             workflow_id="wf_nonexistent123",
         )
@@ -221,7 +223,7 @@ class TestExecutionService:
         execution_service = ExecutionService(tmp_path, workflow_service, thread_facade)
 
         invalid_params = ExecutionCreateParams(
-            workflow_id=test_workflow_id,  # This workflow belongs to a different workspace
+            workflow_id=test_workflow_id,
         )
 
         with pytest.raises(NotFoundError) as exc_info:
@@ -434,7 +436,6 @@ class TestExecutionService:
     @pytest.mark.asyncio
     async def test_persistence_across_service_instances(
         self,
-        tmp_path: Path,
         workspace_id: WorkspaceId,
         execution_service: ExecutionService,
         create_params: ExecutionCreateParams,
