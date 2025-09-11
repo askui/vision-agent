@@ -2,6 +2,10 @@
 
 __version__ = "0.15.1"
 
+import os
+
+os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
+
 from .agent import VisionAgent
 from .locators import Locator
 from .models import (

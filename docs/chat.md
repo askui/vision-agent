@@ -273,14 +273,6 @@ curl -X GET "$BASE_URL/v1/assistants" \
       "created_at": 1755848144
     },
     {
-      "id": "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmcb",
-      "name": "Human DemonstrationAgent",
-      "description": null,
-      "avatar": "data:image/svg+xml;base64,PHN2ZyAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogIHdpZHRoPSIyNCIKICBoZWlnaHQ9IjI0IgogIHZpZXdCb3g9IjAgMCAyNCAyNCIKICBmaWxsPSJub25lIgogIHN0cm9rZT0iIzAwMCIgc3R5bGU9ImJhY2tncm91bmQtY29sb3I6ICNmZmY7IGJvcmRlci1yYWRpdXM6IDJweCIKICBzdHJva2Utd2lkdGg9IjIiCiAgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIgogIHN0cm9rZS1saW5lam9pbj0icm91bmQiCj4KICA8cGF0aCBkPSJNMTkgMjF2LTJhNCA0IDAgMCAwLTQtNEg5YTQgNCAwIDAgMC00IDR2MiIgLz4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiIC8+Cjwvc3ZnPgo=",
-      "object": "assistant",
-      "created_at": 1755848144
-    },
-    {
       "id": "asst_ge3tiojsga3dgnruge3di2u5ov36shedkcslxnmca",
       "name": "AskUI Vision Agent",
       "description": null,

@@ -51,7 +51,7 @@ def retrieve_mcp_config(
 def modify_mcp_config(
     mcp_config_id: McpConfigId,
     params: McpConfigModifyParams,
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> McpConfig:
     """Update an MCP configuration."""

@@ -24,7 +24,7 @@ PLAYWRIGHT_MCP = McpConfig(
     name="playwright",
     mcp_server=StdioMCPServer(
         command="npx",
-        args=["@playwright/mcp@latest", "--isolated"],
+        args=["@playwright/mcp@latest", "--isolated", "--caps=vision,verify,pdf"],
     ),
 )
 
