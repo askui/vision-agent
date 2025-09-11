@@ -12,6 +12,8 @@ FileId = Annotated[str, IdField("file")]
 MessageId = Annotated[str, IdField("msg")]
 RunId = Annotated[str, IdField("run")]
 ThreadId = Annotated[str, IdField("thread")]
+WorkflowId = Annotated[str, IdField("wf")]
+
 WorkspaceId = UUID4
 
 

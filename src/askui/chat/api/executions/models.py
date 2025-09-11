@@ -4,7 +4,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import ExecutionId, ThreadId, WorkspaceId, WorkspaceResource
+from askui.chat.api.models import (
+    ExecutionId,
+    RunId,
+    ThreadId,
+    WorkspaceId,
+    WorkspaceResource,
+)
 from askui.chat.api.workflows.models import WorkflowId
 from askui.utils.datetime_utils import now
 from askui.utils.id_utils import generate_time_ordered_id
@@ -82,8 +88,7 @@ class ExecutionCreateParams(BaseModel):
     Parameters for creating an execution via API.
     """
 
-    workflow: WorkflowId
-    thread: ThreadId
+    workflow_id: WorkflowId
 
 
 class ExecutionModifyParams(BaseModelWithNotGiven):
@@ -113,22 +118,29 @@ class Execution(WorkspaceResource):
     id: ExecutionId
     object: Literal["execution"] = "execution"
     created_at: datetime.datetime
-    workflow: WorkflowId
-    thread: ThreadId
+    workflow_id: WorkflowId
+    thread_id: ThreadId
+    run_id: RunId
     status: ExecutionStatus = Field(
         ..., description="The current status of the workflow execution."
     )
 
     @classmethod
     def create(
-        cls, workspace_id: WorkspaceId | None, params: ExecutionCreateParams
+        cls,
+        workspace_id: WorkspaceId,
+        workflow_id: WorkflowId,
+        run_id: RunId,
+        thread_id: ThreadId,
     ) -> "Execution":
         return cls(
             id=generate_time_ordered_id("exec"),
             created_at=now(),
             workspace_id=workspace_id,
             status=ExecutionStatus.PENDING,
-            **params.model_dump(),
+            run_id=run_id,
+            thread_id=thread_id,
+            workflow_id=workflow_id,
         )
 
     def modify(self, params: ExecutionModifyParams) -> "Execution":

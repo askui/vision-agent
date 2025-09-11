@@ -2,11 +2,14 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from askui.chat.api.models import WorkspaceId, WorkspaceResource
+from askui.chat.api.models import (
+    AssistantId,
+    WorkflowId,
+    WorkspaceId,
+    WorkspaceResource,
+)
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import IdField, generate_time_ordered_id
-
-WorkflowId = Annotated[str, IdField("wf")]
 
 
 class WorkflowCreateParams(BaseModel):
@@ -16,6 +19,7 @@ class WorkflowCreateParams(BaseModel):
 
     name: str
     description: str
+    assistant_id: AssistantId
     tags: list[str] = Field(default_factory=list)
 
 
@@ -42,11 +46,12 @@ class Workflow(WorkspaceResource):
         description (str): A detailed description of the workflow's purpose and steps.
         tags (list[str], optional): Tags associated with the workflow for filtering or
             categorization. Default is an empty list.
-        workspace_id (WorkspaceId | None, optional): The workspace this workflow belongs to.
+        workspace_id (WorkspaceId, optional): The workspace this workflow belongs to.
     """
 
     id: WorkflowId
     object: Literal["workflow"] = "workflow"
+    assistant_id: AssistantId
     created_at: UnixDatetime
     name: str
     description: str
@@ -54,7 +59,7 @@ class Workflow(WorkspaceResource):
 
     @classmethod
     def create(
-        cls, workspace_id: WorkspaceId | None, params: WorkflowCreateParams
+        cls, workspace_id: WorkspaceId, params: WorkflowCreateParams
     ) -> "Workflow":
         return cls(
             id=generate_time_ordered_id("wf"),

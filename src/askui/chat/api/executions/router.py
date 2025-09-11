@@ -1,6 +1,9 @@
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, BackgroundTasks, Header, Query, Response, status
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.executions.dependencies import ExecutionServiceDep
@@ -36,13 +39,23 @@ def list_executions(
 
 
 @router.post("/")
-def create_execution(
+async def create_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
     params: ExecutionCreateParams,
+    background_tasks: BackgroundTasks,
     execution_service: ExecutionService = ExecutionServiceDep,
 ) -> Execution:
     """Create a new workflow execution."""
-    return execution_service.create(workspace_id=askui_workspace, params=params)
+    execution, async_generator = await execution_service.create(
+        workspace_id=askui_workspace, params=params
+    )
+
+    async def _run_async_generator() -> None:
+        async for _ in async_generator:
+            pass
+
+    background_tasks.add_task(_run_async_generator)
+    return execution
 
 
 @router.get("/{execution_id}")

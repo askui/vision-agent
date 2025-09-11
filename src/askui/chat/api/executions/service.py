@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Callable
 
@@ -7,7 +8,12 @@ from askui.chat.api.executions.models import (
     ExecutionId,
     ExecutionModifyParams,
 )
+from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.models import ThreadId, WorkspaceId
+from askui.chat.api.runs.models import ThreadAndRunCreateParams
+from askui.chat.api.runs.runner.events.events import Events
+from askui.chat.api.threads.facade import ThreadFacade
+from askui.chat.api.threads.models import ThreadCreateParams
 from askui.chat.api.utils import build_workspace_filter_fn
 from askui.chat.api.workflows.models import WorkflowId
 from askui.chat.api.workflows.service import WorkflowService
@@ -21,7 +27,7 @@ from askui.utils.api_utils import (
 
 
 def _build_execution_filter_fn(
-    workspace_id: WorkspaceId | None,
+    workspace_id: WorkspaceId,
     workflow_id: WorkflowId | None = None,
     thread_id: ThreadId | None = None,
 ) -> Callable[[Execution], bool]:
@@ -33,9 +39,9 @@ def _build_execution_filter_fn(
     def filter_fn(execution: Execution) -> bool:
         if not workspace_filter(execution):
             return False
-        if workflow_id is not None and execution.workflow != workflow_id:
+        if workflow_id is not None and execution.workflow_id != workflow_id:
             return False
-        if thread_id is not None and execution.thread != thread_id:
+        if thread_id is not None and execution.thread_id != thread_id:
             return False
         return True
 
@@ -45,10 +51,16 @@ def _build_execution_filter_fn(
 class ExecutionService:
     """Service for managing Execution resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path, workflow_service: WorkflowService) -> None:
+    def __init__(
+        self,
+        base_dir: Path,
+        workflow_service: WorkflowService,
+        thread_facade: ThreadFacade,
+    ) -> None:
         self._base_dir = base_dir
         self._executions_dir = base_dir / "executions"
         self._workflow_service = workflow_service
+        self._thread_facade = thread_facade
 
     def _get_execution_path(self, execution_id: ExecutionId, new: bool = False) -> Path:
         """Get the file path for an execution."""
@@ -64,7 +76,7 @@ class ExecutionService:
 
     def list_(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         query: ListQuery,
         workflow_id: WorkflowId | None = None,
         thread_id: ThreadId | None = None,
@@ -78,7 +90,7 @@ class ExecutionService:
         )
 
     def retrieve(
-        self, workspace_id: WorkspaceId | None, execution_id: ExecutionId
+        self, workspace_id: WorkspaceId, execution_id: ExecutionId
     ) -> Execution:
         """Retrieve a specific execution by ID."""
         try:
@@ -101,20 +113,36 @@ class ExecutionService:
         else:
             return execution
 
-    def create(
-        self, workspace_id: WorkspaceId | None, params: ExecutionCreateParams
-    ) -> Execution:
+    async def create(
+        self, workspace_id: WorkspaceId, params: ExecutionCreateParams
+    ) -> tuple[Execution, AsyncGenerator[Events, None]]:
         """Create a new execution."""
         # Validate that the workflow exists in the same workspace
-        self._workflow_service.retrieve(workspace_id, params.workflow)
+        workflow = self._workflow_service.retrieve(workspace_id, params.workflow_id)
 
-        execution = Execution.create(workspace_id, params)
+        # Create a thread and a run
+        run, async_generator = await self._thread_facade.create_thread_and_run(
+            workspace_id,
+            ThreadAndRunCreateParams(
+                assistant_id=workflow.assistant_id,
+                thread=ThreadCreateParams(
+                    name=workflow.name,
+                    messages=[
+                        MessageCreateParams(role="user", content=workflow.description)
+                    ],
+                ),
+            ),
+        )
+
+        execution = Execution.create(
+            workspace_id, params.workflow_id, run.id, run.thread_id
+        )
         self._save(execution, new=True)
-        return execution
+        return execution, async_generator
 
     def modify(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         execution_id: ExecutionId,
         params: ExecutionModifyParams,
     ) -> Execution:

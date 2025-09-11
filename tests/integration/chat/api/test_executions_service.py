@@ -57,7 +57,7 @@ class TestExecutionService:
     def create_params(self, test_workflow_id: str) -> ExecutionCreateParams:
         """Create sample execution creation parameters."""
         return ExecutionCreateParams(
-            workflow=test_workflow_id,
+            workflow_id=test_workflow_id,
             thread="thread_test123",
         )
 
@@ -82,7 +82,7 @@ class TestExecutionService:
             workspace_id=workspace_id, params=create_params
         )
 
-        assert execution.workflow == create_params.workflow
+        assert execution.workflow == create_params.workflow_id
         assert execution.thread == create_params.thread
         assert execution.status == ExecutionStatus.PENDING
         assert execution.workspace_id == workspace_id
@@ -97,7 +97,7 @@ class TestExecutionService:
     ) -> None:
         """Test that creating execution with non-existent workflow raises NotFoundError."""
         invalid_params = ExecutionCreateParams(
-            workflow="wf_nonexistent123",
+            workflow_id="wf_nonexistent123",
             thread="thread_test123",
         )
 
@@ -118,7 +118,7 @@ class TestExecutionService:
         execution_service = ExecutionService(tmp_path, workflow_service)
 
         invalid_params = ExecutionCreateParams(
-            workflow=test_workflow_id,  # This workflow belongs to a different workspace
+            workflow_id=test_workflow_id,  # This workflow belongs to a different workspace
             thread="thread_test123",
         )
 
@@ -141,8 +141,8 @@ class TestExecutionService:
         )
 
         assert retrieved.id == sample_execution.id
-        assert retrieved.workflow == sample_execution.workflow
-        assert retrieved.thread == sample_execution.thread
+        assert retrieved.workflow_id == sample_execution.workflow_id
+        assert retrieved.thread_id == sample_execution.thread_id
         assert retrieved.status == sample_execution.status
         assert retrieved.workspace_id == sample_execution.workspace_id
 
@@ -173,8 +173,8 @@ class TestExecutionService:
 
         assert modified.id == sample_execution.id
         assert modified.status == ExecutionStatus.PASSED
-        assert modified.workflow == sample_execution.workflow
-        assert modified.thread == sample_execution.thread
+        assert modified.workflow_id == sample_execution.workflow_id
+        assert modified.thread_id == sample_execution.thread_id
 
     def test_modify_execution_invalid_transition_raises_error(
         self,
@@ -273,7 +273,7 @@ class TestExecutionService:
         )
 
         different_params = ExecutionCreateParams(
-            workflow=different_workflow.id,
+            workflow_id=different_workflow.id,
             thread="thread_different456",
         )
         execution_service.create(workspace_id=workspace_id, params=different_params)
@@ -284,11 +284,11 @@ class TestExecutionService:
         workflow_filtered = execution_service.list_(
             workspace_id=workspace_id,
             query=query,
-            workflow_id=create_params.workflow,
+            workflow_id=create_params.workflow_id,
         )
         assert len(workflow_filtered.data) >= 1
         assert all(
-            execution.workflow == create_params.workflow
+            execution.workflow_id == create_params.workflow_id
             for execution in workflow_filtered.data
         )
 
@@ -300,7 +300,7 @@ class TestExecutionService:
         )
         assert len(thread_filtered.data) >= 1
         assert all(
-            execution.thread == create_params.thread
+            execution.thread_id == create_params.thread
             for execution in thread_filtered.data
         )
 
@@ -308,13 +308,13 @@ class TestExecutionService:
         combined_filtered = execution_service.list_(
             workspace_id=workspace_id,
             query=query,
-            workflow_id=create_params.workflow,
+            workflow_id=create_params.workflow_id,
             thread_id=create_params.thread,
         )
         assert len(combined_filtered.data) >= 1
         assert all(
-            execution.workflow == create_params.workflow
-            and execution.thread == create_params.thread
+            execution.workflow_id == create_params.workflow_id
+            and execution.thread_id == create_params.thread
             for execution in combined_filtered.data
         )
 
@@ -337,7 +337,7 @@ class TestExecutionService:
 
         assert retrieved.id == execution.id
         assert retrieved.status == execution.status
-        assert retrieved.workflow == execution.workflow
+        assert retrieved.workflow_id == execution.workflow
 
     def test_modify_execution_persists_changes(
         self,
@@ -384,7 +384,7 @@ class TestExecutionService:
         """Test all valid transitions from PENDING status (parametrized)."""
         # Create execution (always starts as PENDING)
         create_params = ExecutionCreateParams(
-            workflow=test_workflow_id,
+            workflow_id=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -419,7 +419,7 @@ class TestExecutionService:
         """Test all valid transitions from INCOMPLETE status (parametrized)."""
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
-            workflow=test_workflow_id,
+            workflow_id=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -453,7 +453,7 @@ class TestExecutionService:
         """Test that INCOMPLETE cannot transition back to PENDING."""
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
-            workflow=test_workflow_id,
+            workflow_id=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
@@ -515,7 +515,7 @@ class TestExecutionService:
 
         # Create execution and move to final state
         create_params = ExecutionCreateParams(
-            workflow=test_workflow_id,
+            workflow_id=test_workflow_id,
             thread="thread_test123",
         )
         execution = execution_service.create(
