@@ -1,10 +1,10 @@
 from fastapi import Depends
 
 from askui.chat.api.dependencies import SettingsDep
-from askui.chat.api.executions.service import ExecutionService
 from askui.chat.api.settings import Settings
 from askui.chat.api.threads.dependencies import ThreadFacadeDep
 from askui.chat.api.threads.facade import ThreadFacade
+from askui.chat.api.workflow_executions.service import ExecutionService
 from askui.chat.api.workflows.dependencies import WorkflowServiceDep
 from askui.chat.api.workflows.service import WorkflowService
 

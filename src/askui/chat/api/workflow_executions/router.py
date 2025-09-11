@@ -6,23 +6,23 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from askui.chat.api.dependencies import ListQueryDep
-from askui.chat.api.executions.dependencies import ExecutionServiceDep
-from askui.chat.api.executions.models import (
+from askui.chat.api.models import ThreadId, WorkspaceId
+from askui.chat.api.workflow_executions.dependencies import ExecutionServiceDep
+from askui.chat.api.workflow_executions.models import (
     Execution,
     ExecutionCreateParams,
     ExecutionId,
     ExecutionModifyParams,
 )
-from askui.chat.api.executions.service import ExecutionService
-from askui.chat.api.models import ThreadId, WorkspaceId
+from askui.chat.api.workflow_executions.service import ExecutionService
 from askui.chat.api.workflows.models import WorkflowId
 from askui.utils.api_utils import ListQuery, ListResponse
 
-router = APIRouter(prefix="/executions", tags=["executions"])
+router = APIRouter(prefix="/workflow-executions", tags=["workflow-executions"])
 
 
 @router.get("/")
-def list_executions(
+def list_workflow_executions(
     askui_workspace: Annotated[WorkspaceId, Header()],
     query: ListQuery = ListQueryDep,
     workflow_id: Annotated[WorkflowId | None, Query()] = None,
@@ -39,7 +39,7 @@ def list_executions(
 
 
 @router.post("/")
-async def create_execution(
+async def create_workflow_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
     params: ExecutionCreateParams,
     background_tasks: BackgroundTasks,
@@ -59,7 +59,7 @@ async def create_execution(
 
 
 @router.get("/{execution_id}")
-def retrieve_execution(
+def retrieve_workflow_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
     execution_id: ExecutionId,
     execution_service: ExecutionService = ExecutionServiceDep,
@@ -71,7 +71,7 @@ def retrieve_execution(
 
 
 @router.patch("/{execution_id}")
-def modify_execution(
+def modify_workflow_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
     execution_id: ExecutionId,
     params: ExecutionModifyParams,

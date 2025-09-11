@@ -2,7 +2,7 @@
 
 import pytest
 
-from askui.chat.api.executions.models import (
+from askui.chat.api.workflow_executions.models import (
     ExecutionStatus,
     InvalidStatusTransitionError,
     _validate_status_transition,
@@ -150,7 +150,7 @@ class TestStatusTransitionValidation:
 
     def test_transition_map_structure(self) -> None:
         """Test the structure of the transition map."""
-        from askui.chat.api.executions.models import _STATUS_TRANSITIONS
+        from askui.chat.api.workflow_executions.models import _STATUS_TRANSITIONS
 
         # All statuses should be keys in the transition map
         all_statuses = set(ExecutionStatus)

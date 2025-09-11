@@ -13,13 +13,13 @@ from fastapi.testclient import TestClient
 from askui.chat.api.app import app
 from askui.chat.api.assistants.models import AssistantCreateParams
 from askui.chat.api.assistants.service import AssistantService
-from askui.chat.api.executions.models import ExecutionStatus
-from askui.chat.api.executions.service import ExecutionService
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.facade import ThreadFacade
 from askui.chat.api.threads.service import ThreadService
+from askui.chat.api.workflow_executions.models import ExecutionStatus
+from askui.chat.api.workflow_executions.service import ExecutionService
 from askui.chat.api.workflows.models import WorkflowCreateParams
 from askui.chat.api.workflows.service import WorkflowService
 
@@ -115,7 +115,9 @@ class TestExecutionRouter:
         execution_service: ExecutionService,
     ) -> TestClient:
         """Create a test client for the FastAPI app with overridden dependencies."""
-        from askui.chat.api.executions.dependencies import get_execution_service
+        from askui.chat.api.workflow_executions.dependencies import (
+            get_execution_service,
+        )
         from askui.chat.api.workflows.dependencies import get_workflow_service
 
         # Override service dependencies directly

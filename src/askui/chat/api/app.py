@@ -9,8 +9,6 @@ from fastmcp import FastMCP
 from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
-from askui.chat.api.executions.models import InvalidStatusTransitionError
-from askui.chat.api.executions.router import router as executions_router
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
 from askui.chat.api.mcp_clients.dependencies import get_mcp_client_manager_manager
@@ -23,6 +21,8 @@ from askui.chat.api.mcp_servers.utility import mcp as utility_mcp
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
+from askui.chat.api.workflow_executions.models import InvalidStatusTransitionError
+from askui.chat.api.workflow_executions.router import router as executions_router
 from askui.chat.api.workflows.router import router as workflows_router
 from askui.utils.api_utils import (
     ConflictError,
