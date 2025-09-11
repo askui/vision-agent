@@ -6,7 +6,7 @@ from askui.utils.api_utils import Resource
 from askui.utils.id_utils import IdField
 
 AssistantId = Annotated[str, IdField("asst")]
-ExecutionId = Annotated[str, IdField("exec")]
+WorkflowExecutionId = Annotated[str, IdField("wfexec")]
 McpConfigId = Annotated[str, IdField("mcpcnf")]
 FileId = Annotated[str, IdField("file")]
 MessageId = Annotated[str, IdField("msg")]

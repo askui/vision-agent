@@ -9,10 +9,9 @@ from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import ThreadId, WorkspaceId
 from askui.chat.api.workflow_executions.dependencies import ExecutionServiceDep
 from askui.chat.api.workflow_executions.models import (
-    Execution,
-    ExecutionCreateParams,
-    ExecutionId,
-    ExecutionModifyParams,
+    WorkflowExecution,
+    WorkflowExecutionCreateParams,
+    WorkflowExecutionId,
 )
 from askui.chat.api.workflow_executions.service import ExecutionService
 from askui.chat.api.workflows.models import WorkflowId
@@ -28,7 +27,7 @@ def list_workflow_executions(
     workflow_id: Annotated[WorkflowId | None, Query()] = None,
     thread_id: Annotated[ThreadId | None, Query()] = None,
     execution_service: ExecutionService = ExecutionServiceDep,
-) -> ListResponse[Execution]:
+) -> ListResponse[WorkflowExecution]:
     """List executions with optional filtering by workflow and/or thread."""
     return execution_service.list_(
         workspace_id=askui_workspace,
@@ -41,10 +40,10 @@ def list_workflow_executions(
 @router.post("/")
 async def create_workflow_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
-    params: ExecutionCreateParams,
+    params: WorkflowExecutionCreateParams,
     background_tasks: BackgroundTasks,
     execution_service: ExecutionService = ExecutionServiceDep,
-) -> Execution:
+) -> WorkflowExecution:
     """Create a new workflow execution."""
     execution, async_generator = await execution_service.create(
         workspace_id=askui_workspace, params=params
@@ -61,25 +60,10 @@ async def create_workflow_execution(
 @router.get("/{execution_id}")
 def retrieve_workflow_execution(
     askui_workspace: Annotated[WorkspaceId, Header()],
-    execution_id: ExecutionId,
+    execution_id: WorkflowExecutionId,
     execution_service: ExecutionService = ExecutionServiceDep,
-) -> Execution:
+) -> WorkflowExecution:
     """Retrieve a specific execution by ID."""
     return execution_service.retrieve(
         workspace_id=askui_workspace, execution_id=execution_id
-    )
-
-
-@router.patch("/{execution_id}")
-def modify_workflow_execution(
-    askui_workspace: Annotated[WorkspaceId, Header()],
-    execution_id: ExecutionId,
-    params: ExecutionModifyParams,
-    execution_service: ExecutionService = ExecutionServiceDep,
-) -> Execution:
-    """Update an existing execution (only status can be modified)."""
-    return execution_service.modify(
-        workspace_id=askui_workspace,
-        execution_id=execution_id,
-        params=params,
     )

@@ -141,17 +141,6 @@ def forbidden_error_handler(
     )
 
 
-@app.exception_handler(InvalidStatusTransitionError)
-def invalid_status_transition_error_handler(
-    request: Request,  # noqa: ARG001
-    exc: InvalidStatusTransitionError,
-) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": str(exc)},
-    )
-
-
 @app.exception_handler(Exception)
 def catch_all_exception_handler(
     request: Request,  # noqa: ARG001

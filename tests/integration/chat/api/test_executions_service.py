@@ -14,11 +14,11 @@ from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.facade import ThreadFacade
 from askui.chat.api.threads.service import ThreadService
 from askui.chat.api.workflow_executions.models import (
-    Execution,
-    ExecutionCreateParams,
     ExecutionModifyParams,
     ExecutionStatus,
     InvalidStatusTransitionError,
+    WorkflowExecution,
+    WorkflowExecutionCreateParams,
 )
 from askui.chat.api.workflow_executions.service import ExecutionService
 from askui.chat.api.workflows.models import WorkflowCreateParams
@@ -144,9 +144,9 @@ class TestExecutionService:
         return workflow.id
 
     @pytest.fixture
-    def create_params(self, test_workflow_id: str) -> ExecutionCreateParams:
+    def create_params(self, test_workflow_id: str) -> WorkflowExecutionCreateParams:
         """Create sample execution creation parameters."""
-        return ExecutionCreateParams(
+        return WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
 
@@ -155,8 +155,8 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        create_params: ExecutionCreateParams,
-    ) -> Execution:
+        create_params: WorkflowExecutionCreateParams,
+    ) -> WorkflowExecution:
         """Create a sample execution for testing."""
         execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
@@ -168,7 +168,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        create_params: ExecutionCreateParams,
+        create_params: WorkflowExecutionCreateParams,
     ) -> None:
         """Test successful execution creation."""
         execution, _ = await execution_service.create(
@@ -177,7 +177,6 @@ class TestExecutionService:
 
         assert execution.workflow_id == create_params.workflow_id
         assert execution.thread_id is not None  # Thread is created automatically
-        assert execution.status == ExecutionStatus.PENDING
         assert execution.workspace_id == workspace_id
         assert execution.object == "execution"
         assert execution.id.startswith("exec_")
@@ -192,7 +191,7 @@ class TestExecutionService:
         """
         Test that creating execution with non-existent workflow raises NotFoundError.
         """
-        invalid_params = ExecutionCreateParams(
+        invalid_params = WorkflowExecutionCreateParams(
             workflow_id="wf_nonexistent123",
         )
 
@@ -222,7 +221,7 @@ class TestExecutionService:
         )
         execution_service = ExecutionService(tmp_path, workflow_service, thread_facade)
 
-        invalid_params = ExecutionCreateParams(
+        invalid_params = WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
 
@@ -238,7 +237,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        sample_execution: Execution,
+        sample_execution: WorkflowExecution,
     ) -> None:
         """Test successful execution retrieval."""
         retrieved = execution_service.retrieve(
@@ -248,7 +247,6 @@ class TestExecutionService:
         assert retrieved.id == sample_execution.id
         assert retrieved.workflow_id == sample_execution.workflow_id
         assert retrieved.thread_id == sample_execution.thread_id
-        assert retrieved.status == sample_execution.status
         assert retrieved.workspace_id == sample_execution.workspace_id
 
     def test_retrieve_execution_not_found(
@@ -267,7 +265,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        sample_execution: Execution,
+        sample_execution: WorkflowExecution,
     ) -> None:
         """Test successful execution modification with valid status transition."""
         modify_params = ExecutionModifyParams(status=ExecutionStatus.PASSED)
@@ -278,7 +276,6 @@ class TestExecutionService:
         )
 
         assert modified.id == sample_execution.id
-        assert modified.status == ExecutionStatus.PASSED
         assert modified.workflow_id == sample_execution.workflow_id
         assert modified.thread_id == sample_execution.thread_id
 
@@ -287,7 +284,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        sample_execution: Execution,
+        sample_execution: WorkflowExecution,
     ) -> None:
         """Test that invalid status transition raises InvalidStatusTransitionError."""
         # First transition to a final state
@@ -318,7 +315,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        sample_execution: Execution,
+        sample_execution: WorkflowExecution,
     ) -> None:
         """Test that modifying to the same status is allowed (no-op)."""
         modify_params = ExecutionModifyParams(status=ExecutionStatus.PENDING)
@@ -328,7 +325,6 @@ class TestExecutionService:
             params=modify_params,
         )
 
-        assert modified.status == ExecutionStatus.PENDING
         assert modified.id == sample_execution.id
 
     def test_modify_execution_not_found(
@@ -351,7 +347,7 @@ class TestExecutionService:
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
-        sample_execution: Execution,
+        sample_execution: WorkflowExecution,
     ) -> None:
         """Test successful execution listing."""
         query = ListQuery(limit=10, order="desc")
@@ -367,7 +363,7 @@ class TestExecutionService:
         execution_service: ExecutionService,
         workflow_service: WorkflowService,
         workspace_id: WorkspaceId,
-        create_params: ExecutionCreateParams,
+        create_params: WorkflowExecutionCreateParams,
         test_assistant_id: str,
     ) -> None:
         """Test execution listing with workflow and thread filters."""
@@ -386,7 +382,7 @@ class TestExecutionService:
             workspace_id=workspace_id, params=different_workflow_params
         )
 
-        different_params = ExecutionCreateParams(
+        different_params = WorkflowExecutionCreateParams(
             workflow_id=different_workflow.id,
         )
         second_execution, _ = await execution_service.create(
@@ -438,7 +434,7 @@ class TestExecutionService:
         self,
         workspace_id: WorkspaceId,
         execution_service: ExecutionService,
-        create_params: ExecutionCreateParams,
+        create_params: WorkflowExecutionCreateParams,
     ) -> None:
         """Test that executions persist across service instances."""
         # Create execution with existing service instance
@@ -451,7 +447,6 @@ class TestExecutionService:
         )
 
         assert retrieved.id == execution.id
-        assert retrieved.status == execution.status
         assert retrieved.workflow_id == execution.workflow_id
 
     @pytest.mark.asyncio
@@ -459,7 +454,7 @@ class TestExecutionService:
         self,
         workspace_id: WorkspaceId,
         execution_service: ExecutionService,
-        create_params: ExecutionCreateParams,
+        create_params: WorkflowExecutionCreateParams,
     ) -> None:
         """Test that execution modifications are persisted to filesystem."""
         # Create execution using existing service
@@ -479,7 +474,6 @@ class TestExecutionService:
         retrieved = execution_service.retrieve(
             workspace_id=workspace_id, execution_id=execution.id
         )
-        assert retrieved.status == ExecutionStatus.PASSED
 
     @pytest.mark.parametrize(
         "target_status",
@@ -500,7 +494,7 @@ class TestExecutionService:
     ) -> None:
         """Test all valid transitions from PENDING status (parametrized)."""
         # Create execution (always starts as PENDING)
-        create_params = ExecutionCreateParams(
+        create_params = WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
         execution, _ = await execution_service.create(
@@ -535,7 +529,7 @@ class TestExecutionService:
     ) -> None:
         """Test all valid transitions from INCOMPLETE status (parametrized)."""
         # Create execution and move to INCOMPLETE
-        create_params = ExecutionCreateParams(
+        create_params = WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
         execution, _ = await execution_service.create(
@@ -569,7 +563,7 @@ class TestExecutionService:
     ) -> None:
         """Test that INCOMPLETE cannot transition back to PENDING."""
         # Create execution and move to INCOMPLETE
-        create_params = ExecutionCreateParams(
+        create_params = WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
         execution, _ = await execution_service.create(
@@ -631,7 +625,7 @@ class TestExecutionService:
             pytest.skip("Same-status transitions are allowed as no-ops")
 
         # Create execution and move to final state
-        create_params = ExecutionCreateParams(
+        create_params = WorkflowExecutionCreateParams(
             workflow_id=test_workflow_id,
         )
         execution, _ = await execution_service.create(
