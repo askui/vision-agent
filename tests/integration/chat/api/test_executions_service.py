@@ -2,9 +2,12 @@
 
 import uuid
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
+import pytest_asyncio
 
+from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.executions.models import (
     Execution,
     ExecutionCreateParams,
@@ -13,7 +16,11 @@ from askui.chat.api.executions.models import (
     InvalidStatusTransitionError,
 )
 from askui.chat.api.executions.service import ExecutionService
+from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import WorkspaceId
+from askui.chat.api.runs.service import RunService
+from askui.chat.api.threads.facade import ThreadFacade
+from askui.chat.api.threads.service import ThreadService
 from askui.chat.api.workflows.models import WorkflowCreateParams
 from askui.chat.api.workflows.service import WorkflowService
 from askui.utils.api_utils import ListQuery, NotFoundError
@@ -28,11 +35,74 @@ class TestExecutionService:
         return WorkflowService(tmp_path)
 
     @pytest.fixture
+    def assistant_service(self, tmp_path: Path) -> AssistantService:
+        """Create an assistant service for testing."""
+        return AssistantService(tmp_path)
+
+    @pytest.fixture
+    def mock_mcp_config_service(self) -> Mock:
+        """Create a mock MCP config service for testing."""
+        mock_service = Mock()
+        mock_service.list_.return_value.data = []
+        return mock_service
+
+    @pytest.fixture
+    def mock_message_translator(self) -> Mock:
+        """Create a mock message translator for testing."""
+        return Mock()
+
+    @pytest.fixture
+    def thread_service(
+        self,
+        tmp_path: Path,
+        message_service: MessageService,
+        run_service: RunService,
+    ) -> ThreadService:
+        """Create a thread service for testing."""
+        return ThreadService(tmp_path, message_service, run_service)
+
+    @pytest.fixture
+    def message_service(self, tmp_path: Path) -> MessageService:
+        """Create a message service for testing."""
+        return MessageService(tmp_path)
+
+    @pytest.fixture
+    def run_service(
+        self,
+        tmp_path: Path,
+        assistant_service: AssistantService,
+        mock_mcp_config_service: Mock,
+        message_service: MessageService,
+        mock_message_translator: Mock,
+    ) -> RunService:
+        """Create a run service for testing."""
+        return RunService(
+            tmp_path,
+            assistant_service,
+            mock_mcp_config_service,
+            message_service,
+            mock_message_translator,
+        )
+
+    @pytest.fixture
+    def thread_facade(
+        self,
+        thread_service: ThreadService,
+        message_service: MessageService,
+        run_service: RunService,
+    ) -> ThreadFacade:
+        """Create a thread facade for testing."""
+        return ThreadFacade(thread_service, message_service, run_service)
+
+    @pytest.fixture
     def execution_service(
-        self, tmp_path: Path, workflow_service: WorkflowService
+        self,
+        tmp_path: Path,
+        workflow_service: WorkflowService,
+        thread_facade: ThreadFacade,
     ) -> ExecutionService:
         """Create an execution service for testing."""
-        return ExecutionService(tmp_path, workflow_service)
+        return ExecutionService(tmp_path, workflow_service, thread_facade)
 
     @pytest.fixture
     def workspace_id(self) -> WorkspaceId:
@@ -40,13 +110,33 @@ class TestExecutionService:
         return uuid.uuid4()
 
     @pytest.fixture
+    def test_assistant_id(
+        self, assistant_service: AssistantService, workspace_id: WorkspaceId
+    ) -> str:
+        """Create a test assistant and return its ID."""
+        from askui.chat.api.assistants.models import AssistantCreateParams
+
+        assistant_params = AssistantCreateParams(
+            name="Test Assistant",
+            description="A test assistant for execution testing",
+        )
+        assistant = assistant_service.create(
+            workspace_id=workspace_id, params=assistant_params
+        )
+        return assistant.id
+
+    @pytest.fixture
     def test_workflow_id(
-        self, workflow_service: WorkflowService, workspace_id: WorkspaceId
+        self,
+        workflow_service: WorkflowService,
+        workspace_id: WorkspaceId,
+        test_assistant_id: str,
     ) -> str:
         """Create a test workflow and return its ID."""
         workflow_params = WorkflowCreateParams(
             name="Test Workflow",
             description="A test workflow for execution testing",
+            assistant_id=test_assistant_id,
         )
         workflow = workflow_service.create(
             workspace_id=workspace_id, params=workflow_params
@@ -58,39 +148,43 @@ class TestExecutionService:
         """Create sample execution creation parameters."""
         return ExecutionCreateParams(
             workflow_id=test_workflow_id,
-            thread="thread_test123",
         )
 
-    @pytest.fixture
-    def sample_execution(
+    @pytest_asyncio.fixture
+    async def sample_execution(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
         create_params: ExecutionCreateParams,
     ) -> Execution:
         """Create a sample execution for testing."""
-        return execution_service.create(workspace_id=workspace_id, params=create_params)
+        execution, _ = await execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
+        return execution
 
-    def test_create_execution_success(
+    @pytest.mark.asyncio
+    async def test_create_execution_success(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
         create_params: ExecutionCreateParams,
     ) -> None:
         """Test successful execution creation."""
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
-        assert execution.workflow == create_params.workflow_id
-        assert execution.thread == create_params.thread
+        assert execution.workflow_id == create_params.workflow_id
+        assert execution.thread_id is not None  # Thread is created automatically
         assert execution.status == ExecutionStatus.PENDING
         assert execution.workspace_id == workspace_id
         assert execution.object == "execution"
         assert execution.id.startswith("exec_")
         assert execution.created_at is not None
 
-    def test_create_execution_with_nonexistent_workflow_fails(
+    @pytest.mark.asyncio
+    async def test_create_execution_with_nonexistent_workflow_fails(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -98,15 +192,17 @@ class TestExecutionService:
         """Test that creating execution with non-existent workflow raises NotFoundError."""
         invalid_params = ExecutionCreateParams(
             workflow_id="wf_nonexistent123",
-            thread="thread_test123",
         )
 
         with pytest.raises(NotFoundError) as exc_info:
-            execution_service.create(workspace_id=workspace_id, params=invalid_params)
+            await execution_service.create(
+                workspace_id=workspace_id, params=invalid_params
+            )
 
         assert "Workflow wf_nonexistent123 not found" in str(exc_info.value)
 
-    def test_create_execution_with_workflow_from_different_workspace_fails(
+    @pytest.mark.asyncio
+    async def test_create_execution_with_workflow_from_different_workspace_fails(
         self,
         tmp_path: Path,
         test_workflow_id: str,
@@ -115,21 +211,28 @@ class TestExecutionService:
         # Create execution service with different workspace
         different_workspace_id = uuid.uuid4()
         workflow_service = WorkflowService(tmp_path)
-        execution_service = ExecutionService(tmp_path, workflow_service)
+        # Create minimal thread facade for this test
+        mock_thread_service = Mock()
+        mock_message_service = Mock()
+        mock_run_service = Mock()
+        thread_facade = ThreadFacade(
+            mock_thread_service, mock_message_service, mock_run_service
+        )
+        execution_service = ExecutionService(tmp_path, workflow_service, thread_facade)
 
         invalid_params = ExecutionCreateParams(
             workflow_id=test_workflow_id,  # This workflow belongs to a different workspace
-            thread="thread_test123",
         )
 
         with pytest.raises(NotFoundError) as exc_info:
-            execution_service.create(
+            await execution_service.create(
                 workspace_id=different_workspace_id, params=invalid_params
             )
 
         assert "not found" in str(exc_info.value)
 
-    def test_retrieve_execution_success(
+    @pytest.mark.asyncio
+    async def test_retrieve_execution_success(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -157,7 +260,8 @@ class TestExecutionService:
 
         assert "not found" in str(exc_info.value)
 
-    def test_modify_execution_valid_transition(
+    @pytest.mark.asyncio
+    async def test_modify_execution_valid_transition(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -176,7 +280,8 @@ class TestExecutionService:
         assert modified.workflow_id == sample_execution.workflow_id
         assert modified.thread_id == sample_execution.thread_id
 
-    def test_modify_execution_invalid_transition_raises_error(
+    @pytest.mark.asyncio
+    async def test_modify_execution_invalid_transition_raises_error(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -206,7 +311,8 @@ class TestExecutionService:
             exc_info.value
         )
 
-    def test_modify_execution_same_status_allowed(
+    @pytest.mark.asyncio
+    async def test_modify_execution_same_status_allowed(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -238,7 +344,8 @@ class TestExecutionService:
 
         assert "not found" in str(exc_info.value)
 
-    def test_list_executions_success(
+    @pytest.mark.asyncio
+    async def test_list_executions_success(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -252,21 +359,26 @@ class TestExecutionService:
         assert len(result.data) >= 1
         assert any(execution.id == sample_execution.id for execution in result.data)
 
-    def test_list_executions_with_filters(
+    @pytest.mark.asyncio
+    async def test_list_executions_with_filters(
         self,
         execution_service: ExecutionService,
         workflow_service: WorkflowService,
         workspace_id: WorkspaceId,
         create_params: ExecutionCreateParams,
+        test_assistant_id: str,
     ) -> None:
         """Test execution listing with workflow and thread filters."""
         # Create multiple executions with different workflows and threads
-        execution_service.create(workspace_id=workspace_id, params=create_params)
+        first_execution, _ = await execution_service.create(
+            workspace_id=workspace_id, params=create_params
+        )
 
         # Create a second workflow for the different execution
         different_workflow_params = WorkflowCreateParams(
             name="Different Test Workflow",
             description="A different test workflow for execution filtering testing",
+            assistant_id=test_assistant_id,
         )
         different_workflow = workflow_service.create(
             workspace_id=workspace_id, params=different_workflow_params
@@ -274,9 +386,10 @@ class TestExecutionService:
 
         different_params = ExecutionCreateParams(
             workflow_id=different_workflow.id,
-            thread="thread_different456",
         )
-        execution_service.create(workspace_id=workspace_id, params=different_params)
+        second_execution, _ = await execution_service.create(
+            workspace_id=workspace_id, params=different_params
+        )
 
         query = ListQuery(limit=10, order="desc")
 
@@ -292,15 +405,15 @@ class TestExecutionService:
             for execution in workflow_filtered.data
         )
 
-        # Test thread filter
+        # Test thread filter - use the actual thread_id from the first execution
         thread_filtered = execution_service.list_(
             workspace_id=workspace_id,
             query=query,
-            thread_id=create_params.thread,
+            thread_id=first_execution.thread_id,
         )
         assert len(thread_filtered.data) >= 1
         assert all(
-            execution.thread_id == create_params.thread
+            execution.thread_id == first_execution.thread_id
             for execution in thread_filtered.data
         )
 
@@ -309,16 +422,17 @@ class TestExecutionService:
             workspace_id=workspace_id,
             query=query,
             workflow_id=create_params.workflow_id,
-            thread_id=create_params.thread,
+            thread_id=first_execution.thread_id,
         )
         assert len(combined_filtered.data) >= 1
         assert all(
             execution.workflow_id == create_params.workflow_id
-            and execution.thread_id == create_params.thread
+            and execution.thread_id == first_execution.thread_id
             for execution in combined_filtered.data
         )
 
-    def test_persistence_across_service_instances(
+    @pytest.mark.asyncio
+    async def test_persistence_across_service_instances(
         self,
         tmp_path: Path,
         workspace_id: WorkspaceId,
@@ -327,7 +441,7 @@ class TestExecutionService:
     ) -> None:
         """Test that executions persist across service instances."""
         # Create execution with existing service instance
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
@@ -337,9 +451,10 @@ class TestExecutionService:
 
         assert retrieved.id == execution.id
         assert retrieved.status == execution.status
-        assert retrieved.workflow_id == execution.workflow
+        assert retrieved.workflow_id == execution.workflow_id
 
-    def test_modify_execution_persists_changes(
+    @pytest.mark.asyncio
+    async def test_modify_execution_persists_changes(
         self,
         workspace_id: WorkspaceId,
         execution_service: ExecutionService,
@@ -347,7 +462,7 @@ class TestExecutionService:
     ) -> None:
         """Test that execution modifications are persisted to filesystem."""
         # Create execution using existing service
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
@@ -374,7 +489,8 @@ class TestExecutionService:
             ExecutionStatus.SKIPPED,
         ],
     )
-    def test_valid_transitions_from_pending(
+    @pytest.mark.asyncio
+    async def test_valid_transitions_from_pending(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -385,9 +501,8 @@ class TestExecutionService:
         # Create execution (always starts as PENDING)
         create_params = ExecutionCreateParams(
             workflow_id=test_workflow_id,
-            thread="thread_test123",
         )
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
@@ -409,7 +524,8 @@ class TestExecutionService:
             ExecutionStatus.SKIPPED,
         ],
     )
-    def test_valid_transitions_from_incomplete(
+    @pytest.mark.asyncio
+    async def test_valid_transitions_from_incomplete(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -420,9 +536,8 @@ class TestExecutionService:
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
             workflow_id=test_workflow_id,
-            thread="thread_test123",
         )
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
@@ -444,7 +559,8 @@ class TestExecutionService:
 
         assert modified.status == target_status
 
-    def test_incomplete_cannot_go_back_to_pending(
+    @pytest.mark.asyncio
+    async def test_incomplete_cannot_go_back_to_pending(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -454,9 +570,8 @@ class TestExecutionService:
         # Create execution and move to INCOMPLETE
         create_params = ExecutionCreateParams(
             workflow_id=test_workflow_id,
-            thread="thread_test123",
         )
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
@@ -498,7 +613,8 @@ class TestExecutionService:
             ExecutionStatus.SKIPPED,
         ],
     )
-    def test_final_states_cannot_transition(
+    @pytest.mark.asyncio
+    async def test_final_states_cannot_transition(
         self,
         execution_service: ExecutionService,
         workspace_id: WorkspaceId,
@@ -516,9 +632,8 @@ class TestExecutionService:
         # Create execution and move to final state
         create_params = ExecutionCreateParams(
             workflow_id=test_workflow_id,
-            thread="thread_test123",
         )
-        execution = execution_service.create(
+        execution, _ = await execution_service.create(
             workspace_id=workspace_id, params=create_params
         )
 
