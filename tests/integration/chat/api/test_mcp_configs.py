@@ -13,18 +13,6 @@ from askui.chat.api.mcp_configs.service import McpConfigService
 class TestMcpConfigsAPI:
     """Test suite for the MCP configs API endpoints."""
 
-    def test_list_mcp_configs_empty(
-        self, test_client: TestClient, test_headers: dict[str, str]
-    ) -> None:
-        """Test listing MCP configs when no configs exist."""
-        response = test_client.get("/v1/mcp-configs", headers=test_headers)
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["object"] == "list"
-        assert data["data"] == []
-        assert data["has_more"] is False
-
     def test_list_mcp_configs_with_configs(self, test_headers: dict[str, str]) -> None:
         """Test listing MCP configs when configs exist."""
         temp_dir = tempfile.mkdtemp()

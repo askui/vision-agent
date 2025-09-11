@@ -6,7 +6,7 @@ import anyio
 from typing_extensions import override
 
 from askui.chat.api.assistants.service import AssistantService
-from askui.chat.api.mcp_configs.service import McpConfigService
+from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
@@ -34,13 +34,13 @@ class RunService(RunnerRunService):
         self,
         base_dir: Path,
         assistant_service: AssistantService,
-        mcp_config_service: McpConfigService,
+        mcp_client_manager_manager: McpClientManagerManager,
         message_service: MessageService,
         message_translator: MessageTranslator,
     ) -> None:
         self._base_dir = base_dir
         self._assistant_service = assistant_service
-        self._mcp_config_service = mcp_config_service
+        self._mcp_client_manager_manager = mcp_client_manager_manager
         self._message_service = message_service
         self._message_translator = message_translator
 
@@ -82,7 +82,7 @@ class RunService(RunnerRunService):
             run=run,
             message_service=self._message_service,
             message_translator=self._message_translator,
-            mcp_config_service=self._mcp_config_service,
+            mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
         )
 
