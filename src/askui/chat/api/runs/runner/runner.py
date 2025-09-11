@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Literal, Sequence
+from typing import TYPE_CHECKING, Literal
 
 import anthropic
 import anyio
@@ -8,7 +8,6 @@ from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 from fastmcp import Client
 from fastmcp.client.transports import MCPConfigTransport
-from fastmcp.mcp_config import MCPConfig
 
 from askui.android_agent import AndroidVisionAgent
 from askui.chat.api.assistants.models import Assistant
@@ -18,8 +17,7 @@ from askui.chat.api.assistants.seeds import (
     TESTING_AGENT,
     WEB_AGENT,
 )
-from askui.chat.api.mcp_configs.models import McpConfig
-from askui.chat.api.mcp_configs.service import McpConfigService
+from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.models import MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
@@ -57,13 +55,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def build_fast_mcp_config(mcp_configs: Sequence[McpConfig]) -> MCPConfig:
-    mcp_config_dict = {
-        mcp_config.id: mcp_config.mcp_server for mcp_config in mcp_configs
-    }
-    return MCPConfig(mcpServers=mcp_config_dict)
-
-
 McpClient = Client[MCPConfigTransport]
 
 
@@ -85,7 +76,7 @@ class Runner:
         run: Run,
         message_service: MessageService,
         message_translator: MessageTranslator,
-        mcp_config_service: McpConfigService,
+        mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
     ) -> None:
         self._workspace_id = workspace_id
@@ -94,17 +85,9 @@ class Runner:
         self._message_service = message_service
         self._message_translator = message_translator
         self._message_content_translator = message_translator.content_translator
-        self._mcp_config_service = mcp_config_service
+        self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
         self._agent_os = PynputAgentOs()
-
-    def _get_mcp_client(self) -> McpClient | None:
-        mcp_configs = self._mcp_config_service.list_(
-            workspace_id=self._workspace_id,
-            query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
-        )
-        fast_mcp_config = build_fast_mcp_config(mcp_configs.data)
-        return Client(fast_mcp_config) if fast_mcp_config.mcpServers else None
 
     def _retrieve(self) -> Run:
         return self._run_service.retrieve(
@@ -342,19 +325,24 @@ class Runner:
 
         await asyncify(_run_agent_inner)()
 
+    async def _get_mcp_client(self) -> McpClient | None:
+        return await self._mcp_client_manager_manager.get_mcp_client_manager(  # type: ignore
+            self._workspace_id
+        )
+
     async def run(
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
-        mcp_client = self._get_mcp_client()
-        self._mark_run_as_started()
-        await send_stream.send(
-            RunEvent(
-                data=self._run,
-                event="thread.run.in_progress",
-            )
-        )
         try:
+            mcp_client = await self._get_mcp_client()
+            self._mark_run_as_started()
+            await send_stream.send(
+                RunEvent(
+                    data=self._run,
+                    event="thread.run.in_progress",
+                )
+            )
             if self._run.assistant_id == HUMAN_DEMONSTRATION_AGENT.id:
                 await self._run_human_agent(send_stream)
             elif self._run.assistant_id == ANDROID_AGENT.id:

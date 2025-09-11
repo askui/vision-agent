@@ -1,4 +1,4 @@
-from fastmcp.mcp_config import RemoteMCPServer
+from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
 
 from askui.chat.api.dependencies import get_settings
 from askui.chat.api.mcp_configs.models import McpConfig
@@ -10,7 +10,7 @@ settings = get_settings()
 ASKUI_CHAT_MCP = McpConfig(
     id="mcpcnf_68ac2c4edc4b2f27faa5a252",
     created_at=now(),
-    name="AskUI Chat MCP",
+    name="askui_chat",
     mcp_server=RemoteMCPServer(
         url=f"http://{settings.host}:{settings.port}/mcp/sse",
         transport="sse",
@@ -18,4 +18,15 @@ ASKUI_CHAT_MCP = McpConfig(
 )
 
 
-SEEDS = [ASKUI_CHAT_MCP]
+PLAYWRIGHT_MCP = McpConfig(
+    id="mcpcnf_68ac2c4edc4b2f27faa5a251",
+    created_at=now(),
+    name="playwright",
+    mcp_server=StdioMCPServer(
+        command="npx",
+        args=["@playwright/mcp@latest", "--isolated"],
+    ),
+)
+
+
+SEEDS = [ASKUI_CHAT_MCP, PLAYWRIGHT_MCP]

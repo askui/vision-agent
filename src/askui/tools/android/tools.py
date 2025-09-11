@@ -117,7 +117,6 @@ class AndroidDragAndDropTool(Tool):
     """
 
     def __init__(self, agent_os_facade: AndroidAgentOsFacade) -> None:
-        self._agent_os_facade = agent_os_facade
         super().__init__(
             name="android_drag_and_drop_tool",
             description=(
@@ -160,6 +159,7 @@ class AndroidDragAndDropTool(Tool):
                 "required": ["x1", "y1", "x2", "y2"],
             },
         )
+        self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self, x1: int, y1: int, x2: int, y2: int, duration: int = 1000) -> str:

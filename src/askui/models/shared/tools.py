@@ -1,12 +1,13 @@
+import types
 from abc import ABC, abstractmethod
-from typing import Any, Literal, cast
+from datetime import timedelta
+from typing import Any, Literal, Protocol, Type, cast
 
+import mcp
 from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
 from anthropic.types.beta.beta_tool_param import InputSchema
 from asyncer import syncify
-from fastmcp import Client
-from fastmcp.client.client import CallToolResult
-from fastmcp.client.transports import ClientTransportT
+from fastmcp.client.client import CallToolResult, ProgressHandler
 from mcp import Tool as McpTool
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -128,6 +129,28 @@ class AgentException(Exception):
         super().__init__(self.message)
 
 
+class McpClientProtocol(Protocol):
+    async def list_tools(self) -> list[mcp.types.Tool]: ...
+
+    async def call_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        timeout: timedelta | float | None = None,  # noqa: ASYNC109
+        progress_handler: ProgressHandler | None = None,
+        raise_on_error: bool = True,
+    ) -> CallToolResult: ...
+
+    async def __aenter__(self) -> Self: ...
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
+    ) -> None: ...
+
+
 class ToolCollection:
     """A collection of tools.
 
@@ -146,14 +169,14 @@ class ToolCollection:
     Args:
         tools (list[Tool] | None, optional): The tools to add to the collection.
             Defaults to `None`.
-        mcp_client (Client[ClientTransportT] | None, optional): The client to use for
+        mcp_client (McpClientProtocol | None, optional): The client to use for
             the tools. Defaults to `None`.
     """
 
     def __init__(
         self,
         tools: list[Tool] | None = None,
-        mcp_client: Client[ClientTransportT] | None = None,
+        mcp_client: McpClientProtocol | None = None,
         include: set[str] | None = None,
     ) -> None:
         _tools = tools or []
@@ -227,9 +250,7 @@ class ToolCollection:
             tool_use_id=tool_use_block_param.id,
         )
 
-    async def _list_mcp_tools(
-        self, mcp_client: Client[ClientTransportT]
-    ) -> list[McpTool]:
+    async def _list_mcp_tools(self, mcp_client: McpClientProtocol) -> list[McpTool]:
         async with mcp_client:
             return await mcp_client.list_tools()
 
@@ -269,7 +290,7 @@ class ToolCollection:
 
     async def _call_mcp_tool(
         self,
-        mcp_client: Client[ClientTransportT],
+        mcp_client: McpClientProtocol,
         tool_use_block_param: ToolUseBlockParam,
     ) -> ToolCallResult:
         async with mcp_client:
