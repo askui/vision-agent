@@ -48,6 +48,7 @@ def _get_android_tools() -> list[Tool]:
     )
 
     agent_os = PpadbAgentOs()
+    agent_os.connect()
     act_agent_os_facade = AndroidAgentOsFacade(agent_os)
     return [
         AndroidScreenshotTool(act_agent_os_facade),
