@@ -19,7 +19,7 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 @router.get("")
 def list_workflows(
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     tags: Annotated[list[str] | None, Query()] = None,
     query: ListQuery = ListQueryDep,
     workflow_service: WorkflowService = WorkflowServiceDep,
@@ -41,7 +41,7 @@ def list_workflows(
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_workflow(
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     params: WorkflowCreateParams,
     workflow_service: WorkflowService = WorkflowServiceDep,
 ) -> Workflow:
@@ -61,7 +61,7 @@ def create_workflow(
 
 @router.get("/{workflow_id}")
 def retrieve_workflow(
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     workflow_id: Annotated[WorkflowId, Path(...)],
     workflow_service: WorkflowService = WorkflowServiceDep,
 ) -> Workflow:
@@ -86,7 +86,7 @@ def retrieve_workflow(
 
 @router.patch("/{workflow_id}")
 def modify_workflow(
-    askui_workspace: Annotated[WorkspaceId | None, Header()],
+    askui_workspace: Annotated[WorkspaceId, Header()],
     workflow_id: Annotated[WorkflowId, Path(...)],
     params: WorkflowModifyParams,
     workflow_service: WorkflowService = WorkflowServiceDep,
