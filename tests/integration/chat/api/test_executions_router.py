@@ -155,8 +155,24 @@ class TestExecutionRouter:
         self,
         workspace_id: WorkspaceId,
         execution_data: dict[str, str],
+        execution_service: ExecutionService,
+        workflow_service: WorkflowService,
+        assistant_service: AssistantService,
+        thread_facade: ThreadFacade,
     ) -> None:
         """Test successful execution creation."""
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+        from askui.chat.api.threads.dependencies import get_thread_facade
+        from askui.chat.api.workflow_executions.dependencies import (
+            get_execution_service,
+        )
+        from askui.chat.api.workflows.dependencies import get_workflow_service
+
+        app.dependency_overrides[get_execution_service] = lambda: execution_service
+        app.dependency_overrides[get_workflow_service] = lambda: workflow_service
+        app.dependency_overrides[get_assistant_service] = lambda: assistant_service
+        app.dependency_overrides[get_thread_facade] = lambda: thread_facade
+
         try:
             with TestClient(app) as client:
                 response = client.post(
@@ -179,9 +195,23 @@ class TestExecutionRouter:
         self,
         workspace_id: WorkspaceId,
         execution_data: dict[str, str],
+        execution_service: ExecutionService,
+        workflow_service: WorkflowService,
+        assistant_service: AssistantService,
+        thread_facade: ThreadFacade,
     ) -> None:
         """Test successful execution retrieval."""
-        # Create an execution
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+        from askui.chat.api.threads.dependencies import get_thread_facade
+        from askui.chat.api.workflow_executions.dependencies import (
+            get_execution_service,
+        )
+        from askui.chat.api.workflows.dependencies import get_workflow_service
+
+        app.dependency_overrides[get_execution_service] = lambda: execution_service
+        app.dependency_overrides[get_workflow_service] = lambda: workflow_service
+        app.dependency_overrides[get_assistant_service] = lambda: assistant_service
+        app.dependency_overrides[get_thread_facade] = lambda: thread_facade
 
         try:
             with TestClient(app) as client:
@@ -210,9 +240,24 @@ class TestExecutionRouter:
         self,
         workspace_id: WorkspaceId,
         execution_data: dict[str, str],
+        execution_service: ExecutionService,
+        workflow_service: WorkflowService,
+        assistant_service: AssistantService,
+        thread_facade: ThreadFacade,
     ) -> None:
         """Test successful execution listing."""
-        # Create an execution
+        from askui.chat.api.assistants.dependencies import get_assistant_service
+        from askui.chat.api.threads.dependencies import get_thread_facade
+        from askui.chat.api.workflow_executions.dependencies import (
+            get_execution_service,
+        )
+        from askui.chat.api.workflows.dependencies import get_workflow_service
+
+        app.dependency_overrides[get_execution_service] = lambda: execution_service
+        app.dependency_overrides[get_workflow_service] = lambda: workflow_service
+        app.dependency_overrides[get_assistant_service] = lambda: assistant_service
+        app.dependency_overrides[get_thread_facade] = lambda: thread_facade
+
         try:
             with TestClient(app) as client:
                 create_response = client.post(
