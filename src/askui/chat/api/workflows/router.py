@@ -46,7 +46,9 @@ def create_workflow(
     workflow_service: WorkflowService = WorkflowServiceDep,
 ) -> Workflow:
     """
-    Create a new workflow.
+    Create a new workflow. The description should start off with the end goal and then
+    to achieve that goal have a set of clear instructions to be executed in order e.g.
+    \n1.) open a new tab in the browser \n2.) navigate to a specific URL.
 
     Args:
         askui_workspace: The workspace ID from header
