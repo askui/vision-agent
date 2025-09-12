@@ -2,6 +2,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 
+from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
@@ -91,32 +92,49 @@ class Runner:
             run_id=self._run.id,
         )
 
-    def _build_system(self) -> str:
-        base_system = self._assistant.system or ""
+    def _build_system(self) -> list[BetaTextBlockParam]:
         metadata = {
             "run_id": str(self._run.id),
             "thread_id": str(self._run.thread_id),
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
         }
-        return f"{base_system}\n\nMetadata of current conversation: {json.dumps(metadata)}".strip()
+        return [
+            *(
+                [
+                    BetaTextBlockParam(
+                        type="text",
+                        text=self._assistant.system,
+                    )
+                ]
+                if self._assistant.system
+                else []
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text="Metadata of current conversation: ",
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text=json.dumps(metadata),
+                cache_control=BetaCacheControlEphemeralParam(
+                    type="ephemeral",
+                ),
+            ),
+        ]
 
     async def _run_agent(
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
-        messages = await self._chat_history_manager.retrieve(
-            thread_id=self._run.thread_id
-        )
-
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            created_message = await self._chat_history_manager.append(
+            created_message = await self._chat_history_manager.append_message(
                 thread_id=self._run.thread_id,
                 assistant_id=self._run.assistant_id,
                 run_id=self._run.id,
-                on_message_cb_param=on_message_cb_param,
+                message=on_message_cb_param.message,
             )
             await send_stream.send(
                 MessageEvent(
@@ -132,7 +150,6 @@ class Runner:
             return on_message_cb_param.message
 
         on_message = syncify(async_on_message)
-
         mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(
             self._workspace_id
         )
@@ -142,10 +159,18 @@ class Runner:
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
             )
+            betas = tools.retrieve_tool_beta_flags()
             # Remove this after having extracted tools into Android MCP
             if self._run.assistant_id == ANDROID_AGENT.id:
                 tools.append_tool(*_get_android_tools())
-            betas = tools.retrieve_tool_beta_flags()
+            system = self._build_system()
+            model = str(ModelName.CLAUDE__SONNET__4__20250514)
+            messages = syncify(self._chat_history_manager.retrieve_message_params)(
+                thread_id=self._run.thread_id,
+                tools=tools.to_params(),
+                system=system,
+                model=model,
+            )
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
@@ -155,9 +180,10 @@ class Runner:
                 settings=ActSettings(
                     messages=MessageSettings(
                         betas=betas,
-                        model=ModelName.CLAUDE__SONNET__4__20250514,
-                        system=self._build_system(),
-                        thinking={"type": "enabled", "budget_tokens": 2048},
+                        model=model,
+                        system=system,
+                        thinking={"type": "enabled", "budget_tokens": 4096},
+                        max_tokens=8192,
                     ),
                 ),
             )
