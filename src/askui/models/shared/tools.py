@@ -2,7 +2,7 @@ import json
 import types
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import Any, Literal, Protocol, Type, cast
+from typing import Any, Literal, Protocol, Type
 
 import jsonref
 import mcp
@@ -202,6 +202,18 @@ class ToolCollection:
         self._mcp_client = mcp_client
         self._include = include
 
+    def retrieve_tool_beta_flags(self) -> list[str]:
+        result: set[str] = set()
+        for tool in self._get_mcp_tools().values():
+            beta_flags = (tool.meta or {}).get("betas", [])
+            if not isinstance(beta_flags, list):
+                continue
+            for beta_flag in beta_flags:
+                if not isinstance(beta_flag, str):
+                    continue
+                result.add(beta_flag)
+        return list(result)
+
     def to_params(self) -> list[BetaToolUnionParam]:
         tool_map = {
             **self._get_mcp_tool_params(),
@@ -221,17 +233,17 @@ class ToolCollection:
         if not self._mcp_client:
             return {}
         mcp_tools = self._get_mcp_tools()
-        return {
-            tool_name: cast(
-                "BetaToolUnionParam",
-                BetaToolParam(
-                    name=tool_name,
-                    description=tool.description or "",
-                    input_schema=_replace_refs(tool_name, tool.inputSchema),
-                ),
+        result: dict[str, BetaToolUnionParam] = {}
+        for tool_name, tool in mcp_tools.items():
+            if params := (tool.meta or {}).get("params"):
+                # validation missing
+                result[tool_name] = params
+            result[tool_name] = BetaToolParam(
+                name=tool_name,
+                description=tool.description or "",
+                input_schema=_replace_refs(tool_name, tool.inputSchema),
             )
-            for tool_name, tool in mcp_tools.items()
-        }
+        return result
 
     def append_tool(self, *tools: Tool) -> "Self":
         """Append a tool to the collection."""

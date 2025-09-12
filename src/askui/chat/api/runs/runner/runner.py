@@ -162,6 +162,7 @@ class Runner:
             # Remove this after having extracted tools into Android MCP
             if self._run.assistant_id == ANDROID_AGENT.id:
                 tools.append_tool(*_get_android_tools())
+            betas = tools.retrieve_tool_beta_flags()
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
@@ -170,6 +171,7 @@ class Runner:
                 tools=tools,
                 settings=ActSettings(
                     messages=MessageSettings(
+                        betas=betas,
                         model=ModelName.CLAUDE__SONNET__4__20250514,
                         system=self._build_system(),
                         thinking={"type": "enabled", "budget_tokens": 2048},

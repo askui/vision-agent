@@ -5,12 +5,19 @@ from fastmcp.utilities.types import Image
 from PIL import Image as PILImage
 from pydantic import BaseModel, Field
 
+from askui.models.shared.settings import COMPUTER_USE_20250124_BETA_FLAG
 from askui.tools.askui.askui_controller import AskUiControllerClient
-from askui.tools.computer import Action20250124, Computer20250124Tool, ScrollDirection
+from askui.tools.computer import (
+    RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC,
+    Action20250124,
+    Computer20250124Tool,
+    ScrollDirection,
+)
 from askui.utils.image_utils import ImageSource
 
 mcp = FastMCP(name="AskUI Computer MCP")
 
+RESOLUTION = RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC["WXGA"]
 
 active_display = 1
 
@@ -18,6 +25,15 @@ active_display = 1
 @mcp.tool(
     description="Interact with your computer",
     tags={"computer"},
+    meta={
+        "betas": [COMPUTER_USE_20250124_BETA_FLAG],
+        "params": {
+            "name": "computer",
+            "display_width_px": RESOLUTION.width,
+            "display_height_px": RESOLUTION.height,
+            "type": "computer_20250124",
+        },
+    },
 )
 def computer(
     action: Action20250124,
@@ -30,7 +46,7 @@ def computer(
     key: str | None = None,
 ) -> Image | None | str:
     with AskUiControllerClient(display=active_display) as agent_os:
-        result = Computer20250124Tool(agent_os=agent_os)(
+        result = Computer20250124Tool(agent_os=agent_os, resolution=RESOLUTION)(
             action=action,
             text=text,
             coordinate=coordinate,
