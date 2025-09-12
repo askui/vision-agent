@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import Iterator
 
 from askui.chat.api.messages.models import Message, MessageCreateParams
 from askui.chat.api.models import MessageId, ThreadId
 from askui.utils.api_utils import (
+    LIST_LIMIT_DEFAULT,
     ConflictError,
+    ListOrder,
     ListQuery,
     ListResponse,
     NotFoundError,
@@ -39,6 +42,24 @@ class MessageService:
     def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
         messages_dir = self.get_messages_dir(thread_id)
         return list_resources(messages_dir, query, Message)
+
+    def iter(
+        self,
+        thread_id: ThreadId,
+        order: ListOrder = "asc",
+        batch_size: int = LIST_LIMIT_DEFAULT,
+    ) -> Iterator[Message]:
+        has_more = True
+        last_id: str | None = None
+        while has_more:
+            list_messages_response = self.list_(
+                thread_id=thread_id,
+                query=ListQuery(limit=batch_size, order=order, after=last_id),
+            )
+            has_more = list_messages_response.has_more
+            last_id = list_messages_response.last_id
+            for msg in list_messages_response.data:
+                yield msg
 
     def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
         try:

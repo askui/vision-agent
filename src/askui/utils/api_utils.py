@@ -8,6 +8,7 @@ from typing_extensions import TypeVar
 
 ListOrder = Literal["asc", "desc"]
 LIST_LIMIT_MAX = 100
+LIST_LIMIT_DEFAULT = 20
 
 
 Id = TypeVar("Id", bound=str, default=str)
@@ -15,7 +16,7 @@ Id = TypeVar("Id", bound=str, default=str)
 
 @dataclass(kw_only=True)
 class ListQuery(Generic[Id]):
-    limit: Annotated[int, Query(ge=1, le=LIST_LIMIT_MAX)] = 20
+    limit: Annotated[int, Query(ge=1, le=LIST_LIMIT_MAX)] = LIST_LIMIT_DEFAULT
     after: Annotated[Id | None, Query()] = None
     before: Annotated[Id | None, Query()] = None
     order: Annotated[ListOrder, Query()] = "desc"
@@ -58,19 +59,47 @@ class FileTooLargeError(ApiError):
         super().__init__(f"File too large. Maximum size is {max_size} bytes.")
 
 
+def _build_after_fn(after: str, order: ListOrder) -> Callable[[Path], bool]:
+    after_name = f"{after}.json"
+    if order == "asc":
+        return lambda f: f.name > after_name
+    return lambda f: f.name < after_name
+
+
+def _build_before_fn(before: str, order: ListOrder) -> Callable[[Path], bool]:
+    before_name = f"{before}.json"
+    if order == "asc":
+        return lambda f: f.name < before_name
+    return lambda f: f.name > before_name
+
+
+def _build_list_filter_fn(list_query: ListQuery) -> Callable[[Path], bool]:
+    after_fn = (
+        _build_after_fn(list_query.after, list_query.order)
+        if list_query.after
+        else None
+    )
+    before_fn = (
+        _build_before_fn(list_query.before, list_query.order)
+        if list_query.before
+        else None
+    )
+    if after_fn and before_fn:
+        return lambda f: after_fn(f) and before_fn(f)
+    if after_fn:
+        return after_fn
+    if before_fn:
+        return before_fn
+    return lambda _: True
+
+
 def list_resource_paths(base_dir: Path, list_query: ListQuery) -> list[Path]:
     paths: list[Path] = []
-    after_name = f"{list_query.after}.json"
-    before_name = f"{list_query.before}.json"
+    filter_fn = _build_list_filter_fn(list_query)
     for f in base_dir.glob("*.json"):
         try:
-            if list_query.after:
-                if f.name <= after_name:
-                    continue
-            if list_query.before:
-                if f.name >= before_name:
-                    continue
-            paths.append(f)
+            if filter_fn(f):
+                paths.append(f)
         except ValidationError:  # noqa: PERF203
             continue
     return sorted(paths, key=lambda f: f.name, reverse=(list_query.order == "desc"))

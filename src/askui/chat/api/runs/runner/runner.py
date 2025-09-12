@@ -2,15 +2,14 @@ import json
 import logging
 from abc import ABC, abstractmethod
 
+from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
-from askui.chat.api.messages.models import MessageCreateParams
-from askui.chat.api.messages.service import MessageService
-from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import Run, RunError
 from askui.chat.api.runs.runner.events.done_events import DoneEvent
@@ -28,7 +27,6 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool, ToolCollection
-from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
 
 logger = logging.getLogger(__name__)
 
@@ -77,17 +75,14 @@ class Runner:
         workspace_id: WorkspaceId,
         assistant: Assistant,
         run: Run,
-        message_service: MessageService,
-        message_translator: MessageTranslator,
+        chat_history_manager: ChatHistoryManager,
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
     ) -> None:
         self._workspace_id = workspace_id
         self._assistant = assistant
         self._run = run
-        self._message_service = message_service
-        self._message_translator = message_translator
-        self._message_content_translator = message_translator.content_translator
+        self._chat_history_manager = chat_history_manager
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
 
@@ -97,47 +92,53 @@ class Runner:
             run_id=self._run.id,
         )
 
-    def _build_system(self) -> str:
-        base_system = self._assistant.system or ""
+    def _build_system(self) -> list[BetaTextBlockParam]:
         metadata = {
             "run_id": str(self._run.id),
             "thread_id": str(self._run.thread_id),
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
         }
-        return f"{base_system}\n\nMetadata of current conversation: {json.dumps(metadata)}".strip()
+        return [
+            *(
+                [
+                    BetaTextBlockParam(
+                        type="text",
+                        text=self._assistant.system,
+                    )
+                ]
+                if self._assistant.system
+                else []
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text="Metadata of current conversation: ",
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text=json.dumps(metadata),
+                cache_control=BetaCacheControlEphemeralParam(
+                    type="ephemeral",
+                ),
+            ),
+        ]
 
     async def _run_agent(
         self,
         send_stream: ObjectStream[Events],
     ) -> None:
-        messages: list[MessageParam] = [
-            await self._message_translator.to_anthropic(msg)
-            for msg in self._message_service.list_(
-                thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
-            ).data
-        ]
-
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._message_service.create(
+            created_message = await self._chat_history_manager.append_message(
                 thread_id=self._run.thread_id,
-                params=MessageCreateParams(
-                    assistant_id=self._run.assistant_id
-                    if on_message_cb_param.message.role == "assistant"
-                    else None,
-                    role=on_message_cb_param.message.role,
-                    content=await self._message_content_translator.from_anthropic(
-                        on_message_cb_param.message.content
-                    ),
-                    run_id=self._run.id,
-                ),
+                assistant_id=self._run.assistant_id,
+                run_id=self._run.id,
+                message=on_message_cb_param.message,
             )
             await send_stream.send(
                 MessageEvent(
-                    data=message,
+                    data=created_message,
                     event="thread.message.created",
                 )
             )
@@ -149,7 +150,6 @@ class Runner:
             return on_message_cb_param.message
 
         on_message = syncify(async_on_message)
-
         mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(
             self._workspace_id
         )
@@ -159,10 +159,18 @@ class Runner:
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
             )
+            betas = tools.retrieve_tool_beta_flags()
             # Remove this after having extracted tools into Android MCP
             if self._run.assistant_id == ANDROID_AGENT.id:
                 tools.append_tool(*_get_android_tools())
-            betas = tools.retrieve_tool_beta_flags()
+            system = self._build_system()
+            model = str(ModelName.CLAUDE__SONNET__4__20250514)
+            messages = syncify(self._chat_history_manager.retrieve_message_params)(
+                thread_id=self._run.thread_id,
+                tools=tools.to_params(),
+                system=system,
+                model=model,
+            )
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
@@ -172,9 +180,10 @@ class Runner:
                 settings=ActSettings(
                     messages=MessageSettings(
                         betas=betas,
-                        model=ModelName.CLAUDE__SONNET__4__20250514,
-                        system=self._build_system(),
-                        thinking={"type": "enabled", "budget_tokens": 2048},
+                        model=model,
+                        system=system,
+                        thinking={"type": "enabled", "budget_tokens": 4096},
+                        max_tokens=8192,
                     ),
                 ),
             )
