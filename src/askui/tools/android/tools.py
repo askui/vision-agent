@@ -344,6 +344,7 @@ class AndroidShellTool(Tool):
                 run system commands, check device status, or perform administrative
                 tasks. The command will be executed in the Android shell environment
                 with the current user's permissions.
+                it adds the adb shell prefix to the provided command.
                 """
             ),
             input_schema={
@@ -369,3 +370,144 @@ class AndroidShellTool(Tool):
     def __call__(self, command: str) -> str:
         output = self._agent_os_facade.shell(command)
         return f"Shell command executed. Output: {output}"
+
+
+class AndroidGetConnectedDevicesSerialNumbersTool(Tool):
+    """
+    Get the connected devices serial numbers.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_get_connected_devices_serial_numbers_tool",
+            description="Can be used to get all connected devices serial numbers.",
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self) -> str:
+        devices_sn = self._agent_os_facade.get_connected_devices_serial_numbers()
+        return f"Connected devices serial numbers: [{', '.join(devices_sn)}]"
+
+
+class AndroidGetConnectedDisplaysInfosTool(Tool):
+    """
+    Get the connected displays infos for the current connected device.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_get_connected_device_display_infos_tool",
+            description="Can be used to get all connected displays infos for the "
+            "current selected device.",
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self) -> str:
+        displays = self._agent_os_facade.get_connected_displays()
+        display_infos = [str(display) for display in displays]
+        return f"Connected displays infos: [{', '.join(display_infos)}]"
+
+
+class AndroidGetCurrentConnectedDeviceInfosTool(Tool):
+    """
+    Get the current selected device infos.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_get_current_connected_device_infos_tool",
+            description="""
+            Can be used to get the current selected device and  selected display infos.
+            """,
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self) -> str:
+        device_serial_number, selected_display = (
+            self._agent_os_facade.get_selected_device_infos()
+        )
+        return (
+            f"The device with the serial number {device_serial_number} is selected"
+            f" and its selected display is {str(selected_display)}."
+        )
+
+
+class AndroidSelectDeviceBySerialNumberTool(Tool):
+    """
+    Select a device by its serial number.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_select_device_by_serial_number_tool",
+            description="Can be used to select a device by its serial number.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "device_sn": {
+                        "type": "string",
+                        "description": "The serial number of the device to select.",
+                    },
+                },
+                "required": ["device_sn"],
+            },
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self, device_sn: str) -> str:
+        self._agent_os_facade.set_device_by_serial_number(device_sn)
+        return f"Device with the serial number {device_sn} was selected."
+
+
+class AndroidSelectDisplayByIndex(Tool):
+    """
+    Select a display by its index.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_select_display_by_index_tool",
+            description="Can be used to select a display by its index.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "display_index": {
+                        "type": "integer",
+                        "description": "The index of the display to select.",
+                    },
+                },
+                "required": ["display_index"],
+            },
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self, display_index: int) -> str:
+        self._agent_os_facade.set_display_by_index(display_index)
+        return f"Display with the index {display_index} was selected."
+
+
+class AndroidConnectTool(Tool):
+    """
+    Connect to the Android device.
+    """
+
+    def __init__(self, agent_os_facade: AndroidAgentOsFacade):
+        super().__init__(
+            name="android_connect_tool",
+            description="""Can be used to connect the adb client to the server.
+            This must be called as the first tool to be called at the beginning of the
+            conversation.
+            It calls the connect method on the agent os.
+            """
+        )
+        self._agent_os_facade = agent_os_facade
+
+    @override
+    def __call__(self) -> str:
+        self._agent_os_facade.connect()
+        return "adb client is connected to the server."

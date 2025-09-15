@@ -38,9 +38,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._mouse_position = (0, 0)
 
     def get_connected_displays(self) -> list[AndroidDisplay]:
-        if not self._device:
-            msg = "No device connected"
-            raise RuntimeError(msg)
+        self._check_if_device_is_selected()
+        assert self._device is not None
         displays: list[AndroidDisplay] = []
         output: str = self._device.shell(
             "dumpsys SurfaceFlinger --display-id",
@@ -122,7 +121,8 @@ class PpadbAgentOs(AndroidAgentOs):
         raise RuntimeError(msg)
 
     def screenshot(self) -> Image.Image:
-        self._check_if_device_is_connected()
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
         connection_to_device = self._device.create_connection()
@@ -136,16 +136,19 @@ class PpadbAgentOs(AndroidAgentOs):
         return Image.open(io.BytesIO(response))
 
     def shell(self, command: str) -> str:
-        self._check_if_device_is_connected()
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
         assert self._device is not None
         response: str = self._device.shell(command)
         return response
 
     def tap(self, x: int, y: int) -> None:
-        self._check_if_device_is_connected()
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(f"input -d {display_index} tap {x} {y}")
+        self._device.shell(f"input -d {display_index} tap {x} {y}")
         self._mouse_position = (x, y)
 
     def swipe(
@@ -156,9 +159,12 @@ class PpadbAgentOs(AndroidAgentOs):
         y2: int,
         duration_in_ms: int = 1000,
     ) -> None:
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(
+        self._device.shell(
             f"input -d {display_index} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
@@ -171,9 +177,12 @@ class PpadbAgentOs(AndroidAgentOs):
         y2: int,
         duration_in_ms: int = 1000,
     ) -> None:
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(
+        self._device.shell(
             f"input -d {display_index} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
@@ -185,19 +194,25 @@ class PpadbAgentOs(AndroidAgentOs):
                 + "or special characters which are not supported by the device"
             )
             raise RuntimeError(error_msg_nonprintable)
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
         escaped_text = shlex.quote(text)
         shell_safe_text = escaped_text.replace(" ", "%s")
-        self.shell(f"input -d {display_index} text {shell_safe_text}")
+        self._device.shell(f"input -d {display_index} text {shell_safe_text}")
 
     def key_tap(self, key: ANDROID_KEY) -> None:
         if key not in get_args(ANDROID_KEY):
             error_msg_invalid_key: str = f"Invalid key: {key}"
             raise RuntimeError(error_msg_invalid_key)
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(f"input -d {display_index} keyevent {key}")
+        self._device.shell(f"input -d {display_index} keyevent {key}")
 
     def key_combination(
         self, keys: List[ANDROID_KEY], duration_in_ms: int = 100
@@ -211,19 +226,20 @@ class PpadbAgentOs(AndroidAgentOs):
             raise RuntimeError(error_msg_too_few)
 
         keys_string = " ".join(keys)
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
         assert self._selected_display is not None
         display_index: int = self._selected_display.display_index
-        self.shell(
+        self._device.shell(
             f"input -d {display_index} keycombination -t {duration_in_ms} {keys_string}"
         )
 
-    def _check_if_device_is_connected(self) -> None:
-        if not self._client or not self._device:
-            msg = "No device connected"
-            raise RuntimeError(msg)
-        devices: list[AndroidDevice] = self._client.devices()
-        if not devices:
-            msg = "No devices connected"
+    def _check_if_device_is_selected(self) -> None:
+        devices: list[AndroidDevice] = self._get_connected_devices()
+
+        if not self._device:
+            msg = "No device is selected, did you call on of the set_device methods?"
             raise RuntimeError(msg)
 
         for device in devices:
@@ -232,12 +248,41 @@ class PpadbAgentOs(AndroidAgentOs):
         msg = f"Device {self._device.serial} not found in connected devices"
         raise RuntimeError(msg)
 
+    def _check_if_display_is_selected(self) -> None:
+        if self._selected_display is None:
+            msg = "No display is selected, did you call on of  the set_display methods?"
+            raise RuntimeError(msg)
+
     def _get_connected_devices(self) -> list[AndroidDevice]:
+        """
+        Get the connected devices.
+        """
         if not self._client:
-            msg = "No client connected"
+            msg = "No adb client is connected, did you call the connect method?"
             raise RuntimeError(msg)
         devices: list[AndroidDevice] = self._client.devices()
         if not devices:
-            msg = "No devices connected"
+            msg = """No devices are connected,
+            If you are using an emulator, make sure the emulator is running.
+            If you are using a real device, make sure the device is connected and
+            the adb server is running.
+            """
             raise RuntimeError(msg)
         return devices
+
+    def get_connected_devices_serial_numbers(self) -> list[str]:
+        """
+        Get the connected devices serial numbers.
+        """
+        devices: list[AndroidDevice] = self._get_connected_devices()
+        return [device.serial for device in devices]
+
+    def get_selected_device_infos(self) -> tuple[str, AndroidDisplay]:
+        """
+        Get the selected device infos.
+        """
+        self._check_if_device_is_selected()
+        self._check_if_display_is_selected()
+        assert self._device is not None
+        assert self._selected_display is not None
+        return (self._device.serial, self._selected_display)

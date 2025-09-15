@@ -37,6 +37,12 @@ ANDROID_AGENT = Assistant(
         "android_swipe_tool",
         "android_key_combination_tool",
         "android_shell_tool",
+        "android_connect_tool",
+        "android_get_connected_devices_serial_numbers_tool",
+        "android_get_connected_displays_infos_tool",
+        "android_get_current_connected_device_infos_tool",
+        "android_select_device_by_serial_number_tool",
+        "android_select_display_by_index_tool",
     ],
 )
 

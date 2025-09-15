@@ -35,10 +35,16 @@ def _get_android_tools() -> list[Tool]:
     from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
     from askui.tools.android.ppadb_agent_os import PpadbAgentOs
     from askui.tools.android.tools import (
+        AndroidConnectTool,
         AndroidDragAndDropTool,
+        AndroidGetConnectedDevicesSerialNumbersTool,
+        AndroidGetConnectedDisplaysInfosTool,
+        AndroidGetCurrentConnectedDeviceInfosTool,
         AndroidKeyCombinationTool,
         AndroidKeyTapEventTool,
         AndroidScreenshotTool,
+        AndroidSelectDeviceBySerialNumberTool,
+        AndroidSelectDisplayByIndex,
         AndroidShellTool,
         AndroidSwipeTool,
         AndroidTapTool,
@@ -48,6 +54,12 @@ def _get_android_tools() -> list[Tool]:
     agent_os = PpadbAgentOs()
     act_agent_os_facade = AndroidAgentOsFacade(agent_os)
     return [
+        AndroidSelectDeviceBySerialNumberTool(act_agent_os_facade),
+        AndroidSelectDisplayByIndex(act_agent_os_facade),
+        AndroidGetConnectedDevicesSerialNumbersTool(act_agent_os_facade),
+        AndroidGetConnectedDisplaysInfosTool(act_agent_os_facade),
+        AndroidGetCurrentConnectedDeviceInfosTool(act_agent_os_facade),
+        AndroidConnectTool(act_agent_os_facade),
         AndroidScreenshotTool(act_agent_os_facade),
         AndroidTapTool(act_agent_os_facade),
         AndroidTypeTool(act_agent_os_facade),
