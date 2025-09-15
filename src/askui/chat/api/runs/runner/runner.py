@@ -31,46 +31,6 @@ from askui.models.shared.tools import Tool, ToolCollection
 logger = logging.getLogger(__name__)
 
 
-def _get_android_tools() -> list[Tool]:
-    from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
-    from askui.tools.android.ppadb_agent_os import PpadbAgentOs
-    from askui.tools.android.tools import (
-        AndroidConnectTool,
-        AndroidDragAndDropTool,
-        AndroidGetConnectedDevicesSerialNumbersTool,
-        AndroidGetConnectedDisplaysInfosTool,
-        AndroidGetCurrentConnectedDeviceInfosTool,
-        AndroidKeyCombinationTool,
-        AndroidKeyTapEventTool,
-        AndroidScreenshotTool,
-        AndroidSelectDeviceBySerialNumberTool,
-        AndroidSelectDisplayByIndex,
-        AndroidShellTool,
-        AndroidSwipeTool,
-        AndroidTapTool,
-        AndroidTypeTool,
-    )
-
-    agent_os = PpadbAgentOs()
-    act_agent_os_facade = AndroidAgentOsFacade(agent_os)
-    return [
-        AndroidSelectDeviceBySerialNumberTool(act_agent_os_facade),
-        AndroidSelectDisplayByIndex(act_agent_os_facade),
-        AndroidGetConnectedDevicesSerialNumbersTool(act_agent_os_facade),
-        AndroidGetConnectedDisplaysInfosTool(act_agent_os_facade),
-        AndroidGetCurrentConnectedDeviceInfosTool(act_agent_os_facade),
-        AndroidConnectTool(act_agent_os_facade),
-        AndroidScreenshotTool(act_agent_os_facade),
-        AndroidTapTool(act_agent_os_facade),
-        AndroidTypeTool(act_agent_os_facade),
-        AndroidDragAndDropTool(act_agent_os_facade),
-        AndroidKeyTapEventTool(act_agent_os_facade),
-        AndroidSwipeTool(act_agent_os_facade),
-        AndroidKeyCombinationTool(act_agent_os_facade),
-        AndroidShellTool(act_agent_os_facade),
-    ]
-
-
 class RunnerRunService(ABC):
     @abstractmethod
     def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
@@ -172,9 +132,6 @@ class Runner:
                 include=set(self._assistant.tools),
             )
             betas = tools.retrieve_tool_beta_flags()
-            # Remove this after having extracted tools into Android MCP
-            if self._run.assistant_id == ANDROID_AGENT.id:
-                tools.append_tool(*_get_android_tools())
             system = self._build_system()
             model = str(ModelName.CLAUDE__SONNET__4__20250514)
             messages = syncify(self._chat_history_manager.retrieve_message_params)(

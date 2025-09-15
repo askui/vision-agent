@@ -23,8 +23,24 @@ class PpadbAgentOs(AndroidAgentOs):
         self._displays: list[AndroidDisplay] = []
         self._selected_display: Optional[AndroidDisplay] = None
 
+    def connect_adb_client(self) -> None:
+        if self._client is not None:
+            msg = "Adb client is already connected"
+            raise RuntimeError(msg)
+        try:
+            self._client = AdbClient()
+        except Exception as e:  # noqa: BLE001
+            msg = f""" Failed to connect the adb client to the server.
+            Make sure the adb server is running.
+            IF you are using a real device, make sure the device is connected.
+            And listed after executiing the 'adb devices' command.
+            If you are using an emulator, make sure the emulator is running.
+            The error message: {e}
+            """
+            raise RuntimeError(msg)  # noqa: B904
+
     def connect(self) -> None:
-        self._client = AdbClient()
+        self.connect_adb_client()
         self.set_device_by_index(0)
         assert self._device is not None
         self._device.wait_boot_complete()
@@ -264,8 +280,7 @@ class PpadbAgentOs(AndroidAgentOs):
         if not devices:
             msg = """No devices are connected,
             If you are using an emulator, make sure the emulator is running.
-            If you are using a real device, make sure the device is connected and
-            the adb server is running.
+            If you are using a real device, make sure the device is connected.
             """
             raise RuntimeError(msg)
         return devices

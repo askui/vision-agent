@@ -162,3 +162,7 @@ class AndroidAgentOsFacade(AndroidAgentOs):
             ),
         )
         return device_sn, selected_display
+
+    def connect_adb_client(self) -> None:
+        self._agent_os.connect_adb_client()
+        self._reporter.add_message("AndroidAgentOS", "Connected to adb client")

@@ -500,14 +500,12 @@ class AndroidConnectTool(Tool):
         super().__init__(
             name="android_connect_tool",
             description="""Can be used to connect the adb client to the server.
-            This must be called as the first tool to be called at the beginning of the
-            conversation.
-            It calls the connect method on the agent os.
-            """
+            Needs to select a device after connecting the adb client.
+            """,
         )
         self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(self) -> str:
-        self._agent_os_facade.connect()
+        self._agent_os_facade.connect_adb_client()
         return "adb client is connected to the server."

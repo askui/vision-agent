@@ -2,6 +2,7 @@ import json
 import types
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from functools import wraps
 from typing import Any, Literal, Protocol, Type
 
 import jsonref
@@ -14,6 +15,8 @@ from anthropic.types.beta import (
 from anthropic.types.beta.beta_tool_param import InputSchema
 from asyncer import syncify
 from fastmcp.client.client import CallToolResult, ProgressHandler
+from fastmcp.tools import Tool as FastMcpTool
+from fastmcp.utilities.types import Image as FastMcpImage
 from mcp import Tool as McpTool
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -101,6 +104,22 @@ def _default_input_schema() -> InputSchema:
     return {"type": "object", "properties": {}, "required": []}
 
 
+def _convert_to_mcp_content(
+    result: str | Image.Image | tuple[str | Image.Image, ...] | list[str | Image.Image],
+) -> str | FastMcpImage | tuple[str | FastMcpImage, ...] | list[str | FastMcpImage]:
+    if isinstance(result, tuple):
+        return tuple(_convert_to_mcp_content(item) for item in result)
+
+    if isinstance(result, list):
+        return [_convert_to_mcp_content(item) for item in result]
+
+    if isinstance(result, Image.Image):
+        src = ImageSource(result)
+        return FastMcpImage(data=src.to_bytes(), format="png")
+
+    return result
+
+
 class Tool(BaseModel, ABC):
     name: str = Field(description="Name of the tool")
     description: str = Field(description="Description of what the tool does")
@@ -122,6 +141,21 @@ class Tool(BaseModel, ABC):
             name=self.name,
             description=self.description,
             input_schema=self.input_schema,
+        )
+
+    def to_mcp_tool(self, tags: set[str]) -> FastMcpTool:
+        """Convert the AskUI tool to an MCP tool."""
+        tool_call = self.__call__
+
+        @wraps(tool_call)
+        def wrapped_tool_call(*args: Any, **kwargs: Any) -> Any:
+            return _convert_to_mcp_content(tool_call(*args, **kwargs))
+
+        return FastMcpTool.from_function(
+            wrapped_tool_call,
+            name=self.name,
+            description=self.description,
+            tags=tags,
         )
 
 

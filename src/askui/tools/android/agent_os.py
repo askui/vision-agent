@@ -401,3 +401,10 @@ class AndroidAgentOs(ABC):
         Gets the selected device infos.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def connect_adb_client(self) -> None:
+        """
+        Connects the adb client to the server.
+        """
+        raise NotImplementedError
