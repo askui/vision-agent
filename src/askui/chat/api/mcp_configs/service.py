@@ -109,6 +109,9 @@ class McpConfigService:
         params: McpConfigModifyParams,
     ) -> McpConfig:
         mcp_config = self.retrieve(workspace_id, mcp_config_id)
+        if mcp_config.workspace_id is None:
+            error_msg = f"Default MCP configuration {mcp_config_id} cannot be modified"
+            raise ForbiddenError(error_msg)
         modified = mcp_config.modify(params)
         self._save(modified)
         return modified
@@ -129,7 +132,11 @@ class McpConfigService:
             self._get_mcp_config_path(mcp_config_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"MCP configuration {mcp_config_id} not found"
-            raise NotFoundError(error_msg) from e
+            if not force:
+                raise NotFoundError(error_msg) from e
+        except NotFoundError:
+            if not force:
+                raise
 
     def _save(self, mcp_config: McpConfig, new: bool = False) -> None:
         self._mcp_configs_dir.mkdir(parents=True, exist_ok=True)

@@ -6,7 +6,11 @@ from typing import Any, Literal, Protocol, Type
 
 import jsonref
 import mcp
-from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
+from anthropic.types.beta import (
+    BetaCacheControlEphemeralParam,
+    BetaToolParam,
+    BetaToolUnionParam,
+)
 from anthropic.types.beta.beta_tool_param import InputSchema
 from asyncer import syncify
 from fastmcp.client.client import CallToolResult, ProgressHandler
@@ -227,7 +231,12 @@ class ToolCollection:
             for tool_name, tool in tool_map.items()
             if self._include is None or tool_name in self._include
         }
-        return list(filtered_tool_map.values())
+        result = list(filtered_tool_map.values())
+        if result:
+            result[-1]["cache_control"] = BetaCacheControlEphemeralParam(
+                type="ephemeral",
+            )
+        return result
 
     def _get_mcp_tool_params(self) -> dict[str, BetaToolUnionParam]:
         if not self._mcp_client:
@@ -238,6 +247,7 @@ class ToolCollection:
             if params := (tool.meta or {}).get("params"):
                 # validation missing
                 result[tool_name] = params
+                continue
             result[tool_name] = BetaToolParam(
                 name=tool_name,
                 description=tool.description or "",

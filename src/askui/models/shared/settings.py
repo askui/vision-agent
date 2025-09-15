@@ -32,5 +32,3 @@ class ActSettings(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: MessageSettings = Field(default_factory=MessageSettings)
-    only_n_most_recent_images: int = 3
-    image_truncation_threshold: int = 10
