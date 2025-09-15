@@ -19,7 +19,7 @@ from askui.utils.api_utils import (
 
 
 def _build_workflow_filter_fn(
-    workspace_id: WorkspaceId | None,
+    workspace_id: WorkspaceId,
     tags: list[str] | None = None,
 ) -> Callable[[Workflow], bool]:
     workspace_filter: Callable[[Workflow], bool] = build_workspace_filter_fn(
@@ -54,7 +54,7 @@ class WorkflowService:
 
     def list_(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         query: ListQuery,
         tags: list[str] | None = None,
     ) -> ListResponse[Workflow]:
@@ -65,9 +65,7 @@ class WorkflowService:
             filter_fn=_build_workflow_filter_fn(workspace_id, tags=tags),
         )
 
-    def retrieve(
-        self, workspace_id: WorkspaceId | None, workflow_id: WorkflowId
-    ) -> Workflow:
+    def retrieve(self, workspace_id: WorkspaceId, workflow_id: WorkflowId) -> Workflow:
         try:
             workflow_path = self._get_workflow_path(workflow_id)
             workflow = Workflow.model_validate_json(workflow_path.read_text())
@@ -84,7 +82,7 @@ class WorkflowService:
             return workflow
 
     def create(
-        self, workspace_id: WorkspaceId | None, params: WorkflowCreateParams
+        self, workspace_id: WorkspaceId, params: WorkflowCreateParams
     ) -> Workflow:
         workflow = Workflow.create(workspace_id, params)
         self._save(workflow, new=True)
@@ -92,7 +90,7 @@ class WorkflowService:
 
     def modify(
         self,
-        workspace_id: WorkspaceId | None,
+        workspace_id: WorkspaceId,
         workflow_id: WorkflowId,
         params: WorkflowModifyParams,
     ) -> Workflow:
