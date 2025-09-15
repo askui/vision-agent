@@ -50,13 +50,21 @@ class AssistantService:
     ) -> Assistant:
         try:
             assistant_path = self._get_assistant_path(assistant_id)
-            assistant = Assistant.model_validate_json(assistant_path.read_text())
+            content = assistant_path.read_text()
+            if not content.strip():
+                error_msg = f"Assistant {assistant_id} not found"
+                raise NotFoundError(error_msg)
+            assistant = Assistant.model_validate_json(content)
             if not (
                 assistant.workspace_id is None or assistant.workspace_id == workspace_id
             ):
                 error_msg = f"Assistant {assistant_id} not found"
                 raise NotFoundError(error_msg)
         except FileNotFoundError as e:
+            error_msg = f"Assistant {assistant_id} not found"
+            raise NotFoundError(error_msg) from e
+        except (ValueError, TypeError) as e:
+            # Handle JSON parsing errors
             error_msg = f"Assistant {assistant_id} not found"
             raise NotFoundError(error_msg) from e
         else:
@@ -76,6 +84,9 @@ class AssistantService:
         params: AssistantModifyParams,
     ) -> Assistant:
         assistant = self.retrieve(workspace_id, assistant_id)
+        if assistant.workspace_id is None:
+            error_msg = f"Default assistant {assistant_id} cannot be modified"
+            raise ForbiddenError(error_msg)
         modified = assistant.modify(params)
         self._save(modified)
         return modified
@@ -91,10 +102,19 @@ class AssistantService:
             if assistant.workspace_id is None and not force:
                 error_msg = f"Default assistant {assistant_id} cannot be deleted"
                 raise ForbiddenError(error_msg)
-            self._get_assistant_path(assistant_id).unlink()
+            try:
+                self._get_assistant_path(assistant_id).unlink()
+            except FileNotFoundError:
+                # File already deleted, that's fine
+                pass
         except FileNotFoundError as e:
             error_msg = f"Assistant {assistant_id} not found"
             raise NotFoundError(error_msg) from e
+        except NotFoundError:
+            # If force=True and assistant doesn't exist, just ignore
+            if not force:
+                raise
+            # For force=True, we can ignore the NotFoundError
 
     def _save(self, assistant: Assistant, new: bool = False) -> None:
         self._assistants_dir.mkdir(parents=True, exist_ok=True)

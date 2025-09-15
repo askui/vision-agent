@@ -533,11 +533,9 @@ class TestFilesAPI:
                 )
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
-                assert len(data["data"]) == 2
-                # After file_test0 should return file_test1 and file_test2 in
-                # descending order
-                assert data["data"][0]["id"] == "file_test2"
-                assert data["data"][1]["id"] == "file_test1"
+                # In descending lexicographic order, file_test0 is the last file,
+                # so there are no files "after" it
+                assert len(data["data"]) == 0
 
                 # Test with before parameter
                 response = client.get(
@@ -545,11 +543,9 @@ class TestFilesAPI:
                 )
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
-                assert len(data["data"]) == 2
-                # Before file_test2 should return file_test0 and file_test1 in
-                # descending order
-                assert data["data"][0]["id"] == "file_test1"
-                assert data["data"][1]["id"] == "file_test0"
+                # In descending lexicographic order, file_test2 is the first file,
+                # so there are no files "before" it
+                assert len(data["data"]) == 0
         finally:
             # Clean up dependency overrides
             app.dependency_overrides.clear()

@@ -63,6 +63,7 @@ def _build_after_fn(after: str, order: ListOrder) -> Callable[[Path], bool]:
     after_name = f"{after}.json"
     if order == "asc":
         return lambda f: f.name > after_name
+    # desc - "after" means files that come before in the sorted list
     return lambda f: f.name < after_name
 
 

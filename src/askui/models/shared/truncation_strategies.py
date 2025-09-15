@@ -193,12 +193,16 @@ class SimpleTruncationStrategy(TruncationStrategy):
                             )
                         ]
                     elif len(message.content) > 0:
-                        message.content[-1].cache_control = CacheControlEphemeralParam(
-                            type="ephemeral",
-                        )
+                        last_content = message.content[-1]
+                        if hasattr(last_content, "cache_control"):
+                            last_content.cache_control = CacheControlEphemeralParam(
+                                type="ephemeral",
+                            )
                 else:
                     if isinstance(message.content, list) and message.content:
-                        message.content[-1].cache_control = None
+                        last_content = message.content[-1]
+                        if hasattr(last_content, "cache_control"):
+                            last_content.cache_control = None
                     break
 
     def _truncate(self) -> None:  # noqa: C901
