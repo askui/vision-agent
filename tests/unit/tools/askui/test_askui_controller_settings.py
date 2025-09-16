@@ -400,7 +400,7 @@ class TestAskUiControllerSettings:
     def test_controller_args_default_value(self) -> None:
         """Test that controller_args is set correctly with default value."""
         settings = AskUiControllerSettings(component_registry_file="/dummy")
-        assert settings.controller_args == "--showOverlay true"
+        assert settings.controller_args == "--showOverlay false"
 
     def test_controller_args_constructor(self) -> None:
         """Test that controller_args is set correctly with constructor."""
