@@ -105,8 +105,8 @@ def _default_input_schema() -> InputSchema:
 
 
 def _convert_to_mcp_content(
-    result: str | Image.Image | tuple[str | Image.Image, ...] | list[str | Image.Image],
-) -> str | FastMcpImage | tuple[str | FastMcpImage, ...] | list[str | FastMcpImage]:
+    result: Any,
+) -> Any:
     if isinstance(result, tuple):
         return tuple(_convert_to_mcp_content(item) for item in result)
 
