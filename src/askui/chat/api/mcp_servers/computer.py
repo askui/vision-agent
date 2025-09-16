@@ -19,7 +19,8 @@ mcp = FastMCP(name="AskUI Computer MCP")
 
 RESOLUTION = RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC["WXGA"]
 
-active_display = 1
+
+AGENT_OS = AskUiControllerClient()
 
 
 @mcp.tool(
@@ -45,20 +46,19 @@ def computer(
     duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
     key: str | None = None,
 ) -> Image | None | str:
-    with AskUiControllerClient(display=active_display) as agent_os:
-        result = Computer20250124Tool(agent_os=agent_os, resolution=RESOLUTION)(
-            action=action,
-            text=text,
-            coordinate=coordinate,
-            scroll_direction=scroll_direction,
-            scroll_amount=scroll_amount,
-            duration=duration,
-            key=key,
-        )
-        if isinstance(result, PILImage.Image):
-            src = ImageSource(result)
-            return Image(data=src.to_bytes(), format="png")
-        return result
+    result = Computer20250124Tool(agent_os=AGENT_OS, resolution=RESOLUTION)(
+        action=action,
+        text=text,
+        coordinate=coordinate,
+        scroll_direction=scroll_direction,
+        scroll_amount=scroll_amount,
+        duration=duration,
+        key=key,
+    )
+    if isinstance(result, PILImage.Image):
+        src = ImageSource(result)
+        return Image(data=src.to_bytes(), format="png")
+    return result
 
 
 class Display(BaseModel):
@@ -71,10 +71,9 @@ class DisplayListResponse(BaseModel):
 
 @mcp.tool(description="List all available displays", tags={"computer"})
 def list_displays() -> DisplayListResponse:
-    with AskUiControllerClient(display=active_display) as agent_os:
-        return DisplayListResponse(
-            data=[Display(id=display.id) for display in agent_os.list_displays().data],
-        )
+    return DisplayListResponse(
+        data=[Display(id=display.id) for display in AGENT_OS.list_displays().data],
+    )
 
 
 @mcp.tool(
@@ -84,8 +83,7 @@ def list_displays() -> DisplayListResponse:
 def set_active_display(
     display_id: Annotated[int, Field(ge=1)],
 ) -> None:
-    global active_display
-    active_display = display_id
+    AGENT_OS.set_display(display_id)
 
 
 @mcp.tool(
@@ -93,4 +91,15 @@ def set_active_display(
     tags={"computer"},
 )
 def retrieve_active_display() -> Display:
-    return Display(id=active_display)
+    return Display(id=AGENT_OS.retrieve_active_display().id)
+
+
+@mcp.tool(
+    description="Connect to the computer",
+    tags={"computer"},
+)
+def computer_connect() -> str:
+    if AGENT_OS._session_info is not None:
+        return "Agent OS already connected"
+    AGENT_OS.connect()
+    return "Agent OS connected"

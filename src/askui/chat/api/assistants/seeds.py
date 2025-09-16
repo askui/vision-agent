@@ -19,6 +19,7 @@ COMPUTER_AGENT = Assistant(
         "list_displays",
         "set_active_display",
         "retrieve_active_display",
+        "computer_connect"
     ],
 )
 
