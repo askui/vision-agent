@@ -71,7 +71,13 @@ class Runner:
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
         }
+        is_custom_assistant = self._assistant.workspace_id is not None
+        custom_assistant_str = "custom " if is_custom_assistant else ""
         return [
+            BetaTextBlockParam(
+                type="text",
+                text=f'You are an {custom_assistant_str}AI agent called "{self._assistant.name}" that is part of Caesr AI (AI agent platform developed by the company AskUI).',
+            ),
             *(
                 [
                     BetaTextBlockParam(
