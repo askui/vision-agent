@@ -7,7 +7,6 @@ from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
 from askui.chat.api.assistants.models import Assistant
-from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
@@ -26,7 +25,7 @@ from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
-from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.tools import  ToolCollection
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,13 @@ class Runner:
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
         }
+        is_custom_assistant = self._assistant.workspace_id is not None
+        custom_assistant_str = "custom " if is_custom_assistant else ""
         return [
+            BetaTextBlockParam(
+                type="text",
+                text=f'You are an {custom_assistant_str}AI agent called "{self._assistant.name}" that is part of Caesr AI (AI agent platform developed by the company AskUI).',
+            ),
             *(
                 [
                     BetaTextBlockParam(
