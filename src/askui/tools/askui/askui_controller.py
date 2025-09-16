@@ -174,6 +174,9 @@ class AskUiControllerClient(AgentOs):
         This method starts the controller server, establishes a gRPC channel,
         creates a session, and sets up the initial display.
         """
+        if self._session_info is not None:
+            msg = "AskUI Controller already connected"
+            raise RuntimeError(msg)
         self._controller_server.start()
         self._channel = grpc.insecure_channel(
             "localhost:23000",

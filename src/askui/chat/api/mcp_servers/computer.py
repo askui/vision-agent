@@ -99,7 +99,5 @@ def retrieve_active_display() -> Display:
     tags={"computer"},
 )
 def computer_connect() -> str:
-    if AGENT_OS._session_info is not None:
-        return "Agent OS already connected"
     AGENT_OS.connect()
     return "Agent OS connected"
