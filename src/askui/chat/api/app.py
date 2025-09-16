@@ -15,6 +15,7 @@ from askui.chat.api.mcp_clients.dependencies import get_mcp_client_manager_manag
 from askui.chat.api.mcp_clients.manager import McpServerConnectionError
 from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 from askui.chat.api.mcp_configs.router import router as mcp_configs_router
+from askui.chat.api.mcp_servers.android import mcp as android_mcp
 from askui.chat.api.mcp_servers.computer import mcp as computer_mcp
 from askui.chat.api.mcp_servers.testing import mcp as testing_mcp
 from askui.chat.api.mcp_servers.utility import mcp as utility_mcp
@@ -64,6 +65,7 @@ app.include_router(v1_router)
 
 mcp = FastMCP.from_fastapi(app=app, name="AskUI Chat MCP")
 mcp.mount(computer_mcp)
+mcp.mount(android_mcp)
 mcp.mount(testing_mcp)
 mcp.mount(utility_mcp)
 mcp_app = mcp.http_app("/sse", transport="sse")
