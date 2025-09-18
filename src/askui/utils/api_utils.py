@@ -94,10 +94,12 @@ def _build_list_filter_fn(list_query: ListQuery) -> Callable[[Path], bool]:
     return lambda _: True
 
 
-def list_resource_paths(base_dir: Path, list_query: ListQuery) -> list[Path]:
+def list_resource_paths(
+    base_dir: Path, list_query: ListQuery, pattern: str = "*.json"
+) -> list[Path]:
     paths: list[Path] = []
     filter_fn = _build_list_filter_fn(list_query)
-    for f in base_dir.glob("*.json"):
+    for f in base_dir.glob(pattern):
         try:
             if filter_fn(f):
                 paths.append(f)
@@ -118,6 +120,7 @@ def list_resources(
     query: ListQuery,
     resource_type: Type[ResourceT],
     filter_fn: Callable[[ResourceT], bool] | None = None,
+    pattern: str = "*.json",
 ) -> ListResponse[ResourceT]:
     """
     List resources from a directory.
@@ -132,7 +135,7 @@ def list_resources(
     Returns:
         A list of resources.
     """
-    resource_paths = list_resource_paths(base_dir, query)
+    resource_paths = list_resource_paths(base_dir, query, pattern)
     resources: list[ResourceT] = []
     for resource_file in resource_paths:
         try:

@@ -157,7 +157,7 @@ class OpenRouterModel(GetModel):
                 response_json = json.loads(model_response)
             except json.JSONDecodeError:
                 error_msg = f"Expected JSON, but model {self._settings.model} returned: {model_response}"  # noqa: E501
-                logger.error(error_msg)
+                logger.exception(error_msg, exc_info=True)
                 raise ValueError(error_msg) from None
 
             validated_response = _response_schema.model_validate(

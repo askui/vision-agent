@@ -2,13 +2,24 @@
 # It is not intended for manual editing.
 
 [metadata]
-groups = ["default", "all", "android", "chat", "dev", "pynput", "test", "web"]
+groups = ["default", "all", "android", "chat", "dev", "pynput", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:8d52f2c4c18cacc1197a60c1e72602933fecfd465384d5c74083f535c093afae"
+content_hash = "sha256:9f37e762e6289c4df583809586d54ba8d3714b62b21bbb652caa1b25e9822794"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
+
+[[package]]
+name = "aiofiles"
+version = "24.1.0"
+requires_python = ">=3.8"
+summary = "File support for asyncio."
+groups = ["default"]
+files = [
+    {file = "aiofiles-24.1.0-py3-none-any.whl", hash = "sha256:b4ec55f4195e3eb5d7abd1bf7e061763e864dd4954231fb8539a0ef8bb8260e5"},
+    {file = "aiofiles-24.1.0.tar.gz", hash = "sha256:22a075c9e5a3810f0c2e48f3008c94d68c65d763b9b03857924c99e57355166c"},
+]
 
 [[package]]
 name = "annotated-types"
@@ -128,7 +139,7 @@ name = "backports-asyncio-runner"
 version = "1.2.0"
 requires_python = "<3.11,>=3.8"
 summary = "Backport of asyncio.Runner, a context manager that controls event loop life cycle."
-groups = ["test"]
+groups = ["dev"]
 marker = "python_version < \"3.11\""
 files = [
     {file = "backports_asyncio_runner-1.2.0-py3-none-any.whl", hash = "sha256:0da0a936a8aeb554eccb426dc55af3ba63bcdc69fa1a600b5bb305413a4477b5"},
@@ -375,7 +386,7 @@ name = "colorama"
 version = "0.4.6"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 summary = "Cross-platform colored terminal text."
-groups = ["default", "all", "chat", "dev", "test"]
+groups = ["default", "all", "chat", "dev"]
 marker = "sys_platform == \"win32\" or platform_system == \"Windows\""
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
@@ -402,7 +413,7 @@ name = "coverage"
 version = "7.8.0"
 requires_python = ">=3.9"
 summary = "Code coverage measurement for Python"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "coverage-7.8.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2931f66991175369859b5fd58529cd4b73582461877ecfd859b6549869287ffe"},
     {file = "coverage-7.8.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:52a523153c568d2c0ef8826f6cc23031dc86cffb8c6aeab92c4ff776e7951b28"},
@@ -465,7 +476,7 @@ version = "7.8.0"
 extras = ["toml"]
 requires_python = ">=3.9"
 summary = "Code coverage measurement for Python"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "coverage==7.8.0",
     "tomli; python_full_version <= \"3.11.0a6\"",
@@ -715,7 +726,7 @@ name = "exceptiongroup"
 version = "1.2.2"
 requires_python = ">=3.7"
 summary = "Backport of PEP 654 (exception groups)"
-groups = ["default", "all", "chat", "test"]
+groups = ["default", "all", "chat", "dev"]
 files = [
     {file = "exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b"},
     {file = "exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc"},
@@ -726,7 +737,7 @@ name = "execnet"
 version = "2.1.1"
 requires_python = ">=3.8"
 summary = "execnet: rapid multi-Python deployment"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "execnet-2.1.1-py3-none-any.whl", hash = "sha256:26dee51f1b80cebd6d0ca8e74dd8745419761d3bef34163928cbebbdc4749fdc"},
     {file = "execnet-2.1.1.tar.gz", hash = "sha256:5189b52c6121c24feae288166ab41b32549c7e2348652736540b9e6e7d4e72e3"},
@@ -886,7 +897,7 @@ name = "greenlet"
 version = "3.2.3"
 requires_python = ">=3.9"
 summary = "Lightweight in-process concurrent programming"
-groups = ["all", "chat", "test", "web"]
+groups = ["all", "chat", "dev", "web"]
 files = [
     {file = "greenlet-3.2.3-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:1afd685acd5597349ee6d7a88a8bec83ce13c106ac78c196ee9dde7c04fe87be"},
     {file = "greenlet-3.2.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:761917cac215c61e9dc7324b2606107b3b292a8349bdebb31503ab4de3f559ac"},
@@ -939,7 +950,7 @@ name = "grpc-stubs"
 version = "1.53.0.6"
 requires_python = ">=3.6"
 summary = "Mypy stubs for gRPC"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "grpcio",
 ]
@@ -953,7 +964,7 @@ name = "grpcio"
 version = "1.73.1"
 requires_python = ">=3.9"
 summary = "HTTP/2-based RPC framework"
-groups = ["default", "dev", "test"]
+groups = ["default", "dev"]
 files = [
     {file = "grpcio-1.73.1-cp310-cp310-linux_armv7l.whl", hash = "sha256:2d70f4ddd0a823436c2624640570ed6097e40935c9194482475fe8e3d9754d55"},
     {file = "grpcio-1.73.1-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:3841a8a5a66830261ab6a3c2a3dc539ed84e4ab019165f77b3eeb9f0ba621f26"},
@@ -1179,7 +1190,7 @@ name = "iniconfig"
 version = "2.1.0"
 requires_python = ">=3.8"
 summary = "brain-dead simple config-ini parsing"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "iniconfig-2.1.0-py3-none-any.whl", hash = "sha256:9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760"},
     {file = "iniconfig-2.1.0.tar.gz", hash = "sha256:3abbd2e30b36733fee78f9c7f7308f2d0050e88f0087fd25c2645f63c773e1c7"},
@@ -1702,7 +1713,7 @@ name = "mypy"
 version = "1.15.0"
 requires_python = ">=3.9"
 summary = "Optional static typing for Python"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "mypy-extensions>=1.0.0",
     "tomli>=1.1.0; python_version < \"3.11\"",
@@ -1742,7 +1753,7 @@ name = "mypy-extensions"
 version = "1.0.0"
 requires_python = ">=3.5"
 summary = "Type system extensions for programs checked with the mypy type checker."
-groups = ["dev", "test"]
+groups = ["dev"]
 files = [
     {file = "mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d"},
     {file = "mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782"},
@@ -1958,7 +1969,7 @@ name = "packaging"
 version = "24.2"
 requires_python = ">=3.8"
 summary = "Core utilities for Python packages"
-groups = ["default", "dev", "test"]
+groups = ["default", "dev"]
 files = [
     {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
     {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
@@ -2133,7 +2144,7 @@ name = "playwright"
 version = "1.53.0"
 requires_python = ">=3.9"
 summary = "A high-level API to automate web browsers"
-groups = ["all", "chat", "test", "web"]
+groups = ["all", "chat", "dev", "web"]
 dependencies = [
     "greenlet<4.0.0,>=3.1.1",
     "pyee<14,>=13",
@@ -2154,7 +2165,7 @@ name = "pluggy"
 version = "1.5.0"
 requires_python = ">=3.8"
 summary = "plugin and hook calling mechanisms for python"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
     {file = "pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1"},
@@ -2378,7 +2389,7 @@ name = "pyee"
 version = "13.0.0"
 requires_python = ">=3.8"
 summary = "A rough port of Node.js's EventEmitter to Python with a few tricks of its own"
-groups = ["all", "chat", "test", "web"]
+groups = ["all", "chat", "dev", "web"]
 dependencies = [
     "typing-extensions",
 ]
@@ -2551,7 +2562,7 @@ name = "pytest"
 version = "8.3.5"
 requires_python = ">=3.8"
 summary = "pytest: simple powerful testing with Python"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "colorama; sys_platform == \"win32\"",
     "exceptiongroup>=1.0.0rc8; python_version < \"3.11\"",
@@ -2570,7 +2581,7 @@ name = "pytest-asyncio"
 version = "1.1.0"
 requires_python = ">=3.9"
 summary = "Pytest support for asyncio"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "backports-asyncio-runner<2,>=1.1; python_version < \"3.11\"",
     "pytest<9,>=8.2",
@@ -2586,7 +2597,7 @@ name = "pytest-cov"
 version = "6.1.1"
 requires_python = ">=3.9"
 summary = "Pytest plugin for measuring coverage."
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "coverage[toml]>=7.5",
     "pytest>=4.6",
@@ -2601,7 +2612,7 @@ name = "pytest-mock"
 version = "3.14.0"
 requires_python = ">=3.8"
 summary = "Thin-wrapper around the mock package for easier use with pytest"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "pytest>=6.2.5",
 ]
@@ -2615,7 +2626,7 @@ name = "pytest-timeout"
 version = "2.4.0"
 requires_python = ">=3.7"
 summary = "pytest plugin to abort hanging tests"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "pytest>=7.0.0",
 ]
@@ -2629,7 +2640,7 @@ name = "pytest-xdist"
 version = "3.6.1"
 requires_python = ">=3.8"
 summary = "pytest xdist plugin for distributed testing, most importantly across multiple CPUs"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "execnet>=2.1",
     "pytest>=7.0.0",
@@ -2994,7 +3005,7 @@ name = "ruff"
 version = "0.11.3"
 requires_python = ">=3.7"
 summary = "An extremely fast Python linter and code formatter, written in Rust."
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "ruff-0.11.3-py3-none-linux_armv6l.whl", hash = "sha256:cb893a5eedff45071d52565300a20cd4ac088869e156b25e0971cb98c06f5dd7"},
     {file = "ruff-0.11.3-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:58edd48af0e201e2f494789de80f5b2f2b46c9a2991a12ea031254865d5f6aa3"},
@@ -3137,7 +3148,7 @@ name = "tomli"
 version = "2.2.1"
 requires_python = ">=3.8"
 summary = "A lil' TOML parser"
-groups = ["dev", "test"]
+groups = ["dev"]
 marker = "python_version <= \"3.11\""
 files = [
     {file = "tomli-2.2.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:678e4fa69e4575eb77d103de3df8a895e1591b48e740211bd1067378c69e8249"},
@@ -3204,11 +3215,22 @@ files = [
 ]
 
 [[package]]
+name = "types-aiofiles"
+version = "24.1.0.20250822"
+requires_python = ">=3.9"
+summary = "Typing stubs for aiofiles"
+groups = ["dev"]
+files = [
+    {file = "types_aiofiles-24.1.0.20250822-py3-none-any.whl", hash = "sha256:0ec8f8909e1a85a5a79aed0573af7901f53120dd2a29771dd0b3ef48e12328b0"},
+    {file = "types_aiofiles-24.1.0.20250822.tar.gz", hash = "sha256:9ab90d8e0c307fe97a7cf09338301e3f01a163e39f3b529ace82466355c84a7b"},
+]
+
+[[package]]
 name = "types-pillow"
 version = "10.2.0.20240822"
 requires_python = ">=3.8"
 summary = "Typing stubs for Pillow"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "types-Pillow-10.2.0.20240822.tar.gz", hash = "sha256:559fb52a2ef991c326e4a0d20accb3bb63a7ba8d40eb493e0ecb0310ba52f0d3"},
     {file = "types_Pillow-10.2.0.20240822-py3-none-any.whl", hash = "sha256:d9dab025aba07aeb12fd50a6799d4eac52a9603488eca09d7662543983f16c5d"},
@@ -3219,7 +3241,7 @@ name = "types-protobuf"
 version = "5.29.1.20250403"
 requires_python = ">=3.9"
 summary = "Typing stubs for protobuf"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "types_protobuf-5.29.1.20250403-py3-none-any.whl", hash = "sha256:c71de04106a2d54e5b2173d0a422058fae0ef2d058d70cf369fb797bf61ffa59"},
     {file = "types_protobuf-5.29.1.20250403.tar.gz", hash = "sha256:7ff44f15022119c9d7558ce16e78b2d485bf7040b4fadced4dd069bb5faf77a2"},
@@ -3230,7 +3252,7 @@ name = "types-pynput"
 version = "1.8.1.20250318"
 requires_python = ">=3.9"
 summary = "Typing stubs for pynput"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "types_pynput-1.8.1.20250318-py3-none-any.whl", hash = "sha256:0c1038aa1550941633114a2728ad85e392f67dfba970aebf755e369ab57aca70"},
     {file = "types_pynput-1.8.1.20250318.tar.gz", hash = "sha256:13d4df97843a7d1e7cddccbf9987aca7f0d463b214a8a35b4f53275d2c5a3576"},
@@ -3241,7 +3263,7 @@ name = "types-pyperclip"
 version = "1.9.0.20250218"
 requires_python = ">=3.9"
 summary = "Typing stubs for pyperclip"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "types_pyperclip-1.9.0.20250218-py3-none-any.whl", hash = "sha256:305afab7efb6fbcc77d9690bf660cf24baa06e30c2db7d12dd1f1602b2094a27"},
     {file = "types_pyperclip-1.9.0.20250218.tar.gz", hash = "sha256:8c03a16c17fae2b1e527e4b3505d711a77d9aa9961763026cc75fba4d32469e5"},
@@ -3252,7 +3274,7 @@ name = "types-python-dateutil"
 version = "2.9.0.20241206"
 requires_python = ">=3.8"
 summary = "Typing stubs for python-dateutil"
-groups = ["test"]
+groups = ["dev"]
 files = [
     {file = "types_python_dateutil-2.9.0.20241206-py3-none-any.whl", hash = "sha256:e248a4bc70a486d3e3ec84d0dc30eec3a5f979d6e7ee4123ae043eedbb987f53"},
     {file = "types_python_dateutil-2.9.0.20241206.tar.gz", hash = "sha256:18f493414c26ffba692a72369fea7a154c502646301ebfe3d56a04b3767284cb"},
@@ -3263,7 +3285,7 @@ name = "types-requests"
 version = "2.32.0.20250328"
 requires_python = ">=3.9"
 summary = "Typing stubs for requests"
-groups = ["test"]
+groups = ["dev"]
 dependencies = [
     "urllib3>=2",
 ]
@@ -3277,7 +3299,7 @@ name = "typing-extensions"
 version = "4.14.1"
 requires_python = ">=3.9"
 summary = "Backported and Experimental Type Hints for Python 3.9+"
-groups = ["default", "all", "chat", "dev", "test", "web"]
+groups = ["default", "all", "chat", "dev", "web"]
 files = [
     {file = "typing_extensions-4.14.1-py3-none-any.whl", hash = "sha256:d1e1e3b58374dc93031d6eda2420a48ea44a36c2b4766a4fdeb3710755731d76"},
     {file = "typing_extensions-4.14.1.tar.gz", hash = "sha256:38b39f4aeeab64884ce9f74c94263ef78f3c22467c8724005483154c26648d36"},
@@ -3313,7 +3335,7 @@ name = "urllib3"
 version = "2.3.0"
 requires_python = ">=3.9"
 summary = "HTTP library with thread-safe connection pooling, file post, and more."
-groups = ["default", "test"]
+groups = ["default", "dev"]
 files = [
     {file = "urllib3-2.3.0-py3-none-any.whl", hash = "sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df"},
     {file = "urllib3-2.3.0.tar.gz", hash = "sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d"},
