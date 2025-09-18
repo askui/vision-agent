@@ -7,35 +7,31 @@ from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
 from askui.chat.api.assistants.models import Assistant
-from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
-from askui.chat.api.models import RunId, ThreadId, WorkspaceId
-from askui.chat.api.runs.models import Run, RunError
-from askui.chat.api.runs.runner.events.done_events import DoneEvent
-from askui.chat.api.runs.runner.events.error_events import (
+from askui.chat.api.models import WorkspaceId
+from askui.chat.api.runs.events.done_events import DoneEvent
+from askui.chat.api.runs.events.error_events import (
     ErrorEvent,
     ErrorEventData,
     ErrorEventDataError,
 )
-from askui.chat.api.runs.runner.events.events import Events
-from askui.chat.api.runs.runner.events.message_events import MessageEvent
-from askui.chat.api.runs.runner.events.run_events import RunEvent
+from askui.chat.api.runs.events.events import Event
+from askui.chat.api.runs.events.message_events import MessageEvent
+from askui.chat.api.runs.events.run_events import RunEvent
+from askui.chat.api.runs.events.service import RetrieveRunService
+from askui.chat.api.runs.models import Run, RunError
 from askui.custom_agent import CustomAgent
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
-from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.tools import ToolCollection
 
 logger = logging.getLogger(__name__)
 
 
-class RunnerRunService(ABC):
-    @abstractmethod
-    def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
-        raise NotImplementedError
-
+class RunnerRunService(RetrieveRunService, ABC):
     @abstractmethod
     def save(self, run: Run, new: bool = False) -> None:
         raise NotImplementedError
@@ -103,7 +99,7 @@ class Runner:
 
     async def _run_agent(
         self,
-        send_stream: ObjectStream[Events],
+        send_stream: ObjectStream[Event],
     ) -> None:
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
@@ -167,7 +163,7 @@ class Runner:
 
     async def run(
         self,
-        send_stream: ObjectStream[Events],
+        send_stream: ObjectStream[Event],
     ) -> None:
         try:
             self._mark_run_as_started()

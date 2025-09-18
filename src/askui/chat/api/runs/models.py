@@ -1,11 +1,13 @@
+from dataclasses import dataclass
 from datetime import timedelta
-from typing import Literal
+from typing import Annotated, Literal
 
+from fastapi import Query
 from pydantic import BaseModel, computed_field
 
 from askui.chat.api.models import AssistantId, RunId, ThreadId
 from askui.chat.api.threads.models import ThreadCreateParams
-from askui.utils.api_utils import Resource
+from askui.utils.api_utils import ListQuery, Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
@@ -101,3 +103,9 @@ class Run(RunBase, Resource):
     def fail(self, error: RunError) -> None:
         self.failed_at = now()
         self.last_error = error
+
+
+@dataclass(kw_only=True)
+class RunListQuery(ListQuery):
+    thread: Annotated[ThreadId | None, Query()] = None
+    status: Annotated[list[RunStatus] | None, Query()] = None

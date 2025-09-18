@@ -63,7 +63,7 @@ def _convert_to_content(
                 case "image":
                     media_type = block.mimeType  # type: ignore[union-attr]
                     if media_type not in IMAGE_MEDIA_TYPES_SUPPORTED:
-                        logger.error(f"Unsupported image media type: {media_type}")
+                        logger.warning(f"Unsupported image media type: {media_type}")
                         continue
                     _result.append(
                         ImageBlockParam(
@@ -74,7 +74,7 @@ def _convert_to_content(
                         )
                     )
                 case _:
-                    logger.error(f"Unsupported block type: {block.type}")
+                    logger.warning(f"Unsupported block type: {block.type}")
         return _result
 
     if isinstance(result, str):
@@ -336,7 +336,7 @@ class ToolCollection:
             list_mcp_tools_sync = syncify(self._list_mcp_tools, raise_sync_error=False)
             tools_list = list_mcp_tools_sync(self._mcp_client)
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Failed to list MCP tools: {e}", exc_info=True)
+            logger.exception(f"Failed to list MCP tools: {e}", exc_info=True)
             return {}
         else:
             return {tool.name: tool for tool in tools_list}
@@ -355,7 +355,9 @@ class ToolCollection:
         except AgentException:
             raise
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Tool {tool_use_block_param.name} failed: {e}", exc_info=True)
+            logger.warning(
+                f"Tool {tool_use_block_param.name} failed: {e}", exc_info=True
+            )
             return ToolResultBlockParam(
                 content=f"Tool {tool_use_block_param.name} failed: {e}",
                 is_error=True,
@@ -392,7 +394,7 @@ class ToolCollection:
                 tool_use_id=tool_use_block_param.id,
             )
         except Exception as e:  # noqa: BLE001
-            logger.error(
+            logger.warning(
                 f"MCP tool {tool_use_block_param.name} failed: {e}", exc_info=True
             )
             return ToolResultBlockParam(
