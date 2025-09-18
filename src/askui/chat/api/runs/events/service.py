@@ -4,10 +4,12 @@ import types
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator, Type
+from typing import TYPE_CHECKING, AsyncIterator, Type
 
 import aiofiles
-from aiofiles.threadpool.text import AsyncTextIOWrapper
+
+if TYPE_CHECKING:
+    from aiofiles.threadpool.text import AsyncTextIOWrapper
 
 from askui.chat.api.models import RunId, ThreadId
 from askui.chat.api.runs.events.done_events import DoneEvent
@@ -101,7 +103,7 @@ class EventWriter:
 
     def __init__(self, manager: EventFileManager):
         self._manager = manager
-        self._file: AsyncTextIOWrapper | None = None
+        self._file: "AsyncTextIOWrapper | None" = None
 
     async def write_event(self, event: Event) -> None:
         """Write an event to the file."""
