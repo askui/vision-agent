@@ -9,8 +9,11 @@ from askui.chat.api.mcp_clients.dependencies import McpClientManagerManagerDep
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.messages.dependencies import ChatHistoryManagerDep
+from askui.chat.api.runs.models import RunListQuery
 
 from .service import RunService
+
+RunListQueryDep = Depends(RunListQuery)
 
 
 def get_runs_service(
