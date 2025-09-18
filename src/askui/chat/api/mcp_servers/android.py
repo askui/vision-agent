@@ -1,5 +1,6 @@
 from fastmcp import FastMCP
 
+from askui.chat.api.mcp_servers.android_setup_doc import ANDROID_SETUP_GUIDE
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
@@ -43,3 +44,12 @@ TOOLS = [
 
 for tool in TOOLS:
     mcp.add_tool(tool.to_mcp_tool({"android"}))
+
+
+@mcp.tool(
+    description="""Provides step-by-step instructions for setting up Android emulators or real devices.
+                Use this tool when no device is connected or the ADB server cannot detect any devices.""",
+    tags={"android"},
+)
+def android_setup_helper() -> str:
+    return ANDROID_SETUP_GUIDE

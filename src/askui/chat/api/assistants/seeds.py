@@ -43,6 +43,7 @@ ANDROID_AGENT = Assistant(
         "android_get_current_connected_device_infos_tool",
         "android_select_device_by_serial_number_tool",
         "android_select_display_by_index_tool",
+        "android_setup_helper",
     ],
 )
 
