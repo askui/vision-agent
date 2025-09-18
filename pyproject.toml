@@ -46,6 +46,7 @@ path = "src/askui/__init__.py"
 
 
 
+
 [tool.pdm]
 distribution = true
 
@@ -74,7 +75,7 @@ typecheck = "mypy"
 "json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
 [dependency-groups]
-test = [
+dev = [
     "pytest>=8.3.4",
     "ruff>=0.9.5",
     "pytest-mock>=3.14.0",
@@ -91,10 +92,9 @@ test = [
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
     "pytest-asyncio>=1.1.0",
-]
-dev = [
     "datamodel-code-generator>=0.31.2",
     "grpcio-tools>=1.73.1",
+    "types-aiofiles>=24.1.0.20250822",
 ]
 
 
