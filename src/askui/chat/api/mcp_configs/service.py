@@ -8,7 +8,6 @@ from askui.chat.api.mcp_configs.models import (
     McpConfigId,
     McpConfigModifyParams,
 )
-from askui.chat.api.mcp_configs.seeds import SEEDS
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
@@ -26,9 +25,10 @@ from askui.utils.api_utils import (
 class McpConfigService:
     """Service for managing McpConfig resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(self, base_dir: Path, seeds: list[McpConfig]) -> None:
         self._base_dir = base_dir
         self._mcp_configs_dir = base_dir / "mcp_configs"
+        self._seeds = seeds
 
     def _get_mcp_config_path(
         self, mcp_config_id: McpConfigId, new: bool = False
@@ -158,7 +158,7 @@ class McpConfigService:
                 self.delete(None, mcp_config.id, force=True)
             if not list_response.has_more:
                 break
-        for seed in SEEDS:
+        for seed in self._seeds:
             try:
                 self._save(seed, new=True)
             except ConflictError:  # noqa: PERF203

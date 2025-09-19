@@ -7,7 +7,7 @@ from askui.chat.api.settings import Settings
 
 def get_mcp_config_service(settings: Settings = SettingsDep) -> McpConfigService:
     """Get McpConfigService instance."""
-    return McpConfigService(settings.data_dir)
+    return McpConfigService(settings.data_dir, settings.mcp_configs)
 
 
 McpConfigServiceDep = Depends(get_mcp_config_service)
