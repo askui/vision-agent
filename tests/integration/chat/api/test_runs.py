@@ -68,7 +68,7 @@ class TestRunsAPI:
         try:
             with TestClient(app) as client:
                 response = client.get(
-                    "/v1/threads/thread_test123/runs", headers=test_headers
+                    "/v1/runs?thread=thread_test123", headers=test_headers
                 )
 
                 assert response.status_code == status.HTTP_200_OK
@@ -137,7 +137,7 @@ class TestRunsAPI:
         try:
             with TestClient(app) as client:
                 response = client.get(
-                    "/v1/threads/thread_test123/runs", headers=test_headers
+                    "/v1/runs?thread=thread_test123", headers=test_headers
                 )
 
                 assert response.status_code == status.HTTP_200_OK
@@ -207,7 +207,7 @@ class TestRunsAPI:
         try:
             with TestClient(app) as client:
                 response = client.get(
-                    "/v1/threads/thread_test123/runs?limit=3", headers=test_headers
+                    "/v1/runs?thread=thread_test123&limit=3", headers=test_headers
                 )
 
                 assert response.status_code == status.HTTP_200_OK

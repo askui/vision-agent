@@ -38,7 +38,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -84,7 +84,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -108,7 +108,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -139,7 +139,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -185,7 +185,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -240,7 +240,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -288,7 +288,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -345,7 +345,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -396,7 +396,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -439,7 +439,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -496,7 +496,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -553,7 +553,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
@@ -599,7 +599,7 @@ class TestMcpConfigsAPI:
         from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 
         def override_mcp_config_service() -> McpConfigService:
-            return McpConfigService(workspace_path)
+            return McpConfigService(workspace_path, seeds=[])
 
         app.dependency_overrides[get_mcp_config_service] = override_mcp_config_service
 
