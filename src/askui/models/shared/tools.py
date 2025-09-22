@@ -115,7 +115,7 @@ def _convert_to_mcp_content(
 
     if isinstance(result, Image.Image):
         src = ImageSource(result)
-        return FastMcpImage(data=src.to_bytes(), format="png")
+        return FastMcpImage(data=src.to_bytes(), format="png").to_image_content()
 
     return result
 
