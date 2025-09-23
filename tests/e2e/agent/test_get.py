@@ -34,7 +34,6 @@ class BrowserContextResponse(ResponseSchemaBase):
         ModelName.ASKUI,
         ModelName.ASKUI__GEMINI__2_5__FLASH,
         ModelName.ASKUI__GEMINI__2_5__PRO,
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         ModelName.CLAUDE__SONNET__4__20250514,
     ],
 )
@@ -58,7 +57,7 @@ def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
         vision_agent.get(
             "What is in the PDF?",
             source=path_fixtures_dummy_pdf,
-            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            model=ModelName.CLAUDE__SONNET__4__20250514,
         )
 
 
@@ -132,7 +131,7 @@ def test_get_with_xlsx_with_non_gemini_model_raises_not_implemented(
         vision_agent.get(
             "What is in the xlsx?",
             source=path_fixtures_dummy_excel,
-            model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
+            model=ModelName.CLAUDE__SONNET__4__20250514,
         )
 
 

@@ -5,7 +5,6 @@ from typing_extensions import override
 
 from askui.agent import VisionAgent
 from askui.models.shared.settings import (
-    COMPUTER_USE_20241022_BETA_FLAG,
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
     MessageSettings,
@@ -27,14 +26,6 @@ from .models import ModelComposition
 from .models.models import ModelChoice, ModelName, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
-
-_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=WEB_AGENT_SYSTEM_PROMPT,
-        betas=[COMPUTER_USE_20241022_BETA_FLAG],
-    ),
-)
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
@@ -82,8 +73,6 @@ class WebVisionAgent(VisionAgent):
     @override
     def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
         match model_choice:
-            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
             case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:

@@ -16,7 +16,6 @@ from askui.models.exceptions import ElementNotFoundError
     "model",
     [
         ModelName.ASKUI,
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
         ModelName.CLAUDE__SONNET__4__20250514,
     ],
 )
@@ -154,7 +153,6 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using image locator."""
         if model in [
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -174,7 +172,6 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
         if model in [
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -201,7 +198,6 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
         if model in [
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -219,7 +215,6 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using an AI element locator."""
         if model in [
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -236,7 +231,6 @@ class TestVisionAgentLocate:
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
         if model in [
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")

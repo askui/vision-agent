@@ -8,14 +8,13 @@ from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import (
-    COMPUTER_USE_20241022_BETA_FLAG,
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
 from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
-from askui.tools.computer import Computer20241022Tool, Computer20250124Tool
+from askui.tools.computer import Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.list_displays_tool import ListDisplaysTool
 from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
@@ -28,14 +27,6 @@ from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
-
-_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=COMPUTER_AGENT_SYSTEM_PROMPT,
-        betas=[COMPUTER_USE_20241022_BETA_FLAG],
-    ),
-)
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
@@ -382,8 +373,6 @@ class VisionAgent(AgentBase):
     @override
     def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
         match model_choice:
-            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
             case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:
@@ -392,8 +381,6 @@ class VisionAgent(AgentBase):
     @override
     def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:
         match model_choice:
-            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return self._tools + [Computer20241022Tool(agent_os=self.tools.os)]
             case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
             case _:

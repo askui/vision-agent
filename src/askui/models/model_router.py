@@ -120,7 +120,7 @@ def initialize_default_model_registry(  # noqa: C901
             raise ValueError(error_msg)  # noqa: B904
 
     return {
-        ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: anthropic_facade,
+        ModelName.CLAUDE__SONNET__4__20250514: anthropic_facade,
         ModelName.ASKUI: askui_facade,
         ModelName.ASKUI__GEMINI__2_5__FLASH: askui_google_genai_api,
         ModelName.ASKUI__GEMINI__2_5__PRO: askui_google_genai_api,
