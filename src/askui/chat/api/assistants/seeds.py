@@ -19,6 +19,10 @@ COMPUTER_AGENT = Assistant(
         "list_displays",
         "set_active_display",
         "retrieve_active_display",
+        "create_workflow_v1_workflows_post",
+        "list_workflows_v1_workflows_get",
+        "modify_workflow_v1_workflows",
+        "create_workflow_execution_v1_workflow_executions",
     ],
 )
 
