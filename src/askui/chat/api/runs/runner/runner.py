@@ -1,6 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 
 from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
@@ -27,6 +28,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
+from askui.prompts.system import caesr_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -66,13 +68,13 @@ class Runner:
             "thread_id": str(self._run.thread_id),
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
+            "continued_by_user_at": datetime.now(timezone.utc).strftime(
+                "%A, %B %d, %Y %H:%M:%S %z"
+            ),
         }
-        is_custom_assistant = self._assistant.workspace_id is not None
-        custom_assistant_str = "custom " if is_custom_assistant else ""
         return [
             BetaTextBlockParam(
-                type="text",
-                text=f'You are an {custom_assistant_str}AI agent called "{self._assistant.name}" that is part of Caesr AI (AI agent platform developed by the company AskUI).',
+                type="text", text=caesr_system_prompt(self._assistant.name)
             ),
             *(
                 [
