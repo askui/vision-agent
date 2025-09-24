@@ -123,15 +123,8 @@ class AssistantService:
 
     def seed(self) -> None:
         """Seed the assistant service with default assistants."""
-        while True:
-            list_response = self.list_(
-                None, ListQuery(limit=LIST_LIMIT_MAX, order="asc")
-            )
-            for assistant in list_response.data:
-                self.delete(None, assistant.id, force=True)
-            if not list_response.has_more:
-                break
         for seed in SEEDS:
+            self.delete(None, seed.id, force=True)
             try:
                 self._save(seed, new=True)
             except ConflictError:  # noqa: PERF203
