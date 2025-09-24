@@ -100,7 +100,7 @@ class ImageBlockParamSourceTranslator:
     def __init__(self, file_service: FileService) -> None:
         self._file_service = file_service
 
-    async def from_anthropic(
+    async def from_anthropic(  # noqa: RET503
         self, source: UrlImageSourceParam | Base64ImageSourceParam
     ) -> UrlImageSourceParam | Base64ImageSourceParam | FileImageSourceParam:
         if source.type == "url":
@@ -129,7 +129,7 @@ class ImageBlockParamSourceTranslator:
             # else:
             #     return FileImageSourceParam(id=file.id, type="file")
 
-    async def to_anthropic(
+    async def to_anthropic(  # noqa: RET503
         self,
         source: UrlImageSourceParam | Base64ImageSourceParam | FileImageSourceParam,
     ) -> UrlImageSourceParam | Base64ImageSourceParam:
