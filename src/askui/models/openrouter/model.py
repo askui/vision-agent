@@ -122,10 +122,10 @@ class OpenRouterModel(GetModel):
                 },
             }
 
-        chat_completion = self._client.chat.completions.create(
+        chat_completion = self._client.chat.completions.create(  # type: ignore[misc]
             model=self._settings.model,
             extra_body=extra_body,
-            response_format=response_format,
+            response_format=response_format,  # type: ignore[arg-type]
             messages=[
                 {
                     "role": "user",
@@ -150,7 +150,7 @@ class OpenRouterModel(GetModel):
             presence_penalty=self._settings.chat_completions_create_settings.presence_penalty,
         )
 
-        model_response = chat_completion.choices[0].message.content
+        model_response = chat_completion.choices[0].message.content  # type: ignore[union-attr]
 
         if _response_schema is not None and model_response is not None:
             try:

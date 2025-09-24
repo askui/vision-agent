@@ -59,9 +59,9 @@ def _convert_to_content(
         for block in result.content:
             match block.type:
                 case "text":
-                    _result.append(TextBlockParam(text=block.text))  # type: ignore[union-attr]
+                    _result.append(TextBlockParam(text=block.text))
                 case "image":
-                    media_type = block.mimeType  # type: ignore[union-attr]
+                    media_type = block.mimeType
                     if media_type not in IMAGE_MEDIA_TYPES_SUPPORTED:
                         logger.warning(f"Unsupported image media type: {media_type}")
                         continue
@@ -69,7 +69,7 @@ def _convert_to_content(
                         ImageBlockParam(
                             source=Base64ImageSourceParam(
                                 media_type=media_type,
-                                data=block.data,  # type: ignore[union-attr]
+                                data=block.data,
                             )
                         )
                     )

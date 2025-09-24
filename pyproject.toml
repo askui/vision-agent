@@ -31,6 +31,7 @@ dependencies = [
     "asyncer==0.0.8",
     "bson>=0.5.10",
     "aiofiles>=24.1.0",
+    "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
 ]
 requires-python = ">=3.10"
 readme = "README.md"
