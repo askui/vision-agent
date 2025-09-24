@@ -143,7 +143,9 @@ class Tool(BaseModel, ABC):
             input_schema=self.input_schema,
         )
 
-    def to_mcp_tool(self, tags: set[str]) -> FastMcpTool:
+    def to_mcp_tool(
+        self, tags: set[str], name_prefix: str | None = None
+    ) -> FastMcpTool:
         """Convert the AskUI tool to an MCP tool."""
         tool_call = self.__call__
 
@@ -151,9 +153,13 @@ class Tool(BaseModel, ABC):
         def wrapped_tool_call(*args: Any, **kwargs: Any) -> Any:
             return _convert_to_mcp_content(tool_call(*args, **kwargs))
 
+        tool_name = self.name
+        if name_prefix is not None:
+            tool_name = f"{name_prefix}{tool_name}"
+
         return FastMcpTool.from_function(
             wrapped_tool_call,
-            name=self.name,
+            name=tool_name,
             description=self.description,
             tags=tags,
         )
