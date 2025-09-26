@@ -9,7 +9,6 @@ from anthropic.types.beta import (
 )
 from pydantic import BaseModel, ConfigDict, Field
 
-COMPUTER_USE_20241022_BETA_FLAG = "computer-use-2024-10-22"
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 
 
@@ -19,7 +18,7 @@ class MessageSettings(BaseModel):
     betas: list[AnthropicBetaParam] | NotGiven = NOT_GIVEN
     max_tokens: int = 4096
     model: (
-        Literal["anthropic-claude-3-5-sonnet-20241022", "claude-sonnet-4-20250514"]  # noqa: PYI051
+        Literal["claude-sonnet-4-20250514"]  # noqa: PYI051
         | str
         | NotGiven
     ) = NOT_GIVEN

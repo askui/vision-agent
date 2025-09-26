@@ -20,11 +20,7 @@ from askui.models.askui.model_router import AskUiModelRouter
 from askui.models.models import ModelName
 from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.settings import (
-    COMPUTER_USE_20250124_BETA_FLAG,
-    ActSettings,
-    MessageSettings,
-)
+from askui.models.shared.settings import MessageSettings
 from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 
@@ -53,9 +49,6 @@ def simple_html_reporter() -> Reporter:
 def askui_facade(
     path_fixtures: pathlib.Path,
 ) -> ModelFacade:
-    settings = ActSettings(
-        messages=MessageSettings(betas=[COMPUTER_USE_20250124_BETA_FLAG])
-    )
     reporter = SimpleHtmlReporter()
     askui_inference_api = AskUiInferenceApi(
         locator_serializer=AskUiLocatorSerializer(
@@ -65,7 +58,7 @@ def askui_facade(
             reporter=reporter,
         ),
         settings=AskUiInferenceApiSettings(
-            messages=settings.messages,
+            messages=MessageSettings(),
         ),
     )
     agent = Agent(

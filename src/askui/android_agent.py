@@ -35,14 +35,6 @@ from .models.models import ModelChoice, ModelName, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 
-_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=ANDROID_AGENT_SYSTEM_PROMPT,
-        betas=[],
-    ),
-)
-
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
         model=ModelName.CLAUDE__SONNET__4__20250514,
@@ -324,8 +316,6 @@ class AndroidVisionAgent(AgentBase):
     @override
     def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
         match model_choice:
-            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
             case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:

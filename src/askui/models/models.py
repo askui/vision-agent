@@ -26,7 +26,6 @@ class ModelName:
     elements.
     """
 
-    ANTHROPIC__CLAUDE__3_5__SONNET__20241022 = "anthropic-claude-3-5-sonnet-20241022"
     ASKUI = "askui"
     ASKUI__GEMINI__2_5__FLASH = "askui/gemini-2.5-flash"
     ASKUI__GEMINI__2_5__PRO = "askui/gemini-2.5-pro"
