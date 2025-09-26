@@ -29,11 +29,12 @@ from askui.tools.android.tools import (
 )
 from askui.tools.exception_tool import ExceptionTool
 
-from .logger import logger
 from .models import ModelComposition
 from .models.models import ModelChoice, ModelName, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
+
+logger = logging.getLogger(__name__)
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
@@ -50,7 +51,6 @@ class AndroidVisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level: int | str = logging.INFO,
         reporters: list[Reporter] | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
@@ -60,7 +60,6 @@ class AndroidVisionAgent(AgentBase):
         reporter = CompositeReporter(reporters=reporters)
         act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
         super().__init__(
-            log_level=log_level,
             reporter=reporter,
             model=model,
             retry=retry,
@@ -128,7 +127,10 @@ class AndroidVisionAgent(AgentBase):
         else:
             msg += f" on {target}"
             self._reporter.add_message("User", msg)
-            logger.debug("VisionAgent received instruction to click on %s", target)
+            logger.debug(
+                "VisionAgent received instruction to click",
+                extra={"target": target},
+            )
             point = self._locate(locator=target, model=model)[0]
             self.os.tap(point[0], point[1])
 
@@ -156,7 +158,7 @@ class AndroidVisionAgent(AgentBase):
             ```
         """
         self._reporter.add_message("User", f'type: "{text}"')
-        logger.debug("VisionAgent received instruction to type '%s'", text)
+        logger.debug("VisionAgent received instruction to type", extra={"text": text})
         self.os.type(text)
 
     @telemetry.record_call()

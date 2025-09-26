@@ -1,5 +1,6 @@
 import base64
 import json as json_lib
+import logging
 from functools import cached_property
 from typing import Any, Type, cast
 
@@ -26,7 +27,6 @@ from typing_extensions import Self, override
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
-from askui.logger import logger
 from askui.models.askui.retry_utils import (
     RETRYABLE_HTTP_STATUS_CODES,
     wait_for_retry_after_header,
@@ -44,6 +44,8 @@ from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
 
 from ..types.response_schemas import to_response_schema
+
+logger = logging.getLogger(__name__)
 
 
 class AskUiInferenceApiSettings(BaseSettings):
@@ -174,7 +176,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             ):
                 raise ValueError(e.response.text) from e
             if _is_retryable_error(e):
-                logger.debug(e)
+                logger.debug("Retryable error", extra={"error": str(e)})
             raise
         else:
             return response
@@ -191,7 +193,10 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             if isinstance(locator, Locator)
             else AskUiSerializedLocator(customElements=[], instruction=locator)
         )
-        logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
+        logger.debug(
+            "Locator serialized",
+            extra={"serialized_locator": json_lib.dumps(serialized_locator)},
+        )
         json: dict[str, Any] = {
             "image": image.to_data_url(),
             "instruction": f"get element {serialized_locator['instruction']}",
@@ -201,7 +206,8 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         if isinstance(model_choice, ModelComposition):
             json["modelComposition"] = model_choice.model_dump(by_alias=True)
             logger.debug(
-                f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}"
+                "Model composition",
+                extra={"modelComposition": json_lib.dumps(json["modelComposition"])},
             )
         response = self._post(path="/inference", json=json)
         content = response.json()
@@ -241,7 +247,10 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         _response_schema = to_response_schema(response_schema)
         json_schema = _response_schema.model_json_schema()
         json["config"] = {"json_schema": json_schema}
-        logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
+        logger.debug(
+            "Json schema used for response",
+            extra={"json_schema": json_lib.dumps(json["config"]["json_schema"])},
+        )
         response = self._post(path="/vqa/inference", json=json)
         content = response.json()
         data = content["data"]["response"]

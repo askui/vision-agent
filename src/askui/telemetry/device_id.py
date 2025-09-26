@@ -1,6 +1,8 @@
+import logging
+
 import machineid
 
-from askui.logger import logger
+logger = logging.getLogger(__name__)
 
 _HASH_KEY = "askui"
 

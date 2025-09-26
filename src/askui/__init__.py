@@ -2,6 +2,7 @@
 
 __version__ = "0.19.1"
 
+import logging
 import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
@@ -58,6 +59,8 @@ try:
     _WEB_AGENTS_AVAILABLE = True
 except ImportError:
     _WEB_AGENTS_AVAILABLE = False
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     "ActModel",

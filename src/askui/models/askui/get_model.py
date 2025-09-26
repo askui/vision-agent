@@ -1,15 +1,17 @@
+import logging
 from typing import Type
 
 from google.genai.errors import ClientError
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.source_utils import Source
+
+logger = logging.getLogger(__name__)
 
 
 class AskUiGetModel(GetModel):
@@ -60,9 +62,11 @@ class AskUiGetModel(GetModel):
             if isinstance(e, ClientError) and e.code != 400:
                 raise
             logger.debug(
-                f"Google GenAI API failed with error that may not occur with other "
-                f"models/apis: {e}"
-                ". Falling back to Inference API..."
+                (
+                    "Google GenAI API failed with exception that may not occur with "
+                    "other models/apis. Falling back to Inference API..."
+                ),
+                extra={"error": str(e)},
             )
             return self._inference_api.get(
                 query=query,

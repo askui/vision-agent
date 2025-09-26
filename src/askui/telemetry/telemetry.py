@@ -1,4 +1,5 @@
 import inspect
+import logging
 import os
 import platform
 import time
@@ -10,7 +11,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 from typing_extensions import ParamSpec, TypeVar
 
-from askui.logger import logger
 from askui.telemetry.anonymous_id import get_anonymous_id
 from askui.telemetry.context import (
     AppContext,
@@ -26,6 +26,8 @@ from askui.telemetry.user_identification import (
     UserIdentification,
     UserIdentificationSettings,
 )
+
+logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -192,7 +194,10 @@ class Telemetry:
                 self._call_stack.push_call()
                 module = func.__module__
                 fn_name = func.__qualname__
-                logger.debug(f"Record call\tfn_name={fn_name} module={module}")
+                logger.debug(
+                    "Record call",
+                    extra={"fn_name": fn_name, "module_": module},
+                )
                 processed_args: tuple[Any, ...] = tuple(
                     arg if param_names_sorted[i] not in _exclude else self._EXCLUDE_MASK
                     for i, arg in enumerate(args)
