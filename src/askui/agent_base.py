@@ -1,3 +1,4 @@
+import logging
 import time
 import types
 from abc import ABC
@@ -19,7 +20,6 @@ from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
-from .logger import configure_logging, logger
 from .models import ModelComposition
 from .models.exceptions import ElementNotFoundError
 from .models.model_router import ModelRouter, initialize_default_model_registry
@@ -35,11 +35,12 @@ from .models.types.response_schemas import ResponseSchema
 from .reporting import Reporter
 from .retry import ConfigurableRetry, Retry
 
+logger = logging.getLogger(__name__)
+
 
 class AgentBase(ABC):  # noqa: B024
     def __init__(
         self,
-        log_level: int | str,
         reporter: Reporter,
         model: ModelChoice | ModelComposition | str | None,
         retry: Retry | None,
@@ -48,7 +49,6 @@ class AgentBase(ABC):  # noqa: B024
         agent_os: AgentOs | AndroidAgentOs,
     ) -> None:
         load_dotenv()
-        configure_logging(level=log_level)
         self._reporter = reporter
         self._agent_os = agent_os
 

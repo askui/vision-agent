@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import subprocess
 import sys
@@ -12,7 +13,6 @@ from PIL import Image
 from typing_extensions import Self, override
 
 from askui.container import telemetry
-from askui.logger import logger
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.tools.agent_os import (
     AgentOs,
@@ -49,10 +49,9 @@ from askui.tools.askui.command_helpers import (
 from askui.utils.image_utils import draw_point_on_image
 
 from ..utils import process_exists, wait_for_port
-from .exceptions import (
-    AskUiControllerOperationFailedError,
-    AskUiControllerOperationTimeoutError,
-)
+from .exceptions import AskUiControllerOperationTimeoutError
+
+logger = logging.getLogger(__name__)
 
 
 class AskUiControllerServer:
@@ -95,8 +94,8 @@ class AskUiControllerServer:
         ):
             self.clean_up()
         logger.debug(
-            "Starting AskUI Remote Device Controller: %s",
-            self._settings.controller_path,
+            "Starting AskUI Remote Device Controller",
+            extra={"path": str(self._settings.controller_path)},
         )
         self._start_process(
             self._settings.controller_path, self._settings.controller_args
@@ -125,12 +124,8 @@ class AskUiControllerServer:
                     self.clean_up()
             else:
                 self._process.terminate()
-        except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
-            error = AskUiControllerOperationFailedError(
-                "stop AskUI Remote Device Controller",
-                e,
-            )
-            logger.error(str(error))
+        except Exception:  # noqa: BLE001 - We want to catch all other exceptions here
+            logger.exception("Controller error")
         finally:
             self._process = None
 

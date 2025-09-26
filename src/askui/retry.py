@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import Annotated, Callable, Literal, Tuple, Type, TypeVar
 
@@ -12,7 +13,7 @@ from tenacity import (
     wait_incrementing,
 )
 
-from askui.logger import logger
+logger = logging.getLogger(__name__)
 
 R = TypeVar("R")
 

@@ -1,4 +1,5 @@
 import ctypes
+import logging
 import platform
 import queue
 import shlex
@@ -16,7 +17,6 @@ from pynput.mouse import Controller as MouseController
 from pynput.mouse import Listener as MouseListener
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.reporting import CompositeReporter, Reporter
 from askui.tools.agent_os import (
     AgentOs,
@@ -28,12 +28,14 @@ from askui.tools.agent_os import (
 )
 from askui.utils.image_utils import draw_point_on_image
 
+logger = logging.getLogger(__name__)
+
 if platform.system() == "Windows":
     try:
         PROCESS_PER_MONITOR_DPI_AWARE = 2
         ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)  # type: ignore[attr-defined]
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Could not set DPI awareness: {e}")
+    except Exception:  # noqa: BLE001
+        logger.exception("Could not set DPI awareness")
 
 if TYPE_CHECKING:
     from mss.screenshot import ScreenShot

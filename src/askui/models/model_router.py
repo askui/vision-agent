@@ -1,4 +1,5 @@
 import functools
+import logging
 from typing import Type, overload
 
 from typing_extensions import Literal
@@ -34,9 +35,10 @@ from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
 
-from ..logger import logger
 from .askui.inference_api import AskUiInferenceApi
 from .ui_tars_ep.ui_tars_api import UiTarsApiHandler, UiTarsApiHandlerSettings
+
+logger = logging.getLogger(__name__)
 
 
 def initialize_default_model_registry(  # noqa: C901
@@ -188,7 +190,10 @@ class ModelRouter:
         settings: ActSettings | None = None,
     ) -> None:
         m = self._get_model(model_choice, "act")
-        logger.debug(f'Routing "act" to model "{model_choice}"')
+        logger.debug(
+            'Routing "act" to model',
+            extra={"model_choice": model_choice},
+        )
         return m.act(
             messages=messages,
             model_choice=model_choice,
@@ -205,7 +210,10 @@ class ModelRouter:
         response_schema: Type[ResponseSchema] | None = None,
     ) -> ResponseSchema | str:
         m = self._get_model(model_choice, "get")
-        logger.debug(f'Routing "get" to model "{model_choice}"')
+        logger.debug(
+            'Routing "get" to model',
+            extra={"model_choice": model_choice},
+        )
         return m.get(query, source, response_schema, model_choice)
 
     def locate(
@@ -223,5 +231,8 @@ class ModelRouter:
             model_choice if isinstance(model_choice, ModelComposition) else None
         )
         m = self._get_model(_model_choice, "locate")
-        logger.debug(f"Routing locate prediction to {_model_choice}")
+        logger.debug(
+            "Routing locate prediction to",
+            extra={"model_choice": _model_choice},
+        )
         return m.locate(locator, screenshot, _model_composition or _model_choice)

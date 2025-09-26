@@ -457,10 +457,9 @@ Implement logging for debugging and monitoring:
 ```python
 import logging
 
-class LoggedModel(ActModel):
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
+class LoggedModel(ActModel):
     @override
     def act(
         self,
@@ -470,9 +469,9 @@ class LoggedModel(ActModel):
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
     ) -> None:
-        self.logger.info(f"Processing act request: {messages}")
+        logger.info(f"Processing act request: {messages}")
         # Your implementation here
-        self.logger.info("Act request completed successfully")
+        logger.info("Act request completed successfully")
 ```
 
 #### 3. Configuration Management

@@ -21,13 +21,14 @@ from askui.tools.list_displays_tool import ListDisplaysTool
 from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
 from askui.tools.set_active_display_tool import SetActiveDisplayTool
 
-from .logger import logger
 from .models import ModelComposition
 from .models.models import ModelChoice, ModelName, ModelRegistry
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
+
+logger = logging.getLogger(__name__)
 
 _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
@@ -55,7 +56,6 @@ class VisionAgent(AgentBase):
     It uses computer vision models to locate UI elements and execute actions on them.
 
     Args:
-        log_level (int | str, optional): The logging level to use. Defaults to `logging.INFO`.
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
@@ -78,7 +78,6 @@ class VisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level: int | str = logging.INFO,
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
@@ -95,7 +94,6 @@ class VisionAgent(AgentBase):
             )
         )
         super().__init__(
-            log_level=log_level,
             reporter=reporter,
             model=model,
             retry=retry,

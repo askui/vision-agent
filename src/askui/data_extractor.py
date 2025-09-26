@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Annotated, Type, overload
 
@@ -9,9 +10,10 @@ from askui.reporting import NULL_REPORTER, Reporter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, Source, load_source
 
-from .logger import logger
 from .models.model_router import ModelRouter, initialize_default_model_registry
 from .models.types.response_schemas import ResponseSchema
+
+logger = logging.getLogger(__name__)
 
 
 class DataExtractor:

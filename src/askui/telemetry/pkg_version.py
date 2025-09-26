@@ -1,6 +1,7 @@
+import logging
 from importlib.metadata import Distribution, PackageNotFoundError, distribution, version
 
-from askui.logger import logger
+logger = logging.getLogger(__name__)
 
 
 def _get_module_name() -> str:
@@ -23,7 +24,7 @@ def _get_distribution() -> Distribution | None:
         module_name = _get_module_name()
         return distribution(module_name)
     except (PackageNotFoundError, RuntimeError) as e:
-        logger.warning(f"Failed to get distribution: {str(e)}")
+        logger.warning("Failed to get distribution", extra={"error": str(e)})
         return None
 
 
@@ -36,5 +37,8 @@ def get_pkg_version() -> str:
     try:
         return version(dist.name)
     except PackageNotFoundError:
-        logger.debug(f'Package "{dist.name}" not found. Setting version to "unknown".')
+        logger.debug(
+            'Package not found. Setting version to "unknown".',
+            extra={"package_name": dist.name},
+        )
         return "unknown"

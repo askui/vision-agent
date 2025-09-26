@@ -1,4 +1,4 @@
-import json
+import logging
 import types
 from abc import ABC, abstractmethod
 from datetime import timedelta
@@ -22,7 +22,6 @@ from PIL import Image
 from pydantic import BaseModel, Field
 from typing_extensions import Self
 
-from askui.logger import logger
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -32,6 +31,8 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.utils.image_utils import ImageSource
+
+logger = logging.getLogger(__name__)
 
 PrimitiveToolCallResult = Image.Image | None | str | BaseModel
 
@@ -63,7 +64,10 @@ def _convert_to_content(
                 case "image":
                     media_type = block.mimeType
                     if media_type not in IMAGE_MEDIA_TYPES_SUPPORTED:
-                        logger.warning(f"Unsupported image media type: {media_type}")
+                        logger.warning(
+                            "Unsupported image media type",
+                            extra={"media_type": media_type},
+                        )
                         continue
                     _result.append(
                         ImageBlockParam(
@@ -74,7 +78,10 @@ def _convert_to_content(
                         )
                     )
                 case _:
-                    logger.warning(f"Unsupported block type: {block.type}")
+                    logger.warning(
+                        "Unsupported block type",
+                        extra={"block_type": block.type},
+                    )
         return _result
 
     if isinstance(result, str):
@@ -204,11 +211,13 @@ def _replace_refs(tool_name: str, input_schema: InputSchema) -> InputSchema:
             lazy_load=False,
             proxies=False,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception(
-            f"Failed to replace refs for tool {tool_name}: {json.dumps(input_schema)}. "
-            "Falling back to original "
-            f"input schema which may be invalid or not be supported by the model: {e}"
+            "Failed to replace refs for tool",
+            extra={
+                "tool_name": tool_name,
+                "input_schema": input_schema,
+            },
         )
         return input_schema
 
@@ -341,8 +350,10 @@ class ToolCollection:
                 return {}
             list_mcp_tools_sync = syncify(self._list_mcp_tools, raise_sync_error=False)
             tools_list = list_mcp_tools_sync(self._mcp_client)
-        except Exception as e:  # noqa: BLE001
-            logger.exception(f"Failed to list MCP tools: {e}", exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Failed to list MCP tools",
+            )
             return {}
         else:
             return {tool.name: tool for tool in tools_list}
@@ -362,7 +373,8 @@ class ToolCollection:
             raise
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                f"Tool {tool_use_block_param.name} failed: {e}", exc_info=True
+                "Tool failed",
+                extra={"tool_name": tool_use_block_param.name, "error": str(e)},
             )
             return ToolResultBlockParam(
                 content=f"Tool {tool_use_block_param.name} failed: {e}",
@@ -401,7 +413,9 @@ class ToolCollection:
             )
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                f"MCP tool {tool_use_block_param.name} failed: {e}", exc_info=True
+                "MCP tool failed",
+                exc_info=True,
+                extra={"tool_name": tool_use_block_param.name, "error": str(e)},
             )
             return ToolResultBlockParam(
                 content=f"MCP tool {tool_use_block_param.name} failed: {e}",

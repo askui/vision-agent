@@ -1,4 +1,5 @@
 import json as json_lib
+import logging
 from typing import Type
 
 import google.genai as genai
@@ -15,7 +16,6 @@ from tenacity import (
 from tenacity.wait import wait_base
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.models.askui.inference_api import AskUiInferenceApiSettings
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel, ModelName
@@ -25,6 +25,8 @@ from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
+
+logger = logging.getLogger(__name__)
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
@@ -122,7 +124,10 @@ class AskUiGoogleGenAiApi(GetModel):
         try:
             _response_schema = to_response_schema(response_schema)
             json_schema = _response_schema.model_json_schema()
-            logger.debug(f"json_schema:\n{json_lib.dumps(json_schema)}")
+            logger.debug(
+                "Json schema used for response",
+                extra={"json_schema": json_lib.dumps(json_schema)},
+            )
             part = self._create_genai_part_from_source(source)
             content = genai_types.Content(
                 parts=[

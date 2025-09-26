@@ -1,16 +1,5 @@
 # Observability
 
-## 📜 Logging
-
-You want a better understanding of what you agent is doing? Set the `log_level` to DEBUG.
-
-```python
-import logging
-
-with VisionAgent(log_level=logging.DEBUG) as agent:
-    agent...
-```
-
 ## 📜 Reporting
 
 You want to see a report of the actions your agent took? Register a reporter using the `reporters` parameter.

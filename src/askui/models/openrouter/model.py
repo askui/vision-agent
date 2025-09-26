@@ -1,11 +1,11 @@
 import json
+import logging
 from typing import TYPE_CHECKING, Any, Optional, Type
 
 import openai
 from openai import OpenAI
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
@@ -15,6 +15,8 @@ from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
 
 from .settings import OpenRouterSettings
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from openai.types.chat.completion_create_params import ResponseFormat
@@ -157,7 +159,10 @@ class OpenRouterModel(GetModel):
                 response_json = json.loads(model_response)
             except json.JSONDecodeError:
                 error_msg = f"Expected JSON, but model {self._settings.model} returned: {model_response}"  # noqa: E501
-                logger.exception(error_msg, exc_info=True)
+                logger.exception(
+                    "Expected JSON, but model returned",
+                    extra={"model": self._settings.model, "response": model_response},
+                )
                 raise ValueError(error_msg) from None
 
             validated_response = _response_schema.model_validate(

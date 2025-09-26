@@ -1,3 +1,5 @@
+import logging
+
 from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
@@ -18,7 +20,7 @@ from askui.models.shared.truncation_strategies import (
 )
 from askui.reporting import NULL_REPORTER, Reporter
 
-from ...logger import logger
+logger = logging.getLogger(__name__)
 
 
 class Agent(ActModel):

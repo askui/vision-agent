@@ -1,9 +1,11 @@
+import logging
 import uuid
 from pathlib import Path
 
-from askui.logger import logger
 from askui.telemetry.device_id import get_device_id
 from askui.telemetry.utils import hash_to_uuid4, is_valid_uuid4
+
+logger = logging.getLogger(__name__)
 
 _ANONYMOUS_ID_FILE_PATH = Path.home() / ".askui" / "ADK" / "anonymous_id"
 _anonymous_id: str | None = None
@@ -15,7 +17,7 @@ def _read_anonymous_id_from_file() -> str | None:
         if _ANONYMOUS_ID_FILE_PATH.exists():
             return _ANONYMOUS_ID_FILE_PATH.read_text().strip()
     except OSError as e:
-        logger.warning(f"Failed to read anonymous ID from file: {str(e)}")
+        logger.warning("Failed to read anonymous ID from file", extra={"error": str(e)})
     return None
 
 
@@ -25,7 +27,7 @@ def _write_anonymous_id_to_file(anonymous_id: str) -> bool:
         _ANONYMOUS_ID_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         _ANONYMOUS_ID_FILE_PATH.write_text(anonymous_id)
     except OSError as e:
-        logger.warning(f"Failed to write anonymous ID to file: {str(e)}")
+        logger.warning("Failed to write anonymous ID to file", extra={"error": str(e)})
     else:
         return True
     return False

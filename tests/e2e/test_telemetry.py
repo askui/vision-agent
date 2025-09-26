@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 from PIL import Image
 
@@ -25,6 +23,6 @@ def test_telemetry_with_nonexistent_domain_should_not_block(
             )
         ]
     )
-    with VisionAgent(tools=agent_toolbox_mock, log_level=logging.DEBUG) as agent:
+    with VisionAgent(tools=agent_toolbox_mock) as agent:
         agent.locate(loc.Text(), screenshot=github_login_screenshot)
     assert True

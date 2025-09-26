@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pathlib
 from datetime import datetime
@@ -8,7 +9,7 @@ from PIL import Image
 from pydantic import UUID4, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from askui.logger import logger
+logger = logging.getLogger(__name__)
 
 
 class Rectangle(BaseModel):
@@ -113,7 +114,10 @@ class AiElementCollection:
             *additional_ai_element_locations,
         ]
 
-        logger.debug("AI Element locations: %s", self._ai_element_locations)
+        logger.debug(
+            "Initialized AI Element paths",
+            extra={"paths": [str(location) for location in self._ai_element_locations]},
+        )
 
     def find(self, name: str) -> list[AiElement]:
         ai_elements: list[AiElement] = []
