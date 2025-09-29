@@ -1,4 +1,5 @@
 import enum
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -16,6 +17,16 @@ class LogFormat(str, enum.Enum):
     LOGFMT = "logfmt"
 
 
+class EqualsLogFilter(BaseModel):
+    type: Literal["equals"]
+    key: str
+    value: str
+
+
+LogFilter = EqualsLogFilter
+
+
 class LogSettings(BaseModel):
     format: LogFormat = LogFormat.LOGFMT
     level: LogLevel = LogLevel.INFO
+    filters: list[LogFilter] | None = None
