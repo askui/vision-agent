@@ -16,7 +16,6 @@ from typing_extensions import override
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.logger import logger
 from askui.models.exceptions import (
     ElementNotFoundError,
     QueryNoResponseError,
@@ -169,8 +168,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
             else [TextBlockParam(text=message.content)]
         )
         if len(content) != 1 or content[0].type != "text":
-            error_msg = f"Unexpected response from Anthropic: {content}"
-            logger.error(error_msg)
+            error_msg = "Unexpected response from Anthropic API"
             raise _UnexpectedResponseError(error_msg, content)
         return content[0].text
 

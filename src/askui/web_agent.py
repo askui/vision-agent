@@ -1,5 +1,3 @@
-import logging
-
 from pydantic import ConfigDict, validate_call
 from typing_extensions import override
 
@@ -41,7 +39,6 @@ class WebVisionAgent(VisionAgent):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level: int | str = logging.INFO,
         reporters: list[Reporter] | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
@@ -53,7 +50,6 @@ class WebVisionAgent(VisionAgent):
             agent_os=agent_os,
         )
         super().__init__(
-            log_level=log_level,
             reporters=reporters,
             model=model,
             retry=retry,

@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import shutil
 import tempfile
@@ -7,7 +8,6 @@ from fastapi import UploadFile
 
 from askui.chat.api.files.models import File, FileCreateParams
 from askui.chat.api.models import FileId
-from askui.logger import logger
 from askui.utils.api_utils import (
     ConflictError,
     FileTooLargeError,
@@ -16,6 +16,8 @@ from askui.utils.api_utils import (
     NotFoundError,
     list_resources,
 )
+
+logger = logging.getLogger(__name__)
 
 # Constants
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB supported
@@ -133,8 +135,8 @@ class FileService:
         try:
             params, temp_path = await self._write_to_temp_file(file)
             file_model = self.create(params, temp_path)
-        except Exception as e:
-            logger.error(f"Failed to upload file: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to upload file")
             raise
         else:
             return file_model

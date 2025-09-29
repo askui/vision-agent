@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
@@ -51,7 +50,6 @@ class WebTestingAgent(WebVisionAgent):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level: int | str = logging.INFO,
         reporters: list[Reporter] | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
@@ -60,7 +58,6 @@ class WebTestingAgent(WebVisionAgent):
         base_dir = Path.cwd() / "chat" / "testing"
         base_dir.mkdir(parents=True, exist_ok=True)
         super().__init__(
-            log_level=log_level,
             reporters=reporters,
             model=model,
             retry=retry,

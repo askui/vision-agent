@@ -1,4 +1,5 @@
 import base64
+import logging
 import os
 import types
 from functools import cached_property
@@ -8,7 +9,7 @@ import httpx
 from pydantic import BaseModel, Field, HttpUrl, SecretStr
 from typing_extensions import Self
 
-from askui.logger import logger
+logger = logging.getLogger(__name__)
 
 
 def get_askui_token_from_env() -> SecretStr | None:
@@ -81,8 +82,11 @@ class UserIdentification:
                 response.json().get("data", [{}])[0].get("user", {}).get("id"),
             )
         except httpx.HTTPError as e:
-            logger.debug(f"Failed to identify user: {e}")
+            logger.debug("Failed to identify user", extra={"error": str(e)})
         except Exception as e:  # noqa: BLE001 - We want to catch all other exceptions here
-            logger.debug(f"Unexpected error while identifying user: {e}")
+            logger.debug(
+                "Unexpected error while identifying user",
+                extra={"error": str(e)},
+            )
 
         return None
