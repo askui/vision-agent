@@ -32,4 +32,4 @@ def instrument(
     app.add_middleware(AccessLoggingMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RawContextMiddleware)
-    Instrumentator().instrument(app).expose(app)
+    Instrumentator().instrument(app).expose(app, endpoint="/v1/metrics")

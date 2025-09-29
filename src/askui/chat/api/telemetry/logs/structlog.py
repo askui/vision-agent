@@ -4,6 +4,7 @@ import structlog
 
 from .settings import LogFormat, LogLevel, LogSettings
 from .structlog_processors import (
+    create_filter_processor,
     drop_color_message_key_processor,
     flatten_dict_processor,
 )
@@ -47,6 +48,7 @@ def get_shared_processors(settings: LogSettings) -> list[structlog.types.Process
     """Returns a list of processors, i.e., a processor chain, that can be shared between
     structlog and stdlib loggers so that their content is consistent."""
     format_dependent_processors = get_format_dependent_processors(settings.format)
+    filter_processor = create_filter_processor(settings.filters)
     return [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
@@ -58,6 +60,7 @@ def get_shared_processors(settings: LogSettings) -> list[structlog.types.Process
         structlog.processors.StackInfoRenderer(),
         *format_dependent_processors,
         structlog.processors.EventRenamer(EVENT_KEY),
+        filter_processor,
     ]
 
 
