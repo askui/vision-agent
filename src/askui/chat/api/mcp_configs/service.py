@@ -150,16 +150,9 @@ class McpConfigService:
 
     def seed(self) -> None:
         """Seed the MCP configuration service with default MCP configurations."""
-        while True:
-            list_response = self.list_(
-                None, ListQuery(limit=LIST_LIMIT_MAX, order="asc")
-            )
-            for mcp_config in list_response.data:
-                self.delete(None, mcp_config.id, force=True)
-            if not list_response.has_more:
-                break
         for seed in self._seeds:
             try:
+                self.delete(None, seed.id, force=True)
                 self._save(seed, new=True)
             except ConflictError:  # noqa: PERF203
                 self._save(seed)
