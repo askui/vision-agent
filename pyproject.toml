@@ -65,7 +65,7 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy ."
-"chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
+"chat:api" = "python -m askui.chat"
 "qa:fix" = { composite = [
     "typecheck:all",
     "format",
@@ -222,6 +222,10 @@ chat = [
     "askui[android,web]",
     "uvicorn>=0.34.3",
     "anyio>=4.10.0",
+    "structlog>=25.4.0",
+    "asgi-correlation-id>=4.3.4",
+    "prometheus-fastapi-instrumentator>=7.1.0",
+    "starlette-context>=0.4.0",
 ]
 pynput = [
     "mss>=10.0.0",
