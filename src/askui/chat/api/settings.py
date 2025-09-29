@@ -5,6 +5,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from askui.chat.api.mcp_configs.models import McpConfig
+from askui.chat.api.telemetry.integrations.fastapi.settings import TelemetrySettings
 from askui.utils.datetime_utils import now
 
 
@@ -49,10 +50,6 @@ class Settings(BaseSettings):
         default="127.0.0.1",
         description="Host for the chat API",
     )
-    log_level: str | int = Field(
-        default="info",
-        description="Log level for the chat API",
-    )
     port: int = Field(
         default=9261,
         description="Port for the chat API",
@@ -67,4 +64,7 @@ class Settings(BaseSettings):
             "Global MCP configurations used to "
             "connect to MCP servers shared across all workspaces."
         ),
+    )
+    telemetry: TelemetrySettings = Field(
+        default_factory=TelemetrySettings,
     )
