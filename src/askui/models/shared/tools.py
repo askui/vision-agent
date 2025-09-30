@@ -127,6 +127,37 @@ def _convert_to_mcp_content(
     return result
 
 
+PLAYWRIGHT_TOOL_PREFIX = "browser_"
+
+
+def _is_playwright_error(
+    param: ToolUseBlockParam,
+    error: Exception,  # noqa: ARG001
+) -> bool:
+    if param.name.startswith(PLAYWRIGHT_TOOL_PREFIX):
+        return True
+    return False
+
+
+def _create_tool_result_block_param_for_playwright_error(
+    param: ToolUseBlockParam, error: Exception
+) -> ToolResultBlockParam:
+    lines = str(error).split("\n")
+    line_idx: int | None = None
+    for idx, line in enumerate(lines):
+        if line.startswith('Run "npx playwright install '):
+            line_idx = idx
+            break
+
+    if line_idx is not None:
+        lines[line_idx] = "Download and install the browser to continue."
+    return ToolResultBlockParam(
+        content="\n\n".join(lines),
+        is_error=True,
+        tool_use_id=param.id,
+    )
+
+
 class Tool(BaseModel, ABC):
     name: str = Field(description="Name of the tool")
     description: str = Field(description="Description of what the tool does")
@@ -377,7 +408,7 @@ class ToolCollection:
                 extra={"tool_name": tool_use_block_param.name, "error": str(e)},
             )
             return ToolResultBlockParam(
-                content=f"Tool {tool_use_block_param.name} failed: {e}",
+                content=str(e),
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
             )
@@ -417,8 +448,13 @@ class ToolCollection:
                 exc_info=True,
                 extra={"tool_name": tool_use_block_param.name, "error": str(e)},
             )
+            if _is_playwright_error(tool_use_block_param, e):
+                return _create_tool_result_block_param_for_playwright_error(
+                    tool_use_block_param,
+                    e,
+                )
             return ToolResultBlockParam(
-                content=f"MCP tool {tool_use_block_param.name} failed: {e}",
+                content=str(e),
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
             )

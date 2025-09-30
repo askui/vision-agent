@@ -74,7 +74,6 @@ WEB_AGENT = Assistant(
         "browser_type",
         "browser_wait_for",
         "browser_tabs",
-        "browser_install",
         "browser_mouse_click_xy",
         "browser_mouse_drag_xy",
         "browser_mouse_move_xy",

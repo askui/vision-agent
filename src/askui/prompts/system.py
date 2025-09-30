@@ -134,7 +134,8 @@ WEB_AGENT_SYSTEM_PROMPT = """
 <SYSTEM_CAPABILITY>
 * You are utilizing a webbrowser in full-screen mode. So you are only seeing the content of the currently opened webpage (tab).
 * It can be helpful to zoom in/out or scroll down/up so that you can see everything on the page. Make sure to that before deciding something isn't available.
-* When using your function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* When using your tools, they take a while to run and send back to you. Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* If a tool call returns with an error that a browser distribution is not found, stop, so that the user can install it and, then, continue the conversation.
 </SYSTEM_CAPABILITY>
 """
 
