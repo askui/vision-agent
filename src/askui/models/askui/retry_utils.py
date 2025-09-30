@@ -45,4 +45,4 @@ class wait_for_retry_after_header(wait_base):
         return self._fallback(retry_state)
 
 
-RETRYABLE_HTTP_STATUS_CODES = (408, 413, 429, 500, 502, 503, 504, 521, 522, 524, 529)
+RETRYABLE_HTTP_STATUS_CODES = (408, 429, 500, 502, 503, 504, 521, 522, 524, 529)
