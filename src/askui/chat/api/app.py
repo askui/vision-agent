@@ -31,10 +31,11 @@ from askui.utils.api_utils import (
     NotFoundError,
 )
 
+settings = get_settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
-    settings = get_settings()
     assistant_service = get_assistant_service(settings=settings)
     assistant_service.seed()
     mcp_config_service = get_mcp_config_service(settings=settings)
@@ -168,7 +169,7 @@ def mcp_server_connection_error_handler(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
