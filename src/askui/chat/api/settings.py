@@ -70,6 +70,16 @@ class Settings(BaseSettings):
         default="claude-sonnet-4-20250514",
         description="Default model to use for chat interactions",
     )
+    allow_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:4200",
+            "https://app.caesr.ai",
+            "https://app-dev.caesr.ai",
+            "https://hub.askui.com",
+            "https://hub-dev.askui.com",
+        ],
+        description="CORS allowed origins for the chat API",
+    )
     telemetry: TelemetrySettings = Field(
         default_factory=lambda: TelemetrySettings(
             log=LogSettings(
