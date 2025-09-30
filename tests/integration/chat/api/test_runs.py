@@ -60,6 +60,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -129,6 +130,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -199,6 +201,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -242,7 +245,11 @@ class TestRunsAPI:
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                workspace_path,
+                mock_message_service,
+                mock_run_service,
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -252,6 +259,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -315,6 +323,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -372,6 +381,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -418,6 +428,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -476,6 +487,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -525,6 +537,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -577,6 +590,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -642,6 +656,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -689,6 +704,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -773,6 +789,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -856,6 +873,7 @@ class TestRunsAPI:
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -944,6 +962,7 @@ class TestRunsAPI:
                 assistant_service=AssistantService(workspace_path),
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         def override_assistant_service() -> AssistantService:
@@ -1029,6 +1048,7 @@ class TestRunsAPI:
                 assistant_service=AssistantService(workspace_path),
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
+                settings=Mock(),
             )
 
         def override_assistant_service() -> AssistantService:
