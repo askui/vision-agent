@@ -22,6 +22,7 @@ from askui.chat.api.runs.events.message_events import MessageEvent
 from askui.chat.api.runs.events.run_events import RunEvent
 from askui.chat.api.runs.events.service import RetrieveRunService
 from askui.chat.api.runs.models import Run, RunError
+from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
@@ -48,6 +49,7 @@ class Runner:
         chat_history_manager: ChatHistoryManager,
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
+        settings: Settings,
     ) -> None:
         self._workspace_id = workspace_id
         self._assistant = assistant
@@ -55,6 +57,7 @@ class Runner:
         self._chat_history_manager = chat_history_manager
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
+        self._settings = settings
 
     def _retrieve(self) -> Run:
         return self._run_service.retrieve(
@@ -137,7 +140,7 @@ class Runner:
             )
             betas = tools.retrieve_tool_beta_flags()
             system = self._build_system()
-            model = str(ModelName.CLAUDE__SONNET__4__20250514)
+            model = self._settings.model
             messages = syncify(self._chat_history_manager.retrieve_message_params)(
                 thread_id=self._run.thread_id,
                 tools=tools.to_params(),

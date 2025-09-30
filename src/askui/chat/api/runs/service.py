@@ -14,6 +14,7 @@ from askui.chat.api.runs.events.events import DoneEvent, ErrorEvent, Event, RunE
 from askui.chat.api.runs.events.service import EventService
 from askui.chat.api.runs.models import Run, RunCreateParams, RunListQuery
 from askui.chat.api.runs.runner.runner import Runner, RunnerRunService
+from askui.chat.api.settings import Settings
 from askui.utils.api_utils import (
     ConflictError,
     ListResponse,
@@ -40,11 +41,13 @@ class RunService(RunnerRunService):
         assistant_service: AssistantService,
         mcp_client_manager_manager: McpClientManagerManager,
         chat_history_manager: ChatHistoryManager,
+        settings: Settings,
     ) -> None:
         self._base_dir = base_dir
         self._assistant_service = assistant_service
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._chat_history_manager = chat_history_manager
+        self._settings = settings
         self._event_service = EventService(base_dir, self)
 
     def get_runs_dir(self, thread_id: ThreadId) -> Path:
@@ -86,6 +89,7 @@ class RunService(RunnerRunService):
             chat_history_manager=self._chat_history_manager,
             mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
+            settings=self._settings,
         )
 
         async def event_generator() -> AsyncGenerator[Event, None]:

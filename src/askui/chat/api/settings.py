@@ -66,6 +66,10 @@ class Settings(BaseSettings):
             "connect to MCP servers shared across all workspaces."
         ),
     )
+    model: str = Field(
+        default="claude-sonnet-4-20250514",
+        description="Default model to use for chat interactions",
+    )
     telemetry: TelemetrySettings = Field(
         default_factory=lambda: TelemetrySettings(
             log=LogSettings(
