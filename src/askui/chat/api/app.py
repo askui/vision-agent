@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -20,6 +22,8 @@ from askui.chat.api.mcp_servers.computer import mcp as computer_mcp
 from askui.chat.api.mcp_servers.testing import mcp as testing_mcp
 from askui.chat.api.mcp_servers.utility import mcp as utility_mcp
 from askui.chat.api.messages.router import router as messages_router
+from askui.chat.api.runs.dependencies import get_runs_service
+from askui.chat.api.runs.models import RunListQuery
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
 from askui.chat.api.workflows.router import router as workflows_router
@@ -32,6 +36,7 @@ from askui.utils.api_utils import (
 )
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -40,8 +45,58 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     assistant_service.seed()
     mcp_config_service = get_mcp_config_service(settings=settings)
     mcp_config_service.seed()
+
+    # Create a run service instance for shutdown cleanup
+    # We need to create this manually since we can't use dependency injection in lifespan
+    from pathlib import Path
+
+    from askui.chat.api.files.service import FileService
+    from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
+    from askui.chat.api.messages.service import MessageService
+    from askui.chat.api.messages.translator import MessageTranslator
+    from askui.models.shared.truncation_strategies import (
+        SimpleTruncationStrategyFactory,
+    )
+
+    app.state.run_service = get_runs_service(
+        workspace_dir=dummy_workspace_dir,
+        assistant_service=assistant_service,
+        chat_history_manager=chat_history_manager,
+        mcp_client_manager_manager=mcp_client_manager_manager,
+        settings=settings,
+    )
+
     yield
+
+    # Graceful shutdown: cancel all active runs
+    logger.info("Starting graceful shutdown...")
+    if app.state.run_service:
+        # Retrieve non-completed runs and cancel them
+        try:
+            active_statuses = ["queued", "in_progress", "cancelling"]
+            active_runs = app.state.run_service.list_(
+                RunListQuery(status=active_statuses)
+            )
+            if active_runs.data:
+                logger.info(f"Cancelling {len(active_runs.data)} active runs...")
+            for run in active_runs.data:
+                try:
+                    app.state.run_service.cancel(run.thread_id, run.id)
+                    logger.debug(f"Cancelled run {run.id} in thread {run.thread_id}")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to cancel run {run.id} in thread {run.thread_id}: {e}"
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to list active runs for shutdown: {e}")
+
+    # Give runs time to gracefully cancel (max 0.5 seconds)
+    await asyncio.sleep(0.5)
+
+    # Force disconnect MCP clients
+    logger.info("Disconnecting MCP clients...")
     await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
+    logger.info("Graceful shutdown completed")
 
 
 app = FastAPI(

@@ -107,16 +107,20 @@ class EventWriter:
 
     async def write_event(self, event: Event) -> None:
         """Write an event to the file."""
-        if self._file is None:
-            self._file = await aiofiles.open(
-                self._manager.file_path, "a", encoding="utf-8"
-            ).__aenter__()
-            await self._manager.notify_file_created()
+        try:
+            if self._file is None:
+                self._file = await aiofiles.open(
+                    self._manager.file_path, "a", encoding="utf-8"
+                ).__aenter__()
+                await self._manager.notify_file_created()
 
-        event_json = event.model_dump_json()
-        await self._file.write(f"{event_json}\n")
-        await self._file.flush()
-        await self._manager.notify_new_event()
+            event_json = event.model_dump_json()
+            await self._file.write(f"{event_json}\n")
+            await self._file.flush()
+            await self._manager.notify_new_event()
+        except asyncio.CancelledError:
+            logger.debug("Event writer cancelled, cleaning up...")
+            raise
 
     async def __aenter__(self) -> "EventWriter":
         return self
@@ -235,6 +239,9 @@ class EventReader:
                                 async for event in self._iter_final_events(run):
                                     yield event
                                 return
+                    except asyncio.CancelledError:
+                        logger.debug("Event reader cancelled, cleaning up...")
+                        raise
 
 
 class EventService:

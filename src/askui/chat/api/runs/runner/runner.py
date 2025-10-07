@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -212,6 +213,22 @@ class Runner:
                     )
                 )
             await send_stream.send(DoneEvent())
+        except asyncio.CancelledError:
+            logger.info("Runner cancelled, cleaning up...")
+            updated_run = self._retrieve()
+            if updated_run.status in ("in_progress", "queued", "cancelling"):
+                updated_run.cancel()
+                self._run_service.save(updated_run)
+                try:
+                    await send_stream.send(
+                        RunEvent(
+                            data=updated_run,
+                            event="thread.run.cancelled",
+                        )
+                    )
+                except Exception:
+                    pass  # Stream might already be closed
+            raise
         except Exception as e:  # noqa: BLE001
             logger.exception("Exception in runner")
             updated_run = self._retrieve()

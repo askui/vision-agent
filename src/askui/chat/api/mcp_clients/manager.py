@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import types
 from datetime import timedelta
 from typing import Any, Type
@@ -13,6 +15,8 @@ from askui.chat.api.mcp_configs.service import McpConfigService
 from askui.chat.api.models import WorkspaceId
 
 McpServerName = str
+
+logger = logging.getLogger(__name__)
 
 
 class McpServerConnectionError(Exception):
@@ -47,10 +51,25 @@ class McpClientManager:
                 raise McpServerConnectionError(mcp_server_name, e) from e
         return self
 
-    async def disconnect(self, force: bool = False) -> None:
+    async def disconnect(self, force: bool = False, timeout: float = 10.0) -> None:
         for mcp_client in self._mcp_clients.values():
             if mcp_client.is_connected():
-                await mcp_client._disconnect(force)  # noqa: SLF001
+                try:
+                    await asyncio.wait_for(
+                        mcp_client._disconnect(force),  # noqa: SLF001
+                        timeout=timeout,
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        f"MCP client disconnect timeout after {timeout}s, forcing disconnect"
+                    )
+                    # Force disconnect without timeout
+                    try:
+                        await mcp_client._disconnect(force=True)  # noqa: SLF001
+                    except Exception as e:
+                        logger.error(f"Failed to force disconnect MCP client: {e}")
+                except Exception as e:
+                    logger.error(f"Error disconnecting MCP client: {e}")
 
     async def list_tools(
         self,
@@ -147,10 +166,10 @@ class McpClientManagerManager:
                     raise
             return McpClientManagerManager._mcp_client_managers[key]
 
-    async def disconnect_all(self, force: bool = False) -> None:
+    async def disconnect_all(self, force: bool = False, timeout: float = 10.0) -> None:
         async with McpClientManagerManager._lock:
             for (
                 mcp_client_manager
             ) in McpClientManagerManager._mcp_client_managers.values():
                 if mcp_client_manager:
-                    await mcp_client_manager.disconnect(force)
+                    await mcp_client_manager.disconnect(force, timeout)

@@ -4,22 +4,21 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     BackgroundTasks,
-    Depends,
     Header,
     Path,
     Query,
+    Request,
     Response,
     status,
 )
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.models import RunCreateParams
 from askui.chat.api.threads.dependencies import ThreadFacadeDep
 from askui.chat.api.threads.facade import ThreadFacade
-from askui.utils.api_utils import ListQuery, ListResponse
+from askui.utils.api_utils import ListResponse
 
 from .dependencies import RunListQueryDep, RunServiceDep
 from .models import Run, RunListQuery, ThreadAndRunCreateParams
@@ -30,6 +29,7 @@ router = APIRouter(tags=["runs"])
 
 @router.post("/threads/{thread_id}/runs")
 async def create_run(
+    request: Request,
     askui_workspace: Annotated[WorkspaceId, Header()],
     thread_id: Annotated[ThreadId, Path(...)],
     params: RunCreateParams,
@@ -40,16 +40,20 @@ async def create_run(
     run, async_generator = await thread_facade.create_run(
         workspace_id=askui_workspace, thread_id=thread_id, params=params
     )
+
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
-            async for event in async_generator:
-                data = (
-                    event.data.model_dump_json()
-                    if isinstance(event.data, BaseModel)
-                    else event.data
-                )
-                yield f"event: {event.event}\ndata: {data}\n\n"
+            try:
+                async for event in async_generator:
+                    data = (
+                        event.data.model_dump_json()
+                        if isinstance(event.data, BaseModel)
+                        else event.data
+                    )
+                    yield f"event: {event.event}\ndata: {data}\n\n"
+            finally:
+                pass
 
         return StreamingResponse(
             status_code=status.HTTP_201_CREATED,
@@ -58,7 +62,10 @@ async def create_run(
         )
 
     async def _run_async_generator() -> None:
-        async for _ in async_generator:
+        try:
+            async for _ in async_generator:
+                pass
+        finally:
             pass
 
     background_tasks.add_task(_run_async_generator)
@@ -67,6 +74,7 @@ async def create_run(
 
 @router.post("/runs")
 async def create_thread_and_run(
+    request: Request,
     askui_workspace: Annotated[WorkspaceId, Header()],
     params: ThreadAndRunCreateParams,
     background_tasks: BackgroundTasks,
@@ -76,16 +84,20 @@ async def create_thread_and_run(
     run, async_generator = await thread_facade.create_thread_and_run(
         workspace_id=askui_workspace, params=params
     )
+
     if stream:
 
         async def sse_event_stream() -> AsyncGenerator[str, None]:
-            async for event in async_generator:
-                data = (
-                    event.data.model_dump_json()
-                    if isinstance(event.data, BaseModel)
-                    else event.data
-                )
-                yield f"event: {event.event}\ndata: {data}\n\n"
+            try:
+                async for event in async_generator:
+                    data = (
+                        event.data.model_dump_json()
+                        if isinstance(event.data, BaseModel)
+                        else event.data
+                    )
+                    yield f"event: {event.event}\ndata: {data}\n\n"
+            finally:
+                pass
 
         return StreamingResponse(
             status_code=status.HTTP_201_CREATED,
@@ -94,7 +106,10 @@ async def create_thread_and_run(
         )
 
     async def _run_async_generator() -> None:
-        async for _ in async_generator:
+        try:
+            async for _ in async_generator:
+                pass
+        finally:
             pass
 
     background_tasks.add_task(_run_async_generator)
