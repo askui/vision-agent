@@ -1,56 +1,41 @@
-from typing import Literal
+"""MCP Config database model."""
 
-from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
-from pydantic import BaseModel
-
-from askui.chat.api.models import McpConfigId, WorkspaceId, WorkspaceResource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import generate_time_ordered_id
-from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
-
-McpServer = StdioMCPServer | RemoteMCPServer
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import McpConfigId
+from askui.chat.api.mcp_configs.schemas import McpConfig
+from sqlalchemy import JSON, Column, DateTime, String
 
 
-class McpConfigBase(BaseModel):
-    """Base MCP configuration model."""
+class McpConfigModel(Base):
+    """MCP Config database model."""
 
-    name: str
-    mcp_server: McpServer
+    __tablename__ = "mcp_configs"
+    id = Column(McpConfigId, primary_key=True)
+    workspace_id = Column(String(36), nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    mcp_server = Column(JSON, nullable=False)
 
-
-class McpConfigCreateParams(McpConfigBase):
-    """Parameters for creating an MCP configuration."""
-
-
-class McpConfigModifyParams(BaseModelWithNotGiven):
-    """Parameters for modifying an MCP configuration."""
-
-    name: str | NotGiven = NOT_GIVEN
-    mcp_server: McpServer | NotGiven = NOT_GIVEN
-
-
-class McpConfig(McpConfigBase, WorkspaceResource):
-    """An MCP configuration that can be stored and managed."""
-
-    id: McpConfigId
-    object: Literal["mcp_config"] = "mcp_config"
-    created_at: UnixDatetime
+    def to_pydantic(self) -> McpConfig:
+        """Convert to Pydantic model."""
+        data = {
+            "id": self.id,  # Prefix is handled by the specialized type
+            "workspace_id": self.workspace_id,
+            "created_at": self.created_at,
+            "name": self.name,
+            "mcp_server": self.mcp_server,
+        }
+        return McpConfig.model_validate(data)
 
     @classmethod
-    def create(
-        cls, workspace_id: WorkspaceId, params: McpConfigCreateParams
-    ) -> "McpConfig":
+    def from_pydantic(cls, mcp_config: McpConfig) -> "McpConfigModel":
+        """Create from Pydantic model."""
         return cls(
-            id=generate_time_ordered_id("mcpcnf"),
-            created_at=now(),
-            workspace_id=workspace_id,
-            **params.model_dump(),
-        )
-
-    def modify(self, params: McpConfigModifyParams) -> "McpConfig":
-        return McpConfig.model_validate(
-            {
-                **self.model_dump(),
-                **params.model_dump(),
-            }
+            id=mcp_config.id,
+            workspace_id=str(mcp_config.workspace_id)
+            if mcp_config.workspace_id
+            else None,
+            created_at=mcp_config.created_at,
+            name=mcp_config.name,
+            mcp_server=mcp_config.mcp_server.model_dump(),
         )

@@ -1,52 +1,54 @@
-from typing import Literal
+"""Thread database model."""
 
-from pydantic import BaseModel
+from datetime import datetime, timezone
 
-from askui.chat.api.messages.models import MessageCreateParams
-from askui.chat.api.models import ThreadId
-from askui.utils.api_utils import Resource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import generate_time_ordered_id
-from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
-
-
-class ThreadBase(BaseModel):
-    """Base thread model."""
-
-    name: str | None = None
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import ThreadId
+from askui.chat.api.threads.schemas import Thread, ThreadCreateParams
+from bson import ObjectId
+from sqlalchemy import Column, DateTime, String
 
 
-class ThreadCreateParams(ThreadBase):
-    """Parameters for creating a thread."""
+class ThreadModel(Base):
+    """Thread database model."""
 
-    messages: list[MessageCreateParams] | None = None
+    __tablename__ = "threads"
+    id = Column(ThreadId, primary_key=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    name = Column(String(128), nullable=True)
 
+    @staticmethod
+    def create_id() -> str:
+        """Create a new thread ID with prefix."""
+        return f"thread_{ObjectId()}"
 
-class ThreadModifyParams(BaseModelWithNotGiven):
-    """Parameters for modifying a thread."""
+    def to_pydantic(self) -> Thread:
+        """Convert to Pydantic model."""
+        # Ensure created_at is timezone-aware
+        created_at = self.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
 
-    name: str | None | NotGiven = NOT_GIVEN
-
-
-class Thread(ThreadBase, Resource):
-    """A chat thread/session."""
-
-    id: ThreadId
-    object: Literal["thread"] = "thread"
-    created_at: UnixDatetime
-
-    @classmethod
-    def create(cls, params: ThreadCreateParams) -> "Thread":
-        return cls(
-            id=generate_time_ordered_id("thread"),
-            created_at=now(),
-            **params.model_dump(exclude={"messages"}),
+        return Thread(
+            id=self.id,  # Prefix is handled by the specialized type
+            created_at=created_at,
+            name=self.name,
         )
 
-    def modify(self, params: ThreadModifyParams) -> "Thread":
-        return Thread.model_validate(
-            {
-                **self.model_dump(),
-                **params.model_dump(),
-            }
+    @classmethod
+    def from_pydantic(cls, thread: Thread) -> "ThreadModel":
+        """Create from Pydantic model."""
+        return cls(
+            id=thread.id,
+            created_at=thread.created_at,
+            name=thread.name,
+        )
+
+    @classmethod
+    def from_create_params(cls, params: ThreadCreateParams) -> "ThreadModel":
+        """Create from create parameters."""
+        return cls(
+            id=cls.create_id(),
+            created_at=datetime.now(timezone.utc),
+            name=params.name,
         )

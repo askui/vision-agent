@@ -1,10 +1,10 @@
 from collections.abc import AsyncGenerator
 
-from askui.chat.api.messages.models import Message, MessageCreateParams
+from askui.chat.api.messages.schemas import Message, MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import ThreadId, WorkspaceId
 from askui.chat.api.runs.events.events import Event
-from askui.chat.api.runs.models import (
+from askui.chat.api.runs.schemas import (
     Run,
     RunCreateParams,
     RunListQuery,

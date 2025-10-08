@@ -1,73 +1,65 @@
-from typing import Annotated, Literal
+"""Workflow database models."""
 
-from pydantic import BaseModel, Field
-
-from askui.chat.api.models import WorkspaceId, WorkspaceResource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import IdField, generate_time_ordered_id
-
-WorkflowId = Annotated[str, IdField("wf")]
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import WorkflowId
+from askui.chat.api.workflows.schemas import Workflow
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import relationship
 
 
-class WorkflowCreateParams(BaseModel):
-    """
-    Parameters for creating a workflow via API.
-    """
+class WorkflowModel(Base):
+    """Workflow database model."""
 
-    name: str
-    description: str
-    tags: list[str] = Field(default_factory=list)
+    __tablename__ = "workflows"
+    id = Column(WorkflowId, primary_key=True)
+    workspace_id = Column(String(36), nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    # Relationship to tags
+    tags = relationship(
+        "WorkflowTagModel",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+        lazy="joined",
+    )
 
-
-class WorkflowModifyParams(BaseModel):
-    """
-    Parameters for modifying a workflow via API.
-    """
-
-    name: str | None = None
-    description: str | None = None
-    tags: list[str] | None = None
-
-
-class Workflow(WorkspaceResource):
-    """
-    A workflow resource in the chat API.
-
-    Args:
-        id (WorkflowId): The id of the workflow. Must start with the 'wf_' prefix and be
-            followed by one or more alphanumerical characters.
-        object (Literal['workflow']): The object type, always 'workflow'.
-        created_at (UnixDatetime): The creation time as a Unix timestamp.
-        name (str): The name or title of the workflow.
-        description (str): A detailed description of the workflow's purpose and steps.
-        tags (list[str], optional): Tags associated with the workflow for filtering or
-            categorization. Default is an empty list.
-        workspace_id (WorkspaceId | None, optional): The workspace this workflow belongs to.
-    """
-
-    id: WorkflowId
-    object: Literal["workflow"] = "workflow"
-    created_at: UnixDatetime
-    name: str
-    description: str
-    tags: list[str] = Field(default_factory=list)
+    def to_pydantic(self) -> Workflow:
+        """Convert to Pydantic model."""
+        data = {
+            "id": self.id,  # Prefix is handled by the specialized type
+            "workspace_id": self.workspace_id,
+            "created_at": self.created_at,
+            "name": self.name,
+            "description": self.description,
+            "tags": [tag.tag for tag in self.tags],
+        }
+        return Workflow.model_validate(data)
 
     @classmethod
-    def create(
-        cls, workspace_id: WorkspaceId | None, params: WorkflowCreateParams
-    ) -> "Workflow":
+    def from_pydantic(cls, workflow: Workflow) -> "WorkflowModel":
+        """Create from Pydantic model."""
         return cls(
-            id=generate_time_ordered_id("wf"),
-            created_at=now(),
-            workspace_id=workspace_id,
-            **params.model_dump(),
+            id=workflow.id,
+            workspace_id=str(workflow.workspace_id) if workflow.workspace_id else None,
+            created_at=workflow.created_at,
+            name=workflow.name,
+            description=workflow.description,
         )
 
-    def modify(self, params: WorkflowModifyParams) -> "Workflow":
-        update_data = {k: v for k, v in params.model_dump().items() if v is not None}
-        return Workflow.model_validate(
-            {
-                **self.model_dump(),
-                **update_data,
-            }
-        )
+
+class WorkflowTagModel(Base):
+    """Workflow tag database model."""
+
+    __tablename__ = "workflow_tags"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    workflow_id = Column(
+        WorkflowId,
+        ForeignKey("workflows.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    tag = Column(String, nullable=False, index=True)
+    workflow = relationship("WorkflowModel", back_populates="tags")
+
+    __table_args__ = (Index("idx_workflow_tags_tag_workflow", "tag", "workflow_id"),)

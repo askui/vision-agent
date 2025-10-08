@@ -3,8 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import pytest_mock
-
-from askui.chat.api.messages.models import RequestDocumentBlockParam
+from askui.chat.api.messages.schemas import RequestDocumentBlockParam
 from askui.chat.api.messages.translator import RequestDocumentBlockParamTranslator
 from askui.models.shared.agent_message_param import (
     CacheControlEphemeralParam,

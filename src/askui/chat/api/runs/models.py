@@ -1,111 +1,67 @@
-from dataclasses import dataclass
-from datetime import timedelta
-from typing import Annotated, Literal
+"""Run database model."""
 
-from fastapi import Query
-from pydantic import BaseModel, computed_field
-
-from askui.chat.api.models import AssistantId, RunId, ThreadId
-from askui.chat.api.threads.models import ThreadCreateParams
-from askui.utils.api_utils import ListQuery, Resource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import generate_time_ordered_id
-
-RunStatus = Literal[
-    "queued",
-    "in_progress",
-    "completed",
-    "cancelling",
-    "cancelled",
-    "failed",
-    "expired",
-]
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import AssistantId, RunId, ThreadId
+from askui.chat.api.runs.schemas import Run
+from sqlalchemy import JSON, Column, DateTime, ForeignKey
 
 
-class RunError(BaseModel):
-    """Error information for a failed run."""
+class RunModel(Base):
+    """Run database model."""
 
-    message: str
-    code: Literal["server_error", "rate_limit_exceeded", "invalid_prompt"]
+    __tablename__ = "runs"
+    id = Column(RunId, primary_key=True)
+    thread_id = Column(
+        ThreadId,
+        ForeignKey("threads.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    assistant_id = Column(
+        AssistantId,
+        ForeignKey("assistants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    created_at = Column(DateTime, nullable=False, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    failed_at = Column(DateTime, nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
+    tried_cancelling_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    last_error = Column(JSON, nullable=True)
 
-
-class RunBase(BaseModel):
-    """Base run model."""
-
-    assistant_id: AssistantId
-
-
-class RunCreateParams(RunBase):
-    """Parameters for creating a run."""
-
-    stream: bool = False
-
-
-class ThreadAndRunCreateParams(RunCreateParams):
-    thread: ThreadCreateParams
-
-
-class Run(RunBase, Resource):
-    """A run execution within a thread."""
-
-    id: RunId
-    object: Literal["thread.run"] = "thread.run"
-    thread_id: ThreadId
-    created_at: UnixDatetime
-    expires_at: UnixDatetime
-    started_at: UnixDatetime | None = None
-    completed_at: UnixDatetime | None = None
-    failed_at: UnixDatetime | None = None
-    cancelled_at: UnixDatetime | None = None
-    tried_cancelling_at: UnixDatetime | None = None
-    last_error: RunError | None = None
+    def to_pydantic(self) -> Run:
+        """Convert to Pydantic model."""
+        data = {
+            "id": self.id,  # Prefix is handled by the specialized type
+            "thread_id": self.thread_id,
+            "assistant_id": self.assistant_id,
+            "created_at": self.created_at,
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
+            "failed_at": self.failed_at,
+            "cancelled_at": self.cancelled_at,
+            "tried_cancelling_at": self.tried_cancelling_at,
+            "expires_at": self.expires_at,
+            "last_error": self.last_error,
+        }
+        return Run.model_validate(data)
 
     @classmethod
-    def create(cls, thread_id: ThreadId, params: RunCreateParams) -> "Run":
+    def from_pydantic(cls, run: Run) -> "RunModel":
+        """Create from Pydantic model."""
         return cls(
-            id=generate_time_ordered_id("run"),
-            thread_id=thread_id,
-            created_at=now(),
-            expires_at=now() + timedelta(minutes=10),
-            **params.model_dump(exclude={"stream"}),
+            id=run.id,
+            thread_id=run.thread_id,
+            assistant_id=run.assistant_id,
+            created_at=run.created_at,
+            started_at=run.started_at,
+            completed_at=run.completed_at,
+            failed_at=run.failed_at,
+            cancelled_at=run.cancelled_at,
+            tried_cancelling_at=run.tried_cancelling_at,
+            expires_at=run.expires_at,
+            last_error=run.last_error.model_dump() if run.last_error else None,
         )
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def status(self) -> RunStatus:
-        if self.cancelled_at:
-            return "cancelled"
-        if self.failed_at:
-            return "failed"
-        if self.completed_at:
-            return "completed"
-        if self.expires_at and self.expires_at < now():
-            return "expired"
-        if self.tried_cancelling_at:
-            return "cancelling"
-        if self.started_at:
-            return "in_progress"
-        return "queued"
-
-    def start(self) -> None:
-        self.started_at = now()
-        self.expires_at = now() + timedelta(minutes=10)
-
-    def ping(self) -> None:
-        self.expires_at = now() + timedelta(minutes=10)
-
-    def complete(self) -> None:
-        self.completed_at = now()
-
-    def cancel(self) -> None:
-        self.cancelled_at = now()
-
-    def fail(self, error: RunError) -> None:
-        self.failed_at = now()
-        self.last_error = error
-
-
-@dataclass(kw_only=True)
-class RunListQuery(ListQuery):
-    thread: Annotated[ThreadId | None, Query()] = None
-    status: Annotated[list[RunStatus] | None, Query()] = None

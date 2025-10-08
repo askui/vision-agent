@@ -1,59 +1,78 @@
-from typing import Literal
+"""Assistant database model."""
 
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
 
-from askui.chat.api.models import AssistantId, WorkspaceId, WorkspaceResource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import generate_time_ordered_id
-from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
-
-
-class AssistantBase(BaseModel):
-    """Base assistant model."""
-
-    name: str | None = None
-    description: str | None = None
-    avatar: str | None = None
-    tools: list[str] = Field(default_factory=list)
-    system: str | None = None
+from askui.chat.api.assistants.schemas import Assistant, AssistantCreateParams
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import AssistantId
+from bson import ObjectId
+from sqlalchemy import JSON, Column, DateTime, String, Text
 
 
-class AssistantCreateParams(AssistantBase):
-    """Parameters for creating an assistant."""
+class AssistantModel(Base):
+    """Assistant database model."""
 
+    __tablename__ = "assistants"
+    id = Column(AssistantId, primary_key=True)
+    workspace_id = Column(String(36), nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    name = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    avatar = Column(Text, nullable=True)
+    tools = Column(JSON, nullable=False)
+    system = Column(Text, nullable=True)
 
-class AssistantModifyParams(BaseModelWithNotGiven):
-    """Parameters for modifying an assistant."""
+    @staticmethod
+    def create_id() -> str:
+        """Create a new assistant ID with prefix."""
+        return f"asst_{ObjectId()}"
 
-    name: str | NotGiven = NOT_GIVEN
-    description: str | NotGiven = NOT_GIVEN
-    avatar: str | NotGiven = NOT_GIVEN
-    tools: list[str] | NotGiven = NOT_GIVEN
-    system: str | NotGiven = NOT_GIVEN
+    def to_pydantic(self) -> Assistant:
+        """Convert to Pydantic model."""
+        # Ensure created_at is timezone-aware
+        created_at = self.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
 
-
-class Assistant(AssistantBase, WorkspaceResource):
-    """An assistant that can be used in a thread."""
-
-    id: AssistantId
-    object: Literal["assistant"] = "assistant"
-    created_at: UnixDatetime
-
-    @classmethod
-    def create(
-        cls, workspace_id: WorkspaceId, params: AssistantCreateParams
-    ) -> "Assistant":
-        return cls(
-            id=generate_time_ordered_id("asst"),
-            created_at=now(),
-            workspace_id=workspace_id,
-            **params.model_dump(),
+        return Assistant(
+            id=self.id,  # Prefix is handled by the specialized type
+            workspace_id=self.workspace_id,
+            created_at=created_at,
+            name=self.name,
+            description=self.description,
+            avatar=self.avatar,
+            tools=self.tools,
+            system=self.system,
         )
 
-    def modify(self, params: AssistantModifyParams) -> "Assistant":
-        return Assistant.model_validate(
-            {
-                **self.model_dump(),
-                **params.model_dump(),
-            }
+    @classmethod
+    def from_pydantic(cls, assistant: Assistant) -> "AssistantModel":
+        """Create from Pydantic model."""
+        return cls(
+            id=assistant.id,
+            workspace_id=str(assistant.workspace_id)
+            if assistant.workspace_id
+            else None,
+            created_at=assistant.created_at,
+            name=assistant.name,
+            description=assistant.description,
+            avatar=assistant.avatar,
+            tools=assistant.tools,
+            system=assistant.system,
+        )
+
+    @classmethod
+    def from_create_params(
+        cls, params: AssistantCreateParams, workspace_id: str | None = None
+    ) -> "AssistantModel":
+        """Create from create parameters."""
+        return cls(
+            id=cls.create_id(),
+            workspace_id=str(workspace_id) if workspace_id else None,
+            created_at=datetime.now(timezone.utc),
+            name=params.name,
+            description=params.description,
+            avatar=params.avatar,
+            tools=params.tools,
+            system=params.system,
         )

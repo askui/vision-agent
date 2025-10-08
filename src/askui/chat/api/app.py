@@ -1,20 +1,17 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, FastAPI, HTTPException, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastmcp import FastMCP
-
-from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
-from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
+from askui.chat.api.assistants.service import AssistantService
+from askui.chat.api.dependencies import (SetEnvFromHeadersDep,
+                                         get_session_factory, get_settings)
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
-from askui.chat.api.mcp_clients.dependencies import get_mcp_client_manager_manager
+from askui.chat.api.mcp_clients.dependencies import \
+    get_mcp_client_manager_manager
 from askui.chat.api.mcp_clients.manager import McpServerConnectionError
-from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
 from askui.chat.api.mcp_configs.router import router as mcp_configs_router
+from askui.chat.api.mcp_configs.service import McpConfigService
 from askui.chat.api.mcp_servers.android import mcp as android_mcp
 from askui.chat.api.mcp_servers.computer import mcp as computer_mcp
 from askui.chat.api.mcp_servers.testing import mcp as testing_mcp
@@ -23,23 +20,40 @@ from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
 from askui.chat.api.workflows.router import router as workflows_router
-from askui.utils.api_utils import (
-    ConflictError,
-    FileTooLargeError,
-    ForbiddenError,
-    LimitReachedError,
-    NotFoundError,
-)
+from askui.utils.api_utils import (ConflictError, FileTooLargeError,
+                                   ForbiddenError, LimitReachedError,
+                                   NotFoundError)
+from fastapi import APIRouter, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastmcp import FastMCP
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
-    assistant_service = get_assistant_service(settings=settings)
+    # Get settings and create session factory
+    settings = get_settings()
+    session_factory = get_session_factory(settings)
+
+    # Run migrations if needed
+    from askui.chat.migrations import MigrationRunner
+    runner = MigrationRunner(settings.db.url)
+    if runner.should_migrate(settings.data_dir):
+        print("Starting database migration...")
+        runner.migrate(settings.data_dir)
+        print("Migration completed")
+
+    # Create services manually for seeding
+    assistant_service = AssistantService(session_factory)
     assistant_service.seed()
-    mcp_config_service = get_mcp_config_service(settings=settings)
+
+    mcp_config_service = McpConfigService(
+        session_factory, settings.data_dir, settings.mcp_configs
+    )
     mcp_config_service.seed()
+
     yield
     await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
 
@@ -173,4 +187,5 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
 )

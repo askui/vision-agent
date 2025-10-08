@@ -1,8 +1,4 @@
-from pathlib import Path
-
-from fastapi import Depends
-
-from askui.chat.api.dependencies import WorkspaceDirDep
+from askui.chat.api.dependencies import SessionFactoryDep
 from askui.chat.api.files.dependencies import FileServiceDep
 from askui.chat.api.files.service import FileService
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
@@ -12,13 +8,12 @@ from askui.models.shared.truncation_strategies import (
     SimpleTruncationStrategyFactory,
     TruncationStrategyFactory,
 )
+from fastapi import Depends
 
 
-def get_message_service(
-    workspace_dir: Path = WorkspaceDirDep,
-) -> MessageService:
-    """Get MessagePersistedService instance."""
-    return MessageService(workspace_dir)
+def get_message_service(session_factory=SessionFactoryDep) -> MessageService:
+    """Get MessageService instance."""
+    return MessageService(session_factory)
 
 
 MessageServiceDep = Depends(get_message_service)
@@ -52,4 +47,5 @@ def get_chat_history_manager(
     )
 
 
+ChatHistoryManagerDep = Depends(get_chat_history_manager)
 ChatHistoryManagerDep = Depends(get_chat_history_manager)

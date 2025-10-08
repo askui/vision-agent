@@ -31,6 +31,9 @@ dependencies = [
     "bson>=0.5.10",
     "aiofiles>=24.1.0",
     "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
+    "sqlalchemy>=2.0.0",
+    "aiosqlite>=0.19.0",
+    "asgi-correlation-id>=0.2.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

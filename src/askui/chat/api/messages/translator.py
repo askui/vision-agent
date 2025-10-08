@@ -1,7 +1,5 @@
-from PIL import Image
-
 from askui.chat.api.files.service import FileService
-from askui.chat.api.messages.models import (
+from askui.chat.api.messages.schemas import (
     ContentBlockParam,
     FileImageSourceParam,
     ImageBlockParam,
@@ -11,11 +9,7 @@ from askui.chat.api.messages.models import (
 )
 from askui.data_extractor import DataExtractor
 from askui.models.models import ModelName
-from askui.models.shared.agent_message_param import (
-    Base64ImageSourceParam,
-    TextBlockParam,
-    UrlImageSourceParam,
-)
+from askui.models.shared.agent_message_param import Base64ImageSourceParam
 from askui.models.shared.agent_message_param import (
     ContentBlockParam as AnthropicContentBlockParam,
 )
@@ -25,12 +19,15 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.agent_message_param import (
     MessageParam as AnthropicMessageParam,
 )
+from askui.models.shared.agent_message_param import TextBlockParam
 from askui.models.shared.agent_message_param import (
     ToolResultBlockParam as AnthropicToolResultBlockParam,
 )
+from askui.models.shared.agent_message_param import UrlImageSourceParam
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource, image_to_base64
 from askui.utils.source_utils import Source, load_source
+from PIL import Image
 
 
 class RequestDocumentBlockParamTranslator:

@@ -1,12 +1,11 @@
-from fastapi import APIRouter, UploadFile, status
-from fastapi.responses import FileResponse
-
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.files.dependencies import FileServiceDep
-from askui.chat.api.files.models import File as FileModel
+from askui.chat.api.files.schemas import File as FileSchema
 from askui.chat.api.files.service import FileService
 from askui.chat.api.models import FileId
 from askui.utils.api_utils import ListQuery, ListResponse
+from fastapi import APIRouter, UploadFile, status
+from fastapi.responses import FileResponse
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -15,7 +14,7 @@ router = APIRouter(prefix="/files", tags=["files"])
 def list_files(
     query: ListQuery = ListQueryDep,
     file_service: FileService = FileServiceDep,
-) -> ListResponse[FileModel]:
+) -> ListResponse[FileSchema]:
     """List all files."""
     return file_service.list_(query=query)
 
@@ -24,7 +23,7 @@ def list_files(
 async def upload_file(
     file: UploadFile,
     file_service: FileService = FileServiceDep,
-) -> FileModel:
+) -> FileSchema:
     """Upload a new file."""
     return await file_service.upload_file(file)
 
@@ -33,7 +32,7 @@ async def upload_file(
 def retrieve_file(
     file_id: FileId,
     file_service: FileService = FileServiceDep,
-) -> FileModel:
+) -> FileSchema:
     """Get file metadata by ID."""
     return file_service.retrieve(file_id)
 

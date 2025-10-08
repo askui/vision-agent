@@ -5,12 +5,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import UploadFile
-
-from askui.chat.api.files.models import File, FileCreateParams
+from askui.chat.api.files.schemas import File, FileCreateParams
 from askui.chat.api.files.service import FileService
 from askui.chat.api.models import FileId
 from askui.utils.api_utils import ConflictError, FileTooLargeError, NotFoundError
+from fastapi import UploadFile
 
 
 class TestFileService:

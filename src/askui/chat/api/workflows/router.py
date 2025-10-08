@@ -1,11 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Path, Query, status
-
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.workflows.dependencies import WorkflowServiceDep
-from askui.chat.api.workflows.models import (
+from askui.chat.api.workflows.schemas import (
     Workflow,
     WorkflowCreateParams,
     WorkflowId,
@@ -13,6 +11,7 @@ from askui.chat.api.workflows.models import (
 )
 from askui.chat.api.workflows.service import WorkflowService
 from askui.utils.api_utils import ListQuery, ListResponse
+from fastapi import APIRouter, Header, Path, Query, status
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 

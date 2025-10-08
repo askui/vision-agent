@@ -1,9 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, status
-
 from askui.chat.api.assistants.dependencies import AssistantServiceDep
-from askui.chat.api.assistants.models import (
+from askui.chat.api.assistants.schemas import (
     Assistant,
     AssistantCreateParams,
     AssistantModifyParams,
@@ -12,6 +10,7 @@ from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import AssistantId, WorkspaceId
 from askui.utils.api_utils import ListQuery, ListResponse
+from fastapi import APIRouter, Header, status
 
 router = APIRouter(prefix="/assistants", tags=["assistants"])
 

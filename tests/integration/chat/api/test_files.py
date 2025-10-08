@@ -4,11 +4,10 @@ import io
 import tempfile
 from pathlib import Path
 
+from askui.chat.api.files.schemas import File
+from askui.chat.api.files.service import FileService
 from fastapi import status
 from fastapi.testclient import TestClient
-
-from askui.chat.api.files.models import File
-from askui.chat.api.files.service import FileService
 
 
 class TestFilesAPI:

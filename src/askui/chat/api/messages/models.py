@@ -1,95 +1,62 @@
-from typing import Literal
+"""Message database model."""
 
-from pydantic import BaseModel
-
-from askui.chat.api.models import AssistantId, FileId, MessageId, RunId, ThreadId
-from askui.models.shared.agent_message_param import (
-    Base64ImageSourceParam,
-    BetaRedactedThinkingBlock,
-    BetaThinkingBlock,
-    CacheControlEphemeralParam,
-    StopReason,
-    TextBlockParam,
-    ToolUseBlockParam,
-    UrlImageSourceParam,
-)
-from askui.utils.api_utils import Resource
-from askui.utils.datetime_utils import UnixDatetime, now
-from askui.utils.id_utils import generate_time_ordered_id
+from askui.chat.api.db.base import Base
+from askui.chat.api.db.types import AssistantId, MessageId, RunId, ThreadId
+from askui.chat.api.messages.schemas import Message
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, String
 
 
-class BetaFileDocumentSourceParam(BaseModel):
-    file_id: str
-    type: Literal["file"] = "file"
+class MessageModel(Base):
+    """Message database model."""
 
+    __tablename__ = "messages"
+    id = Column(MessageId, primary_key=True)
+    thread_id = Column(
+        ThreadId,
+        ForeignKey("threads.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at = Column(DateTime, nullable=False, index=True)
+    assistant_id = Column(
+        AssistantId,
+        ForeignKey("assistants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    run_id = Column(
+        RunId,
+        ForeignKey("runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    role = Column(String, nullable=False)
+    content = Column(JSON, nullable=False)
+    stop_reason = Column(String, nullable=True)
 
-Source = BetaFileDocumentSourceParam
-
-
-class RequestDocumentBlockParam(BaseModel):
-    source: Source
-    type: Literal["document"] = "document"
-    cache_control: CacheControlEphemeralParam | None = None
-
-
-class FileImageSourceParam(BaseModel):
-    """Image source that references a saved file."""
-
-    id: FileId
-    type: Literal["file"] = "file"
-
-
-class ImageBlockParam(BaseModel):
-    source: Base64ImageSourceParam | UrlImageSourceParam | FileImageSourceParam
-    type: Literal["image"] = "image"
-    cache_control: CacheControlEphemeralParam | None = None
-
-
-class ToolResultBlockParam(BaseModel):
-    tool_use_id: str
-    type: Literal["tool_result"] = "tool_result"
-    cache_control: CacheControlEphemeralParam | None = None
-    content: str | list[TextBlockParam | ImageBlockParam]
-    is_error: bool = False
-
-
-ContentBlockParam = (
-    ImageBlockParam
-    | TextBlockParam
-    | ToolResultBlockParam
-    | ToolUseBlockParam
-    | BetaThinkingBlock
-    | BetaRedactedThinkingBlock
-    | RequestDocumentBlockParam
-)
-
-
-class MessageParam(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str | list[ContentBlockParam]
-    stop_reason: StopReason | None = None
-
-
-class MessageBase(MessageParam):
-    assistant_id: AssistantId | None = None
-    run_id: RunId | None = None
-
-
-class MessageCreateParams(MessageBase):
-    pass
-
-
-class Message(MessageBase, Resource):
-    id: MessageId
-    object: Literal["thread.message"] = "thread.message"
-    created_at: UnixDatetime
-    thread_id: ThreadId
+    def to_pydantic(self) -> Message:
+        """Convert to Pydantic model."""
+        return Message(
+            id=self.id,  # Prefix is handled by the specialized type
+            thread_id=self.thread_id,
+            created_at=self.created_at,
+            assistant_id=self.assistant_id,
+            run_id=self.run_id,
+            role=self.role,
+            content=self.content,
+            stop_reason=self.stop_reason,
+        )
 
     @classmethod
-    def create(cls, thread_id: ThreadId, params: MessageCreateParams) -> "Message":
+    def from_pydantic(cls, message: Message) -> "MessageModel":
+        """Create from Pydantic model."""
         return cls(
-            id=generate_time_ordered_id("msg"),
-            created_at=now(),
-            thread_id=thread_id,
-            **params.model_dump(),
+            id=message.id,
+            thread_id=message.thread_id,
+            created_at=message.created_at,
+            assistant_id=message.assistant_id,
+            run_id=message.run_id,
+            role=message.role,
+            content=message.content,
+            stop_reason=message.stop_reason,
         )

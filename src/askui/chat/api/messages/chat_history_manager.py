@@ -1,6 +1,5 @@
 from anthropic.types.beta import BetaTextBlockParam, BetaToolUnionParam
-
-from askui.chat.api.messages.models import Message, MessageCreateParams
+from askui.chat.api.messages.schemas import Message, MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import ThreadId

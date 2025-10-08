@@ -6,14 +6,13 @@ import tempfile
 from typing import Generator
 
 import pytest
-from PIL import Image
-
 from askui.chat.api.files.service import FileService
-from askui.chat.api.messages.models import RequestDocumentBlockParam
+from askui.chat.api.messages.schemas import RequestDocumentBlockParam
 from askui.chat.api.messages.translator import RequestDocumentBlockParamTranslator
 from askui.models.shared.agent_message_param import CacheControlEphemeralParam
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource
+from PIL import Image
 
 
 class TestRequestDocumentBlockParamTranslator:

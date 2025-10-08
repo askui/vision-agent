@@ -1,151 +1,125 @@
+"""File service with SQLAlchemy persistence."""
+
 import logging
-import mimetypes
 import shutil
-import tempfile
 from pathlib import Path
+from typing import Callable
 
-from fastapi import UploadFile
-
-from askui.chat.api.files.models import File, FileCreateParams
+from askui.chat.api.db.query_builder import QueryBuilder
+from askui.chat.api.files.models import FileModel
+from askui.chat.api.files.schemas import File
 from askui.chat.api.models import FileId
 from askui.utils.api_utils import (
-    ConflictError,
     FileTooLargeError,
     ListQuery,
     ListResponse,
     NotFoundError,
-    list_resources,
 )
+from fastapi import UploadFile
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 # Constants
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB supported
-CHUNK_SIZE = 1024 * 1024  # 1MB for uploading and downloading
 
 
 class FileService:
-    """Service for managing File resources with filesystem persistence."""
+    """Service for managing File resources with SQLAlchemy persistence."""
 
-    def __init__(self, base_dir: Path) -> None:
-        self._base_dir = base_dir
-        self._files_dir = base_dir / "files"
-        self._static_dir = base_dir / "static"
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
+        self._files_dir = Path.cwd() / "chat" / "files"
+        self._static_dir = Path.cwd() / "chat" / "static"
 
-    def _get_file_path(self, file_id: FileId, new: bool = False) -> Path:
-        """Get the path for file metadata."""
-        file_path = self._files_dir / f"{file_id}.json"
-        exists = file_path.exists()
-        if new and exists:
-            error_msg = f"File {file_id} already exists"
-            raise ConflictError(error_msg)
-        if not new and not exists:
-            error_msg = f"File {file_id} not found"
-            raise NotFoundError(error_msg)
-        return file_path
-
-    def _get_static_file_path(self, file: File) -> Path:
-        """Get the path for the static file based on extension."""
-        # For application/octet-stream, don't add .bin extension
-        extension = ""
-        if file.media_type != "application/octet-stream":
-            extension = mimetypes.guess_extension(file.media_type) or ""
-        return self._static_dir / f"{file.id}{extension}"
+    def _to_pydantic(self, db_model: FileModel) -> File:
+        """Convert SQLAlchemy model to Pydantic model."""
+        return db_model.to_pydantic()
 
     def list_(self, query: ListQuery) -> ListResponse[File]:
-        """List files with pagination and filtering."""
-        return list_resources(self._files_dir, query, File)
+        """List files with pagination."""
+        with self._session_factory() as session:
+            q = session.query(FileModel)
+
+            # Apply list query parameters
+            q = QueryBuilder.apply_list_query(
+                q, FileModel, query, FileModel.created_at, FileModel.id
+            )
+
+            # Apply limit
+            limit = query.limit or 20
+            q = q.limit(limit + 1)  # +1 to check if there are more
+
+            results = q.all()
+            return QueryBuilder.build_list_response(results, limit, self._to_pydantic)
 
     def retrieve(self, file_id: FileId) -> File:
-        """Retrieve file metadata by ID."""
-        try:
-            file_path = self._get_file_path(file_id)
-            return File.model_validate_json(file_path.read_text())
-        except FileNotFoundError as e:
-            error_msg = f"File {file_id} not found"
-            raise NotFoundError(error_msg) from e
+        """Retrieve a file by ID."""
+        with self._session_factory() as session:
+            db_file = session.query(FileModel).filter(FileModel.id == file_id).first()
+            if not db_file:
+                error_msg = f"File {file_id} not found"
+                raise NotFoundError(error_msg)
+            return self._to_pydantic(db_file)
+
+    def create(
+        self, filename: str, size: int, media_type: str, file: UploadFile
+    ) -> File:
+        """Create a new file."""
+        # Check file size
+        if file.size and file.size > MAX_FILE_SIZE:
+            error_msg = (
+                f"File size {file.size} exceeds maximum allowed size {MAX_FILE_SIZE}"
+            )
+            raise FileTooLargeError(MAX_FILE_SIZE)
+
+        with self._session_factory() as session:
+            # Create database record
+            db_file = FileModel.from_create_params(filename, size, media_type)
+            session.add(db_file)
+            session.commit()
+            session.refresh(db_file)
+
+            # Save file content to filesystem
+            self._files_dir.mkdir(parents=True, exist_ok=True)
+            file_path = self._files_dir / db_file.id
+            with open(file_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+
+            return self._to_pydantic(db_file)
 
     def delete(self, file_id: FileId) -> None:
-        """Delete a file and its content.
+        """Delete a file."""
+        with self._session_factory() as session:
+            db_file = session.query(FileModel).filter(FileModel.id == file_id).first()
+            if not db_file:
+                error_msg = f"File {file_id} not found"
+                raise NotFoundError(error_msg)
 
-        *Important*: We may be left with a static file that is not associated with any
-        file metadata if this fails.
-        """
-        try:
-            file = self.retrieve(file_id)
-            static_path = self._get_static_file_path(file)
-            self._get_file_path(file_id).unlink()
-            if static_path.exists():
-                static_path.unlink()
-        except FileNotFoundError as e:
-            error_msg = f"File {file_id} not found"
-            raise NotFoundError(error_msg) from e
+            # Delete file from filesystem
+            file_path = self._files_dir / file_id
+            if file_path.exists():
+                file_path.unlink()
+
+            # Delete database record
+            session.delete(db_file)
+            session.commit()
+
+    def get_file_path(self, file_id: FileId) -> Path:
+        """Get the filesystem path for a file."""
+        return self._files_dir / file_id
+
+    async def upload_file(self, file: UploadFile) -> File:
+        """Upload a file (async wrapper for create)."""
+        filename = file.filename or "unknown"
+        size = file.size or 0
+        media_type = file.content_type or "application/octet-stream"
+        return self.create(filename, size, media_type, file)
 
     def retrieve_file_content(self, file_id: FileId) -> tuple[File, Path]:
-        """Get file metadata and path for downloading."""
-        file = self.retrieve(file_id)
-        static_path = self._get_static_file_path(file)
-        return file, static_path
-
-    async def _write_to_temp_file(
-        self,
-        file: UploadFile,
-    ) -> tuple[FileCreateParams, Path]:
-        size = 0
-        self._static_dir.mkdir(parents=True, exist_ok=True)
-        temp_file = tempfile.NamedTemporaryFile(
-            delete=False,
-            dir=self._static_dir,
-            suffix=".temp",
-        )
-        temp_path = Path(temp_file.name)
-        with temp_file:
-            while chunk := await file.read(CHUNK_SIZE):
-                temp_file.write(chunk)
-                size += len(chunk)
-                if size > MAX_FILE_SIZE:
-                    raise FileTooLargeError(MAX_FILE_SIZE)
-        mime_type = file.content_type or "application/octet-stream"
-        params = FileCreateParams(
-            filename=file.filename,
-            size=size,
-            media_type=mime_type,
-        )
-        return params, temp_path
-
-    def create(self, params: FileCreateParams, path: Path) -> File:
-        file_model = File.create(params)
-        self._static_dir.mkdir(parents=True, exist_ok=True)
-        static_path = self._get_static_file_path(file_model)
-        shutil.move(path, static_path)
-        self._save(file_model, new=True)
-
-        return file_model
-
-    async def upload_file(
-        self,
-        file: UploadFile,
-    ) -> File:
-        """Upload a file.
-
-        *Important*: We may be left with a static file that is not associated with any
-        file metadata if this fails.
-        """
-        temp_path: Path | None = None
-        try:
-            params, temp_path = await self._write_to_temp_file(file)
-            file_model = self.create(params, temp_path)
-        except Exception:
-            logger.exception("Failed to upload file")
-            raise
-        else:
-            return file_model
-        finally:
-            if temp_path:
-                temp_path.unlink(missing_ok=True)
-
-    def _save(self, file: File, new: bool = False) -> None:
-        self._files_dir.mkdir(parents=True, exist_ok=True)
-        file_path = self._get_file_path(file.id, new=new)
-        content = file.model_dump_json()
-        file_path.write_text(content, encoding="utf-8")
+        """Retrieve file metadata and filesystem path."""
+        file_metadata = self.retrieve(file_id)
+        file_path = self.get_file_path(file_id)
+        return file_metadata, file_path
+        return file_metadata, file_path
+        return file_metadata, file_path

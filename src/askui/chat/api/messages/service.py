@@ -1,83 +1,99 @@
-from pathlib import Path
-from typing import Iterator
+"""Message service with SQLAlchemy persistence."""
 
-from askui.chat.api.messages.models import Message, MessageCreateParams
+from pathlib import Path
+from typing import Callable, Iterator
+
+from askui.chat.api.db.query_builder import QueryBuilder
+from askui.chat.api.messages.models import MessageModel
+from askui.chat.api.messages.schemas import Message, MessageCreateParams
 from askui.chat.api.models import MessageId, ThreadId
-from askui.utils.api_utils import (
-    LIST_LIMIT_DEFAULT,
-    ConflictError,
-    ListOrder,
-    ListQuery,
-    ListResponse,
-    NotFoundError,
-    list_resources,
-)
+from askui.utils.api_utils import ListQuery, ListResponse, NotFoundError
+from sqlalchemy.orm import Session
 
 
 class MessageService:
-    def __init__(self, base_dir: Path) -> None:
-        self._base_dir = base_dir
+    """Service for managing Message resources with SQLAlchemy persistence."""
 
-    def get_messages_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "messages" / thread_id
+    def __init__(self, session_factory: Callable[[], Session]) -> None:
+        self._session_factory = session_factory
 
-    def _get_message_path(
-        self, thread_id: ThreadId, message_id: MessageId, new: bool = False
-    ) -> Path:
-        message_path = self.get_messages_dir(thread_id) / f"{message_id}.json"
-        exists = message_path.exists()
-        if new and exists:
-            error_msg = f"Message {message_id} already exists in thread {thread_id}"
-            raise ConflictError(error_msg)
-        if not new and not exists:
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg)
-        return message_path
-
-    def create(self, thread_id: ThreadId, params: MessageCreateParams) -> Message:
-        new_message = Message.create(thread_id, params)
-        self._save(new_message, new=True)
-        return new_message
+    def _to_pydantic(self, db_model: MessageModel) -> Message:
+        """Convert SQLAlchemy model to Pydantic model."""
+        return db_model.to_pydantic()
 
     def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
-        messages_dir = self.get_messages_dir(thread_id)
-        return list_resources(messages_dir, query, Message)
+        """List messages for a thread with pagination."""
+        with self._session_factory() as session:
+            q = session.query(MessageModel).filter(MessageModel.thread_id == thread_id)
 
-    def iter(
-        self,
-        thread_id: ThreadId,
-        order: ListOrder = "asc",
-        batch_size: int = LIST_LIMIT_DEFAULT,
-    ) -> Iterator[Message]:
-        has_more = True
-        last_id: str | None = None
-        while has_more:
-            list_messages_response = self.list_(
-                thread_id=thread_id,
-                query=ListQuery(limit=batch_size, order=order, after=last_id),
+            # Apply list query parameters
+            q = QueryBuilder.apply_list_query(
+                q, MessageModel, query, MessageModel.created_at, MessageModel.id
             )
-            has_more = list_messages_response.has_more
-            last_id = list_messages_response.last_id
-            for msg in list_messages_response.data:
-                yield msg
+
+            # Apply limit
+            limit = query.limit or 20
+            q = q.limit(limit + 1)  # +1 to check if there are more
+
+            results = q.all()
+            return QueryBuilder.build_list_response(results, limit, self._to_pydantic)
 
     def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
-        try:
-            message_file = self._get_message_path(thread_id, message_id)
-            return Message.model_validate_json(message_file.read_text(encoding="utf-8"))
-        except FileNotFoundError as e:
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg) from e
+        """Retrieve a message by ID."""
+        with self._session_factory() as session:
+            db_message = (
+                session.query(MessageModel)
+                .filter(
+                    MessageModel.thread_id == thread_id,
+                    MessageModel.id == message_id,
+                )
+                .first()
+            )
+            if not db_message:
+                error_msg = f"Message {message_id} not found"
+                raise NotFoundError(error_msg)
+            return self._to_pydantic(db_message)
+
+    def create(self, thread_id: ThreadId, params: MessageCreateParams) -> Message:
+        """Create a new message."""
+        with self._session_factory() as session:
+            db_message = MessageModel.from_create_params(params, thread_id)
+            session.add(db_message)
+            session.commit()
+            session.refresh(db_message)
+
+            return self._to_pydantic(db_message)
 
     def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
-        try:
-            self._get_message_path(thread_id, message_id).unlink()
-        except FileNotFoundError as e:
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg) from e
+        """Delete a message."""
+        with self._session_factory() as session:
+            db_message = (
+                session.query(MessageModel)
+                .filter(
+                    MessageModel.thread_id == thread_id,
+                    MessageModel.id == message_id,
+                )
+                .first()
+            )
+            if not db_message:
+                error_msg = f"Message {message_id} not found"
+                raise NotFoundError(error_msg)
 
-    def _save(self, message: Message, new: bool = False) -> None:
-        messages_dir = self.get_messages_dir(message.thread_id)
-        messages_dir.mkdir(parents=True, exist_ok=True)
-        message_file = self._get_message_path(message.thread_id, message.id, new=new)
-        message_file.write_text(message.model_dump_json(), encoding="utf-8")
+            session.delete(db_message)
+            session.commit()
+
+    def get_messages_dir(self, thread_id: ThreadId) -> Path:
+        """Get messages directory for a thread (for backward compatibility)."""
+        return Path.cwd() / "chat" / "messages" / thread_id
+
+    def list_messages(self, thread_id: ThreadId) -> Iterator[Message]:
+        """List all messages for a thread (for backward compatibility)."""
+        with self._session_factory() as session:
+            db_messages = (
+                session.query(MessageModel)
+                .filter(MessageModel.thread_id == thread_id)
+                .order_by(MessageModel.created_at)
+                .all()
+            )
+            for db_message in db_messages:
+                yield self._to_pydantic(db_message)

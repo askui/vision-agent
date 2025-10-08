@@ -1,13 +1,12 @@
-from fastapi import APIRouter, status
-
 from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.messages.dependencies import MessageServiceDep
-from askui.chat.api.messages.models import Message, MessageCreateParams
+from askui.chat.api.messages.schemas import Message, MessageCreateParams
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.models import MessageId, ThreadId
 from askui.chat.api.threads.dependencies import ThreadFacadeDep
 from askui.chat.api.threads.facade import ThreadFacade
 from askui.utils.api_utils import ListQuery, ListResponse
+from fastapi import APIRouter, status
 
 router = APIRouter(prefix="/threads/{thread_id}/messages", tags=["messages"])
 

@@ -1,28 +1,17 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Depends,
-    Header,
-    Path,
-    Query,
-    Response,
-    status,
-)
+from askui.chat.api.models import RunId, ThreadId, WorkspaceId
+from askui.chat.api.runs.schemas import RunCreateParams
+from askui.chat.api.threads.dependencies import ThreadFacadeDep
+from askui.chat.api.threads.facade import ThreadFacade
+from askui.utils.api_utils import ListResponse
+from fastapi import APIRouter, BackgroundTasks, Header, Path, Query, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from askui.chat.api.dependencies import ListQueryDep
-from askui.chat.api.models import RunId, ThreadId, WorkspaceId
-from askui.chat.api.runs.models import RunCreateParams
-from askui.chat.api.threads.dependencies import ThreadFacadeDep
-from askui.chat.api.threads.facade import ThreadFacade
-from askui.utils.api_utils import ListQuery, ListResponse
-
 from .dependencies import RunListQueryDep, RunServiceDep
-from .models import Run, RunListQuery, ThreadAndRunCreateParams
+from .schemas import Run, RunListQuery, ThreadAndRunCreateParams
 from .service import RunService
 
 router = APIRouter(tags=["runs"])

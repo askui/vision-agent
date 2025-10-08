@@ -4,14 +4,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from fastapi import status
-from fastapi.testclient import TestClient
-
 from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.runs.models import Run
 from askui.chat.api.runs.service import RunService
 from askui.chat.api.threads.models import Thread
 from askui.chat.api.threads.service import ThreadService
+from fastapi import status
+from fastapi.testclient import TestClient
 
 
 def create_mock_mcp_client_manager_manager() -> Mock:
@@ -45,12 +44,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -115,12 +120,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -186,12 +197,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -308,12 +325,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -366,12 +389,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -413,12 +442,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -472,12 +507,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -522,12 +563,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -575,12 +622,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -641,12 +694,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -689,12 +748,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -774,12 +839,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -858,12 +929,18 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
@@ -946,20 +1023,26 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
             from askui.chat.api.assistants.service import AssistantService
 
             return RunService(
-                base_dir=workspace_path,
-                assistant_service=AssistantService(workspace_path),
+                session_factory=mock_session_factory,
+                assistant_service=AssistantService(mock_session_factory),
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
                 settings=Mock(),
@@ -968,7 +1051,7 @@ class TestRunsAPI:
         def override_assistant_service() -> AssistantService:
             from askui.chat.api.assistants.service import AssistantService
 
-            return AssistantService(workspace_path)
+            return AssistantService(mock_session_factory)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_runs_service] = override_runs_service
@@ -1032,20 +1115,26 @@ class TestRunsAPI:
         from askui.chat.api.runs.dependencies import get_runs_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
+        mock_session_factory = Mock()
+        mock_session_factory.return_value.__enter__ = Mock(return_value=Mock())
+        mock_session_factory.return_value.__exit__ = Mock(return_value=None)
+
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
             mock_message_service = Mock()
             mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(
+                mock_session_factory, mock_message_service, mock_run_service
+            )
 
         def override_runs_service() -> RunService:
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
             from askui.chat.api.assistants.service import AssistantService
 
             return RunService(
-                base_dir=workspace_path,
-                assistant_service=AssistantService(workspace_path),
+                session_factory=mock_session_factory,
+                assistant_service=AssistantService(mock_session_factory),
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
                 settings=Mock(),
@@ -1054,7 +1143,7 @@ class TestRunsAPI:
         def override_assistant_service() -> AssistantService:
             from askui.chat.api.assistants.service import AssistantService
 
-            return AssistantService(workspace_path)
+            return AssistantService(mock_session_factory)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_runs_service] = override_runs_service

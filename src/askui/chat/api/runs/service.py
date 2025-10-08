@@ -4,72 +4,51 @@ from pathlib import Path
 from typing import Callable
 
 import anyio
-from typing_extensions import override
-
 from askui.chat.api.assistants.service import AssistantService
+from askui.chat.api.db.query_builder import QueryBuilder
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.events.events import DoneEvent, ErrorEvent, Event, RunEvent
 from askui.chat.api.runs.events.service import EventService
-from askui.chat.api.runs.models import Run, RunCreateParams, RunListQuery
+from askui.chat.api.runs.models import RunModel
 from askui.chat.api.runs.runner.runner import Runner, RunnerRunService
+from askui.chat.api.runs.schemas import Run, RunCreateParams, RunListQuery
 from askui.chat.api.settings import Settings
-from askui.utils.api_utils import (
-    ConflictError,
-    ListResponse,
-    NotFoundError,
-    list_resources,
-)
-
-
-def _build_run_filter_fn(query: RunListQuery) -> Callable[[Run], bool]:
-    def filter_fn(run: Run) -> bool:
-        return (query.thread is None or run.thread_id == query.thread) and (
-            query.status is None or run.status in query.status
-        )
-
-    return filter_fn
+from askui.utils.api_utils import ConflictError, ListQuery, ListResponse, NotFoundError
+from sqlalchemy.orm import Session
+from typing_extensions import override
 
 
 class RunService(RunnerRunService):
-    """Service for managing Run resources with filesystem persistence."""
+    """Service for managing Run resources with SQLAlchemy persistence."""
 
     def __init__(
         self,
-        base_dir: Path,
+        session_factory: Callable[[], Session],
         assistant_service: AssistantService,
         mcp_client_manager_manager: McpClientManagerManager,
         chat_history_manager: ChatHistoryManager,
         settings: Settings,
     ) -> None:
-        self._base_dir = base_dir
+        self._session_factory = session_factory
         self._assistant_service = assistant_service
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._chat_history_manager = chat_history_manager
         self._settings = settings
-        self._event_service = EventService(base_dir, self)
+        self._event_service = EventService(Path.cwd() / "chat", self)
 
-    def get_runs_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "runs" / thread_id
-
-    def _get_run_path(
-        self, thread_id: ThreadId, run_id: RunId, new: bool = False
-    ) -> Path:
-        run_path = self.get_runs_dir(thread_id) / f"{run_id}.json"
-        exists = run_path.exists()
-        if new and exists:
-            error_msg = f"Run {run_id} already exists in thread {thread_id}"
-            raise ConflictError(error_msg)
-        if not new and not exists:
-            error_msg = f"Run {run_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg)
-        return run_path
+    def _to_pydantic(self, db_model: RunModel) -> Run:
+        """Convert SQLAlchemy model to Pydantic model."""
+        return db_model.to_pydantic()
 
     def _create(self, thread_id: ThreadId, params: RunCreateParams) -> Run:
-        run = Run.create(thread_id, params)
-        self.save(run, new=True)
-        return run
+        with self._session_factory() as session:
+            db_run = RunModel.from_create_params(params, thread_id)
+            session.add(db_run)
+            session.commit()
+            session.refresh(db_run)
+            return self._to_pydantic(db_run)
 
     async def create(
         self,
@@ -137,12 +116,19 @@ class RunService(RunnerRunService):
 
     @override
     def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
-        try:
-            run_file = self._get_run_path(thread_id, run_id)
-            return Run.model_validate_json(run_file.read_text())
-        except FileNotFoundError as e:
-            error_msg = f"Run {run_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg) from e
+        with self._session_factory() as session:
+            db_run = (
+                session.query(RunModel)
+                .filter(
+                    RunModel.id == run_id,
+                    RunModel.thread_id == thread_id,
+                )
+                .first()
+            )
+            if not db_run:
+                error_msg = f"Run {run_id} not found in thread {thread_id}"
+                raise NotFoundError(error_msg)
+            return self._to_pydantic(db_run)
 
     async def retrieve_stream(
         self, thread_id: ThreadId, run_id: RunId
@@ -152,31 +138,110 @@ class RunService(RunnerRunService):
                 yield event
 
     def list_(self, query: RunListQuery) -> ListResponse[Run]:
-        if query.thread:
-            runs_dir = self.get_runs_dir(query.thread)
-            pattern = "*.json"
-        else:
-            runs_dir = self._base_dir / "runs"
-            pattern = "*/*.json"
-        return list_resources(
-            runs_dir,
-            query,
-            Run,
-            filter_fn=_build_run_filter_fn(query),
-            pattern=pattern,
-        )
+        with self._session_factory() as session:
+            q = session.query(RunModel)
+
+            # Filter by thread if specified
+            if query.thread:
+                q = q.filter(RunModel.thread_id == query.thread)
+
+            # Filter by status if specified
+            if query.status:
+                q = q.filter(RunModel.status.in_(query.status))
+
+            # Convert to ListQuery for QueryBuilder
+            list_query = ListQuery(
+                limit=query.limit,
+                order=query.order,
+                after=query.after,
+                before=query.before,
+            )
+
+            # Apply list query parameters
+            q = QueryBuilder.apply_list_query(
+                q, RunModel, list_query, RunModel.created_at, RunModel.id
+            )
+
+            # Apply limit
+            limit = query.limit or 20
+            q = q.limit(limit + 1)  # +1 to check if there are more
+
+            results = q.all()
+            return QueryBuilder.build_list_response(results, limit, self._to_pydantic)
 
     def cancel(self, thread_id: ThreadId, run_id: RunId) -> Run:
-        run = self.retrieve(thread_id, run_id)
-        if run.status in ("cancelled", "cancelling", "completed", "failed", "expired"):
-            return run
-        run.tried_cancelling_at = datetime.now(tz=timezone.utc)
-        self.save(run)
-        return run
+        with self._session_factory() as session:
+            db_run = (
+                session.query(RunModel)
+                .filter(
+                    RunModel.id == run_id,
+                    RunModel.thread_id == thread_id,
+                )
+                .first()
+            )
+            if not db_run:
+                error_msg = f"Run {run_id} not found in thread {thread_id}"
+                raise NotFoundError(error_msg)
+
+            run = self._to_pydantic(db_run)
+            if run.status in (
+                "cancelled",
+                "cancelling",
+                "completed",
+                "failed",
+                "expired",
+            ):
+                return run
+
+            db_run.tried_cancelling_at = datetime.now(tz=timezone.utc)
+            session.commit()
+            session.refresh(db_run)
+            return self._to_pydantic(db_run)
 
     @override
     def save(self, run: Run, new: bool = False) -> None:
-        runs_dir = self.get_runs_dir(run.thread_id)
-        runs_dir.mkdir(parents=True, exist_ok=True)
-        run_file = self._get_run_path(run.thread_id, run.id, new=new)
-        run_file.write_text(run.model_dump_json(), encoding="utf-8")
+        with self._session_factory() as session:
+            if new:
+                # Check if run already exists
+                existing_run = (
+                    session.query(RunModel)
+                    .filter(
+                        RunModel.id == run.id,
+                        RunModel.thread_id == run.thread_id,
+                    )
+                    .first()
+                )
+                if existing_run:
+                    error_msg = f"Run {run.id} already exists in thread {run.thread_id}"
+                    raise ConflictError(error_msg)
+
+                db_run = RunModel.from_pydantic(run)
+                session.add(db_run)
+            else:
+                db_run = (
+                    session.query(RunModel)
+                    .filter(
+                        RunModel.id == run.id,
+                        RunModel.thread_id == run.thread_id,
+                    )
+                    .first()
+                )
+                if not db_run:
+                    error_msg = f"Run {run.id} not found in thread {run.thread_id}"
+                    raise NotFoundError(error_msg)
+
+                # Update fields
+                db_run.status = run.status
+                db_run.instructions = run.instructions
+                db_run.tools = run.tools
+                db_run.metadata = run.metadata
+                db_run.tried_cancelling_at = run.tried_cancelling_at
+                db_run.started_at = run.started_at
+                db_run.completed_at = run.completed_at
+                db_run.failed_at = run.failed_at
+                db_run.expired_at = run.expired_at
+                db_run.cancelled_at = run.cancelled_at
+                db_run.last_error = run.last_error
+                db_run.usage = run.usage
+
+            session.commit()

@@ -5,8 +5,6 @@ from datetime import datetime, timezone
 
 from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
-from asyncer import asyncify, syncify
-
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
@@ -21,7 +19,7 @@ from askui.chat.api.runs.events.events import Event
 from askui.chat.api.runs.events.message_events import MessageEvent
 from askui.chat.api.runs.events.run_events import RunEvent
 from askui.chat.api.runs.events.service import RetrieveRunService
-from askui.chat.api.runs.models import Run, RunError
+from askui.chat.api.runs.schemas import Run, RunError
 from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
 from askui.models.models import ModelName
@@ -30,6 +28,7 @@ from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.prompts.system import caesr_system_prompt
+from asyncer import asyncify, syncify
 
 logger = logging.getLogger(__name__)
 
