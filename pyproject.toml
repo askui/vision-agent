@@ -229,6 +229,7 @@ chat = [
     "asgi-correlation-id>=4.3.4",
     "prometheus-fastapi-instrumentator>=7.1.0",
     "starlette-context>=0.4.0",
+    "sqlalchemy>=2.0.43",
 ]
 pynput = [
     "mss>=10.0.0",
