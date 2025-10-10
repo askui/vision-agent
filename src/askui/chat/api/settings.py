@@ -1,13 +1,22 @@
 from pathlib import Path
 
 from fastmcp.mcp_config import StdioMCPServer
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from askui.chat.api.mcp_configs.models import McpConfig, RemoteMCPServer
 from askui.chat.api.telemetry.integrations.fastapi.settings import TelemetrySettings
 from askui.chat.api.telemetry.logs.settings import LogFilter, LogSettings
 from askui.utils.datetime_utils import now
+
+
+class DbSettings(BaseModel):
+    """Database configuration settings."""
+
+    url: str = Field(
+        default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_chat.db').as_posix()}",
+        description="Database URL for SQLAlchemy connection",
+    )
 
 
 def _get_default_mcp_configs(chat_api_host: str, chat_api_port: int) -> list[McpConfig]:
@@ -45,8 +54,9 @@ class Settings(BaseSettings):
 
     data_dir: Path = Field(
         default_factory=lambda: Path.cwd() / "chat",
-        description="Base directory for storing chat data",
+        description="Base directory for chat data (used during migration)",
     )
+    db: DbSettings = Field(default_factory=DbSettings)
     host: str = Field(
         default="127.0.0.1",
         description="Host for the chat API",

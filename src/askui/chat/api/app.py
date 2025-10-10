@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 
-from askui.chat.api.assistants.dependencies import get_assistant_service
 from askui.chat.api.assistants.router import router as assistants_router
+from askui.chat.api.db.orm.base import Base
+from askui.chat.api.db.session import engine
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
@@ -36,8 +37,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
-    assistant_service = get_assistant_service(settings=settings)
-    assistant_service.seed()
+    # TODO Move to mgiration script
+    Base.metadata.create_all(bind=engine)  # type: ignore
     mcp_config_service = get_mcp_config_service(settings=settings)
     mcp_config_service.seed()
     yield
