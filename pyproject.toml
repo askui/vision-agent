@@ -227,6 +227,7 @@ chat = [
     "prometheus-fastapi-instrumentator>=7.1.0",
     "starlette-context>=0.4.0",
     "sqlalchemy>=2.0.43",
+    "alembic>=1.16.5",
 ]
 pynput = [
     "mss>=10.0.0",
