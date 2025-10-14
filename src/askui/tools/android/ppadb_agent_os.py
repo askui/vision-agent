@@ -5,8 +5,8 @@ import string
 from typing import List, Optional, get_args
 
 from PIL import Image
-from ppadb.client import Client as AdbClient  # type: ignore[import-untyped]
-from ppadb.device import Device as AndroidDevice  # type: ignore[import-untyped]
+from ppadb.client import Client as AdbClient
+from ppadb.device import Device as AndroidDevice
 
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
 
