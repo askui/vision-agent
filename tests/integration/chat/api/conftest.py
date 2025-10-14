@@ -2,14 +2,37 @@
 
 import tempfile
 import uuid
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from askui.chat.api.app import app
+from askui.chat.api.assistants.dependencies import get_assistant_service
+from askui.chat.api.assistants.service import AssistantService
+from askui.chat.api.db.orm.base import Base
 from askui.chat.api.files.service import FileService
+
+
+@pytest.fixture
+def test_db_session() -> Generator[Session, None, None]:
+    """Create a test database session with temporary SQLite file."""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
+        # Create an engine with the temporary file
+        engine = create_engine(f"sqlite:///{temp_db.name}", echo=True)
+        # Create all tables
+        Base.metadata.create_all(engine)
+        # Create a session
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        session = SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
 
 
 @pytest.fixture
@@ -19,9 +42,17 @@ def test_app() -> FastAPI:
 
 
 @pytest.fixture
-def test_client(test_app: FastAPI) -> TestClient:
-    """Get a test client for the FastAPI application."""
-    return TestClient(test_app)
+def test_client(
+    test_app: FastAPI, test_db_session: Session
+) -> Generator[TestClient, None, None]:
+    """Yield a TestClient with common overrides (assistants service uses the test DB)."""
+    app.dependency_overrides[get_assistant_service] = lambda: AssistantService(
+        test_db_session
+    )
+    try:
+        yield TestClient(test_app)
+    finally:
+        app.dependency_overrides.pop(get_assistant_service, None)
 
 
 @pytest.fixture
