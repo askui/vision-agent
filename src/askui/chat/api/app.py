@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -7,8 +8,6 @@ from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 
 from askui.chat.api.assistants.router import router as assistants_router
-from askui.chat.api.db.orm.base import Base
-from askui.chat.api.db.session import engine
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
@@ -24,6 +23,7 @@ from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.threads.router import router as threads_router
 from askui.chat.api.workflows.router import router as workflows_router
+from askui.chat.migrations.runner import run_migrations
 from askui.utils.api_utils import (
     ConflictError,
     FileTooLargeError,
@@ -32,16 +32,23 @@ from askui.utils.api_utils import (
     NotFoundError,
 )
 
+logger = logging.getLogger(__name__)
+
+
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
-    # TODO Move to mgiration script
-    Base.metadata.create_all(bind=engine)  # type: ignore
+    if settings.db.auto_migrate:
+        run_migrations()
+    else:
+        logger.info("Automatic migrations are disabled. Skipping migrations...")
+    logger.info("Seeding default MCP configurations...")
     mcp_config_service = get_mcp_config_service(settings=settings)
     mcp_config_service.seed()
     yield
+    logger.info("Disconnecting all MCP clients...")
     await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
 
 

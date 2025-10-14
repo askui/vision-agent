@@ -1,20 +1,12 @@
-import enum
+import logging
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+logger = logging.getLogger(__name__)
 
-class LogLevel(str, enum.Enum):
-    CRITICAL = "CRITICAL"
-    ERROR = "ERROR"
-    WARNING = "WARNING"
-    INFO = "INFO"
-    DEBUG = "DEBUG"
-
-
-class LogFormat(str, enum.Enum):
-    JSON = "json"
-    LOGFMT = "logfmt"
+LogFormat = Literal["JSON", "LOGFMT"]
+LogLevel = Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
 
 
 class EqualsLogFilter(BaseModel):
@@ -27,6 +19,6 @@ LogFilter = EqualsLogFilter
 
 
 class LogSettings(BaseModel):
-    format: LogFormat = LogFormat.LOGFMT
-    level: LogLevel = LogLevel.INFO
+    format: LogFormat = Field("LOGFMT")
+    level: LogLevel = Field("INFO")
     filters: list[LogFilter] | None = None
