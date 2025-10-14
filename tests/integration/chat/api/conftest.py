@@ -45,7 +45,9 @@ def test_app() -> FastAPI:
 def test_client(
     test_app: FastAPI, test_db_session: Session
 ) -> Generator[TestClient, None, None]:
-    """Yield a TestClient with common overrides (assistants service uses the test DB)."""
+    """Yield a TestClient with common overrides
+    (assistants service uses the test DB).
+    """
     app.dependency_overrides[get_assistant_service] = lambda: AssistantService(
         test_db_session
     )
