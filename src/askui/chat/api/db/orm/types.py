@@ -14,7 +14,7 @@ def create_prefixed_id_type(prefix: str) -> type[TypeDecorator[str]]:
         def process_bind_param(self, value: str | None, dialect: Any) -> str | None:
             if value is None:
                 return value
-            return value[len(prefix) + 1 :]
+            return value.removeprefix(f"{prefix}_")
 
         def process_result_value(self, value: str | None, dialect: Any) -> str | None:
             if value is None:

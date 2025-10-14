@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastmcp.mcp_config import StdioMCPServer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from askui.chat.api.mcp_configs.models import McpConfig, RemoteMCPServer
@@ -17,6 +17,21 @@ class DbSettings(BaseModel):
         default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_chat.db').as_posix()}",
         description="Database URL for SQLAlchemy connection",
     )
+    auto_migrate: bool = Field(
+        default=True,
+        description="Whether to run migrations automatically on startup",
+    )
+
+    @field_validator("url")
+    @classmethod
+    def validate_sqlite_url(cls, v: str) -> str:
+        """Ensure only synchronous SQLite URLs are allowed."""
+        if not v.startswith("sqlite://"):
+            error_msg = (
+                "Only synchronous SQLite URLs are allowed (must start with 'sqlite://')"
+            )
+            raise ValueError(error_msg)
+        return v
 
 
 def _get_default_mcp_configs(chat_api_host: str, chat_api_port: int) -> list[McpConfig]:
