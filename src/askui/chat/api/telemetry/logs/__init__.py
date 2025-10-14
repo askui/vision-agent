@@ -7,6 +7,8 @@ from structlog import types as structlog_types
 from .settings import LogSettings
 from .structlog import setup_structlog
 
+logger = logging_stdlib.getLogger(__name__)
+
 
 def setup_uncaught_exception_logging(logger: logging_stdlib.Logger) -> None:
     def handle_uncaught_exception(
@@ -44,11 +46,19 @@ def silence_logs(loggers: list[str]) -> None:
         logger.propagate = False
 
 
+_logging_setup = False
+
+
 def setup_logging(
     settings: LogSettings,
     pre_processors: list[structlog_types.Processor] | None = None,
 ) -> None:
+    global _logging_setup
+    if _logging_setup:
+        logger.debug("Logging already setup. Skipping setup...")
+        return
     logging_stdlib.captureWarnings(True)
     root_logger = logging_stdlib.getLogger()
     setup_structlog(root_logger, settings, pre_processors)
     setup_uncaught_exception_logging(root_logger)
+    _logging_setup = True

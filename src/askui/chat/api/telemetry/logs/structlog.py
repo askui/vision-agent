@@ -38,7 +38,7 @@ def configure_stdlib_logger(
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(log_level.value)
+    logger.setLevel(log_level)
 
 
 EVENT_KEY = "message"
@@ -67,7 +67,7 @@ def get_shared_processors(settings: LogSettings) -> list[structlog.types.Process
 def get_format_dependent_processors(
     log_format: LogFormat,
 ) -> list[structlog.types.Processor]:
-    if log_format == LogFormat.JSON:
+    if log_format == "JSON":
         return [structlog.processors.format_exc_info]
     return [
         structlog.dev.set_exc_info,
@@ -76,6 +76,6 @@ def get_format_dependent_processors(
 
 
 def get_renderer(log_format: LogFormat) -> structlog.types.Processor:
-    if log_format == LogFormat.JSON:
+    if log_format == "JSON":
         return structlog.processors.JSONRenderer()
     return structlog.dev.ConsoleRenderer(event_key=EVENT_KEY)

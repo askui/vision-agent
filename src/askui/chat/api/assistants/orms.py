@@ -20,9 +20,7 @@ class AssistantOrm(Base):
 
     id: Mapped[str] = mapped_column(AssistantId, primary_key=True)
     workspace_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(
-        UnixDatetime, nullable=False, index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(UnixDatetime, nullable=False)
     name: Mapped[str | None] = mapped_column(String, nullable=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     avatar: Mapped[str | None] = mapped_column(Text, nullable=True)

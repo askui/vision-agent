@@ -51,6 +51,7 @@ path = "src/askui/__init__.py"
 distribution = true
 
 [tool.pdm.scripts]
+alembic = "alembic -c src/askui/chat/migrations/alembic.ini"
 test = "pytest -n auto"
 "test:cov" = "pytest -n auto --cov=src/askui --cov-report=html"
 "test:cov:view" = "python -m http.server --directory htmlcov"
@@ -230,6 +231,7 @@ chat = [
     "prometheus-fastapi-instrumentator>=7.1.0",
     "starlette-context>=0.4.0",
     "sqlalchemy>=2.0.43",
+    "alembic>=1.16.5",
 ]
 pynput = [
     "mss>=10.0.0",
