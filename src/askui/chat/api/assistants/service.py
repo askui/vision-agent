@@ -21,6 +21,7 @@ class AssistantService:
                 AssistantOrm.workspace_id.is_(None),
             ),
         )
+        orms: list[AssistantOrm]
         orms, has_more = list_all(q, query, AssistantOrm.id)
         data = [orm.to_model() for orm in orms]
         return ListResponse(
@@ -33,7 +34,7 @@ class AssistantService:
     def _find_by_id(
         self, workspace_id: WorkspaceId | None, assistant_id: AssistantId
     ) -> AssistantOrm:
-        assistant_orm = (
+        assistant_orm: AssistantOrm | None = (
             self._session.query(AssistantOrm)
             .filter(
                 AssistantOrm.id == assistant_id,
