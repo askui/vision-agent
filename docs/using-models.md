@@ -84,7 +84,7 @@ export ASKUI_TOKEN=<your-token-here>
 
 | Model Name | Strengths | Execution Speed | Reliability |
 |------------|-----------|----------------|-------------|
-| `claude-sonnet-4-20250514` | Excellent for autonomous goal achievement and complex reasoning tasks | Slow, >1s per step | **Medium** - Not recommended for production usage |
+| `claude-sonnet-4-20250514` | Excellent for autonomous goal achievement and complex reasoning tasks | Slow, >1s per step | **Medium** - stable |
 
 #### Configuration
 
@@ -146,7 +146,7 @@ with VisionAgent(models=custom_models, model={"get": MODEL_KEY}) as agent:
 
 | Model Name | Strengths | Execution Speed | Reliability |
 |------------|-----------|----------------|-------------|
-| `AskUI/PTA-1` | Same as askui-pta but via Huggingface | Fast, <500ms per step | **Low** - Not recommended for production |
+| `AskUI/PTA-1` | Same as askui-pta but via Huggingface | Fast, <500ms per step | **Low** - depends on UI |
 | `OS-Copilot/OS-Atlas-Base-7B` | Good for autonomous goal achievement | - | **Low** - Not recommended for production |
 | `showlab/ShowUI-2B` | Good for autonomous goal achievement | - | **Low** - Not recommended for production |
 | `Qwen/Qwen2-VL-2B-Instruct` | Good for visual language tasks | - | **Low** - Not recommended for production |
@@ -457,10 +457,9 @@ Implement logging for debugging and monitoring:
 ```python
 import logging
 
-class LoggedModel(ActModel):
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
+class LoggedModel(ActModel):
     @override
     def act(
         self,
@@ -470,9 +469,9 @@ class LoggedModel(ActModel):
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
     ) -> None:
-        self.logger.info(f"Processing act request: {messages}")
+        logger.info(f"Processing act request: {messages}")
         # Your implementation here
-        self.logger.info("Act request completed successfully")
+        logger.info("Act request completed successfully")
 ```
 
 #### 3. Configuration Management

@@ -407,6 +407,7 @@ class Computer20250124Tool(ComputerToolBase):
     def __init__(
         self,
         agent_os: AgentOs,
+        resolution: Resolution | None = None,
     ) -> None:
         super().__init__(
             agent_os=agent_os,
@@ -437,6 +438,7 @@ class Computer20250124Tool(ComputerToolBase):
                 },
                 "required": ["action"],
             },
+            resolution=resolution,
         )
 
     @override
@@ -465,7 +467,7 @@ class Computer20250124Tool(ComputerToolBase):
             case "hold_key":
                 self._hold_key(keystroke=text, duration=duration)  # type: ignore[arg-type]
             case "key":
-                return super().__call__(action, key, coordinate)
+                return super().__call__(action, text, coordinate)
             case "left_mouse_down":
                 self._agent_os.mouse_down("left")
             case "left_mouse_up":

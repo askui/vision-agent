@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from askui.chat.api.runs.runner.events.event_base import EventBase
+from askui.chat.api.runs.events.event_base import EventBase
 
 
 class ErrorEventDataError(BaseModel):

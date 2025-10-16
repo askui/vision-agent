@@ -1,0 +1,5 @@
+{
+  "agentCanUpdateSnapshot": true,
+  "install": "pdm install",
+  "start": "pdm run chat:api"
+}

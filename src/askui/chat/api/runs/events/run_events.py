@@ -1,7 +1,7 @@
 from typing import Literal
 
+from askui.chat.api.runs.events.event_base import EventBase
 from askui.chat.api.runs.models import Run
-from askui.chat.api.runs.runner.events.event_base import EventBase
 
 
 class RunEvent(EventBase):

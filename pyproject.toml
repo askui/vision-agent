@@ -20,7 +20,6 @@ dependencies = [
     "pyperclip>=1.9.0",
     "python-dateutil>=2.9.0.post0",
     "requests>=2.32.3",
-    "rich>=13.9.4",
     "segment-analytics-python>=2.3.4",
     "tenacity>=9.1.2",
     "jsonref>=1.1.0",
@@ -30,6 +29,8 @@ dependencies = [
     "markitdown[xls,xlsx,docx]>=0.1.2",
     "asyncer==0.0.8",
     "bson>=0.5.10",
+    "aiofiles>=24.1.0",
+    "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -42,6 +43,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/askui/__init__.py"
+
 
 
 
@@ -63,7 +65,7 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy ."
-"chat:api" = "uvicorn askui.chat.api.app:app --reload --port 9261"
+"chat:api" = "python -m askui.chat"
 "qa:fix" = { composite = [
     "typecheck:all",
     "format",
@@ -73,7 +75,7 @@ typecheck = "mypy"
 "json:gen" = "datamodel-codegen --output-model-type pydantic_v2.BaseModel --input src/askui/tools/askui/askui_ui_controller_grpc/json_schema/ --input-file-type jsonschema --output src/askui/tools/askui/askui_ui_controller_grpc/generated/"
 
 [dependency-groups]
-test = [
+dev = [
     "pytest>=8.3.4",
     "ruff>=0.9.5",
     "pytest-mock>=3.14.0",
@@ -90,10 +92,9 @@ test = [
     "types-pynput>=1.8.1.20250318",
     "playwright>=1.41.0",
     "pytest-asyncio>=1.1.0",
-]
-dev = [
     "datamodel-code-generator>=0.31.2",
     "grpcio-tools>=1.73.1",
+    "types-aiofiles>=24.1.0.20250822",
 ]
 
 
@@ -221,6 +222,10 @@ chat = [
     "askui[android,web]",
     "uvicorn>=0.34.3",
     "anyio>=4.10.0",
+    "structlog>=25.4.0",
+    "asgi-correlation-id>=4.3.4",
+    "prometheus-fastapi-instrumentator>=7.1.0",
+    "starlette-context>=0.4.0",
 ]
 pynput = [
     "mss>=10.0.0",

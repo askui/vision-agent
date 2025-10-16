@@ -1,21 +1,27 @@
-import json
+import logging
 import types
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import Any, Literal, Protocol, Type, cast
+from functools import wraps
+from typing import Any, Literal, Protocol, Type
 
 import jsonref
 import mcp
-from anthropic.types.beta import BetaToolParam, BetaToolUnionParam
+from anthropic.types.beta import (
+    BetaCacheControlEphemeralParam,
+    BetaToolParam,
+    BetaToolUnionParam,
+)
 from anthropic.types.beta.beta_tool_param import InputSchema
 from asyncer import syncify
 from fastmcp.client.client import CallToolResult, ProgressHandler
+from fastmcp.tools import Tool as FastMcpTool
+from fastmcp.utilities.types import Image as FastMcpImage
 from mcp import Tool as McpTool
 from PIL import Image
 from pydantic import BaseModel, Field
 from typing_extensions import Self
 
-from askui.logger import logger
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -25,6 +31,8 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.utils.image_utils import ImageSource
+
+logger = logging.getLogger(__name__)
 
 PrimitiveToolCallResult = Image.Image | None | str | BaseModel
 
@@ -52,22 +60,28 @@ def _convert_to_content(
         for block in result.content:
             match block.type:
                 case "text":
-                    _result.append(TextBlockParam(text=block.text))  # type: ignore[union-attr]
+                    _result.append(TextBlockParam(text=block.text))
                 case "image":
-                    media_type = block.mimeType  # type: ignore[union-attr]
+                    media_type = block.mimeType
                     if media_type not in IMAGE_MEDIA_TYPES_SUPPORTED:
-                        logger.error(f"Unsupported image media type: {media_type}")
+                        logger.warning(
+                            "Unsupported image media type",
+                            extra={"media_type": media_type},
+                        )
                         continue
                     _result.append(
                         ImageBlockParam(
                             source=Base64ImageSourceParam(
                                 media_type=media_type,
-                                data=block.data,  # type: ignore[union-attr]
+                                data=block.data,
                             )
                         )
                     )
                 case _:
-                    logger.error(f"Unsupported block type: {block.type}")
+                    logger.warning(
+                        "Unsupported block type",
+                        extra={"block_type": block.type},
+                    )
         return _result
 
     if isinstance(result, str):
@@ -97,6 +111,53 @@ def _default_input_schema() -> InputSchema:
     return {"type": "object", "properties": {}, "required": []}
 
 
+def _convert_to_mcp_content(
+    result: Any,
+) -> Any:
+    if isinstance(result, tuple):
+        return tuple(_convert_to_mcp_content(item) for item in result)
+
+    if isinstance(result, list):
+        return [_convert_to_mcp_content(item) for item in result]
+
+    if isinstance(result, Image.Image):
+        src = ImageSource(result)
+        return FastMcpImage(data=src.to_bytes(), format="png").to_image_content()
+
+    return result
+
+
+PLAYWRIGHT_TOOL_PREFIX = "browser_"
+
+
+def _is_playwright_error(
+    param: ToolUseBlockParam,
+    error: Exception,  # noqa: ARG001
+) -> bool:
+    if param.name.startswith(PLAYWRIGHT_TOOL_PREFIX):
+        return True
+    return False
+
+
+def _create_tool_result_block_param_for_playwright_error(
+    param: ToolUseBlockParam, error: Exception
+) -> ToolResultBlockParam:
+    lines = str(error).split("\n")
+    line_idx: int | None = None
+    for idx, line in enumerate(lines):
+        if line.startswith('Run "npx playwright install '):
+            line_idx = idx
+            break
+
+    if line_idx is not None:
+        lines[line_idx] = "Download and install the browser to continue."
+    return ToolResultBlockParam(
+        content="\n\n".join(lines),
+        is_error=True,
+        tool_use_id=param.id,
+    )
+
+
 class Tool(BaseModel, ABC):
     name: str = Field(description="Name of the tool")
     description: str = Field(description="Description of what the tool does")
@@ -118,6 +179,27 @@ class Tool(BaseModel, ABC):
             name=self.name,
             description=self.description,
             input_schema=self.input_schema,
+        )
+
+    def to_mcp_tool(
+        self, tags: set[str], name_prefix: str | None = None
+    ) -> FastMcpTool:
+        """Convert the AskUI tool to an MCP tool."""
+        tool_call = self.__call__
+
+        @wraps(tool_call)
+        def wrapped_tool_call(*args: Any, **kwargs: Any) -> Any:
+            return _convert_to_mcp_content(tool_call(*args, **kwargs))
+
+        tool_name = self.name
+        if name_prefix is not None:
+            tool_name = f"{name_prefix}{tool_name}"
+
+        return FastMcpTool.from_function(
+            wrapped_tool_call,
+            name=tool_name,
+            description=self.description,
+            tags=tags,
         )
 
 
@@ -160,11 +242,13 @@ def _replace_refs(tool_name: str, input_schema: InputSchema) -> InputSchema:
             lazy_load=False,
             proxies=False,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception(
-            f"Failed to replace refs for tool {tool_name}: {json.dumps(input_schema)}. "
-            "Falling back to original "
-            f"input schema which may be invalid or not be supported by the model: {e}"
+            "Failed to replace refs for tool",
+            extra={
+                "tool_name": tool_name,
+                "input_schema": input_schema,
+            },
         )
         return input_schema
 
@@ -202,6 +286,18 @@ class ToolCollection:
         self._mcp_client = mcp_client
         self._include = include
 
+    def retrieve_tool_beta_flags(self) -> list[str]:
+        result: set[str] = set()
+        for tool in self._get_mcp_tools().values():
+            beta_flags = (tool.meta or {}).get("betas", [])
+            if not isinstance(beta_flags, list):
+                continue
+            for beta_flag in beta_flags:
+                if not isinstance(beta_flag, str):
+                    continue
+                result.add(beta_flag)
+        return list(result)
+
     def to_params(self) -> list[BetaToolUnionParam]:
         tool_map = {
             **self._get_mcp_tool_params(),
@@ -215,23 +311,29 @@ class ToolCollection:
             for tool_name, tool in tool_map.items()
             if self._include is None or tool_name in self._include
         }
-        return list(filtered_tool_map.values())
+        result = list(filtered_tool_map.values())
+        if result:
+            result[-1]["cache_control"] = BetaCacheControlEphemeralParam(
+                type="ephemeral",
+            )
+        return result
 
     def _get_mcp_tool_params(self) -> dict[str, BetaToolUnionParam]:
         if not self._mcp_client:
             return {}
         mcp_tools = self._get_mcp_tools()
-        return {
-            tool_name: cast(
-                "BetaToolUnionParam",
-                BetaToolParam(
-                    name=tool_name,
-                    description=tool.description or "",
-                    input_schema=_replace_refs(tool_name, tool.inputSchema),
-                ),
+        result: dict[str, BetaToolUnionParam] = {}
+        for tool_name, tool in mcp_tools.items():
+            if params := (tool.meta or {}).get("params"):
+                # validation missing
+                result[tool_name] = params
+                continue
+            result[tool_name] = BetaToolParam(
+                name=tool_name,
+                description=tool.description or "",
+                input_schema=_replace_refs(tool_name, tool.inputSchema),
             )
-            for tool_name, tool in mcp_tools.items()
-        }
+        return result
 
     def append_tool(self, *tools: Tool) -> "Self":
         """Append a tool to the collection."""
@@ -279,8 +381,10 @@ class ToolCollection:
                 return {}
             list_mcp_tools_sync = syncify(self._list_mcp_tools, raise_sync_error=False)
             tools_list = list_mcp_tools_sync(self._mcp_client)
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Failed to list MCP tools: {e}", exc_info=True)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Failed to list MCP tools",
+            )
             return {}
         else:
             return {tool.name: tool for tool in tools_list}
@@ -299,9 +403,12 @@ class ToolCollection:
         except AgentException:
             raise
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Tool {tool_use_block_param.name} failed: {e}", exc_info=True)
+            logger.warning(
+                "Tool failed",
+                extra={"tool_name": tool_use_block_param.name, "error": str(e)},
+            )
             return ToolResultBlockParam(
-                content=f"Tool {tool_use_block_param.name} failed: {e}",
+                content=str(e),
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
             )
@@ -336,11 +443,18 @@ class ToolCollection:
                 tool_use_id=tool_use_block_param.id,
             )
         except Exception as e:  # noqa: BLE001
-            logger.error(
-                f"MCP tool {tool_use_block_param.name} failed: {e}", exc_info=True
+            logger.warning(
+                "MCP tool failed",
+                exc_info=True,
+                extra={"tool_name": tool_use_block_param.name, "error": str(e)},
             )
+            if _is_playwright_error(tool_use_block_param, e):
+                return _create_tool_result_block_param_for_playwright_error(
+                    tool_use_block_param,
+                    e,
+                )
             return ToolResultBlockParam(
-                content=f"MCP tool {tool_use_block_param.name} failed: {e}",
+                content=str(e),
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
             )

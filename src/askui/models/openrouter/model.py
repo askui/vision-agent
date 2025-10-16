@@ -1,11 +1,11 @@
 import json
+import logging
 from typing import TYPE_CHECKING, Any, Optional, Type
 
 import openai
 from openai import OpenAI
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
@@ -15,6 +15,8 @@ from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
 
 from .settings import OpenRouterSettings
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from openai.types.chat.completion_create_params import ResponseFormat
@@ -122,10 +124,10 @@ class OpenRouterModel(GetModel):
                 },
             }
 
-        chat_completion = self._client.chat.completions.create(
+        chat_completion = self._client.chat.completions.create(  # type: ignore[misc]
             model=self._settings.model,
             extra_body=extra_body,
-            response_format=response_format,
+            response_format=response_format,  # type: ignore[arg-type]
             messages=[
                 {
                     "role": "user",
@@ -150,14 +152,17 @@ class OpenRouterModel(GetModel):
             presence_penalty=self._settings.chat_completions_create_settings.presence_penalty,
         )
 
-        model_response = chat_completion.choices[0].message.content
+        model_response = chat_completion.choices[0].message.content  # type: ignore[union-attr]
 
         if _response_schema is not None and model_response is not None:
             try:
                 response_json = json.loads(model_response)
             except json.JSONDecodeError:
                 error_msg = f"Expected JSON, but model {self._settings.model} returned: {model_response}"  # noqa: E501
-                logger.error(error_msg)
+                logger.exception(
+                    "Expected JSON, but model returned",
+                    extra={"model": self._settings.model, "response": model_response},
+                )
                 raise ValueError(error_msg) from None
 
             validated_response = _response_schema.model_validate(

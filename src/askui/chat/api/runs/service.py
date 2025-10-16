@@ -1,30 +1,35 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Callable
 
 import anyio
 from typing_extensions import override
 
 from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
-from askui.chat.api.messages.service import MessageService
-from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
-from askui.chat.api.runs.models import Run, RunCreateParams
-from askui.chat.api.runs.runner.events.events import (
-    DoneEvent,
-    ErrorEvent,
-    Events,
-    RunEvent,
-)
+from askui.chat.api.runs.events.events import DoneEvent, ErrorEvent, Event, RunEvent
+from askui.chat.api.runs.events.service import EventService
+from askui.chat.api.runs.models import Run, RunCreateParams, RunListQuery
 from askui.chat.api.runs.runner.runner import Runner, RunnerRunService
+from askui.chat.api.settings import Settings
 from askui.utils.api_utils import (
     ConflictError,
-    ListQuery,
     ListResponse,
     NotFoundError,
     list_resources,
 )
+
+
+def _build_run_filter_fn(query: RunListQuery) -> Callable[[Run], bool]:
+    def filter_fn(run: Run) -> bool:
+        return (query.thread is None or run.thread_id == query.thread) and (
+            query.status is None or run.status in query.status
+        )
+
+    return filter_fn
 
 
 class RunService(RunnerRunService):
@@ -35,14 +40,15 @@ class RunService(RunnerRunService):
         base_dir: Path,
         assistant_service: AssistantService,
         mcp_client_manager_manager: McpClientManagerManager,
-        message_service: MessageService,
-        message_translator: MessageTranslator,
+        chat_history_manager: ChatHistoryManager,
+        settings: Settings,
     ) -> None:
         self._base_dir = base_dir
         self._assistant_service = assistant_service
         self._mcp_client_manager_manager = mcp_client_manager_manager
-        self._message_service = message_service
-        self._message_translator = message_translator
+        self._chat_history_manager = chat_history_manager
+        self._settings = settings
+        self._event_service = EventService(base_dir, self)
 
     def get_runs_dir(self, thread_id: ThreadId) -> Path:
         return self._base_dir / "runs" / thread_id
@@ -70,52 +76,60 @@ class RunService(RunnerRunService):
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         params: RunCreateParams,
-    ) -> tuple[Run, AsyncGenerator[Events, None]]:
+    ) -> tuple[Run, AsyncGenerator[Event, None]]:
         assistant = self._assistant_service.retrieve(
             workspace_id=workspace_id, assistant_id=params.assistant_id
         )
         run = self._create(thread_id, params)
-        send_stream, receive_stream = anyio.create_memory_object_stream[Events]()
+        send_stream, receive_stream = anyio.create_memory_object_stream[Event]()
         runner = Runner(
             workspace_id=workspace_id,
             assistant=assistant,
             run=run,
-            message_service=self._message_service,
-            message_translator=self._message_translator,
+            chat_history_manager=self._chat_history_manager,
             mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
+            settings=self._settings,
         )
 
-        async def event_generator() -> AsyncGenerator[Events, None]:
+        async def event_generator() -> AsyncGenerator[Event, None]:
             try:
-                yield RunEvent(
-                    data=run,
-                    event="thread.run.created",
-                )
-                yield RunEvent(
-                    data=run,
-                    event="thread.run.queued",
-                )
+                async with self._event_service.create_writer(
+                    thread_id, run.id
+                ) as event_writer:
+                    run_created_event = RunEvent(
+                        data=run,
+                        event="thread.run.created",
+                    )
+                    await event_writer.write_event(run_created_event)
+                    yield run_created_event
+                    run_queued_event = RunEvent(
+                        data=run,
+                        event="thread.run.queued",
+                    )
+                    await event_writer.write_event(run_queued_event)
+                    yield run_queued_event
 
-                async def run_runner() -> None:
-                    try:
-                        await runner.run(send_stream)  # type: ignore[arg-type]
-                    finally:
-                        await send_stream.aclose()
-
-                async with anyio.create_task_group() as tg:
-                    tg.start_soon(run_runner)
-
-                    while True:
+                    async def run_runner() -> None:
                         try:
-                            event = await receive_stream.receive()
-                            yield event
-                            if isinstance(event, DoneEvent) or isinstance(
-                                event, ErrorEvent
-                            ):
+                            await runner.run(send_stream)  # type: ignore[arg-type]
+                        finally:
+                            await send_stream.aclose()
+
+                    async with anyio.create_task_group() as tg:
+                        tg.start_soon(run_runner)
+
+                        while True:
+                            try:
+                                event = await receive_stream.receive()
+                                await event_writer.write_event(event)
+                                yield event
+                                if isinstance(event, DoneEvent) or isinstance(
+                                    event, ErrorEvent
+                                ):
+                                    break
+                            except anyio.EndOfStream:
                                 break
-                        except anyio.EndOfStream:
-                            break
             finally:
                 await send_stream.aclose()
 
@@ -130,9 +144,27 @@ class RunService(RunnerRunService):
             error_msg = f"Run {run_id} not found in thread {thread_id}"
             raise NotFoundError(error_msg) from e
 
-    def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Run]:
-        runs_dir = self.get_runs_dir(thread_id)
-        return list_resources(runs_dir, query, Run)
+    async def retrieve_stream(
+        self, thread_id: ThreadId, run_id: RunId
+    ) -> AsyncGenerator[Event, None]:
+        async with self._event_service.create_reader(thread_id, run_id) as event_reader:
+            async for event in event_reader.read_events():
+                yield event
+
+    def list_(self, query: RunListQuery) -> ListResponse[Run]:
+        if query.thread:
+            runs_dir = self.get_runs_dir(query.thread)
+            pattern = "*.json"
+        else:
+            runs_dir = self._base_dir / "runs"
+            pattern = "*/*.json"
+        return list_resources(
+            runs_dir,
+            query,
+            Run,
+            filter_fn=_build_run_filter_fn(query),
+            pattern=pattern,
+        )
 
     def cancel(self, thread_id: ThreadId, run_id: RunId) -> Run:
         run = self.retrieve(thread_id, run_id)

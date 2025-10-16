@@ -1,71 +1,40 @@
 import json
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 
+from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
 from askui.chat.api.assistants.models import Assistant
-from askui.chat.api.assistants.seeds import ANDROID_AGENT
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
-from askui.chat.api.messages.models import MessageCreateParams
-from askui.chat.api.messages.service import MessageService
-from askui.chat.api.messages.translator import MessageTranslator
-from askui.chat.api.models import RunId, ThreadId, WorkspaceId
-from askui.chat.api.runs.models import Run, RunError
-from askui.chat.api.runs.runner.events.done_events import DoneEvent
-from askui.chat.api.runs.runner.events.error_events import (
+from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
+from askui.chat.api.models import WorkspaceId
+from askui.chat.api.runs.events.done_events import DoneEvent
+from askui.chat.api.runs.events.error_events import (
     ErrorEvent,
     ErrorEventData,
     ErrorEventDataError,
 )
-from askui.chat.api.runs.runner.events.events import Events
-from askui.chat.api.runs.runner.events.message_events import MessageEvent
-from askui.chat.api.runs.runner.events.run_events import RunEvent
+from askui.chat.api.runs.events.events import Event
+from askui.chat.api.runs.events.message_events import MessageEvent
+from askui.chat.api.runs.events.run_events import RunEvent
+from askui.chat.api.runs.events.service import RetrieveRunService
+from askui.chat.api.runs.models import Run, RunError
+from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
-from askui.models.shared.tools import Tool, ToolCollection
-from askui.utils.api_utils import LIST_LIMIT_MAX, ListQuery
+from askui.models.shared.tools import ToolCollection
+from askui.prompts.system import caesr_system_prompt
 
 logger = logging.getLogger(__name__)
 
 
-def _get_android_tools() -> list[Tool]:
-    from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
-    from askui.tools.android.ppadb_agent_os import PpadbAgentOs
-    from askui.tools.android.tools import (
-        AndroidDragAndDropTool,
-        AndroidKeyCombinationTool,
-        AndroidKeyTapEventTool,
-        AndroidScreenshotTool,
-        AndroidShellTool,
-        AndroidSwipeTool,
-        AndroidTapTool,
-        AndroidTypeTool,
-    )
-
-    agent_os = PpadbAgentOs()
-    act_agent_os_facade = AndroidAgentOsFacade(agent_os)
-    return [
-        AndroidScreenshotTool(act_agent_os_facade),
-        AndroidTapTool(act_agent_os_facade),
-        AndroidTypeTool(act_agent_os_facade),
-        AndroidDragAndDropTool(act_agent_os_facade),
-        AndroidKeyTapEventTool(act_agent_os_facade),
-        AndroidSwipeTool(act_agent_os_facade),
-        AndroidKeyCombinationTool(act_agent_os_facade),
-        AndroidShellTool(act_agent_os_facade),
-    ]
-
-
-class RunnerRunService(ABC):
-    @abstractmethod
-    def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
-        raise NotImplementedError
-
+class RunnerRunService(RetrieveRunService, ABC):
     @abstractmethod
     def save(self, run: Run, new: bool = False) -> None:
         raise NotImplementedError
@@ -77,19 +46,18 @@ class Runner:
         workspace_id: WorkspaceId,
         assistant: Assistant,
         run: Run,
-        message_service: MessageService,
-        message_translator: MessageTranslator,
+        chat_history_manager: ChatHistoryManager,
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
+        settings: Settings,
     ) -> None:
         self._workspace_id = workspace_id
         self._assistant = assistant
         self._run = run
-        self._message_service = message_service
-        self._message_translator = message_translator
-        self._message_content_translator = message_translator.content_translator
+        self._chat_history_manager = chat_history_manager
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
+        self._settings = settings
 
     def _retrieve(self) -> Run:
         return self._run_service.retrieve(
@@ -97,47 +65,59 @@ class Runner:
             run_id=self._run.id,
         )
 
-    def _build_system(self) -> str:
-        base_system = self._assistant.system or ""
+    def _build_system(self) -> list[BetaTextBlockParam]:
         metadata = {
             "run_id": str(self._run.id),
             "thread_id": str(self._run.thread_id),
             "workspace_id": str(self._workspace_id),
             "assistant_id": str(self._run.assistant_id),
+            "continued_by_user_at": datetime.now(timezone.utc).strftime(
+                "%A, %B %d, %Y %H:%M:%S %z"
+            ),
         }
-        return f"{base_system}\n\nMetadata of current conversation: {json.dumps(metadata)}".strip()
+        return [
+            BetaTextBlockParam(
+                type="text", text=caesr_system_prompt(self._assistant.name)
+            ),
+            *(
+                [
+                    BetaTextBlockParam(
+                        type="text",
+                        text=self._assistant.system,
+                    )
+                ]
+                if self._assistant.system
+                else []
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text="Metadata of current conversation: ",
+            ),
+            BetaTextBlockParam(
+                type="text",
+                text=json.dumps(metadata),
+                cache_control=BetaCacheControlEphemeralParam(
+                    type="ephemeral",
+                ),
+            ),
+        ]
 
     async def _run_agent(
         self,
-        send_stream: ObjectStream[Events],
+        send_stream: ObjectStream[Event],
     ) -> None:
-        messages: list[MessageParam] = [
-            await self._message_translator.to_anthropic(msg)
-            for msg in self._message_service.list_(
-                thread_id=self._run.thread_id,
-                query=ListQuery(limit=LIST_LIMIT_MAX, order="asc"),
-            ).data
-        ]
-
         async def async_on_message(
             on_message_cb_param: OnMessageCbParam,
         ) -> MessageParam | None:
-            message = self._message_service.create(
+            created_message = await self._chat_history_manager.append_message(
                 thread_id=self._run.thread_id,
-                params=MessageCreateParams(
-                    assistant_id=self._run.assistant_id
-                    if on_message_cb_param.message.role == "assistant"
-                    else None,
-                    role=on_message_cb_param.message.role,
-                    content=await self._message_content_translator.from_anthropic(
-                        on_message_cb_param.message.content
-                    ),
-                    run_id=self._run.id,
-                ),
+                assistant_id=self._run.assistant_id,
+                run_id=self._run.id,
+                message=on_message_cb_param.message,
             )
             await send_stream.send(
                 MessageEvent(
-                    data=message,
+                    data=created_message,
                     event="thread.message.created",
                 )
             )
@@ -149,7 +129,6 @@ class Runner:
             return on_message_cb_param.message
 
         on_message = syncify(async_on_message)
-
         mcp_client = await self._mcp_client_manager_manager.get_mcp_client_manager(
             self._workspace_id
         )
@@ -159,9 +138,15 @@ class Runner:
                 mcp_client=mcp_client,
                 include=set(self._assistant.tools),
             )
-            # Remove this after having extracted tools into Android MCP
-            if self._run.assistant_id == ANDROID_AGENT.id:
-                tools.append_tool(*_get_android_tools())
+            betas = tools.retrieve_tool_beta_flags()
+            system = self._build_system()
+            model = self._settings.model
+            messages = syncify(self._chat_history_manager.retrieve_message_params)(
+                thread_id=self._run.thread_id,
+                tools=tools.to_params(),
+                system=system,
+                model=model,
+            )
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
@@ -170,9 +155,11 @@ class Runner:
                 tools=tools,
                 settings=ActSettings(
                     messages=MessageSettings(
-                        model=ModelName.CLAUDE__SONNET__4__20250514,
-                        system=self._build_system(),
-                        thinking={"type": "enabled", "budget_tokens": 2048},
+                        betas=betas,
+                        model=model,
+                        system=system,
+                        thinking={"type": "enabled", "budget_tokens": 4096},
+                        max_tokens=8192,
                     ),
                 ),
             )
@@ -181,7 +168,7 @@ class Runner:
 
     async def run(
         self,
-        send_stream: ObjectStream[Events],
+        send_stream: ObjectStream[Event],
     ) -> None:
         try:
             self._mark_run_as_started()

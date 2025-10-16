@@ -156,7 +156,7 @@ $env:ASKUI_TOKEN="<your-token-here>"
 ```python
 from askui import VisionAgent
 
-with VisionAgent(log_level="DEBUG") as agent:
+with VisionAgent() as agent:
     # Give complex instructions to the agent (may have problems with virtual displays out of the box, so make sure there is no browser opened on a virtual display that the agent may not see)
     agent.act(
         "Look for a browser on the current device (checking all available displays, "
@@ -181,8 +181,6 @@ with VisionAgent(log_level="DEBUG") as agent:
 ```
 
 Run the script with `python <file path>`, e.g `python test.py`.
-
-**Note:** The `log_level` parameter is set to `DEBUG` to give you a better picture of what is happening. By default, it is set to `INFO` to see less logs.
 
 If you see a lot of logs and the first paragraph of the introduction in the console, congratulations! You've successfully let AI agents control your device to automate a task! If you have any issues, please check the [documentation](https://docs.askui.com/01-tutorials/01-your-first-agent#common-issues-and-solutions) or join our [Discord](https://discord.gg/Gu35zMGxbx) for support.
 

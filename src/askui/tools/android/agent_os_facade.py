@@ -143,3 +143,26 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         self._reporter.add_message(
             "AndroidAgentOS", f"Set device by serial number: {device_sn}"
         )
+
+    def get_connected_devices_serial_numbers(self) -> list[str]:
+        devices_sn = self._agent_os.get_connected_devices_serial_numbers()
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            f"Retrieved connected devices serial numbers, length: {len(devices_sn)}",
+        )
+        return devices_sn
+
+    def get_selected_device_infos(self) -> tuple[str, AndroidDisplay]:
+        device_sn, selected_display = self._agent_os.get_selected_device_infos()
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            (
+                f"Selected device serial number '{device_sn}'"
+                f" and selected display: {str(selected_display)}"
+            ),
+        )
+        return device_sn, selected_display
+
+    def connect_adb_client(self) -> None:
+        self._agent_os.connect_adb_client()
+        self._reporter.add_message("AndroidAgentOS", "Connected to adb client")

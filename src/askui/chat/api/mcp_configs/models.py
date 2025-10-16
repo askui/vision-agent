@@ -1,12 +1,23 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
-from pydantic import BaseModel
+from fastmcp.mcp_config import RemoteMCPServer as _RemoteMCPServer
+from fastmcp.mcp_config import StdioMCPServer
+from pydantic import BaseModel, Field
 
 from askui.chat.api.models import McpConfigId, WorkspaceId, WorkspaceResource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
+
+
+class RemoteMCPServer(_RemoteMCPServer):
+    auth: Annotated[
+        str | Literal["oauth"] | None,  # noqa: PYI051
+        Field(
+            description='Either a string representing a Bearer token or the literal "oauth" to use OAuth authentication.',
+        ),
+    ] = None
+
 
 McpServer = StdioMCPServer | RemoteMCPServer
 

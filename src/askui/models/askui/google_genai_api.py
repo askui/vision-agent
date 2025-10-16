@@ -1,83 +1,38 @@
 import json as json_lib
+import logging
 from typing import Type
 
 import google.genai as genai
 from google.genai import types as genai_types
 from google.genai.errors import APIError
 from pydantic import ValidationError
-from tenacity import (
-    RetryCallState,
-    retry,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
-from tenacity.wait import wait_base
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
-from askui.logger import logger
 from askui.models.askui.inference_api import AskUiInferenceApiSettings
+from askui.models.askui.retry_utils import (
+    RETRYABLE_HTTP_STATUS_CODES,
+    wait_for_retry_after_header,
+)
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel, ModelName
 from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
 from askui.utils.excel_utils import OfficeDocumentSource
-from askui.utils.http_utils import parse_retry_after_header
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
+
+logger = logging.getLogger(__name__)
 
 ASKUI_MODEL_CHOICE_PREFIX = "askui/"
 ASKUI_MODEL_CHOICE_PREFIX_LEN = len(ASKUI_MODEL_CHOICE_PREFIX)
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 
 
-class _wait_for_retry_after_header(wait_base):
-    """Wait strategy that tries to wait for the length specified by
-    the Retry-After header, or the underlying wait strategy if not.
-    See RFC 6585 § 4.
-
-    Otherwise, wait according to the fallback strategy.
-    """
-
-    def __init__(self, fallback: wait_base) -> None:
-        """Initialize the wait strategy with a fallback strategy.
-
-        Args:
-            fallback (wait_base): The fallback wait strategy to use when
-                Retry-After header is not available or invalid.
-        """
-        self._fallback = fallback
-
-    def __call__(self, retry_state: RetryCallState) -> float:
-        """Calculate the wait time based on Retry-After header or fallback.
-
-        Args:
-            retry_state (RetryCallState): The retry state containing the
-                exception information.
-
-        Returns:
-            float: The wait time in seconds.
-        """
-        if outcome := retry_state.outcome:
-            exc = outcome.exception()
-            if isinstance(exc, APIError):
-                retry_after: str | None = exc.response.headers.get("Retry-After")
-                if retry_after:
-                    try:
-                        return parse_retry_after_header(retry_after)
-                    except ValueError:
-                        pass
-        return self._fallback(retry_state)
-
-
 def _is_retryable_error(exception: BaseException) -> bool:
-    """Check if the exception is a retryable error (status codes 429, 502, or 529).
-
-    The 502 status of the AskUI Inference API is usually temporary which is why we also
-    retry it.
-    """
+    """Check if the exception is a retryable error."""
     if isinstance(exception, APIError):
-        return exception.code in (408, 413, 429, 500, 502, 503, 504, 521, 522, 524)
+        return exception.code in RETRYABLE_HTTP_STATUS_CODES
     return False
 
 
@@ -105,7 +60,7 @@ class AskUiGoogleGenAiApi(GetModel):
 
     @retry(
         stop=stop_after_attempt(4),  # 3 retries
-        wait=_wait_for_retry_after_header(
+        wait=wait_for_retry_after_header(
             wait_exponential(multiplier=30, min=30, max=120)
         ),  # retry after or as a fallback 30s, 60s, 120s
         retry=retry_if_exception(_is_retryable_error),
@@ -122,7 +77,10 @@ class AskUiGoogleGenAiApi(GetModel):
         try:
             _response_schema = to_response_schema(response_schema)
             json_schema = _response_schema.model_json_schema()
-            logger.debug(f"json_schema:\n{json_lib.dumps(json_schema)}")
+            logger.debug(
+                "Json schema used for response",
+                extra={"json_schema": json_lib.dumps(json_schema)},
+            )
             part = self._create_genai_part_from_source(source)
             content = genai_types.Content(
                 parts=[

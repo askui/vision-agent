@@ -16,19 +16,12 @@ from typing_extensions import override
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.logger import logger
 from askui.models.exceptions import (
     ElementNotFoundError,
     QueryNoResponseError,
     QueryUnexpectedResponseError,
 )
-from askui.models.models import (
-    GetModel,
-    LocateModel,
-    ModelComposition,
-    ModelName,
-    PointList,
-)
+from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -41,7 +34,6 @@ from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.shared.settings import MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
-from askui.utils.dict_utils import IdentityDefaultDict
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import (
     ImageSource,
@@ -57,18 +49,6 @@ from .utils import extract_click_coordinates
 
 def build_system_prompt_locate(screen_width: str, screen_height: str) -> str:
     return f"Use a mouse and keyboard to interact with a computer, and take screenshots.\n* This is an interface to a desktop GUI. You do not have access to a terminal or applications menu. You must click on desktop icons to start applications.\n* Some applications may take time to start or process actions, so you may need to wait and take successive screenshots to see the results of your actions. E.g. if you click on Firefox and a window doesn't open, try taking another screenshot.\n* The screen's resolution is {screen_width}x{screen_height}.\n* The display number is 0\n* Whenever you intend to move the cursor to click on an element like an icon, you should consult a screenshot to determine the coordinates of the element before moving the cursor.\n* If you tried clicking on a program or link but it failed to load, even after waiting, try adjusting your cursor position so that the tip of the cursor visually falls on the element that you want to click.\n* Make sure to click any buttons, links, icons, etc with the cursor tip in the center of the element. Don't click boxes on their edges unless asked.\n"  # noqa: E501
-
-
-ANTHROPIC_MODEL_MAPPING: IdentityDefaultDict[ModelName | str, str] = (
-    IdentityDefaultDict(
-        {
-            ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022: (
-                "claude-3-5-sonnet-20241022"
-            ),
-            ModelName.CLAUDE__SONNET__4__20250514: "claude-sonnet-4-20250514",
-        }
-    )
-)
 
 
 class _UnexpectedResponseError(Exception):
@@ -137,7 +117,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
             ],
             tools=tools.to_params() if tools else NOT_GIVEN,
             max_tokens=max_tokens or self._settings.messages.max_tokens,
-            model=ANTHROPIC_MODEL_MAPPING[model],
+            model=model,
             betas=betas
             if not isinstance(betas, NotGiven)
             else self._settings.messages.betas,
@@ -188,8 +168,7 @@ class AnthropicMessagesApi(LocateModel, GetModel, MessagesApi):
             else [TextBlockParam(text=message.content)]
         )
         if len(content) != 1 or content[0].type != "text":
-            error_msg = f"Unexpected response from Anthropic: {content}"
-            logger.error(error_msg)
+            error_msg = "Unexpected response from Anthropic API"
             raise _UnexpectedResponseError(error_msg, content)
         return content[0].text
 

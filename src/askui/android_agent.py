@@ -14,9 +14,14 @@ from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
+    AndroidGetConnectedDevicesSerialNumbersTool,
+    AndroidGetConnectedDisplaysInfosTool,
+    AndroidGetCurrentConnectedDeviceInfosTool,
     AndroidKeyCombinationTool,
     AndroidKeyTapEventTool,
     AndroidScreenshotTool,
+    AndroidSelectDeviceBySerialNumberTool,
+    AndroidSelectDisplayByIndex,
     AndroidShellTool,
     AndroidSwipeTool,
     AndroidTapTool,
@@ -24,19 +29,12 @@ from askui.tools.android.tools import (
 )
 from askui.tools.exception_tool import ExceptionTool
 
-from .logger import logger
 from .models import ModelComposition
 from .models.models import ModelChoice, ModelName, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 
-_ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022,
-        system=ANDROID_AGENT_SYSTEM_PROMPT,
-        betas=[],
-    ),
-)
+logger = logging.getLogger(__name__)
 
 _CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
     messages=MessageSettings(
@@ -53,7 +51,6 @@ class AndroidVisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
-        log_level: int | str = logging.INFO,
         reporters: list[Reporter] | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
@@ -63,7 +60,6 @@ class AndroidVisionAgent(AgentBase):
         reporter = CompositeReporter(reporters=reporters)
         act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
         super().__init__(
-            log_level=log_level,
             reporter=reporter,
             model=model,
             retry=retry,
@@ -77,6 +73,11 @@ class AndroidVisionAgent(AgentBase):
                 AndroidSwipeTool(act_agent_os_facade),
                 AndroidKeyCombinationTool(act_agent_os_facade),
                 AndroidShellTool(act_agent_os_facade),
+                AndroidSelectDeviceBySerialNumberTool(act_agent_os_facade),
+                AndroidSelectDisplayByIndex(act_agent_os_facade),
+                AndroidGetConnectedDevicesSerialNumbersTool(act_agent_os_facade),
+                AndroidGetConnectedDisplaysInfosTool(act_agent_os_facade),
+                AndroidGetCurrentConnectedDeviceInfosTool(act_agent_os_facade),
                 ExceptionTool(),
             ],
             agent_os=self.os,
@@ -126,7 +127,10 @@ class AndroidVisionAgent(AgentBase):
         else:
             msg += f" on {target}"
             self._reporter.add_message("User", msg)
-            logger.debug("VisionAgent received instruction to click on %s", target)
+            logger.debug(
+                "VisionAgent received instruction to click",
+                extra={"target": target},
+            )
             point = self._locate(locator=target, model=model)[0]
             self.os.tap(point[0], point[1])
 
@@ -154,7 +158,7 @@ class AndroidVisionAgent(AgentBase):
             ```
         """
         self._reporter.add_message("User", f'type: "{text}"')
-        logger.debug("VisionAgent received instruction to type '%s'", text)
+        logger.debug("VisionAgent received instruction to type", extra={"text": text})
         self.os.type(text)
 
     @telemetry.record_call()
@@ -314,8 +318,6 @@ class AndroidVisionAgent(AgentBase):
     @override
     def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
         match model_choice:
-            case ModelName.ANTHROPIC__CLAUDE__3_5__SONNET__20241022:
-                return _ANTHROPIC__CLAUDE__3_5__SONNET__20241022__ACT_SETTINGS
             case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
                 return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
             case _:

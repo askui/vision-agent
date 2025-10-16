@@ -387,3 +387,24 @@ class AndroidAgentOs(ABC):
         Gets the connected displays for screen interactions.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def get_connected_devices_serial_numbers(self) -> list[str]:
+        """
+        Gets the connected devices serial numbers.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_selected_device_infos(self) -> tuple[str, AndroidDisplay]:
+        """
+        Gets the selected device infos.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def connect_adb_client(self) -> None:
+        """
+        Connects the adb client to the server.
+        """
+        raise NotImplementedError

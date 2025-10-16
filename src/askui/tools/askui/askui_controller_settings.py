@@ -49,7 +49,7 @@ class AskUiControllerSettings(BaseSettings):
         ".",
     )
     controller_args: str | None = Field(
-        default="--showOverlay true",
+        default="--showOverlay false",
         description=(
             "Arguments to pass to the AskUI Remote Device Controller executable. "
             "Supported arguments: --showOverlay [true|false], --debugDraw [true|false],"
@@ -57,7 +57,7 @@ class AskUiControllerSettings(BaseSettings):
             "Examples:\n"
             "  --showOverlay false --configFile /path/to/config.json\n"
             "  --showOverlay false\n"
-            "Default: --showOverlay true"
+            "Default: --showOverlay false"
         ),
     )
 

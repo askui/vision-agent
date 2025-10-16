@@ -1,12 +1,21 @@
 import base64
 import json as json_lib
+import logging
 from functools import cached_property
-from typing import Any, Type
+from typing import Any, Type, cast
 
 import httpx
-from anthropic import NOT_GIVEN, NotGiven
+from anthropic import (
+    NOT_GIVEN,
+    Anthropic,
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    NotGiven,
+)
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
+    BetaMessageParam,
     BetaTextBlockParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
@@ -18,7 +27,10 @@ from typing_extensions import Self, override
 
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer, AskUiSerializedLocator
-from askui.logger import logger
+from askui.models.askui.retry_utils import (
+    RETRYABLE_HTTP_STATUS_CODES,
+    wait_for_retry_after_header,
+)
 from askui.models.exceptions import ElementNotFoundError
 from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
 from askui.models.shared.agent_message_param import MessageParam
@@ -33,16 +45,7 @@ from askui.utils.source_utils import Source
 
 from ..types.response_schemas import to_response_schema
 
-
-def _is_retryable_error(exception: BaseException) -> bool:
-    """Check if the exception is a retryable error (status codes 429, 502, or 529).
-
-    The 502 status of the AskUI Inference API is usually temporary which is why we also
-    retry it.
-    """
-    if isinstance(exception, httpx.HTTPStatusError):
-        return exception.response.status_code in (429, 502, 529)
-    return False
+logger = logging.getLogger(__name__)
 
 
 class AskUiInferenceApiSettings(BaseSettings):
@@ -101,6 +104,15 @@ class AskUiInferenceApiSettings(BaseSettings):
         return f"{self.inference_endpoint}api/v1/workspaces/{self.workspace_id}"
 
 
+def _is_retryable_error(exception: BaseException) -> bool:
+    """Check if the exception is a retryable error."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in RETRYABLE_HTTP_STATUS_CODES
+    if isinstance(exception, APIStatusError):
+        return exception.status_code in RETRYABLE_HTTP_STATUS_CODES
+    return isinstance(exception, (APIConnectionError, APITimeoutError))
+
+
 class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
     def __init__(
         self,
@@ -117,7 +129,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         return self._settings_default
 
     @cached_property
-    def _client(self) -> httpx.Client:
+    def _http_client(self) -> httpx.Client:
         return httpx.Client(
             base_url=f"{self._settings.base_url}",
             headers={
@@ -126,9 +138,21 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             },
         )
 
+    @cached_property
+    def _anthropic_client(self) -> Anthropic:
+        return Anthropic(
+            api_key="DummyValueRequiredByAnthropicClient",
+            base_url=f"{self._settings.base_url}/proxy/anthropic",
+            default_headers={
+                "Authorization": self._settings.authorization_header,
+            },
+        )
+
     @retry(
         stop=stop_after_attempt(4),  # 3 retries
-        wait=wait_exponential(multiplier=30, min=30, max=120),  # 30s, 60s, 120s
+        wait=wait_for_retry_after_header(
+            wait_exponential(multiplier=30, min=30, max=120)
+        ),  # retry after or as a fallback 30s, 60s, 120s
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )
@@ -139,7 +163,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         timeout: float = 30.0,
     ) -> httpx.Response:
         try:
-            response = self._client.post(
+            response = self._http_client.post(
                 path,
                 json=json,
                 timeout=timeout,
@@ -152,7 +176,7 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             ):
                 raise ValueError(e.response.text) from e
             if _is_retryable_error(e):
-                logger.debug(e)
+                logger.debug("Retryable error", extra={"error": str(e)})
             raise
         else:
             return response
@@ -169,7 +193,10 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
             if isinstance(locator, Locator)
             else AskUiSerializedLocator(customElements=[], instruction=locator)
         )
-        logger.debug(f"serialized_locator:\n{json_lib.dumps(serialized_locator)}")
+        logger.debug(
+            "Locator serialized",
+            extra={"serialized_locator": json_lib.dumps(serialized_locator)},
+        )
         json: dict[str, Any] = {
             "image": image.to_data_url(),
             "instruction": f"get element {serialized_locator['instruction']}",
@@ -179,7 +206,8 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         if isinstance(model_choice, ModelComposition):
             json["modelComposition"] = model_choice.model_dump(by_alias=True)
             logger.debug(
-                f"modelComposition:\n{json_lib.dumps(json['modelComposition'])}"
+                "Model composition",
+                extra={"modelComposition": json_lib.dumps(json["modelComposition"])},
             )
         response = self._post(path="/inference", json=json)
         content = response.json()
@@ -219,7 +247,10 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         _response_schema = to_response_schema(response_schema)
         json_schema = _response_schema.model_json_schema()
         json["config"] = {"json_schema": json_schema}
-        logger.debug(f"json_schema:\n{json_lib.dumps(json['config']['json_schema'])}")
+        logger.debug(
+            "Json schema used for response",
+            extra={"json_schema": json_lib.dumps(json["config"]["json_schema"])},
+        )
         response = self._post(path="/vqa/inference", json=json)
         content = response.json()
         data = content["data"]["response"]
@@ -227,6 +258,14 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         return validated_response.root
 
     @override
+    @retry(
+        stop=stop_after_attempt(4),  # 3 retries
+        wait=wait_for_retry_after_header(
+            wait_exponential(multiplier=30, min=30, max=120)
+        ),  # retry after or as a fallback 30s, 60s, 120s
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True,
+    )
     def create_message(
         self,
         messages: list[MessageParam],
@@ -238,24 +277,20 @@ class AskUiInferenceApi(GetModel, LocateModel, MessagesApi):
         thinking: BetaThinkingConfigParam | NotGiven = NOT_GIVEN,
         tool_choice: BetaToolChoiceParam | NotGiven = NOT_GIVEN,
     ) -> MessageParam:
-        json = {
-            "messages": [
-                message.model_dump(mode="json", exclude={"stop_reason"})
+        response = self._anthropic_client.beta.messages.create(
+            messages=[
+                cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
                 for message in messages
             ],
-            "tools": tools.to_params() if tools else NOT_GIVEN,
-            "max_tokens": max_tokens or self._settings.messages.max_tokens,
-            "model": model,
-            "betas": betas
+            tools=tools.to_params() if tools else NOT_GIVEN,
+            max_tokens=max_tokens or self._settings.messages.max_tokens,
+            model=model,
+            betas=betas
             if not isinstance(betas, NotGiven)
             else self._settings.messages.betas,
-            "system": system or self._settings.messages.system,
-            "thinking": thinking or self._settings.messages.thinking,
-            "tool_choice": tool_choice or self._settings.messages.tool_choice,
-        }
-        response = self._post(
-            "/act/inference",
-            json={k: v for k, v in json.items() if not isinstance(v, NotGiven)},
+            system=system or self._settings.messages.system,
+            thinking=thinking or self._settings.messages.thinking,
+            tool_choice=tool_choice or self._settings.messages.tool_choice,
             timeout=300.0,
         )
-        return MessageParam.model_validate_json(response.text)
+        return MessageParam.model_validate(response.model_dump())

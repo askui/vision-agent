@@ -8,7 +8,6 @@ from askui.chat.api.mcp_configs.models import (
     McpConfigId,
     McpConfigModifyParams,
 )
-from askui.chat.api.mcp_configs.seeds import SEEDS
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.utils import build_workspace_filter_fn
 from askui.utils.api_utils import (
@@ -26,9 +25,10 @@ from askui.utils.api_utils import (
 class McpConfigService:
     """Service for managing McpConfig resources with filesystem persistence."""
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(self, base_dir: Path, seeds: list[McpConfig]) -> None:
         self._base_dir = base_dir
         self._mcp_configs_dir = base_dir / "mcp_configs"
+        self._seeds = seeds
 
     def _get_mcp_config_path(
         self, mcp_config_id: McpConfigId, new: bool = False
@@ -109,6 +109,9 @@ class McpConfigService:
         params: McpConfigModifyParams,
     ) -> McpConfig:
         mcp_config = self.retrieve(workspace_id, mcp_config_id)
+        if mcp_config.workspace_id is None:
+            error_msg = f"Default MCP configuration {mcp_config_id} cannot be modified"
+            raise ForbiddenError(error_msg)
         modified = mcp_config.modify(params)
         self._save(modified)
         return modified
@@ -129,7 +132,11 @@ class McpConfigService:
             self._get_mcp_config_path(mcp_config_id).unlink()
         except FileNotFoundError as e:
             error_msg = f"MCP configuration {mcp_config_id} not found"
-            raise NotFoundError(error_msg) from e
+            if not force:
+                raise NotFoundError(error_msg) from e
+        except NotFoundError:
+            if not force:
+                raise
 
     def _save(self, mcp_config: McpConfig, new: bool = False) -> None:
         self._mcp_configs_dir.mkdir(parents=True, exist_ok=True)
@@ -143,16 +150,9 @@ class McpConfigService:
 
     def seed(self) -> None:
         """Seed the MCP configuration service with default MCP configurations."""
-        while True:
-            list_response = self.list_(
-                None, ListQuery(limit=LIST_LIMIT_MAX, order="asc")
-            )
-            for mcp_config in list_response.data:
-                self.delete(None, mcp_config.id, force=True)
-            if not list_response.has_more:
-                break
-        for seed in SEEDS:
+        for seed in self._seeds:
             try:
+                self.delete(None, seed.id, force=True)
                 self._save(seed, new=True)
             except ConflictError:  # noqa: PERF203
                 self._save(seed)
