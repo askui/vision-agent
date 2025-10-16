@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from fastmcp.mcp_config import RemoteMCPServer, StdioMCPServer
+from fastmcp.mcp_config import StdioMCPServer
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from askui.chat.api.mcp_configs.models import McpConfig
+from askui.chat.api.mcp_configs.models import McpConfig, RemoteMCPServer
 from askui.chat.api.telemetry.integrations.fastapi.settings import TelemetrySettings
 from askui.chat.api.telemetry.logs.settings import LogFilter, LogSettings
 from askui.utils.datetime_utils import now
