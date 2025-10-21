@@ -3,16 +3,10 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, BeforeValidator, Field
 
 from askui.chat.migrations.shared.models import UnixDatetimeV1, WorkspaceIdV1
-
-
-def add_prefix(id_: str) -> str:
-    if id_.startswith("asst_"):
-        return id_
-    return f"asst_{id_}"
-
+from askui.chat.migrations.shared.utils import build_prefixer
 
 AssistantIdV1 = Annotated[
-    str, Field(pattern=r"^asst_[a-z0-9]+$"), BeforeValidator(add_prefix)
+    str, Field(pattern=r"^asst_[a-z0-9]+$"), BeforeValidator(build_prefixer("asst"))
 ]
 
 
