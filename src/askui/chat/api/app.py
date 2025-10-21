@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastmcp import FastMCP
 
 from askui.chat.api.assistants.router import router as assistants_router
+from askui.chat.api.db.session import get_session
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
@@ -45,7 +46,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     else:
         logger.info("Automatic migrations are disabled. Skipping migrations...")
     logger.info("Seeding default MCP configurations...")
-    mcp_config_service = get_mcp_config_service(settings=settings)
+    session = next(get_session())
+    mcp_config_service = get_mcp_config_service(session=session, settings=settings)
     mcp_config_service.seed()
     yield
     logger.info("Disconnecting all MCP clients...")

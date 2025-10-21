@@ -30,7 +30,6 @@ MessageId = create_prefixed_id_type("msg")
 RunId = create_prefixed_id_type("run")
 FileId = create_prefixed_id_type("file")
 WorkflowId = create_prefixed_id_type("workflow")
-McpConfigId = create_prefixed_id_type("mcp")
 
 
 class UnixDatetime(TypeDecorator[datetime]):
