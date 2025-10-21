@@ -65,7 +65,6 @@ def upgrade() -> None:
             data = json.loads(content)
             mcp_config = McpConfigV1.model_validate(data)
             mcp_configs_batch.append(mcp_config)
-
             if len(mcp_configs_batch) >= BATCH_SIZE:
                 _insert_mcp_configs_batch(mcp_configs_table, mcp_configs_batch)
                 mcp_configs_batch.clear()

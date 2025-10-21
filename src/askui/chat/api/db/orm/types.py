@@ -28,7 +28,6 @@ def create_prefixed_id_type(prefix: str) -> type[TypeDecorator[str]]:
 ThreadId = create_prefixed_id_type("thread")
 MessageId = create_prefixed_id_type("msg")
 RunId = create_prefixed_id_type("run")
-FileId = create_prefixed_id_type("file")
 WorkflowId = create_prefixed_id_type("workflow")
 
 
