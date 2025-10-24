@@ -11,7 +11,7 @@ import logging
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy import MetaData, Table
+from sqlalchemy import Connection, MetaData, Table
 
 from askui.chat.migrations.shared.mcp_configs.models import McpConfigV1
 from askui.chat.migrations.shared.settings import SettingsV1
@@ -25,15 +25,20 @@ depends_on: Union[str, Sequence[str], None] = None
 logger = logging.getLogger(__name__)
 
 
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 
 
 def _insert_mcp_configs_batch(
-    mcp_configs_table: Table, mcp_configs_batch: list[McpConfigV1]
+    connection: Connection,
+    mcp_configs_table: Table,
+    mcp_configs_batch: list[McpConfigV1],
 ) -> None:
-    """Insert a batch of MCP configs into the database."""
-    op.bulk_insert(
-        mcp_configs_table,
+    """Insert a batch of MCP configs into the database, ignoring conflicts."""
+    if not mcp_configs_batch:
+        return
+
+    connection.execute(
+        mcp_configs_table.insert().prefix_with("OR REPLACE"),
         [mcp_config.to_db_dict() for mcp_config in mcp_configs_batch],
     )
 
@@ -66,7 +71,9 @@ def upgrade() -> None:
             mcp_config = McpConfigV1.model_validate(data)
             mcp_configs_batch.append(mcp_config)
             if len(mcp_configs_batch) >= BATCH_SIZE:
-                _insert_mcp_configs_batch(mcp_configs_table, mcp_configs_batch)
+                _insert_mcp_configs_batch(
+                    connection, mcp_configs_table, mcp_configs_batch
+                )
                 mcp_configs_batch.clear()
         except Exception:  # noqa: PERF203
             error_msg = "Failed to import"
@@ -75,7 +82,7 @@ def upgrade() -> None:
 
     # Insert remaining MCP configs in the final batch
     if mcp_configs_batch:
-        _insert_mcp_configs_batch(mcp_configs_table, mcp_configs_batch)
+        _insert_mcp_configs_batch(connection, mcp_configs_table, mcp_configs_batch)
 
 
 def downgrade() -> None:
@@ -101,7 +108,7 @@ def downgrade() -> None:
             if json_path.exists():
                 continue
             with json_path.open("w", encoding="utf-8") as f:
-                f.write(json.dumps(mcp_config.model_dump()))
+                f.write(mcp_config.model_dump_json())
         except Exception as e:  # noqa: PERF203
             error_msg = f"Failed to export row to json: {e}"
             logger.exception(error_msg, extra={"row": str(row)}, exc_info=e)

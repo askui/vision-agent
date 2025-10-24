@@ -2,7 +2,15 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from askui.chat.api.models import AssistantId, FileId, MessageId, RunId, ThreadId
+from askui.chat.api.models import (
+    AssistantId,
+    FileId,
+    MessageId,
+    RunId,
+    ThreadId,
+    WorkspaceId,
+    WorkspaceResource,
+)
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     BetaRedactedThinkingBlock,
@@ -13,7 +21,6 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from askui.utils.api_utils import Resource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
@@ -75,21 +82,24 @@ class MessageBase(MessageParam):
     run_id: RunId | None = None
 
 
-class MessageCreateParams(MessageBase):
+class MessageCreate(MessageBase):
     pass
 
 
-class Message(MessageBase, Resource):
+class Message(MessageBase, WorkspaceResource):
     id: MessageId
     object: Literal["thread.message"] = "thread.message"
     created_at: UnixDatetime
     thread_id: ThreadId
 
     @classmethod
-    def create(cls, thread_id: ThreadId, params: MessageCreateParams) -> "Message":
+    def create(
+        cls, workspace_id: WorkspaceId, thread_id: ThreadId, params: MessageCreate
+    ) -> "Message":
         return cls(
             id=generate_time_ordered_id("msg"),
             created_at=now(),
+            workspace_id=workspace_id,
             thread_id=thread_id,
             **params.model_dump(),
         )

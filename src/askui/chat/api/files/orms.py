@@ -28,8 +28,7 @@ class FileOrm(Base):
     @classmethod
     def from_model(cls, model: File) -> "FileOrm":
         return cls(
-            **model.model_dump(exclude={"object", "created_at"}),
-            created_at=model.created_at,
+            **model.model_dump(exclude={"object"}),
         )
 
     def to_model(self) -> File:

@@ -3,11 +3,17 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from fastapi import Query
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field, computed_field
 
-from askui.chat.api.models import AssistantId, RunId, ThreadId
-from askui.chat.api.threads.models import ThreadCreateParams
-from askui.utils.api_utils import ListQuery, Resource
+from askui.chat.api.models import (
+    AssistantId,
+    RunId,
+    ThreadId,
+    WorkspaceId,
+    WorkspaceResource,
+)
+from askui.chat.api.threads.models import ThreadCreate
+from askui.utils.api_utils import ListQuery
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
@@ -29,23 +35,92 @@ class RunError(BaseModel):
     code: Literal["server_error", "rate_limit_exceeded", "invalid_prompt"]
 
 
-class RunBase(BaseModel):
-    """Base run model."""
-
-    assistant_id: AssistantId
-
-
-class RunCreateParams(RunBase):
+class RunCreate(BaseModel):
     """Parameters for creating a run."""
 
     stream: bool = False
+    assistant_id: AssistantId
 
 
-class ThreadAndRunCreateParams(RunCreateParams):
-    thread: ThreadCreateParams
+class RunStart(BaseModel):
+    """Parameters for starting a run."""
+
+    type: Literal["start"] = "start"
+    status: Literal["in_progress"] = "in_progress"
+    started_at: UnixDatetime = Field(default_factory=now)
+    expires_at: UnixDatetime = Field(
+        default_factory=lambda: now() + timedelta(minutes=10)
+    )
 
 
-class Run(RunBase, Resource):
+class RunPing(BaseModel):
+    """Parameters for pinging a run."""
+
+    type: Literal["ping"] = "ping"
+    expires_at: UnixDatetime = Field(
+        default_factory=lambda: now() + timedelta(minutes=10)
+    )
+
+
+class RunComplete(BaseModel):
+    """Parameters for completing a run."""
+
+    type: Literal["complete"] = "complete"
+    status: Literal["completed"] = "completed"
+    completed_at: UnixDatetime = Field(default_factory=now)
+
+
+class RunTryCancelling(BaseModel):
+    """Parameters for trying to cancel a run."""
+
+    type: Literal["try_cancelling"] = "try_cancelling"
+    status: Literal["cancelling"] = "cancelling"
+    tried_cancelling_at: UnixDatetime = Field(default_factory=now)
+
+
+class RunCancel(BaseModel):
+    """Parameters for canceling a run."""
+
+    type: Literal["cancel"] = "cancel"
+    status: Literal["cancelled"] = "cancelled"
+    cancelled_at: UnixDatetime = Field(default_factory=now)
+
+
+class RunFail(BaseModel):
+    """Parameters for failing a run."""
+
+    type: Literal["fail"] = "fail"
+    status: Literal["failed"] = "failed"
+    failed_at: UnixDatetime = Field(default_factory=now)
+    last_error: RunError
+
+
+RunModify = RunStart | RunPing | RunComplete | RunTryCancelling | RunCancel | RunFail
+
+
+class ThreadAndRunCreate(RunCreate):
+    thread: ThreadCreate
+
+
+def map_status_to_readable_description(status: RunStatus) -> str:
+    match status:
+        case "queued":
+            return "Run has been queued."
+        case "in_progress":
+            return "Run is in progress."
+        case "completed":
+            return "Run has been completed."
+        case "cancelled":
+            return "Run has been cancelled."
+        case "failed":
+            return "Run has failed."
+        case "expired":
+            return "Run has expired."
+        case "cancelling":
+            return "Run is being cancelled."
+
+
+class Run(WorkspaceResource):
     """A run execution within a thread."""
 
     id: RunId
@@ -59,11 +134,15 @@ class Run(RunBase, Resource):
     cancelled_at: UnixDatetime | None = None
     tried_cancelling_at: UnixDatetime | None = None
     last_error: RunError | None = None
+    assistant_id: AssistantId | None = None
 
     @classmethod
-    def create(cls, thread_id: ThreadId, params: RunCreateParams) -> "Run":
+    def create(
+        cls, workspace_id: WorkspaceId, thread_id: ThreadId, params: RunCreate
+    ) -> "Run":
         return cls(
             id=generate_time_ordered_id("run"),
+            workspace_id=workspace_id,
             thread_id=thread_id,
             created_at=now(),
             expires_at=now() + timedelta(minutes=10),
@@ -87,22 +166,39 @@ class Run(RunBase, Resource):
             return "in_progress"
         return "queued"
 
-    def start(self) -> None:
-        self.started_at = now()
-        self.expires_at = now() + timedelta(minutes=10)
-
-    def ping(self) -> None:
-        self.expires_at = now() + timedelta(minutes=10)
-
-    def complete(self) -> None:
-        self.completed_at = now()
-
-    def cancel(self) -> None:
-        self.cancelled_at = now()
-
-    def fail(self, error: RunError) -> None:
-        self.failed_at = now()
-        self.last_error = error
+    def validate_modify(self, params: RunModify) -> None:  #  noqa: C901
+        status_description = map_status_to_readable_description(self.status)
+        error_msg = status_description
+        match params.type:
+            case "start":
+                if self.status != "queued":
+                    error_msg += " Cannot start it (again). Please create a new run."
+                    raise ValueError(error_msg)
+            case "ping":
+                if self.status != "in_progress":
+                    error_msg += " Cannot ping. Run is not in progress."
+                    raise ValueError(error_msg)
+            case "complete":
+                if self.status != "in_progress":
+                    error_msg += " Cannot complete. Run is not in progress."
+                    raise ValueError(error_msg)
+            case "try_cancelling":
+                if self.status not in ["queued", "in_progress"]:
+                    error_msg += " Cannot cancel (again)."
+                    if self.status != "cancelling":
+                        # I think this just sounds better if this is only added if it
+                        # is not being cancelled as it is still in progress while being
+                        # cancelled.
+                        error_msg += " Run is neither queued nor in progress."
+                    raise ValueError(error_msg)
+            case "cancel":
+                if self.status not in ["queued", "in_progress", "cancelling"]:
+                    error_msg += " Cannot cancel. Run is neither queued, in progress, nor has it been tried to be cancelled."
+                    raise ValueError(error_msg)
+            case "fail":
+                if self.status not in ["queued", "in_progress", "cancelling"]:
+                    error_msg += " Cannot fail. Run is neither queued, in progress, nor has it been tried to be cancelled."
+                    raise ValueError(error_msg)
 
 
 @dataclass(kw_only=True)

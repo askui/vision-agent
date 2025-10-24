@@ -21,7 +21,7 @@ class FileV1(BaseModel):
 
     def to_db_dict(self) -> dict[str, Any]:
         return {
-            **self.model_dump(exclude={"id", "object", "workspace_id"}),
+            **self.model_dump(exclude={"id", "object"}),
             "id": self.id.removeprefix("file_"),
-            "workspace_id": str(self.workspace_id) if self.workspace_id else None,
+            "workspace_id": self.workspace_id.hex if self.workspace_id else None,
         }

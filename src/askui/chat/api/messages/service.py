@@ -1,58 +1,88 @@
-from pathlib import Path
 from typing import Iterator
 
-from askui.chat.api.messages.models import Message, MessageCreateParams
-from askui.chat.api.models import MessageId, ThreadId
+from sqlalchemy.orm import Session
+
+from askui.chat.api.db.queries import list_all
+from askui.chat.api.messages.models import Message, MessageCreate
+from askui.chat.api.messages.orms import MessageOrm
+from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
 from askui.utils.api_utils import (
     LIST_LIMIT_DEFAULT,
-    ConflictError,
     ListOrder,
     ListQuery,
     ListResponse,
     NotFoundError,
-    list_resources,
 )
 
 
 class MessageService:
-    def __init__(self, base_dir: Path) -> None:
-        self._base_dir = base_dir
+    """Service for managing Message resources with database persistence."""
 
-    def get_messages_dir(self, thread_id: ThreadId) -> Path:
-        return self._base_dir / "messages" / thread_id
+    def __init__(self, session: Session) -> None:
+        self._session = session
 
-    def _get_message_path(
-        self, thread_id: ThreadId, message_id: MessageId, new: bool = False
-    ) -> Path:
-        message_path = self.get_messages_dir(thread_id) / f"{message_id}.json"
-        exists = message_path.exists()
-        if new and exists:
-            error_msg = f"Message {message_id} already exists in thread {thread_id}"
-            raise ConflictError(error_msg)
-        if not new and not exists:
+    def _find_by_id(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, message_id: MessageId
+    ) -> MessageOrm:
+        """Find message by ID."""
+        message_orm: MessageOrm | None = (
+            self._session.query(MessageOrm)
+            .filter(
+                MessageOrm.id == message_id,
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .first()
+        )
+        if message_orm is None:
             error_msg = f"Message {message_id} not found in thread {thread_id}"
             raise NotFoundError(error_msg)
-        return message_path
+        return message_orm
 
-    def create(self, thread_id: ThreadId, params: MessageCreateParams) -> Message:
-        new_message = Message.create(thread_id, params)
-        self._save(new_message, new=True)
-        return new_message
+    def create(
+        self,
+        workspace_id: WorkspaceId,
+        thread_id: ThreadId,
+        params: MessageCreate,
+    ) -> Message:
+        """Create a new message."""
+        message = Message.create(workspace_id, thread_id, params)
+        message_orm = MessageOrm.from_model(message)
+        self._session.add(message_orm)
+        self._session.commit()
+        return message
 
-    def list_(self, thread_id: ThreadId, query: ListQuery) -> ListResponse[Message]:
-        messages_dir = self.get_messages_dir(thread_id)
-        return list_resources(messages_dir, query, Message)
+    def list_(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, query: ListQuery
+    ) -> ListResponse[Message]:
+        """List messages with pagination and filtering."""
+        q = self._session.query(MessageOrm).filter(
+            MessageOrm.thread_id == thread_id,
+            MessageOrm.workspace_id == workspace_id,
+        )
+        orms: list[MessageOrm]
+        orms, has_more = list_all(q, query, MessageOrm.id)
+        data = [orm.to_model() for orm in orms]
+        return ListResponse(
+            data=data,
+            has_more=has_more,
+            first_id=data[0].id if data else None,
+            last_id=data[-1].id if data else None,
+        )
 
     def iter(
         self,
+        workspace_id: WorkspaceId,
         thread_id: ThreadId,
         order: ListOrder = "asc",
         batch_size: int = LIST_LIMIT_DEFAULT,
     ) -> Iterator[Message]:
+        """Iterate through messages in batches."""
         has_more = True
         last_id: str | None = None
         while has_more:
             list_messages_response = self.list_(
+                workspace_id=workspace_id,
                 thread_id=thread_id,
                 query=ListQuery(limit=batch_size, order=order, after=last_id),
             )
@@ -61,23 +91,17 @@ class MessageService:
             for msg in list_messages_response.data:
                 yield msg
 
-    def retrieve(self, thread_id: ThreadId, message_id: MessageId) -> Message:
-        try:
-            message_file = self._get_message_path(thread_id, message_id)
-            return Message.model_validate_json(message_file.read_text(encoding="utf-8"))
-        except FileNotFoundError as e:
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg) from e
+    def retrieve(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, message_id: MessageId
+    ) -> Message:
+        """Retrieve message by ID."""
+        message_orm = self._find_by_id(workspace_id, thread_id, message_id)
+        return message_orm.to_model()
 
-    def delete(self, thread_id: ThreadId, message_id: MessageId) -> None:
-        try:
-            self._get_message_path(thread_id, message_id).unlink()
-        except FileNotFoundError as e:
-            error_msg = f"Message {message_id} not found in thread {thread_id}"
-            raise NotFoundError(error_msg) from e
-
-    def _save(self, message: Message, new: bool = False) -> None:
-        messages_dir = self.get_messages_dir(message.thread_id)
-        messages_dir.mkdir(parents=True, exist_ok=True)
-        message_file = self._get_message_path(message.thread_id, message.id, new=new)
-        message_file.write_text(message.model_dump_json(), encoding="utf-8")
+    def delete(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, message_id: MessageId
+    ) -> None:
+        """Delete a message."""
+        message_orm = self._find_by_id(workspace_id, thread_id, message_id)
+        self._session.delete(message_orm)
+        self._session.commit()

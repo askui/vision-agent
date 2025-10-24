@@ -8,6 +8,7 @@ UnixDatetime = Annotated[
     PlainSerializer(
         lambda v: int(v.timestamp()),
         return_type=int,
+        when_used="json-unless-none",
     ),
 ]
 

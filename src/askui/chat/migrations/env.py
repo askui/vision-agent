@@ -6,6 +6,11 @@ from alembic import context
 
 # We need to import the orms to ensure they are registered
 import askui.chat.api.assistants.orms
+import askui.chat.api.files.orms
+import askui.chat.api.mcp_configs.orms
+import askui.chat.api.messages.orms
+import askui.chat.api.runs.orms
+import askui.chat.api.threads.orms
 from askui.chat.api.db.orm.base import Base
 from askui.chat.api.dependencies import get_settings
 from askui.chat.api.telemetry.logs import setup_logging

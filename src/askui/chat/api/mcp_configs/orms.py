@@ -27,10 +27,7 @@ class McpConfigOrm(Base):
 
     @classmethod
     def from_model(cls, model: McpConfig) -> "McpConfigOrm":
-        return cls(
-            **model.model_dump(exclude={"object", "created_at"}),
-            created_at=model.created_at,
-        )
+        return cls(**model.model_dump(exclude={"object"}))
 
     def to_model(self) -> McpConfig:
         return McpConfig.model_validate(self, from_attributes=True)

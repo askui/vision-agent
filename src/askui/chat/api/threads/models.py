@@ -2,9 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from askui.chat.api.messages.models import MessageCreateParams
-from askui.chat.api.models import ThreadId
-from askui.utils.api_utils import Resource
+from askui.chat.api.messages.models import MessageCreate
+from askui.chat.api.models import ThreadId, WorkspaceId, WorkspaceResource
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 from askui.utils.not_given import NOT_GIVEN, BaseModelWithNotGiven, NotGiven
@@ -16,19 +15,19 @@ class ThreadBase(BaseModel):
     name: str | None = None
 
 
-class ThreadCreateParams(ThreadBase):
+class ThreadCreate(ThreadBase):
     """Parameters for creating a thread."""
 
-    messages: list[MessageCreateParams] | None = None
+    messages: list[MessageCreate] | None = None
 
 
-class ThreadModifyParams(BaseModelWithNotGiven):
+class ThreadModify(BaseModelWithNotGiven):
     """Parameters for modifying a thread."""
 
     name: str | None | NotGiven = NOT_GIVEN
 
 
-class Thread(ThreadBase, Resource):
+class Thread(ThreadBase, WorkspaceResource):
     """A chat thread/session."""
 
     id: ThreadId
@@ -36,17 +35,10 @@ class Thread(ThreadBase, Resource):
     created_at: UnixDatetime
 
     @classmethod
-    def create(cls, params: ThreadCreateParams) -> "Thread":
+    def create(cls, workspace_id: WorkspaceId, params: ThreadCreate) -> "Thread":
         return cls(
             id=generate_time_ordered_id("thread"),
             created_at=now(),
+            workspace_id=workspace_id,
             **params.model_dump(exclude={"messages"}),
-        )
-
-    def modify(self, params: ThreadModifyParams) -> "Thread":
-        return Thread.model_validate(
-            {
-                **self.model_dump(),
-                **params.model_dump(),
-            }
         )

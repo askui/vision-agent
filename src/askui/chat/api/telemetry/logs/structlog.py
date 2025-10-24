@@ -1,6 +1,7 @@
 import logging
 
 import structlog
+from structlog.dev import plain_traceback
 
 from .settings import LogFormat, LogLevel, LogSettings
 from .structlog_processors import (
@@ -78,4 +79,7 @@ def get_format_dependent_processors(
 def get_renderer(log_format: LogFormat) -> structlog.types.Processor:
     if log_format == "JSON":
         return structlog.processors.JSONRenderer()
-    return structlog.dev.ConsoleRenderer(event_key=EVENT_KEY)
+    return structlog.dev.ConsoleRenderer(
+        event_key=EVENT_KEY,
+        exception_formatter=plain_traceback,
+    )
