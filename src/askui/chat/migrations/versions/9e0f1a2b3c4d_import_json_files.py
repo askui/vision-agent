@@ -8,11 +8,10 @@ Create Date: 2025-01-27 11:01:00.000000
 
 import json
 import logging
-import mimetypes
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy import MetaData, Table
+from sqlalchemy import Connection, MetaData, Table
 
 from askui.chat.migrations.shared.files.models import FileV1
 from askui.chat.migrations.shared.settings import SettingsV1
@@ -26,13 +25,18 @@ depends_on: Union[str, Sequence[str], None] = None
 logger = logging.getLogger(__name__)
 
 
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 
 
-def _insert_files_batch(files_table: Table, files_batch: list[FileV1]) -> None:
-    """Insert a batch of files into the database."""
-    op.bulk_insert(
-        files_table,
+def _insert_files_batch(
+    connection: Connection, files_table: Table, files_batch: list[FileV1]
+) -> None:
+    """Insert a batch of files into the database, ignoring conflicts."""
+    if not files_batch:
+        return
+
+    connection.execute(
+        files_table.insert().prefix_with("OR REPLACE"),
         [file.to_db_dict() for file in files_batch],
     )
 
@@ -76,7 +80,7 @@ def upgrade() -> None:  # noqa: C901
                 file = FileV1.model_validate({**data, "workspace_id": workspace_id})
                 files_batch.append(file)
                 if len(files_batch) >= BATCH_SIZE:
-                    _insert_files_batch(files_table, files_batch)
+                    _insert_files_batch(connection, files_table, files_batch)
                     files_batch.clear()
             except Exception:  # noqa: PERF203
                 error_msg = "Failed to import file"
@@ -85,7 +89,7 @@ def upgrade() -> None:  # noqa: C901
 
     # Insert remaining files in the final batch
     if files_batch:
-        _insert_files_batch(files_table, files_batch)
+        _insert_files_batch(connection, files_table, files_batch)
 
 
 def downgrade() -> None:
@@ -112,7 +116,7 @@ def downgrade() -> None:
             if json_path.exists():
                 continue
             with json_path.open("w", encoding="utf-8") as f:
-                f.write(json.dumps(file_model.model_dump()))
+                f.write(file_model.model_dump_json())
         except Exception as e:  # noqa: PERF203
             error_msg = f"Failed to export row to json: {e}"
             logger.exception(error_msg, extra={"row": str(row)}, exc_info=e)

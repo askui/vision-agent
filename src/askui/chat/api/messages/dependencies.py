@@ -1,8 +1,6 @@
-from pathlib import Path
-
 from fastapi import Depends
 
-from askui.chat.api.dependencies import WorkspaceDirDep
+from askui.chat.api.db.session import SessionDep
 from askui.chat.api.files.dependencies import FileServiceDep
 from askui.chat.api.files.service import FileService
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
@@ -15,10 +13,10 @@ from askui.models.shared.truncation_strategies import (
 
 
 def get_message_service(
-    workspace_dir: Path = WorkspaceDirDep,
+    session: SessionDep,
 ) -> MessageService:
-    """Get MessagePersistedService instance."""
-    return MessageService(workspace_dir)
+    """Get MessageService instance."""
+    return MessageService(session)
 
 
 MessageServiceDep = Depends(get_message_service)

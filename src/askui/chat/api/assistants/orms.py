@@ -30,8 +30,7 @@ class AssistantOrm(Base):
     @classmethod
     def from_model(cls, model: Assistant) -> "AssistantOrm":
         return cls(
-            **model.model_dump(exclude={"object", "created_at"}),
-            created_at=model.created_at,
+            **model.model_dump(exclude={"object"}),
         )
 
     def to_model(self) -> Assistant:

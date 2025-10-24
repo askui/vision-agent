@@ -149,8 +149,8 @@ class McpConfigService:
     def seed(self) -> None:
         """Seed the MCP configuration service with default MCP configurations."""
         for seed in self._seeds:
-            with self._session.begin():
-                self._session.query(McpConfigOrm).filter(
-                    McpConfigOrm.id == seed.id
-                ).delete()
-                self._session.add(McpConfigOrm.from_model(seed))
+            self._session.query(McpConfigOrm).filter(
+                McpConfigOrm.id == seed.id
+            ).delete()
+            self._session.add(McpConfigOrm.from_model(seed))
+            self._session.commit()

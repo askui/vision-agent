@@ -11,7 +11,7 @@ import logging
 from typing import Sequence, Union
 
 from alembic import op
-from sqlalchemy import MetaData, Table
+from sqlalchemy import Connection, MetaData, Table
 
 from askui.chat.migrations.shared.assistants.models import AssistantV1
 from askui.chat.migrations.shared.settings import SettingsV1
@@ -25,15 +25,18 @@ depends_on: Union[str, Sequence[str], None] = None
 logger = logging.getLogger(__name__)
 
 
-BATCH_SIZE = 100
+BATCH_SIZE = 1000
 
 
 def _insert_assistants_batch(
-    assistants_table: Table, assistants_batch: list[AssistantV1]
+    connection: Connection, assistants_table: Table, assistants_batch: list[AssistantV1]
 ) -> None:
-    """Insert a batch of assistants into the database."""
-    op.bulk_insert(
-        assistants_table,
+    """Insert a batch of assistants into the database, ignoring conflicts."""
+    if not assistants_batch:
+        return
+
+    connection.execute(
+        assistants_table.insert().prefix_with("OR REPLACE"),
         [assistant.to_db_dict() for assistant in assistants_batch],
     )
 
@@ -67,7 +70,7 @@ def upgrade() -> None:
             assistants_batch.append(assistant)
 
             if len(assistants_batch) >= BATCH_SIZE:
-                _insert_assistants_batch(assistants_table, assistants_batch)
+                _insert_assistants_batch(connection, assistants_table, assistants_batch)
                 assistants_batch.clear()
         except Exception:  # noqa: PERF203
             error_msg = "Failed to import"
@@ -76,7 +79,7 @@ def upgrade() -> None:
 
     # Insert remaining assistants in the final batch
     if assistants_batch:
-        _insert_assistants_batch(assistants_table, assistants_batch)
+        _insert_assistants_batch(connection, assistants_table, assistants_batch)
 
 
 def downgrade() -> None:
@@ -102,7 +105,7 @@ def downgrade() -> None:
             if json_path.exists():
                 continue
             with json_path.open("w", encoding="utf-8") as f:
-                f.write(json.dumps(assistant.model_dump()))
+                f.write(assistant.model_dump_json())
         except Exception as e:  # noqa: PERF203
             error_msg = f"Failed to export row to json: {e}"
             logger.exception(error_msg, extra={"row": str(row)}, exc_info=e)
