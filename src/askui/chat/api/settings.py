@@ -77,6 +77,10 @@ class Settings(BaseSettings):
             "https://app-dev.caesr.ai",
             "https://hub.askui.com",
             "https://hub-dev.askui.com",
+            "https://app.caeser.dev",
+            "https://app.qa.caeser.dev",
+            "https://hub.askui.dev",
+            "https://hub.qa.askui.dev",
         ],
         description="CORS allowed origins for the chat API",
     )
