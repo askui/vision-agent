@@ -85,6 +85,8 @@ export ASKUI_TOKEN=<your-token-here>
 | Model Name | Strengths | Execution Speed | Reliability |
 |------------|-----------|----------------|-------------|
 | `claude-sonnet-4-20250514` | Excellent for autonomous goal achievement and complex reasoning tasks | Slow, >1s per step | **Medium** - stable |
+| `claude-haiku-4-5-20251001` | Excellent for autonomous goal achievement and complex reasoning tasks | Fast, <1s per step | **Medium** - stable |
+| `claude-sonnet-4-5-20250929` | Excellent for autonomous goal achievement and complex reasoning tasks | Slow, >1s per step | **High** - stable |
 
 #### Configuration
 
