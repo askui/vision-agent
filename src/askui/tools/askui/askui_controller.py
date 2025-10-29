@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 import subprocess
 import sys
@@ -169,7 +170,9 @@ class AskUiControllerClient(AgentOs):
         This method starts the controller server, establishes a gRPC channel,
         creates a session, and sets up the initial display.
         """
-        self._controller_server.start()
+        if os.getenv("ASKUI_START_CONTROLLER", "true").lower() != "false":
+            self._controller_server.start()
+
         self._channel = grpc.insecure_channel(
             "localhost:23000",
             options=[
