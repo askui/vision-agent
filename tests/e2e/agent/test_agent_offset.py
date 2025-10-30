@@ -25,17 +25,17 @@ class TestVisionAgentOffset:
 
     def _setup_mocks(
         self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
-    ) -> tuple[Mock, Mock, Mock, Mock]:  # type: ignore[method-assign]
+    ) -> tuple[Mock, Mock, Mock, Mock]:
         """Helper method to setup common mocks."""
         mock_mouse_move = Mock()
         mock_click = Mock()
         mock_type = Mock()
         mock_screenshot = Mock(return_value=github_login_screenshot)
 
-        vision_agent.tools.os.mouse_move = mock_mouse_move
-        vision_agent.tools.os.click = mock_click
-        vision_agent.tools.os.type = mock_type
-        vision_agent.tools.os.screenshot = mock_screenshot
+        vision_agent.tools.os.mouse_move = mock_mouse_move  # type: ignore[method-assign]
+        vision_agent.tools.os.click = mock_click  # type: ignore[method-assign]
+        vision_agent.tools.os.type = mock_type  # type: ignore[method-assign]
+        vision_agent.tools.os.screenshot = mock_screenshot  # type: ignore[method-assign]
 
         return mock_mouse_move, mock_click, mock_type, mock_screenshot
 
