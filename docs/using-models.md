@@ -11,6 +11,7 @@ This guide covers all the AI models available in AskUI Vision Agent, their capab
 - [AskUI models](#askui-models)
 - [Other models and providers: Anthropic, OpenRouter, Huggingface, UI-TARS](#other-models-and-providers-anthropic-openrouter-huggingface-ui-tars)
 - [Your own custom models](#your-own-custom-models)
+- [Model providers](#model-providers)
 
 ## When to select a different model
 
