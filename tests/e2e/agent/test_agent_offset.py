@@ -1,16 +1,17 @@
 """Tests for VisionAgent offset functionality with different locator types and models"""
 
-import pathlib
+from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
-from askui.locators import AiElement, Element, Prompt, Text
-from askui.locators.locators import Image
+from askui.locators import Element
 from askui.models import ModelName
-from askui.models.models import Point
+
+if TYPE_CHECKING:
+    from askui.models.models import Point
 
 
 @pytest.mark.parametrize(
@@ -22,7 +23,9 @@ from askui.models.models import Point
 class TestVisionAgentOffset:
     """Test class for VisionAgent offset functionality."""
 
-    def _setup_mocks(self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image):
+    def _setup_mocks(
+        self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
+    ):
         """Helper method to setup common mocks."""
         mock_mouse_move = Mock()
         mock_click = Mock()
@@ -46,7 +49,9 @@ class TestVisionAgentOffset:
         locator = "Forgot password?"
         offset: Point = (10, 5)
 
-        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -70,7 +75,9 @@ class TestVisionAgentOffset:
         locator = "Forgot password?"
         offset: Point = (-10, -5)
 
-        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -94,7 +101,9 @@ class TestVisionAgentOffset:
         locator = "Forgot password?"
         offset: Point = (0, 0)
 
-        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -117,14 +126,19 @@ class TestVisionAgentOffset:
         point_locator: Point = (100, 100)
         offset: Point = (20, 15)
 
-        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Click with Point locator and offset should work
         vision_agent.click(point_locator, offset=offset, model=model)
 
         # Verify calls
         mock_screenshot.assert_not_called()
-        expected_x, expected_y = point_locator[0] + offset[0], point_locator[1] + offset[1]
+        expected_x, expected_y = (
+            point_locator[0] + offset[0],
+            point_locator[1] + offset[1],
+        )
         mock_mouse_move.assert_called_once_with(expected_x, expected_y)
         mock_click.assert_called_once_with("left", 1)
 
@@ -138,7 +152,9 @@ class TestVisionAgentOffset:
         locator = "Forgot password?"
         offset: Point = (15, 10)
 
-        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -161,7 +177,9 @@ class TestVisionAgentOffset:
         locator = "Forgot password?"
         offset: Point = (-15, -10)
 
-        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -184,14 +202,19 @@ class TestVisionAgentOffset:
         point_locator: Point = (200, 150)
         offset: Point = (25, -10)
 
-        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, _, _, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Mouse move with Point locator and offset should work
         vision_agent.mouse_move(point_locator, offset=offset, model=model)
 
         # Verify calls
         mock_screenshot.assert_not_called()
-        expected_x, expected_y = point_locator[0] + offset[0], point_locator[1] + offset[1]
+        expected_x, expected_y = (
+            point_locator[0] + offset[0],
+            point_locator[1] + offset[1],
+        )
         mock_mouse_move.assert_called_once_with(expected_x, expected_y)
 
     def test_type_with_positive_offset(
@@ -205,7 +228,9 @@ class TestVisionAgentOffset:
         offset: Point = (5, 3)
         text = "test@example.com"
 
-        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -231,7 +256,9 @@ class TestVisionAgentOffset:
         offset: Point = (-5, -3)
         text = "test@example.com"
 
-        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Get original position
         x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
@@ -257,14 +284,19 @@ class TestVisionAgentOffset:
         offset: Point = (10, 5)
         text = "username"
 
-        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(vision_agent, github_login_screenshot)
+        mock_mouse_move, mock_click, mock_type, mock_screenshot = self._setup_mocks(
+            vision_agent, github_login_screenshot
+        )
 
         # Type with Point locator and offset should work
         vision_agent.type(text, locator=point_locator, offset=offset, model=model)
 
         # Verify calls
         mock_screenshot.assert_not_called()
-        expected_x, expected_y = point_locator[0] + offset[0], point_locator[1] + offset[1]
+        expected_x, expected_y = (
+            point_locator[0] + offset[0],
+            point_locator[1] + offset[1],
+        )
         mock_mouse_move.assert_called_once_with(expected_x, expected_y)
         mock_click.assert_called_once_with("left", 3)
         mock_type.assert_called_once_with(text)

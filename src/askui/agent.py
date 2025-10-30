@@ -152,7 +152,10 @@ class VisionAgent(AgentBase):
         self.tools.os.click(button, repeat)
 
     def _mouse_move(
-        self, locator: str | Locator | Point, offset: Optional[Point], model: ModelComposition | str | None = None
+        self,
+        locator: str | Locator | Point,
+        offset: Optional[Point],
+        model: ModelComposition | str | None = None,
     ) -> None:
         point: Point
         if isinstance(locator, tuple):
@@ -275,7 +278,13 @@ class VisionAgent(AgentBase):
                 msg += " clearing the current content (line/paragraph) of input field"
             else:
                 repeat = 1
-            self._click(locator=locator, button="left", repeat=repeat, offset=offset, model=model)
+            self._click(
+                locator=locator,
+                button="left",
+                repeat=repeat,
+                offset=offset,
+                model=model,
+            )
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
         self.tools.os.type(text)
