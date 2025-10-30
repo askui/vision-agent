@@ -157,11 +157,11 @@ class VisionAgent(AgentBase):
         offset: Optional[Point],
         model: ModelComposition | str | None = None,
     ) -> None:
-        point: Point
-        if isinstance(locator, tuple):
-            point: Point = locator
-        else:
-            point: Point = self._locate(locator=locator, model=model)[0]
+        point: Point = (
+            locator
+            if isinstance(locator, tuple)
+            else self._locate(locator=locator, model=model)[0]
+        )
         if offset is not None:
             point = (point[0] + offset[0], point[1] + offset[1])
         self.tools.os.mouse_move(point[0], point[1])

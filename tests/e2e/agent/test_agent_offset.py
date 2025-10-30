@@ -25,7 +25,7 @@ class TestVisionAgentOffset:
 
     def _setup_mocks(
         self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
-    ):
+    ) -> tuple[Mock, Mock, Mock, Mock]:
         """Helper method to setup common mocks."""
         mock_mouse_move = Mock()
         mock_click = Mock()
