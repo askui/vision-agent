@@ -229,7 +229,7 @@ class MyActModel(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
@@ -254,7 +254,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         # Implement custom get logic, e.g.:
         # - Use a different OCR service
@@ -267,7 +267,7 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
         # Implement custom locate logic, e.g.:
         # - Use a different object detection model
@@ -316,7 +316,7 @@ class DynamicActModel(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
@@ -362,7 +362,7 @@ class ExternalAIModel(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
@@ -386,7 +386,7 @@ class BusinessLogicModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         # Apply business rules to the query
         if "price" in query.lower() and "discount" in self.business_rules:
@@ -408,7 +408,7 @@ class HybridModel(GetModel, LocateModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         try:
             # Try primary model first
@@ -440,7 +440,7 @@ class RobustModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         try:
             # Your model logic here
@@ -464,7 +464,7 @@ class LoggedModel(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | None = None,
         settings: ActSettings | None = None,
@@ -491,8 +491,97 @@ class ConfigurableModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         # Use configuration in your implementation
         return self._process_with_config(query, source)
 ```
+
+## Model providers
+
+### Using a model provider
+
+You can configure the model provider by setting the `ASKUI__VA__MODEL_PROVIDER` environment variable, e.g., `"bedrock"` to use Bedrock models. All the models you pass via `model` parameter of `act()`, `get()`, `locate()` will be prefixed with `"bedrock/"` in this case, e.g., if you call `agent.act("do something", model="anthropic.claude-sonnet-4-20250514-v1:0")`, it will be called as `agent.act("do something", model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0")` under the hood. Alternatively, just prefix the model name(s) you pass via `model` parameter, e.g., `agent.act("do something", model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0")` or `agent.act("do something", model="vertex/claude-sonnet-4@20250514")`.
+
+At the time of writing, the following model providers are available:
+- `"bedrock"`: Use models hosted on AWS Bedrock.
+- `"vertex"`: Use models hosted on Google Vertex AI.
+- `"anthropic"`: Use models hosted behind Anthropic API.
+- `"askui"`: Use models hosted behind AskUI API.
+
+**IMPORTANT:** If you pass a `model` argument at construction, this is not going to be prefixed with the model provider, e.g., if you call `VisionAgent(model="claude-sonnet-4-20250514", model_provider="askui")`, and later call `agent.act("do something")`, it will be called as `agent.act("do something", model="claude-sonnet-4-20250514")` and not as `agent.act("do something", model="askui/claude-sonnet-4-20250514")` under the hood. If you want to use a provider per default, just prefix the model name(s) you pass via `model` parameter, e.g., `VisionAgent(model="askui/claude-sonnet-4-20250514")` or `VisionAgent(model={"act": "askui/claude-sonnet-4-20250514"})`.
+
+You can also set the `model` parameter of an agent via environment variable, e.g., `ASKUI__VA__MODEL`. For complex values, just use json, e.g., `ASKUI__VA__MODEL={"act":"askui/claude-sonnet-4-20250514"}`.
+
+**IMPORTANT:** Keep in mind that the model name may differ between providers and not all providers may support a model (see https://docs.claude.com/en/docs/about-claude/models/overview). `askui` uses the same model names as `anthropic`. For `vertex` see https://docs.claude.com/en/api/claude-on-vertex-ai and for `bedrock` see https://docs.claude.com/en/api/claude-on-amazon-bedrock.
+
+**IMPORTANT:** Keep in mind that when using a custom model that you may have to pass different `settings` to act as the settings support, e.g., tool or betas, differs between models, e.g., `agent.act("do something", model="askui/<a-special-model>", settings=ActSettings(tools=[ASpecialTool()]))`.
+
+### Configure provider
+
+The following environment variables control authentication and behavior per provider. Variables marked as required must be set for that provider, unless your environment provides credentials through instance/role bindings or local SDK configuration.
+
+#### Common
+- `ASKUI__VA__MODEL_PROVIDER` (str, optional): Provider prefix to apply automatically (e.g., `bedrock`, `vertex`, `anthropic`, `askui`). Per default, no provider prefix is applied, e.g., `claude-sonnet-4-20250514` is going to be called as `claude-sonnet-4-20250514` and not as `bedrock/claude-sonnet-4-20250514` under the hood.
+- `ASKUI__VA__MODEL` (str | json): Default model or per-capability map. Example: `{"act":"bedrock/claude-sonnet-4-20250514"}`.
+
+#### `askui` provider
+- `ASKUI_WORKSPACE_ID` (UUID, required): Workspace to route requests to.
+- `ASKUI_TOKEN` (str) or `ASKUI__AUTHORIZATION` (str): Exactly one required. If `ASKUI__AUTHORIZATION` is set, it is used verbatim as the `Authorization` header. Takes precedence over `ASKUI_TOKEN`.
+- `ASKUI_INFERENCE_ENDPOINT` (url, optional): Override base endpoint. Default: `https://inference.askui.com`.
+
+#### `anthropic` provider (see https://docs.claude.com/en/docs/get-started#python)
+- `ANTHROPIC_API_KEY` (str, required): Anthropic API key.
+- `ANTHROPIC_AUTH_TOKEN` (str, optional): Anthropic auth token.
+- `ANTHROPIC_BASE_URL` (url, optional): Base URL to use for Anthropic API.
+
+#### `bedrock` provider (via Anthropic Bedrock client, see https://docs.claude.com/en/api/claude-on-bedrock)
+- Uses standard AWS credential resolution. Set one of:
+- `AWS_PROFILE` (str) or static credentials `AWS_ACCESS_KEY_ID` (str), `AWS_SECRET_ACCESS_KEY` (str), optional `AWS_SESSION_TOKEN` (str).
+- Region (required): `AWS_REGION` (str) or `AWS_DEFAULT_REGION` (str).
+- Any other AWS SDK configuration is respected (env, shared config/credentials files, instance role, SSO, etc.).
+- `ANTHROPIC_BEDROCK_BASE_URL` (url, optional): Base URL to use for Bedrock API.
+
+#### `vertex` provider (via Anthropic Vertex client, see https://docs.claude.com/en/api/claude-on-vertex-ai)
+- Uses Google Application Default Credentials (ADC). Common setups:
+    - `GOOGLE_APPLICATION_CREDENTIALS` (path): Service account JSON key file.
+    - Or gcloud-authenticated user with `gcloud auth application-default login`.
+    - Project and location are resolved from ADC and/or environment; typical envs if needed in your setup: `GOOGLE_CLOUD_PROJECT` (str), `GOOGLE_CLOUD_LOCATION` (str). Consult your org’s Vertex configuration if these are required.
+- `CLOUD_ML_REGION` (str): Region to use for Vertex AI.
+- `ANTHROPIC_VERTEX_BASE_URL` (url): Base URL to use for Vertex AI.
+- `ANTHROPIC_VERTEX_PROJECT_ID` (str): Project ID to use for Vertex AI.
+
+```python
+import os
+
+from askui import VisionAgent
+
+os.environ["ANTHROPIC_VERTEX_PROJECT_ID"] = "test-project"
+os.environ["CLOUD_ML_REGION"] = "europe-west1"
+
+with VisionAgent() as agent:
+    agent.act("do something", model="vertex/claude-sonnet-4@20250514")
+
+# or
+
+with VisionAgent(model_provider="vertex") as agent:
+    agent.act("do something", model="claude-sonnet-4@20250514")
+
+# or
+
+with VisionAgent(model="vertex/claude-sonnet-4@20250514") as agent:
+    agent.act("do something")
+
+# or
+
+os.environ["ASKUI__VA__MODEL"] = '{"act":"vertex/claude-sonnet-4@20250514"}'
+with VisionAgent() as agent:
+    agent.act("do something")
+```
+
+### Configure your own model provider
+
+If you would like to configure you own model provider, e.g., let's say `"openai"`, just use provider string as key in the model registry as described in [Your own custom models](#your-own-custom-models) section but suffix it with a `"/"`, e.g., `"openai/"`, in order to differentiate it from regular model names. If you then, later call a model of that provider, e.g.,
+`agent.act("do something", model="openai/gpt-4o")`, the request will be routed to the model (api client) implementation that is the value of `"openai"` key in the model registry and the model passed to the underlying model (api client) implementation will be `"gpt-4o"`.
+
+**IMPORTANT:** If you configure both a provider as well as a model prefixed with the provider prefix in the model registry, e.g., both `"openai/"` and `"openai/gpt-4o"`, the model has is going to be used and not the provider, e.g., `agent.act("do something", model="openai/gpt-4o")` is going to use `"openai/gpt-4o"` and not `"openai/"`, and `"openai/gpt-4o"` is going to be passed to the model (api client) implementation as `model` parameter instead of `"gpt-4o"`.

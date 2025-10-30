@@ -5,7 +5,7 @@ authors = [
     {name = "askui GmbH", email = "info@askui.com"},
 ]
 dependencies = [
-    "anthropic>=0.54.0",
+    "anthropic>=0.72.0",
     "fastapi>=0.115.12",
     "fastmcp>=2.3.0",
     "gradio-client>=1.4.3",
@@ -214,9 +214,12 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,chat,pynput,web]"]
+all = ["askui[android,bedrock,chat,pynput,vertex,web]"]
 android = [
     "pure-python-adb>=0.3.0.dev0"
+]
+bedrock = [
+    "anthropic[bedrock]>=0.72.0"
 ]
 chat = [
     "askui[android,web]",
@@ -230,6 +233,10 @@ chat = [
 pynput = [
     "mss>=10.0.0",
     "pynput>=1.8.1",
+]
+vertex = [
+    "google-cloud-aiplatform>=1.122.0",
+    "anthropic[vertex]>=0.72.0",
 ]
 web = [
     "playwright>=1.41.0",

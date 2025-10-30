@@ -1,5 +1,6 @@
 """Shared pytest fixtures for e2e tests."""
 
+import functools
 import pathlib
 from typing import Any, Generator, Optional, Union
 
@@ -8,20 +9,21 @@ from PIL import Image as PILImage
 from typing_extensions import override
 
 from askui.agent import VisionAgent
-from askui.locators.serializers import AskUiLocatorSerializer
+from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
+from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
+from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.get_model import AskUiGetModel
 from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
 )
-from askui.models.askui.model_router import AskUiModelRouter
+from askui.models.askui.models import AskUiGetModel, AskUiLocateModel
 from askui.models.models import ModelName
 from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.settings import MessageSettings
-from askui.reporting import Reporter, SimpleHtmlReporter
+from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 
 
@@ -50,28 +52,66 @@ def askui_facade(
     path_fixtures: pathlib.Path,
 ) -> ModelFacade:
     reporter = SimpleHtmlReporter()
-    askui_inference_api = AskUiInferenceApi(
-        locator_serializer=AskUiLocatorSerializer(
-            ai_element_collection=AiElementCollection(
-                additional_ai_element_locations=[path_fixtures / "images"]
-            ),
-            reporter=reporter,
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
         ),
-        settings=AskUiInferenceApiSettings(
-            messages=MessageSettings(),
-        ),
+        reporter=reporter,
     )
-    agent = Agent(
-        messages_api=askui_inference_api,
+    askui_inference_api = AskUiInferenceApi(
+        settings=AskUiInferenceApiSettings(),
+    )
+    act_model = Agent(
+        messages_api=AnthropicMessagesApi(
+            client=create_api_client(api_provider="askui"),
+            locator_serializer=VlmLocatorSerializer(),
+        ),
         reporter=reporter,
     )
     return ModelFacade(
-        act_model=agent,
+        act_model=act_model,
         get_model=AskUiGetModel(
             google_genai_api=AskUiGoogleGenAiApi(),
             inference_api=askui_inference_api,
         ),
-        locate_model=AskUiModelRouter(inference_api=askui_inference_api),
+        locate_model=AskUiLocateModel(
+            locator_serializer=locator_serializer,
+            inference_api=askui_inference_api,
+        ),
+    )
+
+
+@functools.cache
+def vlm_locator_serializer() -> VlmLocatorSerializer:
+    return VlmLocatorSerializer()
+
+
+@functools.cache
+def anthropic_messages_api(
+    api_provider: AnthropicApiProvider,
+) -> AnthropicMessagesApi:
+    return AnthropicMessagesApi(
+        client=create_api_client(api_provider=api_provider),
+        locator_serializer=vlm_locator_serializer(),
+    )
+
+
+@functools.cache
+def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
+    messages_api = anthropic_messages_api(api_provider)
+    act_model = Agent(
+        messages_api=messages_api,
+        reporter=NULL_REPORTER,
+    )
+    model = AnthropicModel(
+        settings=AnthropicModelSettings(),
+        messages_api=messages_api,
+        locator_serializer=vlm_locator_serializer(),
+    )
+    return ModelFacade(
+        act_model=act_model,
+        get_model=model,
+        locate_model=model,
     )
 
 
@@ -90,6 +130,10 @@ def vision_agent(
             ModelName.ASKUI__COMBO: askui_facade,
             ModelName.ASKUI__OCR: askui_facade,
             ModelName.ASKUI__PTA: askui_facade,
+            ModelName.CLAUDE__SONNET__4__20250514: lambda: anthropic_facade(
+                "anthropic"
+            ),
+            "askui/": askui_facade,
         },
         tools=agent_toolbox_mock,
     ) as agent:

@@ -2,10 +2,11 @@ import logging
 import time
 import types
 from abc import ABC
-from typing import Annotated, Optional, Type, overload
+from typing import Annotated, Literal, Optional, Type, overload
 
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, validate_call
+from pydantic import ConfigDict, Field, field_validator, validate_call
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
 from askui.container import telemetry
@@ -38,6 +39,26 @@ from .retry import ConfigurableRetry, Retry
 logger = logging.getLogger(__name__)
 
 
+class AgentBaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="ASKUI__VA__",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_nested_delimiter="__",
+        extra="ignore",
+    )
+    m: ModelChoice | ModelComposition | str | None = Field(default=None, alias="MODEL")
+    m_provider: str | None = Field(default=None, alias="MODEL_PROVIDER")
+
+    @field_validator("m_provider")
+    @classmethod
+    def validate_m_provider(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return v if v.endswith("/") else f"{v}/"
+
+
 class AgentBase(ABC):  # noqa: B024
     def __init__(
         self,
@@ -47,24 +68,27 @@ class AgentBase(ABC):  # noqa: B024
         models: ModelRegistry | None,
         tools: list[Tool] | None,
         agent_os: AgentOs | AndroidAgentOs,
+        model_provider: str | None,
     ) -> None:
         load_dotenv()
         self._reporter = reporter
         self._agent_os = agent_os
 
         self._tools = tools or []
+        settings = AgentBaseSettings()
+        _model_provider = model_provider or settings.m_provider
+        self._model_provider_prefix = _model_provider or ""
         self._model_router = self._init_model_router(
             reporter=self._reporter,
             models=models or {},
         )
-        self.model = model
         self._retry = retry or ConfigurableRetry(
             strategy="Exponential",
             base_delay=1000,
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
-        self._model_choice = self._init_model_choice(model)
+        self._model = self._init_model(model or settings.m)
         self._data_extractor = DataExtractor(
             reporter=self._reporter, models=models or {}
         )
@@ -83,36 +107,61 @@ class AgentBase(ABC):  # noqa: B024
             models=_models,
         )
 
-    def _init_model_choice(
-        self, model_choice: ModelComposition | ModelChoice | str | None
+    def _init_model(
+        self,
+        model: ModelComposition | ModelChoice | str | None,
     ) -> TotalModelChoice:
         """Initialize the model choice based on the provided model parameter.
 
         Args:
-            model (ModelComposition | ModelChoice | str | None): The model to initialize
-                from. Can be a ModelComposition, ModelChoice dict, string, or None.
+            model: ModelComposition | ModelChoice | str | None: The model to
+                initialize from. Can be a `ModelComposition`, `ModelChoice` dict, `str`,
+                or `None`.
 
         Returns:
             TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to
                 model names (or a ModelComposition for "locate").
         """
-        if isinstance(model_choice, ModelComposition):
+        default_act_model = f"askui/{ModelName.CLAUDE__SONNET__4__20250514}"
+        default_get_model = ModelName.ASKUI
+        default_locate_model = ModelName.ASKUI
+        if isinstance(model, ModelComposition):
             return {
-                "act": ModelName.ASKUI,
-                "get": ModelName.ASKUI,
-                "locate": model_choice,
+                "act": default_act_model,
+                "get": default_get_model,
+                "locate": model,
             }
-        if isinstance(model_choice, str) or model_choice is None:
+        if isinstance(model, str) or model is None:
             return {
-                "act": model_choice or ModelName.ASKUI,
-                "get": model_choice or ModelName.ASKUI,
-                "locate": model_choice or ModelName.ASKUI,
+                "act": model or default_act_model,
+                "get": model or default_get_model,
+                "locate": model or default_locate_model,
             }
         return {
-            "act": model_choice.get("act", ModelName.ASKUI),
-            "get": model_choice.get("get", ModelName.ASKUI),
-            "locate": model_choice.get("locate", ModelName.ASKUI),
+            "act": model.get(
+                "act",
+                default_act_model,
+            ),
+            "get": model.get("get", default_get_model),
+            "locate": model.get("locate", default_locate_model),
         }
+
+    @overload
+    def _get_model(self, model: str | None, type_: Literal["act", "get"]) -> str: ...
+    @overload
+    def _get_model(
+        self, model: ModelComposition | str | None, type_: Literal["locate"]
+    ) -> str | ModelComposition: ...
+    def _get_model(
+        self,
+        model: ModelComposition | str | None,
+        type_: Literal["act", "get", "locate"],
+    ) -> str | ModelComposition:
+        if model is None:
+            return self._model[type_]
+        if isinstance(model, ModelComposition):
+            return model
+        return f"{self._model_provider_prefix}{model}"
 
     @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -173,31 +222,31 @@ class AgentBase(ABC):  # noqa: B024
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
-        model_choice = model or self._model_choice["act"]
-        _settings = settings or self._get_default_settings_for_act(model_choice)
-        _tools = self._build_tools(tools, model_choice)
+        _model = self._get_model(model, "act")
+        _settings = settings or self._get_default_settings_for_act(_model)
+        _tools = self._build_tools(tools, _model)
         self._model_router.act(
             messages=messages,
-            model_choice=model_choice,
+            model=_model,
             on_message=on_message,
             settings=_settings,
             tools=_tools,
         )
 
     def _build_tools(
-        self, tools: list[Tool] | ToolCollection | None, model_choice: str
+        self, tools: list[Tool] | ToolCollection | None, model: str
     ) -> ToolCollection:
-        default_tools = self._get_default_tools_for_act(model_choice)
+        default_tools = self._get_default_tools_for_act(model)
         if isinstance(tools, list):
             return ToolCollection(tools=default_tools + tools)
         if isinstance(tools, ToolCollection):
             return ToolCollection(default_tools) + tools
         return ToolCollection(tools=default_tools)
 
-    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:  # noqa: ARG002
+    def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
         return ActSettings()
 
-    def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:  # noqa: ARG002
+    def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
         return self._tools
 
     @overload
@@ -337,7 +386,7 @@ class AgentBase(ABC):  # noqa: B024
             ```
         """
         _source = source or ImageSource(self._agent_os.screenshot())
-        _model = model or self._model_choice["get"]
+        _model = self._get_model(model, "get")
         return self._data_extractor.get(
             query=query,
             source=_source,
@@ -359,7 +408,7 @@ class AgentBase(ABC):  # noqa: B024
             return self._model_router.locate(
                 screenshot=_screenshot,
                 locator=locator,
-                model_choice=model or self._model_choice["locate"],
+                model=self._get_model(model, "locate"),
             )
 
         points = self._retry.attempt(locate_with_screenshot)

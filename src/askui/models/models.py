@@ -173,7 +173,7 @@ class ActModel(abc.ABC):
             def act(
                 self,
                 messages: list[MessageParam],
-                model_choice: str,
+                model: str,
                 on_message: OnMessageCb | None = None,
                 tools: list[Tool] | None = None,
                 settings: AgentSettings | None = None,
@@ -188,7 +188,7 @@ class ActModel(abc.ABC):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
@@ -209,9 +209,9 @@ class ActModel(abc.ABC):
         Args:
             messages (list[MessageParam]): The message history to start that
                 determines the actions and following messages.
-            model_choice (str): The name of the model being used, e.g., useful for
+            model (str): The name of the model being used, e.g., useful for
                 models registered under multiple keys, e.g., `"my-act-1"` and
-                `"my-act-2"` that depending on the key (passed as `model_choice`)
+                `"my-act-2"` that depending on the key (passed as `model`)
                 behave differently.
             on_message (OnMessageCb | None, optional): Callback for new messages
                 from either an assistant/agent or a user (including
@@ -253,7 +253,7 @@ class GetModel(abc.ABC):
                 query: str,
                 source: Source,
                 response_schema: Type[ResponseSchema] | None,
-                model_choice: str,
+                model: str,
             ) -> ResponseSchema | str:
                 # Implement custom get logic
                 return "Custom response"
@@ -269,7 +269,7 @@ class GetModel(abc.ABC):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         """Extract information from a source based on a query.
         Args:
@@ -277,7 +277,7 @@ class GetModel(abc.ABC):
             source (Source): The source to analyze (screenshot, image or PDF)
             response_schema (Type[ResponseSchema] | None): Optional Pydantic model class
                 defining the expected response structure
-            model_choice (str): The name of the model being used (useful for models that
+            model (str): The name of the model being used (useful for models that
                 support multiple configurations)
 
         Returns:
@@ -305,7 +305,7 @@ class LocateModel(abc.ABC):
                 self,
                 locator: str | Locator,
                 image: ImageSource,
-                model_choice: ModelComposition | str,
+                model: ModelComposition | str,
             ) -> PointList:
                 # Implement custom locate logic
                 return [(100, 100)]
@@ -320,7 +320,7 @@ class LocateModel(abc.ABC):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
         """Find the coordinates of a UI element in an image.
 
@@ -328,7 +328,7 @@ class LocateModel(abc.ABC):
             locator (str | Locator): A description or locator object identifying the
                 element to find
             image (ImageSource): The image to analyze (screenshot or provided image)
-            model_choice (ModelComposition | str): Either a string model name or a
+            model (ModelComposition | str): Either a string model name or a
                 `ModelComposition` for models that support composition
 
         Returns:
@@ -385,7 +385,7 @@ Example:
         def act(
             self,
             messages: list[MessageParam],
-            model_choice: str,
+            model: str,
             on_message: OnMessageCb | None = None,
             tools: list[Tool] | None = None,
             settings: AgentSettings | None = None,

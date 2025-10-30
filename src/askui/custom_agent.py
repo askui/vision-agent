@@ -43,7 +43,7 @@ class CustomAgent:
         _tools = self._build_tools(tools)
         self._model_router.act(
             messages=messages,
-            model_choice=model or ModelName.CLAUDE__SONNET__4__20250514,
+            model=model or ModelName.CLAUDE__SONNET__4__20250514,
             on_message=on_message,
             settings=_settings,
             tools=_tools,

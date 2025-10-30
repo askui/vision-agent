@@ -132,24 +132,23 @@ class Agent(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         _settings = settings or ActSettings()
-        _model = _settings.messages.model or model_choice
         _tool_collection = tools or ToolCollection()
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
                 system=_settings.messages.system or None,
                 messages=messages,
-                model=_model,
+                model=model,
             )
         )
         self._step(
-            model=_model,
+            model=model,
             on_message=on_message or NULL_ON_MESSAGE_CB,
             settings=_settings,
             tool_collection=_tool_collection,

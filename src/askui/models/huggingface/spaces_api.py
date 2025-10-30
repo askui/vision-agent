@@ -64,10 +64,10 @@ class HFSpacesHandler(LocateModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
         """Predict element location using Hugging Face Spaces."""
-        if not isinstance(model_choice, str):
+        if not isinstance(model, str):
             error_msg = "Model composition is not supported for Hugging Face Spaces"
             raise NotImplementedError(error_msg)
         try:
@@ -76,9 +76,7 @@ class HFSpacesHandler(LocateModel):
                 if isinstance(locator, Locator)
                 else locator
             )
-            return [
-                self._spaces[model_choice](image.root, serialized_locator, model_choice)
-            ]
+            return [self._spaces[model](image.root, serialized_locator, model)]
         except (ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
             error_msg = f"Hugging Face Spaces Exception: {e}"
             raise AutomationError(error_msg) from e

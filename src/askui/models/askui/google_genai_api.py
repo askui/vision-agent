@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
-from askui.models.askui.inference_api import AskUiInferenceApiSettings
+from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
 from askui.models.askui.retry_utils import (
     RETRYABLE_HTTP_STATUS_CODES,
     wait_for_retry_after_header,
@@ -36,12 +36,12 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-def _extract_model_id(model_choice: str) -> str:
-    if model_choice == ModelName.ASKUI:
+def _extract_model_id(model: str) -> str:
+    if model == ModelName.ASKUI:
         return ModelName.GEMINI__2_5__FLASH
-    if model_choice.startswith(ASKUI_MODEL_CHOICE_PREFIX):
-        return model_choice[ASKUI_MODEL_CHOICE_PREFIX_LEN:]
-    return model_choice
+    if model.startswith(ASKUI_MODEL_CHOICE_PREFIX):
+        return model[ASKUI_MODEL_CHOICE_PREFIX_LEN:]
+    return model
 
 
 class AskUiGoogleGenAiApi(GetModel):
@@ -72,7 +72,7 @@ class AskUiGoogleGenAiApi(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         try:
             _response_schema = to_response_schema(response_schema)
@@ -90,7 +90,7 @@ class AskUiGoogleGenAiApi(GetModel):
                 role="user",
             )
             generate_content_response = self._client.models.generate_content(
-                model=f"models/{_extract_model_id(model_choice)}",
+                model=f"models/{_extract_model_id(model)}",
                 contents=content,
                 config={
                     "response_mime_type": "application/json",

@@ -93,15 +93,18 @@ class UiTarsApiHandlerSettings(BaseSettings):
     """Settings for TARS API."""
 
     tars_url: HttpUrl = Field(
+        default=...,
         validation_alias="TARS_URL",
         description="URL of the TARS API",
     )
     tars_api_key: SecretStr = Field(
+        default=...,
         min_length=1,
         validation_alias="TARS_API_KEY",
         description="API key for authenticating with the TARS API",
     )
     tars_model_name: str = Field(
+        default=...,
         validation_alias="TARS_MODEL_NAME",
         description="Name of the TARS model to use for inference",
     )
@@ -155,9 +158,9 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
-        if not isinstance(model_choice, str):
+        if not isinstance(model, str):
             error_msg = "Model composition is not supported for UI-TARS"
             raise NotImplementedError(error_msg)
         locator_serialized = (
@@ -188,13 +191,13 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
-            err_msg = f"PDF and Excel processing is not supported for the model {model_choice}"
+            err_msg = f"PDF and Excel processing is not supported for the model {model}"
             raise NotImplementedError(err_msg)
         if response_schema is not None:
-            error_msg = f'Response schema is not supported for model "{model_choice}"'
+            error_msg = f'Response schema is not supported for model "{model}"'
             raise NotImplementedError(error_msg)
         response = self._predict(
             image_url=source.to_data_url(),
@@ -202,7 +205,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             prompt=PROMPT_QA,
         )
         if response is None:
-            error_msg = f'No response from model "{model_choice}" to query: "{query}"'
+            error_msg = f'No response from model "{model}" to query: "{query}"'
             raise QueryNoResponseError(error_msg, query)
         return response
 
@@ -210,7 +213,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,

@@ -150,13 +150,12 @@ class Runner:
             custom_agent = CustomAgent()
             custom_agent.act(
                 messages,
-                model=ModelName.ASKUI,
+                model=model,
                 on_message=on_message,
                 tools=tools,
                 settings=ActSettings(
                     messages=MessageSettings(
                         betas=betas,
-                        model=model,
                         system=system,
                         thinking={"type": "enabled", "budget_tokens": 4096},
                         max_tokens=8192,

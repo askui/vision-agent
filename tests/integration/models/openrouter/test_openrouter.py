@@ -39,7 +39,7 @@ def test_basic_query_returns_string(
         query="What is in the image?",
         source=image_source_github_login_screenshot,
         response_schema=None,
-        model_choice="test-model",
+        model="test-model",
     )
 
     assert isinstance(result, str)
@@ -66,7 +66,7 @@ def test_query_with_response_schema_returns_validated_object(
         query="What is in the image?",
         source=image_source_github_login_screenshot,
         response_schema=TestResponse,
-        model_choice="test-model",
+        model="test-model",
     )
 
     assert isinstance(result, TestResponse)
@@ -89,7 +89,7 @@ def test_no_response_from_model(
             query="What is in the image?",
             source=image_source_github_login_screenshot,
             response_schema=None,
-            model_choice="test-model",
+            model="test-model",
         )
     mock_openai_client.chat.completions.create.assert_called_once()
 
@@ -108,6 +108,6 @@ def test_malformed_json_from_model(
             query="What is in the image?",
             source=image_source_github_login_screenshot,
             response_schema=TestResponse,
-            model_choice="test-model",
+            model="test-model",
         )
     mock_openai_client.chat.completions.create.assert_called_once()

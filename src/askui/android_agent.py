@@ -30,20 +30,11 @@ from askui.tools.android.tools import (
 from askui.tools.exception_tool import ExceptionTool
 
 from .models import ModelComposition
-from .models.models import ModelChoice, ModelName, ModelRegistry, Point
+from .models.models import ModelChoice, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 
 logger = logging.getLogger(__name__)
-
-_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=ANDROID_AGENT_SYSTEM_PROMPT,
-        thinking={"type": "enabled", "budget_tokens": 2048},
-        betas=[],
-    ),
-)
 
 
 class AndroidVisionAgent(AgentBase):
@@ -55,6 +46,7 @@ class AndroidVisionAgent(AgentBase):
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
+        model_provider: str | None = None,
     ) -> None:
         self.os = PpadbAgentOs()
         reporter = CompositeReporter(reporters=reporters)
@@ -81,6 +73,7 @@ class AndroidVisionAgent(AgentBase):
                 ExceptionTool(),
             ],
             agent_os=self.os,
+            model_provider=model_provider,
         )
 
     @overload
@@ -316,9 +309,11 @@ class AndroidVisionAgent(AgentBase):
         self.os.set_device_by_serial_number(device_sn)
 
     @override
-    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
-        match model_choice:
-            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
-                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
-            case _:
-                return ActSettings()
+    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        return ActSettings(
+            messages=MessageSettings(
+                system=ANDROID_AGENT_SYSTEM_PROMPT,
+                thinking={"type": "enabled", "budget_tokens": 2048},
+                betas=[],
+            ),
+        )

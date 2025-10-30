@@ -178,12 +178,12 @@ class OpenRouterModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
             err_msg = (
                 f"PDF or Office Document processing is not supported for the model: "
-                f"{model_choice}"
+                f"{model}"
             )
             raise NotImplementedError(err_msg)
         response = self._predict(
@@ -193,6 +193,6 @@ class OpenRouterModel(GetModel):
             response_schema=response_schema,
         )
         if response is None:
-            error_msg = f'No response from model "{model_choice}" to query: "{query}"'
+            error_msg = f'No response from model "{model}" to query: "{query}"'
             raise QueryNoResponseError(error_msg, query)
         return response
