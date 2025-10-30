@@ -11,15 +11,16 @@ from askui.tools.toolbox import AgentToolbox
     "model",
     [
         None,
-        ModelName.ASKUI,
+        f"askui/{ModelName.CLAUDE__SONNET__4__20250514}",
         ModelName.CLAUDE__SONNET__4__20250514,
+        "askui/claude-sonnet-4-5-20250929",
     ],
 )
 def test_act(
     vision_agent: VisionAgent,
     model: str,
 ) -> None:
-    vision_agent.act("Click anywhere on the screen (may be blank)", model=model)
+    vision_agent.act("Tell me a joke", model=model)
     assert True
 
 
@@ -47,5 +48,5 @@ def test_act_with_model_composition_should_use_default_model(
         ),
         tools=agent_toolbox_mock,
     ) as vision_agent:
-        vision_agent.act("Click anywhere on the screen (may be blank)")
+        vision_agent.act("Tell me a joke")
         assert True

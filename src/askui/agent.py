@@ -21,22 +21,13 @@ from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
 from askui.tools.set_active_display_tool import SetActiveDisplayTool
 
 from .models import ModelComposition
-from .models.models import ModelChoice, ModelName, ModelRegistry
+from .models.models import ModelChoice, ModelRegistry
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
 
 logger = logging.getLogger(__name__)
-
-_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=COMPUTER_AGENT_SYSTEM_PROMPT,
-        betas=[COMPUTER_USE_20250124_BETA_FLAG],
-        thinking={"type": "enabled", "budget_tokens": 2048},
-    ),
-)
 
 
 class VisionAgent(AgentBase):
@@ -76,6 +67,7 @@ class VisionAgent(AgentBase):
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
+        model_provider: str | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
@@ -97,6 +89,7 @@ class VisionAgent(AgentBase):
             ]
             + (act_tools or []),
             agent_os=self.tools.os,
+            model_provider=model_provider,
         )
 
     @telemetry.record_call(exclude={"locator"})
@@ -369,20 +362,18 @@ class VisionAgent(AgentBase):
         self.tools.os.mouse_down(button)
 
     @override
-    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
-        match model_choice:
-            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
-                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
-            case _:
-                return ActSettings()
+    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        return ActSettings(
+            messages=MessageSettings(
+                system=COMPUTER_AGENT_SYSTEM_PROMPT,
+                betas=[COMPUTER_USE_20250124_BETA_FLAG],
+                thinking={"type": "enabled", "budget_tokens": 2048},
+            ),
+        )
 
     @override
-    def _get_default_tools_for_act(self, model_choice: str) -> list[Tool]:
-        match model_choice:
-            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
-                return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
-            case _:
-                return self._tools
+    def _get_default_tools_for_act(self, model: str) -> list[Tool]:
+        return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
 
     @telemetry.record_call()
     @validate_call

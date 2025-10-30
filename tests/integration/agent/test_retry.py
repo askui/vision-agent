@@ -26,7 +26,7 @@ class FailingLocateModel(LocateModel):
         self,
         locator: Union[str, Locator],
         image: ImageSource,  # noqa: ARG002
-        model_choice: Union[ModelComposition, str],  # noqa: ARG002
+        model: Union[ModelComposition, str],  # noqa: ARG002
     ) -> list[Tuple[int, int]]:
         self.calls += 1
         if self.calls <= self.fail_times:

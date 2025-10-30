@@ -32,18 +32,9 @@ from askui.tools.testing.scenario_tools import (
 )
 from askui.web_agent import WebVisionAgent
 
-from .models.models import ModelChoice, ModelComposition, ModelName, ModelRegistry
+from .models.models import ModelChoice, ModelComposition, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
-
-_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=TESTING_AGENT_SYSTEM_PROMPT,
-        betas=[COMPUTER_USE_20250124_BETA_FLAG],
-        thinking={"type": "enabled", "budget_tokens": 2048},
-    ),
-)
 
 
 class WebTestingAgent(WebVisionAgent):
@@ -54,6 +45,7 @@ class WebTestingAgent(WebVisionAgent):
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
+        model_provider: str | None = None,
     ) -> None:
         base_dir = Path.cwd() / "chat" / "testing"
         base_dir.mkdir(parents=True, exist_ok=True)
@@ -79,12 +71,15 @@ class WebTestingAgent(WebVisionAgent):
                 ModifyExecutionTool(base_dir),
                 DeleteExecutionTool(base_dir),
             ],
+            model_provider=model_provider,
         )
 
     @override
-    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
-        match model_choice:
-            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
-                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
-            case _:
-                return ActSettings()
+    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        return ActSettings(
+            messages=MessageSettings(
+                system=TESTING_AGENT_SYSTEM_PROMPT,
+                betas=[COMPUTER_USE_20250124_BETA_FLAG],
+                thinking={"type": "enabled", "budget_tokens": 2048},
+            ),
+        )

@@ -18,7 +18,7 @@ from askui import (
     VisionAgent,
 )
 from askui.locators.locators import Locator
-from askui.models import ModelComposition, ModelDefinition, ModelName
+from askui.models import ModelComposition, ModelDefinition
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
@@ -33,19 +33,19 @@ class SimpleActModel(ActModel):
 
     def __init__(self) -> None:
         self.goals: list[list[dict[str, Any]]] = []
-        self.model_choices: list[str] = []
+        self.models: list[str] = []
 
     @override
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         self.goals.append([message.model_dump(mode="json") for message in messages])
-        self.model_choices.append(model_choice)
+        self.models.append(model)
 
 
 class SimpleGetModel(GetModel):
@@ -55,7 +55,7 @@ class SimpleGetModel(GetModel):
         self.queries: list[str] = []
         self.sources: list[Source] = []
         self.schemas: list[Any] = []
-        self.model_choices: list[str] = []
+        self.models: list[str] = []
         self.response = response
 
     def get(
@@ -63,12 +63,12 @@ class SimpleGetModel(GetModel):
         query: str,
         source: Source,
         response_schema: Optional[Type[ResponseSchema]],
-        model_choice: str,
+        model: str,
     ) -> Union[ResponseSchema, str]:
         self.queries.append(query)
         self.sources.append(source)
         self.schemas.append(response_schema)
-        self.model_choices.append(model_choice)
+        self.models.append(model)
         if (
             response_schema is not None
             and isinstance(self.response, response_schema)
@@ -88,18 +88,18 @@ class SimpleLocateModel(LocateModel):
     def __init__(self, point: Point = (100, 100)) -> None:
         self.locators: list[str | Locator] = []
         self.images: list[ImageSource] = []
-        self.model_choices: list[ModelComposition | str] = []
+        self.models: list[ModelComposition | str] = []
         self._point = point
 
     def locate(
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
         self.locators.append(locator)
         self.images.append(image)
-        self.model_choices.append(model_choice)
+        self.models.append(model)
         return [self._point]
 
 
@@ -150,7 +150,7 @@ class TestCustomModels:
         assert act_model.goals == [
             [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
-        assert act_model.model_choices == ["custom-act"]
+        assert act_model.models == ["custom-act"]
 
     def test_register_and_use_custom_get_model(
         self,
@@ -164,7 +164,7 @@ class TestCustomModels:
 
         assert result == "test response"
         assert get_model.queries == ["test query"]
-        assert get_model.model_choices == ["custom-get"]
+        assert get_model.models == ["custom-get"]
 
     def test_register_and_use_custom_get_model_with_pdf(
         self,
@@ -181,7 +181,7 @@ class TestCustomModels:
 
         assert result == "test response"
         assert get_model.queries == ["test query"]
-        assert get_model.model_choices == ["custom-get"]
+        assert get_model.models == ["custom-get"]
 
     def test_register_and_use_custom_locate_model(
         self,
@@ -194,7 +194,7 @@ class TestCustomModels:
             agent.click("test element", model="custom-locate")
 
         assert locate_model.locators == ["test element"]
-        assert locate_model.model_choices == ["custom-locate"]
+        assert locate_model.models == ["custom-locate"]
 
     def test_register_and_use_model_factory(
         self,
@@ -214,7 +214,7 @@ class TestCustomModels:
         assert act_model.goals == [
             [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
-        assert act_model.model_choices == ["factory-model"]
+        assert act_model.models == ["factory-model"]
 
     def test_register_multiple_models_for_same_task(
         self,
@@ -228,7 +228,7 @@ class TestCustomModels:
             def act(
                 self,
                 messages: list[MessageParam],
-                model_choice: str,
+                model: str,
                 on_message: OnMessageCb | None = None,
                 tools: ToolCollection | None = None,
                 settings: ActSettings | None = None,
@@ -247,7 +247,7 @@ class TestCustomModels:
         assert act_model.goals == [
             [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
-        assert act_model.model_choices == ["act-1"]
+        assert act_model.models == ["act-1"]
 
     def test_use_response_schema_with_custom_get_model(
         self,
@@ -276,7 +276,7 @@ class TestCustomModels:
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
         """Test overriding a default model with a custom one."""
-        registry: ModelRegistry = {ModelName.ASKUI: act_model}
+        registry: ModelRegistry = {"askui/claude-sonnet-4-20250514": act_model}
 
         with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
             agent.act("test goal")  # Should use custom model since it overrides "askui"
@@ -284,7 +284,7 @@ class TestCustomModels:
         assert act_model.goals == [
             [{"role": "user", "content": "test goal", "stop_reason": None}],
         ]
-        assert act_model.model_choices == [ModelName.ASKUI]
+        assert act_model.models == ["askui/claude-sonnet-4-20250514"]
 
     def test_model_composition(
         self,
@@ -308,7 +308,7 @@ class TestCustomModels:
         with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
             agent.click("test element", model=composition)
 
-        assert locate_model.model_choices == [composition]
+        assert locate_model.models == [composition]
 
     @pytest.mark.parametrize(
         "model_name,expected_exception",

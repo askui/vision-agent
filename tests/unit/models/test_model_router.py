@@ -8,7 +8,6 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from askui.models.exceptions import ModelNotFoundError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
@@ -86,16 +85,21 @@ def model_router(
         models={
             ModelName.CLAUDE__SONNET__4__20250514: mock_anthropic_facade,
             ModelName.ASKUI: mock_askui_facade,
+            ModelName.ASKUI__GEMINI__2_5__FLASH: mock_askui_facade,
+            ModelName.ASKUI__GEMINI__2_5__PRO: mock_askui_facade,
             ModelName.ASKUI__AI_ELEMENT: mock_askui_facade,
             ModelName.ASKUI__COMBO: mock_askui_facade,
             ModelName.ASKUI__OCR: mock_askui_facade,
             ModelName.ASKUI__PTA: mock_askui_facade,
+            ModelName.CLAUDE__SONNET__4__20250514: mock_anthropic_facade,
             ModelName.HF__SPACES__ASKUI__PTA_1: mock_hf_spaces,
-            ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: mock_hf_spaces,
             ModelName.HF__SPACES__QWEN__QWEN2_VL_2B_INSTRUCT: mock_hf_spaces,
             ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: mock_hf_spaces,
+            ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B: mock_hf_spaces,
             ModelName.HF__SPACES__SHOWUI__2B: mock_hf_spaces,
             ModelName.TARS: mock_tars,
+            "anthropic/": mock_anthropic_facade,
+            "askui/": mock_askui_facade,
         },
     )
 
@@ -200,7 +204,7 @@ class TestModelRouter:
         x, y = model_router.locate(
             ImageSource(mock_image),
             locator,
-            ModelName.CLAUDE__SONNET__4__20250514,
+            f"anthropic/{ModelName.CLAUDE__SONNET__4__20250514}",
         )
         assert x == 50
         assert y == 50
@@ -217,20 +221,11 @@ class TestModelRouter:
         x, y = model_router.locate(
             ImageSource(mock_image),
             locator,
-            model_choice=ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B,
+            model=ModelName.HF__SPACES__OS_COPILOT__OS_ATLAS_BASE_7B,
         )
         assert x == 50
         assert y == 50
         mock_hf_spaces.locate.assert_called_once()  # type: ignore
-
-    def test_locate_with_invalid_model(
-        self, model_router: ModelRouter, mock_image: Image.Image
-    ) -> None:
-        """Test that locating with invalid model raises InvalidModelError."""
-        with pytest.raises(ModelNotFoundError):
-            model_router.locate(
-                ImageSource(mock_image), "test locator", "invalid-model"
-            )
 
     def test_get_with_askui_model(
         self,
@@ -240,7 +235,7 @@ class TestModelRouter:
     ) -> None:
         """Test getting inference using AskUI model."""
         response = model_router.get(
-            "test query", mock_image_source, model_choice=ModelName.ASKUI
+            "test query", mock_image_source, model=ModelName.ASKUI
         )
         assert response == "Mock response"
         mock_askui_facade.get.assert_called_once()  # type: ignore
@@ -253,7 +248,7 @@ class TestModelRouter:
     ) -> None:
         """Test getting inference using TARS model."""
         response = model_router.get(
-            "test query", mock_image_source, model_choice=ModelName.TARS
+            "test query", mock_image_source, model=ModelName.TARS
         )
         assert response == "Mock response"
         mock_tars.get.assert_called_once()  # type: ignore
@@ -268,29 +263,20 @@ class TestModelRouter:
         response = model_router.get(
             "test query",
             mock_image_source,
-            model_choice=ModelName.CLAUDE__SONNET__4__20250514,
+            model=f"anthropic/{ModelName.CLAUDE__SONNET__4__20250514}",
         )
         assert response == "Mock response"
         mock_anthropic_facade.get.assert_called_once()  # type: ignore
-
-    def test_get_with_invalid_model(
-        self, model_router: ModelRouter, mock_image_source: ImageSource
-    ) -> None:
-        """Test that getting inference with invalid model raises InvalidModelError."""
-        with pytest.raises(ModelNotFoundError):
-            model_router.get(
-                "test query", mock_image_source, model_choice="invalid-model"
-            )
 
     def test_act_with_tars_model(
         self, model_router: ModelRouter, mock_tars: UiTarsApiHandler
     ) -> None:
         """Test acting using TARS model."""
         messages = [MessageParam(role="user", content="test goal")]
-        model_router.act(messages, ModelName.TARS)
+        model_router.act(messages, model=ModelName.TARS)
         mock_tars.act.assert_called_once_with(  # type: ignore[attr-defined]
             messages=messages,
-            model_choice=ModelName.TARS,
+            model="tars",
             on_message=None,
             settings=None,
             tools=None,
@@ -303,18 +289,12 @@ class TestModelRouter:
         messages = [MessageParam(role="user", content="test goal")]
         model_router.act(
             messages,
-            ModelName.CLAUDE__SONNET__4__20250514,
+            f"anthropic/{ModelName.CLAUDE__SONNET__4__20250514}",
         )
         mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
             messages=messages,
-            model_choice=ModelName.CLAUDE__SONNET__4__20250514,
+            model=ModelName.CLAUDE__SONNET__4__20250514,
             on_message=None,
             settings=None,
             tools=None,
         )
-
-    def test_act_with_invalid_model(self, model_router: ModelRouter) -> None:
-        """Test that acting with invalid model raises InvalidModelError."""
-        messages = [MessageParam(role="user", content="test goal")]
-        with pytest.raises(ModelNotFoundError):
-            model_router.act(messages, "invalid-model")

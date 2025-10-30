@@ -21,18 +21,9 @@ from askui.tools.playwright.tools import (
 from askui.tools.toolbox import AgentToolbox
 
 from .models import ModelComposition
-from .models.models import ModelChoice, ModelName, ModelRegistry
+from .models.models import ModelChoice, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
-
-_CLAUDE__SONNET__4__20250514__ACT_SETTINGS = ActSettings(
-    messages=MessageSettings(
-        model=ModelName.CLAUDE__SONNET__4__20250514,
-        system=WEB_AGENT_SYSTEM_PROMPT,
-        betas=[COMPUTER_USE_20250124_BETA_FLAG],
-        thinking={"type": "enabled", "budget_tokens": 2048},
-    ),
-)
 
 
 class WebVisionAgent(VisionAgent):
@@ -44,6 +35,7 @@ class WebVisionAgent(VisionAgent):
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
+        model_provider: str | None = None,
     ) -> None:
         agent_os = PlaywrightAgentOs()
         tools = AgentToolbox(
@@ -64,12 +56,15 @@ class WebVisionAgent(VisionAgent):
                 ExceptionTool(),
             ]
             + (act_tools or []),
+            model_provider=model_provider,
         )
 
     @override
-    def _get_default_settings_for_act(self, model_choice: str) -> ActSettings:
-        match model_choice:
-            case ModelName.CLAUDE__SONNET__4__20250514 | ModelName.ASKUI:
-                return _CLAUDE__SONNET__4__20250514__ACT_SETTINGS
-            case _:
-                return ActSettings()
+    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        return ActSettings(
+            messages=MessageSettings(
+                system=WEB_AGENT_SYSTEM_PROMPT,
+                betas=[COMPUTER_USE_20250124_BETA_FLAG],
+                thinking={"type": "enabled", "budget_tokens": 2048},
+            ),
+        )

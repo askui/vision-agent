@@ -63,40 +63,38 @@ class ModelNotFoundError(AutomationError):
     """Exception raised when a model could not be found within available models.
 
     Args:
-        model_choice (str): The model choice.
+        model (str): The model.
     """
 
     def __init__(
         self,
-        model_choice: str,
+        model: str,
         message: str | None = None,
     ):
-        self.model_choice = model_choice
-        super().__init__(
-            f"Model not found: {model_choice}" if message is None else message
-        )
+        self.model = model
+        super().__init__(f"Model not found: {model}" if message is None else message)
 
 
 class ModelTypeMismatchError(ModelNotFoundError):
     """Exception raised when a model is not of the expected type.
 
     Args:
-        model_choice (str): The model choice.
+        model (str): The model choice.
         expected_type (type): The expected type.
         actual_type (type): The actual type.
     """
 
     def __init__(
         self,
-        model_choice: str,
+        model: str,
         expected_type: type,
         actual_type: type,
     ):
         self.expected_type = expected_type
         self.actual_type = actual_type
         super().__init__(
-            model_choice=model_choice,
-            message=f'Model "{model_choice}" is an instance of {actual_type.mro()}, '
+            model=model,
+            message=f'Model "{model}" is an instance of {actual_type.mro()}, '
             f"expected it to be an instance of {expected_type.mro()}",
         )
 

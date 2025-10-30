@@ -34,14 +34,14 @@ class ModelFacade(ActModel, GetModel, LocateModel):
     def act(
         self,
         messages: list[MessageParam],
-        model_choice: str,
+        model: str,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
         self._act_model.act(
             messages=messages,
-            model_choice=model_choice,
+            model=model,
             on_message=on_message,
             settings=settings,
             tools=tools,
@@ -53,15 +53,15 @@ class ModelFacade(ActModel, GetModel, LocateModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model_choice: str,
+        model: str,
     ) -> ResponseSchema | str:
-        return self._get_model.get(query, source, response_schema, model_choice)
+        return self._get_model.get(query, source, response_schema, model)
 
     @override
     def locate(
         self,
         locator: str | Locator,
         image: ImageSource,
-        model_choice: ModelComposition | str,
+        model: ModelComposition | str,
     ) -> PointList:
-        return self._locate_model.locate(locator, image, model_choice)
+        return self._locate_model.locate(locator, image, model)

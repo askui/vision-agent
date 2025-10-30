@@ -86,7 +86,7 @@ class DataExtractor:
             source=_source,
             query=query,
             response_schema=response_schema,
-            model_choice=model,
+            model=model,
         )
         message_content = (
             str(response)
