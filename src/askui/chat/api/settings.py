@@ -67,7 +67,7 @@ class Settings(BaseSettings):
         ),
     )
     model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default="askui/claude-haiku-4-5-20251001",
         description="Default model to use for chat interactions",
     )
     allow_origins: list[str] = Field(
