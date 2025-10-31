@@ -21,7 +21,7 @@ from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
 from askui.tools.set_active_display_tool import SetActiveDisplayTool
 
 from .models import ModelComposition
-from .models.models import ModelChoice, ModelRegistry
+from .models.models import ModelChoice, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
@@ -96,18 +96,20 @@ class VisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def click(
         self,
-        locator: Optional[str | Locator] = None,
+        locator: Optional[str | Locator | Point] = None,
         button: Literal["left", "middle", "right"] = "left",
         repeat: Annotated[int, Field(gt=0)] = 1,
+        offset: Optional[Point] = None,
         model: ModelComposition | str | None = None,
     ) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
 
         Args:
-            locator (str | Locator | None, optional): The identifier or description of the element to click. If `None`, clicks at current position.
+            locator (str | Locator | Point | None, optional): UI element description, structured locator, or absolute coordinates (x, y). If `None`, clicks at current position.
             button ('left' | 'middle' | 'right', optional): Specifies which mouse button to click. Defaults to `'left'`.
             repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
+            offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
 
         Example:
@@ -117,9 +119,11 @@ class VisionAgent(AgentBase):
             with VisionAgent() as agent:
                 agent.click()              # Left click on current position
                 agent.click("Edit")        # Left click on text "Edit"
+                agent.click((100, 200))    # Left click at absolute coordinates (100, 200)
                 agent.click("Edit", button="right")  # Right click on text "Edit"
                 agent.click(repeat=2)      # Double left click on current position
                 agent.click("Edit", button="middle", repeat=4)   # 4x middle click on text "Edit"
+                agent.click("Submit", offset=(10, -5))  # Click 10 pixels right and 5 pixels up from "Submit"
             ```
         """
         msg = "click"
@@ -129,39 +133,53 @@ class VisionAgent(AgentBase):
             msg += f" {repeat}x times"
         if locator is not None:
             msg += f" on {locator}"
+        if offset is not None:
+            msg += f" with offset {offset}"
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
-        self._click(locator, button, repeat, model)
+        self._click(locator, button, repeat, offset, model)
 
     def _click(
         self,
-        locator: Optional[str | Locator],
+        locator: Optional[str | Locator | Point],
         button: Literal["left", "middle", "right"],
         repeat: int,
+        offset: Optional[Point],
         model: ModelComposition | str | None,
     ) -> None:
         if locator is not None:
-            self._mouse_move(locator, model)
+            self._mouse_move(locator, offset, model)
         self.tools.os.click(button, repeat)
 
     def _mouse_move(
-        self, locator: str | Locator, model: ModelComposition | str | None = None
+        self,
+        locator: str | Locator | Point,
+        offset: Optional[Point],
+        model: ModelComposition | str | None = None,
     ) -> None:
-        point = self._locate(locator=locator, model=model)[0]
+        point: Point = (
+            locator
+            if isinstance(locator, tuple)
+            else self._locate(locator=locator, model=model)[0]
+        )
+        if offset is not None:
+            point = (point[0] + offset[0], point[1] + offset[1])
         self.tools.os.mouse_move(point[0], point[1])
 
     @telemetry.record_call(exclude={"locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def mouse_move(
         self,
-        locator: str | Locator,
+        locator: str | Locator | Point,
+        offset: Optional[Point] = None,
         model: ModelComposition | str | None = None,
     ) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
 
         Args:
-            locator (str | Locator): The identifier or description of the element to move to.
+            locator (str | Locator | Point): UI element description, structured locator, or absolute coordinates (x, y).
+            offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
 
         Example:
@@ -170,13 +188,15 @@ class VisionAgent(AgentBase):
 
             with VisionAgent() as agent:
                 agent.mouse_move("Submit button")  # Moves cursor to submit button
-                agent.mouse_move("Close")  # Moves cursor to close element
+                agent.mouse_move((300, 150))       # Moves cursor to absolute coordinates (300, 150)
+                agent.mouse_move("Close")          # Moves cursor to close element
                 agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
+                agent.mouse_move("Menu", offset=(5, 10))  # Move 5 pixels right and 10 pixels down from "Menu"
             ```
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, model)
+        self._mouse_move(locator, offset, model)
 
     @telemetry.record_call()
     @validate_call
@@ -217,7 +237,8 @@ class VisionAgent(AgentBase):
     def type(
         self,
         text: Annotated[str, Field(min_length=1)],
-        locator: str | Locator | None = None,
+        locator: str | Locator | Point | None = None,
+        offset: Optional[Point] = None,
         model: ModelComposition | str | None = None,
         clear: bool = True,
     ) -> None:
@@ -231,7 +252,8 @@ class VisionAgent(AgentBase):
 
         Args:
             text (str): The text to be typed. Must be at least `1` character long.
-            locator (str | Locator | None, optional): The identifier or description of the element (e.g., input field) to type into. If `None`, types at the current focus.
+            locator (str | Locator | Point | None, optional): UI element description, structured locator, or absolute coordinates (x, y). If `None`, types at current focus.
+            offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element, i.e., input field, to type into using the `locator`.
             clear (bool, optional): Whether to triple click on the element to give it focus and select the current text before typing. Defaults to `True`.
 
@@ -242,8 +264,10 @@ class VisionAgent(AgentBase):
             with VisionAgent() as agent:
                 agent.type("Hello, world!")  # Types "Hello, world!" at current focus
                 agent.type("user@example.com", locator="Email")  # Clicks on "Email" input, then types
+                agent.type("username", locator=(200, 100))  # Clicks at coordinates (200, 100), then types
                 agent.type("password123", locator="Password field", model="custom_model")  # Uses specific model
                 agent.type("Hello, world!", locator="Textarea", clear=False)  # Types "Hello, world!" into textarea without clearing
+                agent.type("text", locator="Input field", offset=(5, 0))  # Click 5 pixels right of "Input field", then type
             ```
         """
         msg = f'type "{text}"'
@@ -254,7 +278,13 @@ class VisionAgent(AgentBase):
                 msg += " clearing the current content (line/paragraph) of input field"
             else:
                 repeat = 1
-            self._click(locator=locator, button="left", repeat=repeat, model=model)
+            self._click(
+                locator=locator,
+                button="left",
+                repeat=repeat,
+                offset=offset,
+                model=model,
+            )
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
         self.tools.os.type(text)
