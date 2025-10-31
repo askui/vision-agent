@@ -26,6 +26,7 @@ class MessagesApi(ABC):
         system: str | list[BetaTextBlockParam] | Omit = omit,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
+        temperature: float | Omit = omit,
     ) -> MessageParam:
         """Create a message using the Anthropic API.
 
@@ -38,6 +39,7 @@ class MessagesApi(ABC):
             system (str | list[BetaTextBlockParam] | Omit): The system to use.
             thinking (BetaThinkingConfigParam | Omit): The thinking to use.
             tool_choice (BetaToolChoiceParam | Omit): The tool choice to use.
+            temperature (float | Omit): The temperature to use.
 
         Returns:
             MessageParam: The created message.

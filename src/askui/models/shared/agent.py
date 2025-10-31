@@ -86,6 +86,7 @@ class Agent(ActModel):
                 system=settings.messages.system,
                 thinking=settings.messages.thinking,
                 tool_choice=settings.messages.tool_choice,
+                temperature=settings.messages.temperature,
             )
             message_by_assistant = self._call_on_message(
                 on_message, response_message, truncation_strategy.messages
