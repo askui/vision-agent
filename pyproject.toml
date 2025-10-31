@@ -32,7 +32,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<=3.13"
 readme = "README.md"
 license = {text = "MIT"}
 dynamic = ["version"]
