@@ -18,6 +18,7 @@ class MessageSettings(BaseModel):
     system: str | list[BetaTextBlockParam] | Omit = omit
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
+    temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)
 
 
 class ActSettings(BaseModel):

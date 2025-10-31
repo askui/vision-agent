@@ -64,6 +64,7 @@ class AnthropicMessagesApi(MessagesApi):
         system: str | list[BetaTextBlockParam] | Omit = omit,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
+        temperature: float | Omit = omit,
     ) -> MessageParam:
         _messages = [
             cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
@@ -78,6 +79,7 @@ class AnthropicMessagesApi(MessagesApi):
             system=system,
             thinking=thinking,
             tool_choice=tool_choice,
+            temperature=temperature,
             timeout=300.0,
         )
         return MessageParam.model_validate(response.model_dump())
