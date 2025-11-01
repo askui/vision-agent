@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from askui.locators.locators import Locator
 
@@ -42,6 +42,26 @@ class ElementNotFoundError(AutomationError):
         self.locator_serialized = locator_serialized
         super().__init__(f"Element not found: {self.locator}")
 
+
+class WaitUntilError(AutomationError):
+    """Exception raised when an element cannot be located within the given time.
+
+    Args:
+        locator (str | Locator): The locator that was used.
+        locator_serialized (Any): The locator serialized for the specific model
+    """
+
+    def __init__(self, locator: str | Locator, locator_serialized: Any, retry_count: int,
+                 delay: float,
+                 until_condition: Literal["appear", "disappear"]) -> None:
+        self.locator = locator
+        self.locator_serialized = locator_serialized
+        self.retry_count = retry_count
+        self.delay = delay
+        self.until_condition = until_condition
+
+        super().__init__(f"Wait until condition '{self.until_condition}' not met for locator: {self.locator} "
+                         f"after {self.retry_count} retries with {self.delay} seconds delay")
 
 class QueryUnexpectedResponseError(AutomationError):
     """Exception raised when a query returns an unexpected response.
