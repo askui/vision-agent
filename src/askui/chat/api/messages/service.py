@@ -6,6 +6,7 @@ from askui.chat.api.db.queries import list_all
 from askui.chat.api.messages.models import Message, MessageCreate
 from askui.chat.api.messages.orms import MessageOrm
 from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
+from askui.chat.api.threads.orms import ThreadOrm
 from askui.utils.api_utils import (
     LIST_LIMIT_DEFAULT,
     ListOrder,
@@ -46,6 +47,19 @@ class MessageService:
         params: MessageCreate,
     ) -> Message:
         """Create a new message."""
+        # Validate thread exists
+        thread_orm: ThreadOrm | None = (
+            self._session.query(ThreadOrm)
+            .filter(
+                ThreadOrm.id == thread_id,
+                ThreadOrm.workspace_id == workspace_id,
+            )
+            .first()
+        )
+        if thread_orm is None:
+            error_msg = f"Thread {thread_id} not found"
+            raise NotFoundError(error_msg)
+
         message = Message.create(workspace_id, thread_id, params)
         message_orm = MessageOrm.from_model(message)
         self._session.add(message_orm)

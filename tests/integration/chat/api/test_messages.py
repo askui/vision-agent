@@ -1,22 +1,40 @@
 """Integration tests for the messages API endpoints."""
 
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock
+from uuid import UUID
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from askui.chat.api.messages.models import Message
+from askui.chat.api.messages.orms import MessageOrm
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.threads.models import Thread
+from askui.chat.api.threads.orms import ThreadOrm
 from askui.chat.api.threads.service import ThreadService
 
 
 class TestMessagesAPI:
     """Test suite for the messages API endpoints."""
 
-    def test_list_messages_empty(self, test_headers: dict[str, str]) -> None:
+    def _add_thread_to_db(self, thread: Thread, test_db_session: Session) -> None:
+        """Add a thread to the test database."""
+        thread_orm = ThreadOrm.from_model(thread)
+        test_db_session.add(thread_orm)
+        test_db_session.commit()
+
+    def _add_message_to_db(self, message: Message, test_db_session: Session) -> None:
+        """Add a message to the test database."""
+        message_orm = MessageOrm.from_model(message)
+        test_db_session.add(message_orm)
+        test_db_session.commit()
+
+    def test_list_messages_empty(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test listing messages when no messages exist."""
         # First create a thread
         temp_dir = tempfile.mkdtemp()
@@ -24,27 +42,28 @@ class TestMessagesAPI:
         threads_dir = workspace_path / "threads"
         threads_dir.mkdir(parents=True, exist_ok=True)
 
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -63,7 +82,9 @@ class TestMessagesAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_list_messages_with_messages(self, test_headers: dict[str, str]) -> None:
+    def test_list_messages_with_messages(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test listing messages when messages exist."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -73,39 +94,45 @@ class TestMessagesAPI:
         messages_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
 
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
         # Create a mock message
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_message = Message(
             id="msg_test123",
             object="thread.message",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             role="user",
             content="Hello, this is a test message",
             metadata={"key": "value"},
+            workspace_id=workspace_id,
         )
         (messages_dir / "msg_test123.json").write_text(mock_message.model_dump_json())
+
+        # Add message to database
+        self._add_message_to_db(mock_message, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -126,7 +153,9 @@ class TestMessagesAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_list_messages_with_pagination(self, test_headers: dict[str, str]) -> None:
+    def test_list_messages_with_pagination(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test listing messages with pagination parameters."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -136,41 +165,46 @@ class TestMessagesAPI:
         messages_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
 
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
         # Create multiple mock messages
+        workspace_id = UUID(test_headers["askui-workspace"])
         for i in range(5):
             mock_message = Message(
                 id=f"msg_test{i}",
                 object="thread.message",
-                created_at=1234567890 + i,
+                created_at=datetime.fromtimestamp(1234567890 + i, tz=timezone.utc),
                 thread_id="thread_test123",
                 role="user" if i % 2 == 0 else "assistant",
                 content=f"Test message {i}",
+                workspace_id=workspace_id,
             )
             (messages_dir / f"msg_test{i}.json").write_text(
                 mock_message.model_dump_json()
             )
+            # Add message to database
+            self._add_message_to_db(mock_message, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -188,7 +222,9 @@ class TestMessagesAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_create_message(self, test_headers: dict[str, str]) -> None:
+    def test_create_message(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test creating a new message."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -196,27 +232,28 @@ class TestMessagesAPI:
         threads_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -246,7 +283,9 @@ class TestMessagesAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_create_message_minimal(self, test_headers: dict[str, str]) -> None:
+    def test_create_message_minimal(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test creating a message with minimal data."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -254,27 +293,28 @@ class TestMessagesAPI:
         threads_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -310,7 +350,9 @@ class TestMessagesAPI:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_retrieve_message(self, test_headers: dict[str, str]) -> None:
+    def test_retrieve_message(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test retrieving an existing message."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -320,39 +362,45 @@ class TestMessagesAPI:
         messages_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
 
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
         # Create a mock message
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_message = Message(
             id="msg_test123",
             object="thread.message",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             role="user",
             content="Test message content",
             metadata={"key": "value"},
+            workspace_id=workspace_id,
         )
         (messages_dir / "msg_test123.json").write_text(mock_message.model_dump_json())
+
+        # Add message to database
+        self._add_message_to_db(mock_message, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service
@@ -386,7 +434,9 @@ class TestMessagesAPI:
         data = response.json()
         assert "detail" in data
 
-    def test_delete_message(self, test_headers: dict[str, str]) -> None:
+    def test_delete_message(
+        self, test_db_session: Session, test_headers: dict[str, str]
+    ) -> None:
         """Test deleting an existing message."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -396,38 +446,44 @@ class TestMessagesAPI:
         messages_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
 
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
         # Create a mock message
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_message = Message(
             id="msg_test123",
             object="thread.message",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             role="user",
             content="Test message to delete",
+            workspace_id=workspace_id,
         )
         (messages_dir / "msg_test123.json").write_text(mock_message.model_dump_json())
+
+        # Add message to database
+        self._add_message_to_db(mock_message, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.messages.dependencies import get_message_service
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            from askui.chat.api.threads.service import ThreadService
-
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(test_db_session)
 
         def override_message_service() -> MessageService:
-            return MessageService(workspace_path)
+            return MessageService(test_db_session)
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_message_service] = override_message_service

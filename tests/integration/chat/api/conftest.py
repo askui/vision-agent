@@ -77,12 +77,16 @@ def test_headers(test_workspace_id: str) -> dict[str, str]:
 
 
 @pytest.fixture
-def mock_file_service(temp_workspace_dir: Path) -> FileService:
+def mock_file_service(
+    test_db_session: Session, temp_workspace_dir: Path
+) -> FileService:
     """Create a mock file service with temporary workspace."""
-    return FileService(temp_workspace_dir)
+    return FileService(test_db_session, temp_workspace_dir)
 
 
-def create_test_app_with_overrides(workspace_path: Path) -> FastAPI:
+def create_test_app_with_overrides(
+    test_db_session: Session, workspace_path: Path
+) -> FastAPI:
     """Create a test app with all dependencies overridden."""
     from askui.chat.api.app import app
     from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_workspace_dir
@@ -96,7 +100,7 @@ def create_test_app_with_overrides(workspace_path: Path) -> FastAPI:
         return workspace_path
 
     def override_file_service() -> FileService:
-        return FileService(workspace_path)
+        return FileService(test_db_session, workspace_path)
 
     def override_set_env_from_headers() -> None:
         # No-op for testing

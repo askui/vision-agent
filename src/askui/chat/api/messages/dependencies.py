@@ -1,11 +1,13 @@
 from fastapi import Depends
 
 from askui.chat.api.db.session import SessionDep
+from askui.chat.api.dependencies import WorkspaceIdDep
 from askui.chat.api.files.dependencies import FileServiceDep
 from askui.chat.api.files.service import FileService
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
+from askui.chat.api.models import WorkspaceId
 from askui.models.shared.truncation_strategies import (
     SimpleTruncationStrategyFactory,
     TruncationStrategyFactory,
@@ -24,8 +26,9 @@ MessageServiceDep = Depends(get_message_service)
 
 def get_message_translator(
     file_service: FileService = FileServiceDep,
+    workspace_id: WorkspaceId | None = WorkspaceIdDep,
 ) -> MessageTranslator:
-    return MessageTranslator(file_service)
+    return MessageTranslator(file_service, workspace_id)
 
 
 MessageTranslatorDep = Depends(get_message_translator)

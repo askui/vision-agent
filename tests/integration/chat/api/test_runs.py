@@ -15,8 +15,11 @@ from askui.chat.api.assistants.orms import AssistantOrm
 from askui.chat.api.assistants.service import AssistantService
 from askui.chat.api.models import WorkspaceId
 from askui.chat.api.runs.models import Run
+from askui.chat.api.runs.orms import RunOrm
 from askui.chat.api.runs.service import RunService
+from askui.chat.api.settings import Settings
 from askui.chat.api.threads.models import Thread
+from askui.chat.api.threads.orms import ThreadOrm
 from askui.chat.api.threads.service import ThreadService
 
 
@@ -67,6 +70,21 @@ class TestRunsAPI:
         test_db_session.add(assistant_orm)
         test_db_session.commit()
 
+    def _add_thread_to_db(self, thread: Thread, test_db_session: Session) -> None:
+        """Add a thread to the test database."""
+        thread_orm = ThreadOrm.from_model(thread)
+        test_db_session.add(thread_orm)
+        test_db_session.commit()
+
+    def _add_run_to_db(self, run: Run, test_db_session: Session) -> None:
+        """Add a run to the test database."""
+        # Need to include status (computed field) in the model dump
+        run_dict = run.model_dump(exclude={"object"})
+        run_dict["status"] = run.status  # Add computed status field
+        run_orm = RunOrm(**run_dict)
+        test_db_session.add(run_orm)
+        test_db_session.commit()
+
     def _create_test_workspace(self) -> Path:
         """Create a temporary workspace directory for testing."""
         temp_dir = tempfile.mkdtemp()
@@ -76,24 +94,38 @@ class TestRunsAPI:
         return workspace_path
 
     def _create_test_thread(
-        self, workspace_path: Path, thread_id: str = "thread_test123"
-    ) -> None:
+        self,
+        workspace_path: Path,
+        thread_id: str = "thread_test123",
+        test_db_session: Session | None = None,
+        workspace_id: UUID | None = None,
+    ) -> Thread:
         """Create a test thread in the workspace."""
         threads_dir = workspace_path / "threads"
+        if workspace_id is None and test_db_session is not None:
+            # Need workspace_id if adding to DB
+            error_msg = "workspace_id required when test_db_session is provided"
+            raise ValueError(error_msg)
         mock_thread = Thread(
             id=thread_id,
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / f"{thread_id}.json").write_text(mock_thread.model_dump_json())
+        if test_db_session is not None and workspace_id is not None:
+            self._add_thread_to_db(mock_thread, test_db_session)
+        return mock_thread
 
     def _create_test_run(
         self,
         workspace_path: Path,
         thread_id: str = "thread_test123",
         run_id: str = "run_test123",
-    ) -> None:
+        test_db_session: Session | None = None,
+        workspace_id: UUID | None = None,
+    ) -> Run:
         """Create a test run in the workspace."""
         runs_dir = workspace_path / "runs" / thread_id
         runs_dir.mkdir(parents=True, exist_ok=True)
@@ -101,14 +133,18 @@ class TestRunsAPI:
         mock_run = Run(
             id=run_id,
             object="thread.run",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id=thread_id,
             assistant_id="asst_test123",
-            expires_at=1755846718,  # 10 minutes later
-            started_at=1234567890,
-            completed_at=1234567900,
+            expires_at=datetime.fromtimestamp(1755846718, tz=timezone.utc),
+            started_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
+            completed_at=datetime.fromtimestamp(1234567900, tz=timezone.utc),
+            workspace_id=workspace_id,
         )
         (runs_dir / f"{run_id}.json").write_text(mock_run.model_dump_json())
+        if test_db_session is not None and workspace_id is not None:
+            self._add_run_to_db(mock_run, test_db_session)
+        return mock_run
 
     def _setup_runs_dependencies(
         self, workspace_path: Path, test_db_session: Session
@@ -119,26 +155,30 @@ class TestRunsAPI:
         from askui.chat.api.threads.dependencies import get_thread_service
 
         def override_thread_service() -> ThreadService:
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             assistant_service = AssistantService(test_db_session)
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
         app.dependency_overrides[get_runs_service] = override_runs_service
 
     def _create_multiple_test_runs(
-        self, workspace_path: Path, thread_id: str = "thread_test123", count: int = 5
+        self,
+        workspace_path: Path,
+        thread_id: str = "thread_test123",
+        count: int = 5,
+        test_db_session: Session | None = None,
+        workspace_id: UUID | None = None,
     ) -> None:
         """Create multiple test runs in the workspace."""
         runs_dir = workspace_path / "runs" / thread_id
@@ -148,12 +188,17 @@ class TestRunsAPI:
             mock_run = Run(
                 id=f"run_test{i}",
                 object="thread.run",
-                created_at=1234567890 + i,
+                created_at=datetime.fromtimestamp(1234567890 + i, tz=timezone.utc),
                 thread_id=thread_id,
                 assistant_id=f"asst_test{i}",
-                expires_at=1234567890 + i + 600,  # 10 minutes later
+                expires_at=datetime.fromtimestamp(
+                    1234567890 + i + 600, tz=timezone.utc
+                ),
+                workspace_id=workspace_id,
             )
             (runs_dir / f"run_test{i}.json").write_text(mock_run.model_dump_json())
+            if test_db_session is not None and workspace_id is not None:
+                self._add_run_to_db(mock_run, test_db_session)
 
     def _cleanup_dependencies(self) -> None:
         """Clean up dependency overrides."""
@@ -194,8 +239,21 @@ class TestRunsAPI:
     ) -> None:
         """Test listing runs when runs exist."""
         workspace_path = self._create_test_workspace()
-        self._create_test_thread(workspace_path)
-        self._create_test_run(workspace_path)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        self._create_test_thread(
+            workspace_path, test_db_session=test_db_session, workspace_id=workspace_id
+        )
+        # Add assistant for foreign key
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
+        self._create_test_run(
+            workspace_path,
+            test_db_session=test_db_session,
+            workspace_id=workspace_id,
+        )
 
         self._setup_runs_dependencies(workspace_path, test_db_session)
 
@@ -222,8 +280,22 @@ class TestRunsAPI:
     ) -> None:
         """Test listing runs with pagination parameters."""
         workspace_path = self._create_test_workspace()
-        self._create_test_thread(workspace_path)
-        self._create_multiple_test_runs(workspace_path)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        self._create_test_thread(
+            workspace_path, test_db_session=test_db_session, workspace_id=workspace_id
+        )
+        # Add assistants for foreign keys
+        for i in range(5):
+            mock_assistant = self._create_test_assistant(
+                assistant_id=f"asst_test{i}",
+                workspace_id=workspace_id,
+            )
+            self._add_assistant_to_db(mock_assistant, test_db_session)
+        self._create_multiple_test_runs(
+            workspace_path,
+            test_db_session=test_db_session,
+            workspace_id=workspace_id,
+        )
 
         self._setup_runs_dependencies(workspace_path, test_db_session)
 
@@ -247,10 +319,16 @@ class TestRunsAPI:
     ) -> None:
         """Test creating a new run."""
         workspace_path = self._create_test_workspace()
-        self._create_test_thread(workspace_path)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        self._create_test_thread(
+            workspace_path, test_db_session=test_db_session, workspace_id=workspace_id
+        )
         self._setup_runs_dependencies(workspace_path, test_db_session)
         self._add_assistant_to_db(
-            self._create_test_assistant(assistant_id="asst_test123"), test_db_session
+            self._create_test_assistant(
+                assistant_id="asst_test123", workspace_id=workspace_id
+            ),
+            test_db_session,
         )
 
         try:
@@ -275,7 +353,9 @@ class TestRunsAPI:
         finally:
             self._cleanup_dependencies()
 
-    def test_create_run_minimal(self, test_headers: dict[str, str]) -> None:
+    def test_create_run_minimal(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test creating a run with minimal data."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -283,13 +363,25 @@ class TestRunsAPI:
         threads_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
+        # Add assistant to database (required for foreign key)
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -298,19 +390,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -333,7 +424,9 @@ class TestRunsAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_create_run_streaming(self, test_headers: dict[str, str]) -> None:
+    def test_create_run_streaming(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test creating a streaming run."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -341,13 +434,25 @@ class TestRunsAPI:
         threads_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
+        # Add assistant to database (required for foreign key)
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -356,19 +461,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -391,10 +495,20 @@ class TestRunsAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_create_thread_and_run(self, test_headers: dict[str, str]) -> None:
+    def test_create_thread_and_run(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test creating a thread and run in one request."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
+
+        # Add assistant to database (required for foreign key)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -403,19 +517,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -450,10 +563,20 @@ class TestRunsAPI:
         finally:
             app.dependency_overrides.clear()
 
-    def test_create_thread_and_run_minimal(self, test_headers: dict[str, str]) -> None:
+    def test_create_thread_and_run_minimal(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test creating a thread and run with minimal data."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
+
+        # Add assistant to database (required for foreign key)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -462,19 +585,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -499,11 +621,19 @@ class TestRunsAPI:
             app.dependency_overrides.clear()
 
     def test_create_thread_and_run_streaming(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test creating a streaming thread and run."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
+
+        # Add assistant to database (required for foreign key)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -512,19 +642,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -552,11 +681,19 @@ class TestRunsAPI:
             app.dependency_overrides.clear()
 
     def test_create_thread_and_run_with_messages(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test creating a thread and run with initial messages."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
+
+        # Add assistant to database (required for foreign key)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -565,19 +702,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -618,7 +754,7 @@ class TestRunsAPI:
             app.dependency_overrides.clear()
 
     def test_create_thread_and_run_validation_error(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test creating thread and run with invalid data."""
         temp_dir = tempfile.mkdtemp()
@@ -631,19 +767,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -666,11 +801,19 @@ class TestRunsAPI:
             app.dependency_overrides.clear()
 
     def test_create_thread_and_run_empty_thread(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test creating thread and run with completely empty thread object."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
+
+        # Add assistant to database (required for foreign key)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -679,19 +822,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -726,7 +868,9 @@ class TestRunsAPI:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_retrieve_run(self, test_headers: dict[str, str]) -> None:
+    def test_retrieve_run(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test retrieving an existing run."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -736,26 +880,42 @@ class TestRunsAPI:
         runs_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_thread = Thread(
             id="thread_test123",
             object="thread",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             name="Test Thread",
+            workspace_id=workspace_id,
         )
         (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+
+        # Add thread to database
+        self._add_thread_to_db(mock_thread, test_db_session)
+
+        # Create and add assistant to database (required for foreign key)
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
 
         # Create a mock run
         mock_run = Run(
             id="run_test123",
             object="thread.run",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             assistant_id="asst_test123",
-            expires_at=1755846718,  # 10 minutes later
-            started_at=1234567890,
-            completed_at=1234567900,
+            expires_at=datetime.fromtimestamp(1755846718, tz=timezone.utc),
+            started_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
+            completed_at=datetime.fromtimestamp(1234567900, tz=timezone.utc),
+            workspace_id=workspace_id,
         )
         (runs_dir / "run_test123.json").write_text(mock_run.model_dump_json())
+
+        # Add run to database
+        self._add_run_to_db(mock_run, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -764,19 +924,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -809,7 +968,9 @@ class TestRunsAPI:
         data = response.json()
         assert "detail" in data
 
-    def test_cancel_run(self, test_headers: dict[str, str]) -> None:
+    def test_cancel_run(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test canceling an existing run."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -819,27 +980,39 @@ class TestRunsAPI:
         runs_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock thread
-        mock_thread = Thread(
-            id="thread_test123",
-            object="thread",
-            created_at=1234567890,
-            name="Test Thread",
-        )
-        (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
-
-        # Create a mock run
+        workspace_id = UUID(test_headers["askui-workspace"])
         import time
 
         current_time = int(time.time())
+        mock_thread = Thread(
+            id="thread_test123",
+            object="thread",
+            created_at=datetime.fromtimestamp(current_time, tz=timezone.utc),
+            name="Test Thread",
+            workspace_id=workspace_id,
+        )
+        (threads_dir / "thread_test123.json").write_text(mock_thread.model_dump_json())
+        self._add_thread_to_db(mock_thread, test_db_session)
+
+        # Create and add assistant to database (required for foreign key)
+        mock_assistant = self._create_test_assistant(
+            assistant_id="asst_test123",
+            workspace_id=workspace_id,
+        )
+        self._add_assistant_to_db(mock_assistant, test_db_session)
+
+        # Create a mock run
         mock_run = Run(
             id="run_test123",
             object="thread.run",
-            created_at=current_time,
+            created_at=datetime.fromtimestamp(current_time, tz=timezone.utc),
             thread_id="thread_test123",
             assistant_id="asst_test123",
-            expires_at=current_time + 600,  # 10 minutes later
+            expires_at=datetime.fromtimestamp(current_time + 600, tz=timezone.utc),
+            workspace_id=workspace_id,
         )
         (runs_dir / "run_test123.json").write_text(mock_run.model_dump_json())
+        self._add_run_to_db(mock_run, test_db_session)
 
         from askui.chat.api.app import app
         from askui.chat.api.runs.dependencies import get_runs_service
@@ -848,19 +1021,18 @@ class TestRunsAPI:
         def override_thread_service() -> ThreadService:
             from askui.chat.api.threads.service import ThreadService
 
-            mock_message_service = Mock()
-            mock_run_service = Mock()
-            return ThreadService(workspace_path, mock_message_service, mock_run_service)
+            return ThreadService(session=test_db_session)
 
         def override_runs_service() -> RunService:
             mock_assistant_service = Mock()
             mock_mcp_client_manager_manager = create_mock_mcp_client_manager_manager()
+            settings = Settings(data_dir=workspace_path)
             return RunService(
-                base_dir=workspace_path,
+                session=test_db_session,
                 assistant_service=mock_assistant_service,
                 mcp_client_manager_manager=mock_mcp_client_manager_manager,
                 chat_history_manager=Mock(),
-                settings=Mock(),
+                settings=settings,
             )
 
         app.dependency_overrides[get_thread_service] = override_thread_service
@@ -876,9 +1048,8 @@ class TestRunsAPI:
                 assert response.status_code == status.HTTP_200_OK
                 data = response.json()
                 assert data["id"] == "run_test123"
-                # The cancel operation sets tried_cancelling_at, making status
-                # "cancelling"
-                assert data["status"] == "cancelling"
+                # The cancel operation sets the status to "cancelled"
+                assert data["status"] == "cancelled"
         finally:
             app.dependency_overrides.clear()
 
@@ -901,10 +1072,12 @@ class TestRunsAPI:
     ) -> None:
         """Test creating a run with a custom assistant."""
         workspace_path = self._create_test_workspace()
-        self._create_test_thread(workspace_path)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        self._create_test_thread(
+            workspace_path, test_db_session=test_db_session, workspace_id=workspace_id
+        )
 
         # Create a custom assistant in the database
-        workspace_id = UUID(test_headers["askui-workspace"])
         custom_assistant = self._create_test_assistant(
             "asst_custom123",
             workspace_id=workspace_id,
@@ -941,10 +1114,12 @@ class TestRunsAPI:
     ) -> None:
         """Test creating a run with a custom assistant that has empty tools."""
         workspace_path = self._create_test_workspace()
-        self._create_test_thread(workspace_path)
+        workspace_id = UUID(test_headers["askui-workspace"])
+        self._create_test_thread(
+            workspace_path, test_db_session=test_db_session, workspace_id=workspace_id
+        )
 
         # Create a custom assistant with empty tools in the database
-        workspace_id = UUID(test_headers["askui-workspace"])
         empty_tools_assistant = self._create_test_assistant(
             "asst_customempty123",
             workspace_id=workspace_id,
