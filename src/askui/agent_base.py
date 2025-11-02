@@ -1,4 +1,3 @@
-import dis
 import logging
 import time
 import types
@@ -6,7 +5,6 @@ from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
 from dotenv import load_dotenv
-from exceptiongroup import catch
 from pydantic import ConfigDict, Field, field_validator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
@@ -413,6 +411,7 @@ class AgentBase(ABC):  # noqa: B024
                 locator=locator,
                 model=self._get_model(model, "locate"),
             )
+
         retry = retry or self._retry
         points = retry.attempt(locate_with_screenshot)
         self._reporter.add_message("ModelRouter", f"locate {len(points)} elements")
@@ -507,26 +506,28 @@ class AgentBase(ABC):  # noqa: B024
     def wait(
         self,
         until: Annotated[float, Field(gt=0.0)] | str | Locator,
-        retry_count: Optional[int] = None,
-        delay: Optional[int] = None,
+        retry_count: Optional[Annotated[int, Field(gt=0)]] = None,
+        delay: Optional[Annotated[float, Field(gt=0.0)]] = None,
         until_condition: Literal["appear", "disappear"] = "appear",
         model: ModelComposition | str | None = None,
     ) -> None:
         """
-        Pauses execution or waits until a UI element appears or disappears on the screen.
+        Pauses execution or waits until a UI element appears or disappears.
 
         Args:
             until (float | str | Locator): If a float, pauses execution for the
                 specified number of seconds (must be greater than 0.0). If a string
-                or Locator, waits until the specified UI element appears or disappears on screen.
-            retry_count (int | None): Number of retries when waiting for a UI element.
-                Defaults to 3 if None.
-            delay (int | None): Sleep duration in seconds between retries when waiting
-                for a UI element. Defaults to 1 second if None.
-            until_condition (Literal["appear", "disappear"]): The condition to wait until
-                the element satisfies. Defaults to "appear".
+                or Locator, waits until the specified UI element appears or
+                disappears on screen.
+            retry_count (int | None): Number of retries when waiting for a UI
+                element. Defaults to 3 if None.
+            delay (int | None): Sleep duration in seconds between retries when
+                waiting for a UI element. Defaults to 1 second if None.
+            until_condition (Literal["appear", "disappear"]): The condition to wait
+                until the element satisfies. Defaults to "appear".
             model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the `until` locator.
+                of the model(s) to be used for locating the element using the
+                `until` locator.
 
         Raises:
             WaitUntilError: If the UI element is not found after all retries.
@@ -554,41 +555,87 @@ class AgentBase(ABC):  # noqa: B024
             ```
         """
         if isinstance(until, float) or isinstance(until, int):
+            self._reporter.add_message("User", f"wait {until} seconds")
             time.sleep(until)
             return
 
+        self._reporter.add_message(
+            "User", f"wait for element '{until}' to {until_condition}"
+        )
         retry_count = retry_count if retry_count is not None else 3
         delay = delay if delay is not None else 1
-        if until_condition == "appear":
-            try:
-                self._locate(until, model=model,
-                            retry=ConfigurableRetry(
-                    strategy="Fixed",
-                    base_delay=delay*1000,
-                    retry_count=retry_count,
-                    on_exception_types=(ElementNotFoundError,)
-                ))
-                return
-            except ElementNotFoundError as e:
-                raise WaitUntilError(e.locator, e.locator_serialized, retry_count, delay, until_condition) from e
-        else:
-            for i in range(retry_count):
-                try:
-                    self._locate(until, model=model,
-                                retry=ConfigurableRetry(
-                    strategy="Fixed",
-                    base_delay=delay*1000,
-                    retry_count=1,
-                    on_exception_types=(ElementNotFoundError,)
-                    ))
-                    logger.debug(
-                        "Element still present, retrying... %d/%d", i + 1, retry_count
-                    )
-                    time.sleep(delay)
-                except ElementNotFoundError:
-                    return
-            raise WaitUntilError(until, str(until), retry_count, delay, until_condition)
 
+        if until_condition == "appear":
+            self._wait_for_appear(until, model, retry_count, delay)
+        else:
+            self._wait_for_disappear(until, model, retry_count, delay)
+
+    def _wait_for_appear(
+        self,
+        locator: str | Locator,
+        model: ModelComposition | str | None,
+        retry_count: int,
+        delay: float,
+    ) -> None:
+        """Wait for an element to appear on screen."""
+        try:
+            self._locate(
+                locator,
+                model=model,
+                retry=ConfigurableRetry(
+                    strategy="Fixed",
+                    base_delay=int(delay * 1000),
+                    retry_count=retry_count,
+                    on_exception_types=(ElementNotFoundError,),
+                ),
+            )
+            self._reporter.add_message(
+                "VisionAgent", f"element '{locator}' appeared successfully"
+            )
+        except ElementNotFoundError as e:
+            self._reporter.add_message(
+                "VisionAgent",
+                f"element '{locator}' failed to appear after {retry_count} retries",
+            )
+            raise WaitUntilError(
+                e.locator, e.locator_serialized, retry_count, delay, "appear"
+            ) from e
+
+    def _wait_for_disappear(
+        self,
+        locator: str | Locator,
+        model: ModelComposition | str | None,
+        retry_count: int,
+        delay: float,
+    ) -> None:
+        """Wait for an element to disappear from screen."""
+        for i in range(retry_count):
+            try:
+                self._locate(
+                    locator,
+                    model=model,
+                    retry=ConfigurableRetry(
+                        strategy="Fixed",
+                        base_delay=int(delay * 1000),
+                        retry_count=1,
+                        on_exception_types=(),
+                    ),
+                )
+                logger.debug(
+                    "Element still present, retrying... %d/%d", i + 1, retry_count
+                )
+                time.sleep(delay)
+            except ElementNotFoundError:  # noqa: PERF203
+                self._reporter.add_message(
+                    "VisionAgent", f"element '{locator}' disappeared successfully"
+                )
+                return
+
+        self._reporter.add_message(
+            "VisionAgent",
+            f"element '{locator}' failed to disappear after {retry_count} retries",
+        )
+        raise WaitUntilError(locator, str(locator), retry_count, delay, "disappear")
 
     @telemetry.record_call()
     def close(self) -> None:

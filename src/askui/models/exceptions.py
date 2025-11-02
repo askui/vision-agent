@@ -51,17 +51,26 @@ class WaitUntilError(AutomationError):
         locator_serialized (Any): The locator serialized for the specific model
     """
 
-    def __init__(self, locator: str | Locator, locator_serialized: Any, retry_count: int,
-                 delay: float,
-                 until_condition: Literal["appear", "disappear"]) -> None:
+    def __init__(
+        self,
+        locator: str | Locator,
+        locator_serialized: Any,
+        retry_count: int,
+        delay: float,
+        until_condition: Literal["appear", "disappear"],
+    ) -> None:
         self.locator = locator
         self.locator_serialized = locator_serialized
         self.retry_count = retry_count
         self.delay = delay
         self.until_condition = until_condition
 
-        super().__init__(f"Wait until condition '{self.until_condition}' not met for locator: {self.locator} "
-                         f"after {self.retry_count} retries with {self.delay} seconds delay")
+        super().__init__(
+            f"Wait until condition '{self.until_condition}' not met"
+            f" for locator: '{self.locator}' after {self.retry_count} retries"
+            f" with {self.delay} seconds delay"
+        )
+
 
 class QueryUnexpectedResponseError(AutomationError):
     """Exception raised when a query returns an unexpected response.
