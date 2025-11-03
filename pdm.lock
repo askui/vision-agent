@@ -5,10 +5,10 @@
 groups = ["default", "all", "android", "bedrock", "chat", "dev", "pynput", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:e9a16ddb2dd5a8a2c2a3cb25f7c65dca1477ceba8392aebedcf08c8fc1c4b329"
+content_hash = "sha256:b332e07a6842e88bbc634645b10755fe3c5a69a341896a307af1ef8ee51114e9"
 
 [[metadata.targets]]
-requires_python = ">=3.10,<=3.13.1"
+requires_python = ">=3.10,<3.14"
 
 [[package]]
 name = "aiofiles"

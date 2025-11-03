@@ -19,7 +19,9 @@ class TestAskUiControllerClientSettings:
             assert settings.server_autostart is True
 
     def test_server_address_from_env(self) -> None:
-        """`ASKUI_CONTOLLER_CLIENT_SERVER_ADDRESS` overrides default for `server_address`."""
+        """
+        `ASKUI_CONTOLLER_CLIENT_SERVER_ADDRESS` overrides default for `server_address`.
+        """
         with patch.dict(
             "os.environ",
             {"ASKUI_CONTOLLER_CLIENT_SERVER_ADDRESS": "127.0.0.1:24000"},
