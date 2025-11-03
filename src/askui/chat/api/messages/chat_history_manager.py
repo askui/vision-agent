@@ -1,9 +1,9 @@
 from anthropic.types.beta import BetaTextBlockParam, BetaToolUnionParam
 
-from askui.chat.api.messages.models import Message, MessageCreateParams
+from askui.chat.api.messages.models import Message, MessageCreate
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
-from askui.chat.api.models import ThreadId
+from askui.chat.api.models import ThreadId, WorkspaceId
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.truncation_strategies import TruncationStrategyFactory
 
@@ -38,6 +38,7 @@ class ChatHistoryManager:
 
     async def retrieve_message_params(
         self,
+        workspace_id: WorkspaceId,
         thread_id: ThreadId,
         model: str,
         system: str | list[BetaTextBlockParam] | None,
@@ -51,36 +52,25 @@ class ChatHistoryManager:
                 model=model,
             )
         )
-        for msg in self._message_service.iter(thread_id=thread_id):
+        for msg in self._message_service.iter(
+            workspace_id=workspace_id, thread_id=thread_id
+        ):
             anthropic_message = await self._message_translator.to_anthropic(msg)
             truncation_strategy.append_message(anthropic_message)
         return truncation_strategy.messages
 
     async def append_message(
         self,
+        workspace_id: WorkspaceId,
         thread_id: ThreadId,
         assistant_id: str | None,
         run_id: str,
         message: MessageParam,
     ) -> Message:
-        """
-        Add a message to the chat history and return both the created message and original message param.
-
-        This method creates a message in the database and returns both the created
-        message object and the original message parameter for further processing.
-
-        Args:
-            thread_id (ThreadId): The thread ID to add the message to.
-            assistant_id (str | None): The assistant ID if the message is from an assistant.
-            run_id (str): The run ID associated with this message.
-            message (MessageParam): The message to add.
-
-        Returns:
-            Message: The created message object
-        """
         return self._message_service.create(
+            workspace_id=workspace_id,
             thread_id=thread_id,
-            params=MessageCreateParams(
+            params=MessageCreate(
                 assistant_id=assistant_id if message.role == "assistant" else None,
                 role=message.role,
                 content=await self._message_content_translator.from_anthropic(

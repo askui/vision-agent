@@ -98,7 +98,12 @@ def test_retrieve_feature(
 ) -> None:
     feature = create_tool(_create_params())
     retrieved = retrieve_tool(feature.id)
-    assert retrieved.model_dump() == feature.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    feat_dict = feature.model_dump(exclude={"created_at"})
+    ret_dict = retrieved.model_dump(exclude={"created_at"})
+    assert ret_dict == feat_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((retrieved.created_at - feature.created_at).total_seconds()) < 1
 
 
 @pytest.mark.parametrize(
@@ -175,7 +180,12 @@ def test_modify_feature_noop(
 ) -> None:
     feature = create_tool(_create_params())
     modified = modify_tool(feature.id, FeatureModifyParams())
-    assert modified.model_dump() == feature.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    feat_dict = feature.model_dump(exclude={"created_at"})
+    mod_dict = modified.model_dump(exclude={"created_at"})
+    assert mod_dict == feat_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((modified.created_at - feature.created_at).total_seconds()) < 1
 
 
 def test_delete_feature(

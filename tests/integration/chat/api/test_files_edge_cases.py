@@ -6,12 +6,15 @@ from pathlib import Path
 
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 
 class TestFilesAPIEdgeCases:
     """Test suite for edge cases and error scenarios in the files API."""
 
-    def test_upload_empty_file(self, test_headers: dict[str, str]) -> None:
+    def test_upload_empty_file(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test uploading an empty file."""
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
@@ -26,7 +29,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -52,7 +55,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_upload_file_with_special_characters_in_filename(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading a file with special characters in the filename."""
         temp_dir = tempfile.mkdtemp()
@@ -68,7 +71,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -96,7 +99,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_upload_file_with_very_long_filename(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading a file with a very long filename."""
         temp_dir = tempfile.mkdtemp()
@@ -112,7 +115,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -140,7 +143,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_upload_file_with_unknown_mime_type(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading a file with an unknown MIME type."""
         temp_dir = tempfile.mkdtemp()
@@ -156,7 +159,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -182,7 +185,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_upload_file_with_binary_content(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading a file with binary content."""
         temp_dir = tempfile.mkdtemp()
@@ -198,7 +201,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -250,7 +253,7 @@ class TestFilesAPIEdgeCases:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_upload_file_with_malformed_file_data(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading with malformed file data."""
         temp_dir = tempfile.mkdtemp()
@@ -266,7 +269,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -288,7 +291,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_upload_file_with_corrupted_content(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test uploading a file with corrupted content."""
         temp_dir = tempfile.mkdtemp()
@@ -304,7 +307,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -333,7 +336,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_list_files_with_invalid_pagination(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test listing files with invalid pagination parameters."""
         temp_dir = tempfile.mkdtemp()
@@ -349,7 +352,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -377,7 +380,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_retrieve_file_with_invalid_id_format(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test retrieving a file with an invalid ID format."""
         temp_dir = tempfile.mkdtemp()
@@ -393,7 +396,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -417,7 +420,7 @@ class TestFilesAPIEdgeCases:
             app.dependency_overrides.clear()
 
     def test_delete_file_with_invalid_id_format(
-        self, test_headers: dict[str, str]
+        self, test_headers: dict[str, str], test_db_session: Session
     ) -> None:
         """Test deleting a file with an invalid ID format."""
         temp_dir = tempfile.mkdtemp()
@@ -433,7 +436,7 @@ class TestFilesAPIEdgeCases:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing

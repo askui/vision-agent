@@ -29,11 +29,11 @@ class McpConfigBase(BaseModel):
     mcp_server: McpServer
 
 
-class McpConfigCreateParams(McpConfigBase):
+class McpConfigCreate(McpConfigBase):
     """Parameters for creating an MCP configuration."""
 
 
-class McpConfigModifyParams(BaseModelWithNotGiven):
+class McpConfigModify(BaseModelWithNotGiven):
     """Parameters for modifying an MCP configuration."""
 
     name: str | NotGiven = NOT_GIVEN
@@ -49,7 +49,7 @@ class McpConfig(McpConfigBase, WorkspaceResource):
 
     @classmethod
     def create(
-        cls, workspace_id: WorkspaceId, params: McpConfigCreateParams
+        cls, workspace_id: WorkspaceId | None, params: McpConfigCreate
     ) -> "McpConfig":
         return cls(
             id=generate_time_ordered_id("mcpcnf"),
@@ -58,7 +58,7 @@ class McpConfig(McpConfigBase, WorkspaceResource):
             **params.model_dump(),
         )
 
-    def modify(self, params: McpConfigModifyParams) -> "McpConfig":
+    def modify(self, params: McpConfigModify) -> "McpConfig":
         return McpConfig.model_validate(
             {
                 **self.model_dump(),

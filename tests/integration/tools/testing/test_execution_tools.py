@@ -104,7 +104,12 @@ def test_retrieve_execution(
     execution_obj = _create_execution(scenario, feature.id)
     execution = create_tool(execution_obj)
     retrieved = retrieve_tool(execution.id)
-    assert retrieved.model_dump() == execution.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    exec_dict = execution.model_dump(exclude={"created_at"})
+    ret_dict = retrieved.model_dump(exclude={"created_at"})
+    assert ret_dict == exec_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((retrieved.created_at - execution.created_at).total_seconds()) < 1
 
 
 @pytest.mark.parametrize(
@@ -199,7 +204,12 @@ def test_modify_execution_noop(
 ) -> None:
     execution = create_tool(_create_execution(scenario, feature.id))
     modified = modify_tool(execution.id, ExecutionModifyParams())
-    assert modified.model_dump() == execution.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    exec_dict = execution.model_dump(exclude={"created_at"})
+    mod_dict = modified.model_dump(exclude={"created_at"})
+    assert mod_dict == exec_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((modified.created_at - execution.created_at).total_seconds()) < 1
 
 
 def test_delete_execution(

@@ -18,11 +18,11 @@ class AssistantBase(BaseModel):
     system: str | None = None
 
 
-class AssistantCreateParams(AssistantBase):
+class AssistantCreate(AssistantBase):
     """Parameters for creating an assistant."""
 
 
-class AssistantModifyParams(BaseModelWithNotGiven):
+class AssistantModify(BaseModelWithNotGiven):
     """Parameters for modifying an assistant."""
 
     name: str | NotGiven = NOT_GIVEN
@@ -41,19 +41,11 @@ class Assistant(AssistantBase, WorkspaceResource):
 
     @classmethod
     def create(
-        cls, workspace_id: WorkspaceId, params: AssistantCreateParams
+        cls, workspace_id: WorkspaceId | None, params: AssistantCreate
     ) -> "Assistant":
         return cls(
             id=generate_time_ordered_id("asst"),
             created_at=now(),
             workspace_id=workspace_id,
             **params.model_dump(),
-        )
-
-    def modify(self, params: AssistantModifyParams) -> "Assistant":
-        return Assistant.model_validate(
-            {
-                **self.model_dump(),
-                **params.model_dump(),
-            }
         )

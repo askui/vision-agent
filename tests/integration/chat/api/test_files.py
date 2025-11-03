@@ -2,17 +2,30 @@
 
 import io
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from askui.chat.api.files.models import File
+from askui.chat.api.files.orms import FileOrm
 from askui.chat.api.files.service import FileService
+from askui.chat.api.models import FileId
+from askui.utils.api_utils import NotFoundError
 
 
 class TestFilesAPI:
     """Test suite for the files API endpoints."""
+
+    def _add_file_to_db(self, file: File, test_db_session: Session) -> None:
+        """Add a file to the test database."""
+        file_orm = FileOrm.from_model(file)
+        test_db_session.add(file_orm)
+        test_db_session.commit()
 
     def test_list_files_empty(
         self, test_client: TestClient, test_headers: dict[str, str]
@@ -29,6 +42,7 @@ class TestFilesAPI:
     def test_list_files_with_files(
         self,
         test_headers: dict[str, str],
+        test_db_session: Session,
     ) -> None:
         """Test listing files when files exist."""
         # Create a mock file in the temporary workspace
@@ -38,15 +52,20 @@ class TestFilesAPI:
         files_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock file
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_file = File(
             id="file_test123",
             object="file",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             filename="test.txt",
             size=32,
             media_type="text/plain",
+            workspace_id=workspace_id,
         )
         (files_dir / "file_test123.json").write_text(mock_file.model_dump_json())
+
+        # Add file to database
+        self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -57,7 +76,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
@@ -76,7 +95,9 @@ class TestFilesAPI:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_list_files_with_pagination(self, test_headers: dict[str, str]) -> None:
+    def test_list_files_with_pagination(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test listing files with pagination parameters."""
         # Create multiple mock files in the temporary workspace
         temp_dir = tempfile.mkdtemp()
@@ -85,16 +106,20 @@ class TestFilesAPI:
         files_dir.mkdir(parents=True, exist_ok=True)
 
         # Create multiple mock files
+        workspace_id = UUID(test_headers["askui-workspace"])
         for i in range(5):
             mock_file = File(
                 id=f"file_test{i}",
                 object="file",
-                created_at=1234567890 + i,
+                created_at=datetime.fromtimestamp(1234567890 + i, tz=timezone.utc),
                 filename=f"test{i}.txt",
                 size=32,
                 media_type="text/plain",
+                workspace_id=workspace_id,
             )
             (files_dir / f"file_test{i}.json").write_text(mock_file.model_dump_json())
+            # Add file to database
+            self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -105,7 +130,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
@@ -140,7 +165,9 @@ class TestFilesAPI:
         assert "id" in data
         assert "created_at" in data
 
-    def test_upload_file_without_filename(self, test_headers: dict[str, str]) -> None:
+    def test_upload_file_without_filename(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test file upload with simple filename."""
         file_content = b"test file content"
         # Test with a simple filename
@@ -151,14 +178,10 @@ class TestFilesAPI:
 
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
-        test_app = create_test_app_with_overrides(workspace_path)
+        test_app = create_test_app_with_overrides(test_db_session, workspace_path)
 
         with TestClient(test_app) as client:
             response = client.post("/v1/files", files=files, headers=test_headers)
-
-            if response.status_code != status.HTTP_201_CREATED:
-                print(f"Response status: {response.status_code}")
-                print(f"Response body: {response.text}")
 
             assert response.status_code == status.HTTP_201_CREATED
             data = response.json()
@@ -182,7 +205,9 @@ class TestFilesAPI:
         data = response.json()
         assert "detail" in data
 
-    def test_retrieve_file_success(self, test_headers: dict[str, str]) -> None:
+    def test_retrieve_file_success(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test successful file retrieval."""
         # Create a mock file in the temporary workspace
         temp_dir = tempfile.mkdtemp()
@@ -191,15 +216,20 @@ class TestFilesAPI:
         files_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a mock file
+        workspace_id = UUID(test_headers["askui-workspace"])
         mock_file = File(
             id="file_test123",
             object="file",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             filename="test.txt",
             size=32,
             media_type="text/plain",
+            workspace_id=workspace_id,
         )
         (files_dir / "file_test123.json").write_text(mock_file.model_dump_json())
+
+        # Add file to database
+        self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -210,7 +240,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
@@ -229,7 +259,9 @@ class TestFilesAPI:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_retrieve_file_not_found(self, test_headers: dict[str, str]) -> None:
+    def test_retrieve_file_not_found(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test file retrieval when file doesn't exist."""
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -243,7 +275,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -266,13 +298,16 @@ class TestFilesAPI:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_download_file_success(self, test_headers: dict[str, str]) -> None:
+    def test_download_file_success(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test successful file download."""
         # Create a mock file in the temporary workspace
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
         files_dir = workspace_path / "files"
-        static_dir = workspace_path / "static"
+        workspace_id = UUID(test_headers["askui-workspace"])
+        static_dir = workspace_path / "workspaces" / str(workspace_id) / "static"
         files_dir.mkdir(parents=True, exist_ok=True)
         static_dir.mkdir(parents=True, exist_ok=True)
 
@@ -280,16 +315,20 @@ class TestFilesAPI:
         mock_file = File(
             id="file_test123",
             object="file",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             filename="test.txt",
             size=32,
             media_type="text/plain",
+            workspace_id=workspace_id,
         )
         (files_dir / "file_test123.json").write_text(mock_file.model_dump_json())
 
         # Create the actual file content
         file_content = b"test file content"
         (static_dir / "file_test123.txt").write_bytes(file_content)
+
+        # Add file to database
+        self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -300,7 +339,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
@@ -322,7 +361,9 @@ class TestFilesAPI:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_download_file_not_found(self, test_headers: dict[str, str]) -> None:
+    def test_download_file_not_found(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test file download when file doesn't exist."""
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -336,7 +377,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -359,13 +400,16 @@ class TestFilesAPI:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_delete_file_success(self, test_headers: dict[str, str]) -> None:
+    def test_delete_file_success(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test successful file deletion."""
         # Create a mock file in the temporary workspace
         temp_dir = tempfile.mkdtemp()
         workspace_path = Path(temp_dir)
         files_dir = workspace_path / "files"
-        static_dir = workspace_path / "static"
+        workspace_id = UUID(test_headers["askui-workspace"])
+        static_dir = workspace_path / "workspaces" / str(workspace_id) / "static"
         files_dir.mkdir(parents=True, exist_ok=True)
         static_dir.mkdir(parents=True, exist_ok=True)
 
@@ -373,16 +417,20 @@ class TestFilesAPI:
         mock_file = File(
             id="file_test123",
             object="file",
-            created_at=1234567890,
+            created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             filename="test.txt",
             size=32,
             media_type="text/plain",
+            workspace_id=workspace_id,
         )
         (files_dir / "file_test123.json").write_text(mock_file.model_dump_json())
 
         # Create the actual file content
         file_content = b"test file content"
         (static_dir / "file_test123.txt").write_bytes(file_content)
+
+        # Add file to database
+        self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -392,8 +440,10 @@ class TestFilesAPI:
         def override_workspace_dir() -> Path:
             return workspace_path
 
+        file_service_override = FileService(test_db_session, workspace_path)
+
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return file_service_override
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
@@ -404,14 +454,19 @@ class TestFilesAPI:
 
                 assert response.status_code == status.HTTP_204_NO_CONTENT
 
-                # Verify file is deleted
-                assert not (files_dir / "file_test123.json").exists()
+                # Verify static file is deleted (JSON files are no longer used)
                 assert not (static_dir / "file_test123.txt").exists()
+
+                # Verify file is deleted from database
+                with pytest.raises(NotFoundError):
+                    file_service_override.retrieve(workspace_id, FileId("file_test123"))
         finally:
             # Clean up dependency overrides
             app.dependency_overrides.clear()
 
-    def test_delete_file_not_found(self, test_headers: dict[str, str]) -> None:
+    def test_delete_file_not_found(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test file deletion when file doesn't exist."""
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -425,7 +480,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         def override_set_env_from_headers() -> None:
             # No-op for testing
@@ -491,7 +546,9 @@ class TestFilesAPI:
         assert data["media_type"] is not None
         assert data["media_type"] != ""
 
-    def test_list_files_with_filtering(self, test_headers: dict[str, str]) -> None:
+    def test_list_files_with_filtering(
+        self, test_headers: dict[str, str], test_db_session: Session
+    ) -> None:
         """Test listing files with filtering parameters."""
         # Create multiple mock files in the temporary workspace
         temp_dir = tempfile.mkdtemp()
@@ -500,16 +557,20 @@ class TestFilesAPI:
         files_dir.mkdir(parents=True, exist_ok=True)
 
         # Create multiple mock files with different timestamps
+        workspace_id = UUID(test_headers["askui-workspace"])
         for i in range(3):
             mock_file = File(
                 id=f"file_test{i}",
                 object="file",
-                created_at=1234567890 + i,
+                created_at=datetime.fromtimestamp(1234567890 + i, tz=timezone.utc),
                 filename=f"test{i}.txt",
                 size=32,
                 media_type="text/plain",
+                workspace_id=workspace_id,
             )
             (files_dir / f"file_test{i}.json").write_text(mock_file.model_dump_json())
+            # Add file to database
+            self._add_file_to_db(mock_file, test_db_session)
 
         # Create a test app with overridden dependencies
         from askui.chat.api.app import app
@@ -520,7 +581,7 @@ class TestFilesAPI:
             return workspace_path
 
         def override_file_service() -> FileService:
-            return FileService(workspace_path)
+            return FileService(test_db_session, workspace_path)
 
         app.dependency_overrides[get_workspace_dir] = override_workspace_dir
         app.dependency_overrides[get_file_service] = override_file_service
