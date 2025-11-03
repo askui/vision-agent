@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     )
     allow_origins: list[str] = Field(
         default_factory=lambda: [
-            "http://localhost",
+            "http://localhost:4200",
             "https://app.caesr.ai",
             "https://app-dev.caesr.ai",
             "https://hub.askui.com",
