@@ -8,18 +8,16 @@ class AskUiControllerClientSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        validate_by_name=True,
+        env_prefix="ASKUI_CONTOLLER_CLIENT_",
     )
 
     server_address: str = Field(
         default="localhost:23000",
-        validation_alias="ASKUI_CONTROLLER_SERVER_ADDRESS",
         description="Address of the AskUI Remote Device Controller server.",
     )
 
     server_autostart: bool = Field(
         default=True,
-        validation_alias="ASKUI_CONTOLLER_CLIENT_CONTROLLER_AUTOSTART",
         description="Whether to automatically start the AskUI Remote Device"
         "Controller server. Defaults to True.",
     )
