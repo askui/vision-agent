@@ -177,7 +177,7 @@ class AskUiControllerClient(AgentOs):
         if self._settings.server_autostart:
             self._controller_server.start()
         self._channel = grpc.insecure_channel(
-            "localhost:23000",
+            self._settings.server_address,
             options=[
                 ("grpc.max_send_message_length", 2**30),
                 ("grpc.max_receive_message_length", 2**30),
