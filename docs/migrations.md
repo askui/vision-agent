@@ -24,6 +24,17 @@ The current migration history shows several real-world examples:
 3. **`c35e88ea9595_seed_default_assistants.py`**: Seeds the database with default assistant configurations
 4. **`37007a499ca7_remove_assistants_dir.py`**: Cleans up the old JSON-based persistence by removing the assistants directory
 
+### Our current migration strategy
+
+#### Until `5e6f7a8b9c0d_import_json_messages.py`
+
+On Upgrade:
+- We migrate from file system persistence to SQLite database persistence. We don't delete any of the files from the file system so rolling back is as easy as just installing an older version of the `askui` library.
+
+On Downgrade:
+- This is mainly to be used by us for debugging and testing new migrations but not a user.
+- We export data from database but already existing files take precedence so you may loose some data that was upgraded or deleted between the upgrade and downgrade. Also you may loose some of the data that was not originally available in the schema, e.g., global files (not scoped to workspace).
+
 ## Automatic Migrations on Startup
 
 By default, migrations are automatically run when the chat API starts up. This ensures that users are always upgraded to the newest database schema version without manual intervention.
