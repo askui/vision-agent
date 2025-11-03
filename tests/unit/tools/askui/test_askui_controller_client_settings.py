@@ -20,21 +20,21 @@ class TestAskUiControllerClientSettings:
 
     def test_server_address_from_env(self) -> None:
         """
-        `ASKUI_CONTOLLER_CLIENT_SERVER_ADDRESS` overrides default for `server_address`.
+        `ASKUI_CONTROLLER_CLIENT_SERVER_ADDRESS` overrides default for `server_address`.
         """
         with patch.dict(
             "os.environ",
-            {"ASKUI_CONTOLLER_CLIENT_SERVER_ADDRESS": "127.0.0.1:24000"},
+            {"ASKUI_CONTROLLER_CLIENT_SERVER_ADDRESS": "127.0.0.1:24000"},
             clear=True,
         ):
             settings = AskUiControllerClientSettings()
             assert settings.server_address == "127.0.0.1:24000"
 
     def test_server_autostart_from_env_false(self) -> None:
-        """`ASKUI_CONTOLLER_CLIENT_SERVER_AUTOSTART` parses boolean from env."""
+        """`ASKUI_CONTROLLER_CLIENT_SERVER_AUTOSTART` parses boolean from env."""
         with patch.dict(
             "os.environ",
-            {"ASKUI_CONTOLLER_CLIENT_SERVER_AUTOSTART": "False"},
+            {"ASKUI_CONTROLLER_CLIENT_SERVER_AUTOSTART": "False"},
             clear=True,
         ):
             settings = AskUiControllerClientSettings()
@@ -44,7 +44,7 @@ class TestAskUiControllerClientSettings:
         """Boolean true value is parsed correctly from environment variable."""
         with patch.dict(
             "os.environ",
-            {"ASKUI_CONTOLLER_CLIENT_SERVER_AUTOSTART": "true"},
+            {"ASKUI_CONTROLLER_CLIENT_SERVER_AUTOSTART": "true"},
             clear=True,
         ):
             settings = AskUiControllerClientSettings()
@@ -66,7 +66,7 @@ class TestAskUiControllerClientSettings:
         """
         with patch.dict(
             "os.environ",
-            {"ASKUI_CONTOLLER_CLIENT_SERVER_AUTOSTART": "invalid"},
+            {"ASKUI_CONTROLLER_CLIENT_SERVER_AUTOSTART": "invalid"},
             clear=True,
         ):
             with pytest.raises(ValidationError):

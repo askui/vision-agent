@@ -8,7 +8,7 @@ class AskUiControllerClientSettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="ASKUI_CONTOLLER_CLIENT_",
+        env_prefix="ASKUI_CONTROLLER_CLIENT_",
     )
 
     server_address: str = Field(
