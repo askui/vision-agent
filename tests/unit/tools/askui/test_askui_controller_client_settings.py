@@ -30,7 +30,6 @@ class TestAskUiControllerClientSettings:
 
     def test_server_autostart_from_env_false(self) -> None:
         """`ASKUI_CONTOLLER_CLIENT_CONTROLLER_AUTOSTART` parses boolean from env."""
-        # Note: environment alias spelling intentionally mirrors implementation
         with patch.dict(
             "os.environ",
             {"ASKUI_CONTOLLER_CLIENT_CONTROLLER_AUTOSTART": "false"},
