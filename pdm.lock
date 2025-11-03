@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "bedrock", "chat", "dev", "pynput", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:5bb9fd17dc5ee03c01df07687951b609238312cc326891d801294c7d0fdea3b3"
+content_hash = "sha256:b0b4a3234caf6b5516e2ca5ea826496fd0abf8b08ee81cd92771f1b40e476b5e"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<=3.13"
