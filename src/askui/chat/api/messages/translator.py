@@ -9,6 +9,7 @@ from askui.chat.api.messages.models import (
     RequestDocumentBlockParam,
     ToolResultBlockParam,
 )
+from askui.chat.api.models import WorkspaceId
 from askui.data_extractor import DataExtractor
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import (
@@ -36,8 +37,11 @@ from askui.utils.source_utils import Source, load_source
 class RequestDocumentBlockParamTranslator:
     """Translator for RequestDocumentBlockParam to/from Anthropic format."""
 
-    def __init__(self, file_service: FileService) -> None:
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
         self._file_service = file_service
+        self._workspace_id = workspace_id
         self._data_extractor = DataExtractor()
 
     def extract_content(
@@ -84,7 +88,9 @@ class RequestDocumentBlockParamTranslator:
     async def to_anthropic(
         self, block: RequestDocumentBlockParam
     ) -> list[AnthropicContentBlockParam]:
-        file, path = self._file_service.retrieve_file_content(block.source.file_id)
+        file, path = self._file_service.retrieve_file_content(
+            self._workspace_id, block.source.file_id
+        )
         source = load_source(path)
         content = self.extract_content(source, block)
         return [
@@ -97,8 +103,11 @@ class RequestDocumentBlockParamTranslator:
 
 
 class ImageBlockParamSourceTranslator:
-    def __init__(self, file_service: FileService) -> None:
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
         self._file_service = file_service
+        self._workspace_id = workspace_id
 
     async def from_anthropic(  # noqa: RET503
         self, source: UrlImageSourceParam | Base64ImageSourceParam
@@ -138,7 +147,9 @@ class ImageBlockParamSourceTranslator:
         if source.type == "base64":
             return source
         if source.type == "file":  # noqa: RET503
-            file, path = self._file_service.retrieve_file_content(source.id)
+            file, path = self._file_service.retrieve_file_content(
+                self._workspace_id, source.id
+            )
             image = Image.open(path)
             return Base64ImageSourceParam(
                 data=image_to_base64(image),
@@ -147,8 +158,12 @@ class ImageBlockParamSourceTranslator:
 
 
 class ImageBlockParamTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.source_translator = ImageBlockParamSourceTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.source_translator = ImageBlockParamSourceTranslator(
+            file_service, workspace_id
+        )
 
     async def from_anthropic(self, block: AnthropicImageBlockParam) -> ImageBlockParam:
         return ImageBlockParam(
@@ -166,8 +181,10 @@ class ImageBlockParamTranslator:
 
 
 class ToolResultContentBlockParamTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.image_translator = ImageBlockParamTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.image_translator = ImageBlockParamTranslator(file_service, workspace_id)
 
     async def from_anthropic(
         self, block: AnthropicImageBlockParam | TextBlockParam
@@ -185,9 +202,11 @@ class ToolResultContentBlockParamTranslator:
 
 
 class ToolResultContentTranslator:
-    def __init__(self, file_service: FileService) -> None:
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
         self.block_param_translator = ToolResultContentBlockParamTranslator(
-            file_service
+            file_service, workspace_id
         )
 
     async def from_anthropic(
@@ -210,8 +229,12 @@ class ToolResultContentTranslator:
 
 
 class ToolResultBlockParamTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.content_translator = ToolResultContentTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.content_translator = ToolResultContentTranslator(
+            file_service, workspace_id
+        )
 
     async def from_anthropic(
         self, block: AnthropicToolResultBlockParam
@@ -237,11 +260,15 @@ class ToolResultBlockParamTranslator:
 
 
 class MessageContentBlockParamTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.image_translator = ImageBlockParamTranslator(file_service)
-        self.tool_result_translator = ToolResultBlockParamTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.image_translator = ImageBlockParamTranslator(file_service, workspace_id)
+        self.tool_result_translator = ToolResultBlockParamTranslator(
+            file_service, workspace_id
+        )
         self.request_document_translator = RequestDocumentBlockParamTranslator(
-            file_service
+            file_service, workspace_id
         )
 
     async def from_anthropic(
@@ -266,8 +293,12 @@ class MessageContentBlockParamTranslator:
 
 
 class MessageContentTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.block_param_translator = MessageContentBlockParamTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.block_param_translator = MessageContentBlockParamTranslator(
+            file_service, workspace_id
+        )
 
     async def from_anthropic(
         self, content: list[AnthropicContentBlockParam] | str
@@ -291,8 +322,10 @@ class MessageContentTranslator:
 
 
 class MessageTranslator:
-    def __init__(self, file_service: FileService) -> None:
-        self.content_translator = MessageContentTranslator(file_service)
+    def __init__(
+        self, file_service: FileService, workspace_id: WorkspaceId | None
+    ) -> None:
+        self.content_translator = MessageContentTranslator(file_service, workspace_id)
 
     async def from_anthropic(self, message: AnthropicMessageParam) -> MessageParam:
         return MessageParam(

@@ -11,7 +11,7 @@ import aiofiles
 if TYPE_CHECKING:
     from aiofiles.threadpool.text import AsyncTextIOWrapper
 
-from askui.chat.api.models import RunId, ThreadId
+from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.events.done_events import DoneEvent
 from askui.chat.api.runs.events.error_events import (
     ErrorEvent,
@@ -94,7 +94,9 @@ class EventFileManager:
 
 class RetrieveRunService(ABC):
     @abstractmethod
-    def retrieve(self, thread_id: ThreadId, run_id: RunId) -> Run:
+    def retrieve(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId, run_id: RunId
+    ) -> Run:
         raise NotImplementedError
 
 
@@ -139,12 +141,14 @@ class EventReader:
         manager: EventFileManager,
         run_service: RetrieveRunService,
         start_index: int,
+        workspace_id: WorkspaceId,
         thread_id: ThreadId,
         run_id: RunId,
     ):
         self._manager = manager
         self._run_service = run_service
         self._start_index = start_index
+        self._workspace_id = workspace_id
         self._thread_id = thread_id
         self._run_id = run_id
 
@@ -189,7 +193,9 @@ class EventReader:
                     "Timeout waiting for file %s to be created",
                     self._manager.file_path,
                 )
-                if run := self._run_service.retrieve(self._thread_id, self._run_id):
+                if run := self._run_service.retrieve(
+                    self._workspace_id, self._thread_id, self._run_id
+                ):
                     if run.status not in ("queued", "in_progress"):
                         async for event in self._iter_final_events(run):
                             yield event
@@ -225,7 +231,7 @@ class EventReader:
                             self._manager.file_path,
                         )
                         if run := self._run_service.retrieve(
-                            self._thread_id, self._run_id
+                            self._workspace_id, self._thread_id, self._run_id
                         ):
                             if run.status not in (
                                 "queued",
@@ -299,7 +305,11 @@ class EventService:
 
     @asynccontextmanager
     async def create_reader(
-        self, thread_id: ThreadId, run_id: RunId, start_index: int = 0
+        self,
+        workspace_id: WorkspaceId,
+        thread_id: ThreadId,
+        run_id: RunId,
+        start_index: int = 0,
     ) -> AsyncIterator["EventReader"]:
         """
         Create a reader context manager for reading events from a file.
@@ -320,6 +330,7 @@ class EventService:
                 manager=manager,
                 run_service=self._run_service,
                 start_index=start_index,
+                workspace_id=workspace_id,
                 thread_id=thread_id,
                 run_id=run_id,
             )

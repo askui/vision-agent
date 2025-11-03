@@ -31,6 +31,7 @@ dependencies = [
     "bson>=0.5.10",
     "aiofiles>=24.1.0",
     "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
+    "sqlalchemy[mypy]>=2.0.44",
 ]
 requires-python = ">=3.10,<=3.13"
 readme = "README.md"
@@ -45,12 +46,11 @@ build-backend = "hatchling.build"
 path = "src/askui/__init__.py"
 
 
-
-
 [tool.pdm]
 distribution = true
 
 [tool.pdm.scripts]
+alembic = "alembic -c src/askui/chat/migrations/alembic.ini"
 test = "pytest -n auto"
 "test:cov" = "pytest -n auto --cov=src/askui --cov-report=html"
 "test:cov:view" = "python -m http.server --directory htmlcov"
@@ -229,6 +229,8 @@ chat = [
     "asgi-correlation-id>=4.3.4",
     "prometheus-fastapi-instrumentator>=7.1.0",
     "starlette-context>=0.4.0",
+    "sqlalchemy>=2.0.43",
+    "alembic>=1.16.5",
 ]
 pynput = [
     "mss>=10.0.0",

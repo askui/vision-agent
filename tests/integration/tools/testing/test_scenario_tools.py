@@ -145,7 +145,12 @@ def test_retrieve_scenario(
 ) -> None:
     scenario = create_tool(_create_params(feature.id))
     retrieved = retrieve_tool(scenario.id)
-    assert retrieved.model_dump() == scenario.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    scen_dict = scenario.model_dump(exclude={"created_at"})
+    ret_dict = retrieved.model_dump(exclude={"created_at"})
+    assert ret_dict == scen_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((retrieved.created_at - scenario.created_at).total_seconds()) < 1
 
 
 @pytest.mark.parametrize(
@@ -242,7 +247,12 @@ def test_modify_scenario_noop(
 ) -> None:
     scenario = create_tool(_create_params(feature.id))
     modified = modify_tool(scenario.id, ScenarioModifyParams())
-    assert modified.model_dump() == scenario.model_dump()
+    # Compare excluding created_at due to potential timestamp precision differences
+    scen_dict = scenario.model_dump(exclude={"created_at"})
+    mod_dict = modified.model_dump(exclude={"created_at"})
+    assert mod_dict == scen_dict
+    # Verify created_at timestamps are close (within 1 second)
+    assert abs((modified.created_at - scenario.created_at).total_seconds()) < 1
 
 
 def test_delete_scenario(

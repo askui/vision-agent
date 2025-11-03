@@ -1,14 +1,17 @@
-from pathlib import Path
-
 from fastapi import Depends
 
-from askui.chat.api.dependencies import WorkspaceDirDep
+from askui.chat.api.db.session import SessionDep
+from askui.chat.api.dependencies import SettingsDep
 from askui.chat.api.files.service import FileService
+from askui.chat.api.settings import Settings
 
 
-def get_file_service(workspace_dir: Path = WorkspaceDirDep) -> FileService:
+def get_file_service(
+    session: SessionDep,
+    settings: Settings = SettingsDep,
+) -> FileService:
     """Get FileService instance."""
-    return FileService(workspace_dir)
+    return FileService(session, settings.data_dir)
 
 
 FileServiceDep = Depends(get_file_service)

@@ -7,6 +7,7 @@ from typing import Generator
 
 import pytest
 from PIL import Image
+from sqlalchemy.orm import Session
 
 from askui.chat.api.files.service import FileService
 from askui.chat.api.messages.models import RequestDocumentBlockParam
@@ -28,16 +29,18 @@ class TestRequestDocumentBlockParamTranslator:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.fixture
-    def file_service(self, temp_dir: pathlib.Path) -> FileService:
+    def file_service(
+        self, test_db_session: Session, temp_dir: pathlib.Path
+    ) -> FileService:
         """Create a FileService instance using the temporary directory."""
-        return FileService(temp_dir)
+        return FileService(test_db_session, temp_dir)
 
     @pytest.fixture
     def translator(
         self, file_service: FileService
     ) -> RequestDocumentBlockParamTranslator:
         """Create a RequestDocumentBlockParamTranslator instance."""
-        return RequestDocumentBlockParamTranslator(file_service)
+        return RequestDocumentBlockParamTranslator(file_service, None)
 
     @pytest.fixture
     def cache_control(self) -> CacheControlEphemeralParam:

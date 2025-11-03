@@ -6,8 +6,8 @@ from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.mcp_configs.dependencies import McpConfigServiceDep
 from askui.chat.api.mcp_configs.models import (
     McpConfig,
-    McpConfigCreateParams,
-    McpConfigModifyParams,
+    McpConfigCreate,
+    McpConfigModify,
 )
 from askui.chat.api.mcp_configs.service import McpConfigService
 from askui.chat.api.models import McpConfigId, WorkspaceId
@@ -27,7 +27,7 @@ def list_mcp_configs(
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model_exclude_none=True)
 def create_mcp_config(
-    params: McpConfigCreateParams,
+    params: McpConfigCreate,
     askui_workspace: Annotated[WorkspaceId, Header()],
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> McpConfig:
@@ -50,7 +50,7 @@ def retrieve_mcp_config(
 @router.post("/{mcp_config_id}", response_model_exclude_none=True)
 def modify_mcp_config(
     mcp_config_id: McpConfigId,
-    params: McpConfigModifyParams,
+    params: McpConfigModify,
     askui_workspace: Annotated[WorkspaceId, Header()],
     mcp_config_service: McpConfigService = McpConfigServiceDep,
 ) -> McpConfig:

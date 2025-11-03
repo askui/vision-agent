@@ -60,6 +60,16 @@ def set_env_from_headers(
 SetEnvFromHeadersDep = Depends(set_env_from_headers)
 
 
+def get_workspace_id(
+    askui_workspace: Annotated[WorkspaceId | None, Header()] = None,
+) -> WorkspaceId | None:
+    """Get workspace ID from header."""
+    return askui_workspace
+
+
+WorkspaceIdDep = Depends(get_workspace_id)
+
+
 def get_workspace_dir(
     askui_workspace: Annotated[WorkspaceId, Header()],
     settings: Settings = SettingsDep,

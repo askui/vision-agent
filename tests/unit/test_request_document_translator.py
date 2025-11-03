@@ -26,7 +26,7 @@ class TestRequestDocumentBlockParamTranslator:
         self, file_service: MagicMock
     ) -> RequestDocumentBlockParamTranslator:
         """Create translator instance."""
-        return RequestDocumentBlockParamTranslator(file_service)
+        return RequestDocumentBlockParamTranslator(file_service, None)
 
     @pytest.fixture
     def cache_control(self) -> CacheControlEphemeralParam:
@@ -35,7 +35,7 @@ class TestRequestDocumentBlockParamTranslator:
 
     def test_init(self, file_service: MagicMock) -> None:
         """Test translator initialization."""
-        translator = RequestDocumentBlockParamTranslator(file_service)
+        translator = RequestDocumentBlockParamTranslator(file_service, None)
         assert translator._file_service == file_service
 
     @pytest.mark.asyncio
