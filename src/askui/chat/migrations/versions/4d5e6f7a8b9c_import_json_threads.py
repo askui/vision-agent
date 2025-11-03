@@ -1,7 +1,7 @@
 """import_json_threads
 
 Revision ID: 4d5e6f7a8b9c
-Revises: 3c4d5e6f7a8b
+Revises: 1a2b3c4d5e6f
 Create Date: 2025-01-27 12:03:00.000000
 
 """
@@ -18,7 +18,7 @@ from askui.chat.migrations.shared.threads.models import ThreadV1
 
 # revision identifiers, used by Alembic.
 revision: str = "4d5e6f7a8b9c"
-down_revision: Union[str, None] = "3c4d5e6f7a8b"
+down_revision: Union[str, None] = "1a2b3c4d5e6f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,6 +33,7 @@ def _insert_threads_batch(
 ) -> None:
     """Insert a batch of threads into the database, ignoring conflicts."""
     if not threads_batch:
+        logger.info("No threads to insert, skipping batch")
         return
 
     connection.execute(
@@ -50,6 +51,10 @@ def upgrade() -> None:  # noqa: C901
 
     # Skip if workspaces directory doesn't exist (e.g., first-time setup)
     if not workspaces_dir.exists():
+        logger.info(
+            "Workspaces directory does not exist, skipping import of threads",
+            extra={"workspaces_dir": str(workspaces_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -62,12 +67,20 @@ def upgrade() -> None:  # noqa: C901
     # Iterate through all workspace directories
     for workspace_dir in workspaces_dir.iterdir():
         if not workspace_dir.is_dir():
+            logger.info(
+                "Skipping non-directory in workspaces",
+                extra={"path": str(workspace_dir)},
+            )
             continue
 
         workspace_id = workspace_dir.name
         threads_dir = workspace_dir / "threads"
 
         if not threads_dir.exists():
+            logger.info(
+                "Threads directory does not exist, skipping workspace",
+                extra={"workspace_id": workspace_id, "threads_dir": str(threads_dir)},
+            )
             continue
 
         # Get all JSON files in the threads directory
@@ -102,6 +115,9 @@ def downgrade() -> None:
     result = connection.execute(threads_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No threads found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -111,6 +127,10 @@ def downgrade() -> None:
             threads_dir.mkdir(parents=True, exist_ok=True)
             json_path = threads_dir / f"{thread_model.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for thread already exists, skipping export of row to json",
+                    extra={"thread_id": thread_model.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(thread_model.model_dump_json())

@@ -33,6 +33,7 @@ def _insert_files_batch(
 ) -> None:
     """Insert a batch of files into the database, ignoring conflicts."""
     if not files_batch:
+        logger.info("No files to insert, skipping batch")
         return
 
     connection.execute(
@@ -50,6 +51,10 @@ def upgrade() -> None:  # noqa: C901
 
     # Skip if workspaces directory doesn't exist (e.g., first-time setup)
     if not workspaces_dir.exists():
+        logger.info(
+            "Workspaces directory does not exist, skipping import of files",
+            extra={"workspaces_dir": str(workspaces_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -62,12 +67,20 @@ def upgrade() -> None:  # noqa: C901
     # Iterate through all workspace directories
     for workspace_dir in workspaces_dir.iterdir():
         if not workspace_dir.is_dir():
+            logger.info(
+                "Skipping non-directory in workspaces",
+                extra={"path": str(workspace_dir)},
+            )
             continue
 
         workspace_id = workspace_dir.name
         files_dir = workspace_dir / "files"
 
         if not files_dir.exists():
+            logger.info(
+                "Files directory does not exist, skipping workspace",
+                extra={"workspace_id": workspace_id, "files_dir": str(files_dir)},
+            )
             continue
 
         # Get all JSON files in the static directory
@@ -102,6 +115,9 @@ def downgrade() -> None:
     result = connection.execute(files_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No files found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -114,6 +130,10 @@ def downgrade() -> None:
             files_dir.mkdir(parents=True, exist_ok=True)
             json_path = files_dir / f"{file_model.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for file already exists, skipping export of row to json",
+                    extra={"file_id": file_model.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(file_model.model_dump_json())

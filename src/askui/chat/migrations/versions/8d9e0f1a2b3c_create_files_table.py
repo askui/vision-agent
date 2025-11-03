@@ -1,7 +1,7 @@
 """create_files_table
 
 Revision ID: 8d9e0f1a2b3c
-Revises: 7c3d4e5f6a7b
+Revises: 6b2c3d4e5f6a
 Create Date: 2025-01-27 11:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "8d9e0f1a2b3c"
-down_revision: Union[str, None] = "7c3d4e5f6a7b"
+down_revision: Union[str, None] = "6b2c3d4e5f6a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

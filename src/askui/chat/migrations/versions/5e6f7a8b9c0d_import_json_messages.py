@@ -1,7 +1,7 @@
 """import_json_messages
 
 Revision ID: 5e6f7a8b9c0d
-Revises: 4d5e6f7a8b9c
+Revises: 2b3c4d5e6f7a
 Create Date: 2025-01-27 12:04:00.000000
 
 """
@@ -18,7 +18,7 @@ from askui.chat.migrations.shared.settings import SettingsV1
 
 # revision identifiers, used by Alembic.
 revision: str = "5e6f7a8b9c0d"
-down_revision: Union[str, None] = "4d5e6f7a8b9c"
+down_revision: Union[str, None] = "2b3c4d5e6f7a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,6 +33,7 @@ def _insert_messages_batch(
 ) -> None:
     """Insert a batch of messages into the database, handling foreign key violations."""
     if not messages_batch:
+        logger.info("No messages to insert, skipping batch")
         return
 
     # Validate and fix foreign key references
@@ -56,6 +57,7 @@ def _validate_and_fix_foreign_keys(  # noqa: C901
     - If run_id is invalid: set to None
     """
     if not messages_batch:
+        logger.info("Empty message batch, nothing to validate")
         return []
 
     # Extract all foreign key values
@@ -180,6 +182,10 @@ def upgrade() -> None:  # noqa: C901
     """Import existing messages from JSON files in workspace directories."""
     # Skip if workspaces directory doesn't exist (e.g., first-time setup)
     if not workspaces_dir.exists():
+        logger.info(
+            "Workspaces directory does not exist, skipping import of messages",
+            extra={"workspaces_dir": str(workspaces_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -192,17 +198,29 @@ def upgrade() -> None:  # noqa: C901
     # Iterate through all workspace directories
     for workspace_dir in workspaces_dir.iterdir():
         if not workspace_dir.is_dir():
+            logger.info(
+                "Skipping non-directory in workspaces",
+                extra={"path": str(workspace_dir)},
+            )
             continue
 
         workspace_id = workspace_dir.name
         messages_dir = workspace_dir / "messages"
 
         if not messages_dir.exists():
+            logger.info(
+                "Messages directory does not exist, skipping workspace",
+                extra={"workspace_id": workspace_id, "messages_dir": str(messages_dir)},
+            )
             continue
 
         # Iterate through thread directories
         for thread_dir in messages_dir.iterdir():
             if not thread_dir.is_dir():
+                logger.info(
+                    "Skipping non-directory in messages",
+                    extra={"path": str(thread_dir)},
+                )
                 continue
 
             # Get all JSON files in the thread directory
@@ -241,6 +259,9 @@ def downgrade() -> None:
     result = connection.execute(messages_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No messages found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -257,6 +278,10 @@ def downgrade() -> None:
             messages_dir.mkdir(parents=True, exist_ok=True)
             json_path = messages_dir / f"{message_model.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for message already exists, skipping export of row to json",
+                    extra={"message_id": message_model.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(message_model.model_dump_json())

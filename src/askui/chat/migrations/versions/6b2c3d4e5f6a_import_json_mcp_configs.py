@@ -35,6 +35,7 @@ def _insert_mcp_configs_batch(
 ) -> None:
     """Insert a batch of MCP configs into the database, ignoring conflicts."""
     if not mcp_configs_batch:
+        logger.info("No MCP configs to insert, skipping batch")
         return
 
     connection.execute(
@@ -52,6 +53,10 @@ def upgrade() -> None:
 
     # Skip if directory doesn't exist (e.g., first-time setup)
     if not mcp_configs_dir.exists():
+        logger.info(
+            "MCP configs directory does not exist, skipping import of MCP configs",
+            extra={"mcp_configs_dir": str(mcp_configs_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -97,6 +102,9 @@ def downgrade() -> None:
     result = connection.execute(mcp_configs_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No MCP configs found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -106,6 +114,10 @@ def downgrade() -> None:
             )
             json_path = mcp_configs_dir / f"{mcp_config.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for mcp config already exists, skipping export of row to json",
+                    extra={"mcp_config_id": mcp_config.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(mcp_config.model_dump_json())

@@ -1,7 +1,7 @@
 """create_mcp_configs_table
 
 Revision ID: 5a1b2c3d4e5f
-Revises: 37007a499ca7
+Revises: c35e88ea9595
 Create Date: 2025-01-27 10:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "5a1b2c3d4e5f"
-down_revision: Union[str, None] = "37007a499ca7"
+down_revision: Union[str, None] = "c35e88ea9595"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

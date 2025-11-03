@@ -33,6 +33,7 @@ def _insert_assistants_batch(
 ) -> None:
     """Insert a batch of assistants into the database, ignoring conflicts."""
     if not assistants_batch:
+        logger.info("No assistants to insert, skipping batch")
         return
 
     connection.execute(
@@ -50,6 +51,10 @@ def upgrade() -> None:
 
     # Skip if directory doesn't exist (e.g., first-time setup)
     if not assistants_dir.exists():
+        logger.info(
+            "Assistants directory does not exist, skipping import of assistants",
+            extra={"assistants_dir": str(assistants_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -94,6 +99,9 @@ def downgrade() -> None:
     result = connection.execute(assistants_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No assistants found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -103,6 +111,10 @@ def downgrade() -> None:
             )
             json_path = assistants_dir / f"{assistant.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for assistant already exists, skipping export of row to json",
+                    extra={"assistant_id": assistant.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(assistant.model_dump_json())

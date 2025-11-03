@@ -28,7 +28,7 @@ def upgrade() -> None:
     """Seed default assistants one by one, skipping duplicates.
 
     For each assistant in `SEEDS_V1`, insert a row into `assistants`. If a
-    row with the same `id` already exists, skip it and log on info level.
+    row with the same `id` already exists, skip it and log on debug level.
     """
     connection = op.get_bind()
     assistants_table: Table = Table("assistants", MetaData(), autoload_with=connection)

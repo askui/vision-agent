@@ -1,7 +1,7 @@
 """import_json_runs
 
 Revision ID: 6f7a8b9c0d1e
-Revises: 5e6f7a8b9c0d
+Revises: 3c4d5e6f7a8b
 Create Date: 2025-01-27 12:05:00.000000
 
 """
@@ -18,7 +18,7 @@ from askui.chat.migrations.shared.settings import SettingsV1
 
 # revision identifiers, used by Alembic.
 revision: str = "6f7a8b9c0d1e"
-down_revision: Union[str, None] = "5e6f7a8b9c0d"
+down_revision: Union[str, None] = "3c4d5e6f7a8b"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,6 +33,7 @@ def _insert_runs_batch(
 ) -> None:
     """Insert a batch of runs into the database, handling foreign key violations."""
     if not runs_batch:
+        logger.info("No runs to insert, skipping batch")
         return
 
     # Validate and fix foreign key references
@@ -55,6 +56,7 @@ def _validate_and_fix_foreign_keys(  # noqa: C901
     - If assistant_id is invalid: set to None
     """
     if not runs_batch:
+        logger.info("Empty run batch, nothing to validate")
         return []
 
     # Extract all foreign key values
@@ -162,6 +164,10 @@ def upgrade() -> None:  # noqa: C901
 
     # Skip if workspaces directory doesn't exist (e.g., first-time setup)
     if not workspaces_dir.exists():
+        logger.info(
+            "Workspaces directory does not exist, skipping import of runs",
+            extra={"workspaces_dir": str(workspaces_dir)},
+        )
         return
 
     # Get the table from the current database schema
@@ -174,17 +180,29 @@ def upgrade() -> None:  # noqa: C901
     # Iterate through all workspace directories
     for workspace_dir in workspaces_dir.iterdir():
         if not workspace_dir.is_dir():
+            logger.info(
+                "Skipping non-directory in workspaces",
+                extra={"path": str(workspace_dir)},
+            )
             continue
 
         workspace_id = workspace_dir.name
         runs_dir = workspace_dir / "runs"
 
         if not runs_dir.exists():
+            logger.info(
+                "Runs directory does not exist, skipping workspace",
+                extra={"workspace_id": workspace_id, "runs_dir": str(runs_dir)},
+            )
             continue
 
         # Iterate through thread directories
         for thread_dir in runs_dir.iterdir():
             if not thread_dir.is_dir():
+                logger.info(
+                    "Skipping non-directory in runs",
+                    extra={"path": str(thread_dir)},
+                )
                 continue
 
             # Get all JSON files in the thread directory
@@ -219,6 +237,9 @@ def downgrade() -> None:
     result = connection.execute(runs_table.select())
     rows = result.fetchall()
     if not rows:
+        logger.info(
+            "No runs found in the database, skipping export of rows to json",
+        )
         return
 
     for row in rows:
@@ -233,6 +254,10 @@ def downgrade() -> None:
             runs_dir.mkdir(parents=True, exist_ok=True)
             json_path = runs_dir / f"{run_model.id}.json"
             if json_path.exists():
+                logger.info(
+                    "Json file for run already exists, skipping export of row to json",
+                    extra={"run_id": run_model.id, "json_path": str(json_path)},
+                )
                 continue
             with json_path.open("w", encoding="utf-8") as f:
                 f.write(run_model.model_dump_json())
