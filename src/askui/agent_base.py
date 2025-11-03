@@ -501,7 +501,7 @@ class AgentBase(ABC):  # noqa: B024
         )
         return self._locate(locator=locator, screenshot=screenshot, model=model)
 
-    @telemetry.record_call(exclude={"locator"})
+    @telemetry.record_call(exclude={"until"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def wait(
         self,
