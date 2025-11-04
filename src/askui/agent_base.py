@@ -22,7 +22,7 @@ from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
 from .models import ModelComposition
-from .models.exceptions import ElementNotFoundError
+from .models.exceptions import ElementNotFoundError, WaitUntilError
 from .models.model_router import ModelRouter, initialize_default_model_registry
 from .models.models import (
     ModelChoice,
@@ -399,6 +399,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
+        retry: Optional[Retry] = None,
         model: ModelComposition | str | None = None,
     ) -> PointList:
         def locate_with_screenshot() -> PointList:
@@ -411,7 +412,8 @@ class AgentBase(ABC):  # noqa: B024
                 model=self._get_model(model, "locate"),
             )
 
-        points = self._retry.attempt(locate_with_screenshot)
+        retry = retry or self._retry
+        points = retry.attempt(locate_with_screenshot)
         self._reporter.add_message("ModelRouter", f"locate {len(points)} elements")
         logger.debug("ModelRouter locate: %d elements", len(points))
         return points
@@ -454,7 +456,7 @@ class AgentBase(ABC):  # noqa: B024
             "VisionAgent received instruction to locate first matching element %s",
             locator,
         )
-        return self._locate(locator, screenshot, model)[0]
+        return self._locate(locator=locator, screenshot=screenshot, model=model)[0]
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -497,30 +499,143 @@ class AgentBase(ABC):  # noqa: B024
             "VisionAgent received instruction to locate all matching UI elements %s",
             locator,
         )
-        return self._locate(locator, screenshot, model)
+        return self._locate(locator=locator, screenshot=screenshot, model=model)
 
-    @telemetry.record_call()
-    @validate_call
+    @telemetry.record_call(exclude={"until"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def wait(
         self,
-        sec: Annotated[float, Field(gt=0.0)],
+        until: Annotated[float, Field(gt=0.0)] | str | Locator,
+        retry_count: Optional[Annotated[int, Field(gt=0)]] = None,
+        delay: Optional[Annotated[float, Field(gt=0.0)]] = None,
+        until_condition: Literal["appear", "disappear"] = "appear",
+        model: ModelComposition | str | None = None,
     ) -> None:
         """
-        Pauses the execution of the program for the specified number of seconds.
+        Pauses execution or waits until a UI element appears or disappears.
 
         Args:
-            sec (float): The number of seconds to wait. Must be greater than `0.0`.
+            until (float | str | Locator): If a float, pauses execution for the
+                specified number of seconds (must be greater than 0.0). If a string
+                or Locator, waits until the specified UI element appears or
+                disappears on screen.
+            retry_count (int | None): Number of retries when waiting for a UI
+                element. Defaults to 3 if None.
+            delay (int | None): Sleep duration in seconds between retries when
+                waiting for a UI element. Defaults to 1 second if None.
+            until_condition (Literal["appear", "disappear"]): The condition to wait
+                until the element satisfies. Defaults to "appear".
+            model (ModelComposition | str | None, optional): The composition or name
+                of the model(s) to be used for locating the element using the
+                `until` locator.
+
+        Raises:
+            WaitUntilError: If the UI element is not found after all retries.
 
         Example:
             ```python
             from askui import VisionAgent
+            from askui.locators import loc
 
             with VisionAgent() as agent:
+                # Wait for a specific duration
                 agent.wait(5)  # Pauses execution for 5 seconds
                 agent.wait(0.5)  # Pauses execution for 500 milliseconds
+
+                # Wait for a UI element to appear
+                agent.wait("Submit button", retry_count=5, delay=2)
+                agent.wait("Login form")  # Uses default retries and sleep time
+                agent.wait(loc.Text("Password"))  # Uses default retries and sleep time
+
+                # Wait for a UI element to disappear
+                agent.wait("Loading spinner", until_condition="disappear")
+
+                # Wait using a specific model
+                agent.wait("Submit button", model="custom_model")
             ```
         """
-        time.sleep(sec)
+        if isinstance(until, float) or isinstance(until, int):
+            self._reporter.add_message("User", f"wait {until} seconds")
+            time.sleep(until)
+            return
+
+        self._reporter.add_message(
+            "User", f"wait for element '{until}' to {until_condition}"
+        )
+        retry_count = retry_count if retry_count is not None else 3
+        delay = delay if delay is not None else 1
+
+        if until_condition == "appear":
+            self._wait_for_appear(until, model, retry_count, delay)
+        else:
+            self._wait_for_disappear(until, model, retry_count, delay)
+
+    def _wait_for_appear(
+        self,
+        locator: str | Locator,
+        model: ModelComposition | str | None,
+        retry_count: int,
+        delay: float,
+    ) -> None:
+        """Wait for an element to appear on screen."""
+        try:
+            self._locate(
+                locator,
+                model=model,
+                retry=ConfigurableRetry(
+                    strategy="Fixed",
+                    base_delay=int(delay * 1000),
+                    retry_count=retry_count,
+                    on_exception_types=(ElementNotFoundError,),
+                ),
+            )
+            self._reporter.add_message(
+                "VisionAgent", f"element '{locator}' appeared successfully"
+            )
+        except ElementNotFoundError as e:
+            self._reporter.add_message(
+                "VisionAgent",
+                f"element '{locator}' failed to appear after {retry_count} retries",
+            )
+            raise WaitUntilError(
+                e.locator, e.locator_serialized, retry_count, delay, "appear"
+            ) from e
+
+    def _wait_for_disappear(
+        self,
+        locator: str | Locator,
+        model: ModelComposition | str | None,
+        retry_count: int,
+        delay: float,
+    ) -> None:
+        """Wait for an element to disappear from screen."""
+        for i in range(retry_count):
+            try:
+                self._locate(
+                    locator,
+                    model=model,
+                    retry=ConfigurableRetry(
+                        strategy="Fixed",
+                        base_delay=int(delay * 1000),
+                        retry_count=1,
+                        on_exception_types=(),
+                    ),
+                )
+                logger.debug(
+                    "Element still present, retrying... %d/%d", i + 1, retry_count
+                )
+                time.sleep(delay)
+            except ElementNotFoundError:  # noqa: PERF203
+                self._reporter.add_message(
+                    "VisionAgent", f"element '{locator}' disappeared successfully"
+                )
+                return
+
+        self._reporter.add_message(
+            "VisionAgent",
+            f"element '{locator}' failed to disappear after {retry_count} retries",
+        )
+        raise WaitUntilError(locator, str(locator), retry_count, delay, "disappear")
 
     @telemetry.record_call()
     def close(self) -> None:
