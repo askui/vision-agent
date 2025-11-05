@@ -97,11 +97,8 @@ class Settings(BaseSettings):
     )
     allow_origins: list[str] = Field(
         default_factory=lambda: [
-            "http://localhost:4200",
             "https://app.caesr.ai",
-            "https://app-dev.caesr.ai",
             "https://hub.askui.com",
-            "https://hub-dev.askui.com",
         ],
         description="CORS allowed origins for the chat API",
     )
