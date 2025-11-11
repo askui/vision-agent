@@ -2,6 +2,7 @@ import io
 import re
 import shlex
 import string
+from pathlib import Path
 from typing import List, Optional, get_args
 
 from PIL import Image
@@ -301,3 +302,23 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._device is not None
         assert self._selected_display is not None
         return (self._device.serial, self._selected_display)
+
+    def push(self, local_path: str, remote_path: str) -> None:
+        """
+        Push a file to the device.
+        """
+        self._check_if_device_is_selected()
+        assert self._device is not None
+        if not Path.exists(Path(local_path)):
+            msg = f"Local path {local_path} does not exist"
+            raise RuntimeError(msg)
+        self._device.push(local_path, remote_path)
+
+    def pull(self, remote_path: str, local_path: str) -> None:
+        """
+        Pull a file from the device.
+        """
+        self._check_if_device_is_selected()
+        assert self._device is not None
+        Path.mkdir(Path.absolute(Path(local_path).parent), exist_ok=True)
+        self._device.pull(remote_path, local_path)
