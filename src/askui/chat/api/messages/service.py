@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Any, Iterator
 
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -237,15 +237,19 @@ class MessageService:
         _path_cte = _path_cte.union_all(_path_recursive)
 
         # Step 3: Fetch messages with pagination and ordering
-        _query = self._session.query(MessageOrm).filter(
-            MessageOrm.id.in_(select(_path_cte.c.id))
+        _query = self._session.query(MessageOrm).join(
+            _path_cte, MessageOrm.id == _path_cte.c.id
         )
 
-        # Exclude cursor nodes from results (proper cursor-based pagination)
+        # Build all filters at once for better query planning
+        _filters: list[Any] = []
         if query.after:
-            _query = _query.filter(MessageOrm.id != query.after)
+            _filters.append(MessageOrm.id != query.after)
         if query.before:
-            _query = _query.filter(MessageOrm.id != query.before)
+            _filters.append(MessageOrm.id != query.before)
+
+        if _filters:
+            _query = _query.filter(*_filters)
 
         orms = (
             _query.order_by(
