@@ -166,3 +166,15 @@ class AndroidAgentOsFacade(AndroidAgentOs):
     def connect_adb_client(self) -> None:
         self._agent_os.connect_adb_client()
         self._reporter.add_message("AndroidAgentOS", "Connected to adb client")
+
+    def push(self, local_path: str, remote_path: str) -> None:
+        self._agent_os.push(local_path, remote_path)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Pushed file to {remote_path} from {local_path}"
+        )
+
+    def pull(self, remote_path: str, local_path: str) -> None:
+        self._agent_os.pull(remote_path, local_path)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Pulled file from {remote_path} to {local_path}"
+        )

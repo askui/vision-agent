@@ -314,6 +314,5 @@ class AndroidVisionAgent(AgentBase):
             messages=MessageSettings(
                 system=ANDROID_AGENT_SYSTEM_PROMPT,
                 thinking={"type": "enabled", "budget_tokens": 2048},
-                betas=[],
             ),
         )

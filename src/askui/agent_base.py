@@ -48,12 +48,12 @@ class AgentBaseSettings(BaseSettings):
         env_nested_delimiter="__",
         extra="ignore",
     )
-    m: ModelChoice | ModelComposition | str | None = Field(default=None, alias="MODEL")
-    m_provider: str | None = Field(default=None, alias="MODEL_PROVIDER")
+    model: ModelChoice | ModelComposition | str | None = Field(default=None)
+    model_provider: str | None = Field(default=None)
 
-    @field_validator("m_provider")
+    @field_validator("model_provider")
     @classmethod
-    def validate_m_provider(cls, v: str | None) -> str | None:
+    def validate_model_provider(cls, v: str | None) -> str | None:
         if v is None:
             return None
         return v if v.endswith("/") else f"{v}/"
@@ -76,8 +76,12 @@ class AgentBase(ABC):  # noqa: B024
 
         self._tools = tools or []
         settings = AgentBaseSettings()
-        _model_provider = model_provider or settings.m_provider
-        self._model_provider_prefix = _model_provider or ""
+        _model_provider = model_provider or settings.model_provider or ""
+        self.model_name_selected_by_user: str | None = None
+        model = model or settings.model
+        if model and isinstance(model, str):
+            self.model_name_selected_by_user = f"{_model_provider}{model}"
+
         self._model_router = self._init_model_router(
             reporter=self._reporter,
             models=models or {},
@@ -88,7 +92,7 @@ class AgentBase(ABC):  # noqa: B024
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
-        self._model = self._init_model(model or settings.m)
+        self._model = self._init_model(model)
         self._data_extractor = DataExtractor(
             reporter=self._reporter, models=models or {}
         )
@@ -157,11 +161,13 @@ class AgentBase(ABC):  # noqa: B024
         model: ModelComposition | str | None,
         type_: Literal["act", "get", "locate"],
     ) -> str | ModelComposition:
-        if model is None:
-            return self._model[type_]
+        if model is None and self.model_name_selected_by_user:
+            return self.model_name_selected_by_user
+
         if isinstance(model, ModelComposition):
             return model
-        return f"{self._model_provider_prefix}{model}"
+
+        return self._model[type_]
 
     @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

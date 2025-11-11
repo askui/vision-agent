@@ -79,7 +79,12 @@ class AskUiControllerServer:
         commands = [str(path)]
         if args:
             commands.extend(args.split())
-        self._process = subprocess.Popen(commands)
+        if not logger.isEnabledFor(logging.DEBUG):
+            self._process = subprocess.Popen(
+                commands, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        else:
+            self._process = subprocess.Popen(commands)
         wait_for_port(23000)
 
     def start(self, clean_up: bool = False) -> None:
