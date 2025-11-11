@@ -12,6 +12,7 @@ from askui.chat.api.db.session import get_session
 from askui.chat.api.dependencies import SetEnvFromHeadersDep, get_settings
 from askui.chat.api.files.router import router as files_router
 from askui.chat.api.health.router import router as health_router
+from askui.chat.api.info.router import router as info_router
 from askui.chat.api.mcp_clients.dependencies import get_mcp_client_manager_manager
 from askui.chat.api.mcp_clients.manager import McpServerConnectionError
 from askui.chat.api.mcp_configs.dependencies import get_mcp_config_service
@@ -71,6 +72,7 @@ v1_router.include_router(mcp_configs_router)
 v1_router.include_router(files_router)
 v1_router.include_router(workflows_router)
 v1_router.include_router(health_router)
+v1_router.include_router(info_router)
 app.include_router(v1_router)
 
 
