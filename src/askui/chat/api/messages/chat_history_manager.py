@@ -41,6 +41,7 @@ class ChatHistoryManager:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         model: str,
+        last_message_id: str,
         system: str | list[BetaTextBlockParam] | None,
         tools: list[BetaToolUnionParam],
     ) -> list[MessageParam]:
@@ -53,11 +54,13 @@ class ChatHistoryManager:
             )
         )
         for msg in self._message_service.iter(
-            workspace_id=workspace_id, thread_id=thread_id
+            workspace_id=workspace_id,
+            thread_id=thread_id,
+            last_message_id=last_message_id,
         ):
             anthropic_message = await self._message_translator.to_anthropic(msg)
             truncation_strategy.append_message(anthropic_message)
-        return truncation_strategy.messages
+        return list(reversed(truncation_strategy.messages))
 
     async def append_message(
         self,
@@ -66,11 +69,13 @@ class ChatHistoryManager:
         assistant_id: str | None,
         run_id: str,
         message: MessageParam,
+        parent_id: str,
     ) -> Message:
         return self._message_service.create(
             workspace_id=workspace_id,
             thread_id=thread_id,
             params=MessageCreate(
+                parent_id=parent_id,
                 assistant_id=assistant_id if message.role == "assistant" else None,
                 role=message.role,
                 content=await self._message_content_translator.from_anthropic(

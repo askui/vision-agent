@@ -43,6 +43,12 @@ class MessageOrm(Base):
     run_id: Mapped[str | None] = mapped_column(
         RunId, ForeignKey("runs.id", ondelete="SET NULL"), nullable=True
     )
+    parent_id: Mapped[str] = mapped_column(
+        MessageId,
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     @classmethod
     def from_model(cls, model: Message) -> "MessageOrm":
