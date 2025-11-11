@@ -311,7 +311,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._device is not None
         if not Path.exists(Path(local_path)):
             msg = f"Local path {local_path} does not exist"
-            raise RuntimeError(msg)
+            raise FileNotFoundError(msg)
         self._device.push(local_path, remote_path)
 
     def pull(self, remote_path: str, local_path: str) -> None:

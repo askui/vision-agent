@@ -78,7 +78,8 @@ class AgentBase(ABC):  # noqa: B024
         settings = AgentBaseSettings()
         _model_provider = model_provider or settings.model_provider or ""
         self.model_name_selected_by_user: str | None = None
-        if model:
+        model = model or settings.model
+        if model and isinstance(model, str):
             self.model_name_selected_by_user = f"{_model_provider}{model}"
 
         self._model_router = self._init_model_router(
@@ -91,7 +92,7 @@ class AgentBase(ABC):  # noqa: B024
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
-        self._model = self._init_model(model or settings.model)
+        self._model = self._init_model(model)
         self._data_extractor = DataExtractor(
             reporter=self._reporter, models=models or {}
         )
