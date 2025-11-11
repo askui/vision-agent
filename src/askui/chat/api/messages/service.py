@@ -95,6 +95,8 @@ class MessageService:
             error_msg = "Cannot specify both 'after' and 'before' parameters"
             raise ValueError(error_msg)
 
+        branch_root_id: str | None
+        leaf_id: str | None
         if query.before:
             # Case 1: Set leaf_id to query.before and find the root by traversing up
             leaf_id = query.before
@@ -131,7 +133,6 @@ class MessageService:
 
         else:
             # Case 2: Set branch_root_id to query.after or ROOT node, then find latest leaf
-            branch_root_id: str | None
             if query.after:
                 branch_root_id = query.after
             else:
@@ -167,7 +168,7 @@ class MessageService:
             _descendants_cte = _descendants_cte.union_all(_descendants_recursive)
 
             # Get the latest leaf (highest ID)
-            leaf_id: str | None = self._session.execute(
+            leaf_id = self._session.execute(
                 select(_descendants_cte.c.id)
                 .order_by(desc(_descendants_cte.c.id))
                 .limit(1)

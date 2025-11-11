@@ -42,8 +42,8 @@ def upgrade() -> None:
     )
     null_parent_count = null_parent_count_result.scalar()
 
-    # Only update parent_ids if there are messages without them
-    if null_parent_count > 0:
+    # Only update parent_ids if null_parent_count is not None and greater than 0
+    if null_parent_count is not None and null_parent_count > 0:
         # Fetch all threads
         threads_result = connection.execute(sa.text("SELECT id FROM threads"))
         thread_ids = [row[0] for row in threads_result]
