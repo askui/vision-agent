@@ -64,6 +64,23 @@ class MessageService:
             error_msg = f"Thread {thread_id} not found"
             raise NotFoundError(error_msg)
 
+        # Validate parent message exists (if not root)
+        if params.parent_id != ROOT_MESSAGE_PARENT_ID:
+            parent_message_orm: MessageOrm | None = (
+                self._session.query(MessageOrm)
+                .filter(
+                    MessageOrm.id == params.parent_id,
+                    MessageOrm.thread_id == thread_id,
+                    MessageOrm.workspace_id == workspace_id,
+                )
+                .first()
+            )
+            if parent_message_orm is None:
+                error_msg = (
+                    f"Parent message {params.parent_id} not found in thread {thread_id}"
+                )
+                raise NotFoundError(error_msg)
+
         message = Message.create(workspace_id, thread_id, params)
         message_orm = MessageOrm.from_model(message)
         self._session.add(message_orm)
