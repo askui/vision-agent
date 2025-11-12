@@ -24,6 +24,8 @@ from askui.models.shared.agent_message_param import (
 from askui.utils.datetime_utils import UnixDatetime, now
 from askui.utils.id_utils import generate_time_ordered_id
 
+ROOT_MESSAGE_PARENT_ID = "msg_000000000000000000000000"
+
 
 class BetaFileDocumentSourceParam(BaseModel):
     file_id: str
@@ -80,6 +82,7 @@ class MessageParam(BaseModel):
 class MessageBase(MessageParam):
     assistant_id: AssistantId | None = None
     run_id: RunId | None = None
+    parent_id: MessageId
 
 
 class MessageCreate(MessageBase):

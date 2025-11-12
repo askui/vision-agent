@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, computed_field
 
 from askui.chat.api.models import (
     AssistantId,
+    MessageId,
     RunId,
     ThreadId,
     WorkspaceId,
@@ -40,6 +41,7 @@ class RunCreate(BaseModel):
 
     stream: bool = False
     assistant_id: AssistantId
+    last_message_id: MessageId
 
 
 class RunStart(BaseModel):

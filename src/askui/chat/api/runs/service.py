@@ -92,6 +92,7 @@ class RunService(RunnerRunService):
             mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
             settings=self._settings,
+            last_message_id=params.last_message_id,
         )
 
         async def event_generator() -> AsyncGenerator[Event, None]:
