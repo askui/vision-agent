@@ -153,6 +153,80 @@ A list of points representing the coordinates of elements on the screen.
 """
 
 
+class BoundingBox(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+
+    xmin: int
+    ymin: int
+    xmax: int
+    ymax: int
+
+    @staticmethod
+    def from_json(data: dict[str, float]) -> "BoundingBox":
+        return BoundingBox(
+            xmin=int(data["xmin"]),
+            ymin=int(data["ymin"]),
+            xmax=int(data["xmax"]),
+            ymax=int(data["ymax"]),
+        )
+
+    def __str__(self) -> str:
+        return f"[{self.xmin}, {self.ymin}, {self.xmax}, {self.ymax}]"
+
+    @property
+    def width(self) -> int:
+        """The width of the bounding box."""
+        return self.xmax - self.xmin
+
+    @property
+    def height(self) -> int:
+        """The height of the bounding box."""
+        return self.ymax - self.ymin
+
+    @property
+    def center(self) -> Point:
+        """The center point of the bounding box."""
+        return int((self.xmin + self.xmax) / 2), int((self.ymin + self.ymax) / 2)
+
+
+class DetectedElement(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+
+    name: str
+    text: str
+    bounding_box: BoundingBox
+
+    @staticmethod
+    def from_json(data: dict[str, str | float | dict[str, float]]) -> "DetectedElement":
+        return DetectedElement(
+            name=str(data["name"]),
+            text=str(data["text"]),
+            bounding_box=BoundingBox.from_json(data["bndbox"]),  # type: ignore
+        )
+
+    def __str__(self) -> str:
+        return f"[name={self.name}, text={self.text}, bndbox={str(self.bounding_box)}]"
+
+    @property
+    def center(self) -> Point:
+        """The center point of the detected element."""
+        return self.bounding_box.center
+
+    @property
+    def width(self) -> int:
+        """The width of the detected element."""
+        return self.bounding_box.width
+
+    @property
+    def height(self) -> int:
+        """The height of the detected element."""
+        return self.bounding_box.height
+
+
 class ActModel(abc.ABC):
     """Abstract base class for models that can execute autonomous actions.
 
@@ -333,6 +407,23 @@ class LocateModel(abc.ABC):
 
         Returns:
             A list of (x, y) coordinates where the element was found, minimum length 1
+        """
+        raise NotImplementedError
+
+    def locate_all_elements(
+        self,
+        image: ImageSource,
+        model: ModelComposition | str,
+    ) -> list[DetectedElement]:
+        """Locate all elements in an image.
+
+        Args:
+            image (ImageSource): The image to analyze (screenshot or provided image)
+            model (ModelComposition | str): Either a string model name or a
+                `ModelComposition` for models that support composition
+
+        Returns:
+            A list of detected elements
         """
         raise NotImplementedError
 

@@ -18,6 +18,7 @@ from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
+from askui.utils.annotation_writer import AnnotationWriter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
@@ -25,6 +26,7 @@ from .models import ModelComposition
 from .models.exceptions import ElementNotFoundError, WaitUntilError
 from .models.model_router import ModelRouter, initialize_default_model_registry
 from .models.models import (
+    DetectedElement,
     ModelChoice,
     ModelName,
     ModelRegistry,
@@ -506,6 +508,101 @@ class AgentBase(ABC):  # noqa: B024
             locator,
         )
         return self._locate(locator=locator, screenshot=screenshot, model=model)
+
+    @telemetry.record_call(exclude={"locator", "screenshot"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def locate_all_elements(
+        self,
+        screenshot: Optional[InputSource] = None,
+        model_composition: ModelComposition | None = None,
+    ) -> list[DetectedElement]:
+        """Locate all elements in the current screen using AskUI Models.
+
+        Args:
+            screenshot (InputSource | None, optional): The screenshot to use for
+                locating the elements. Can be a path to an image file, a PIL Image
+                object or a data URL. If `None`, takes a screenshot of the currently
+                selected display.
+            model_composition (ModelComposition | None, optional): The model composition
+                 to be used for locating the elements.
+
+        Returns:
+            list[DetectedElement]: A list of detected elements
+
+        Example:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                detected_elements = agent.locate_all_elements()
+                print(f"Found {len(detected_elements)} elements: {detected_elements}")
+            ```
+        """
+        _screenshot = load_image_source(
+            self._agent_os.screenshot() if screenshot is None else screenshot
+        )
+        return self._model_router.locate_all_elements(
+            image=_screenshot, model=model_composition or ModelName.ASKUI
+        )
+
+    @telemetry.record_call(exclude={"screenshot", "output_directory"})
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+    def annotate(
+        self,
+        screenshot: InputSource | None = None,
+        model_composition: ModelComposition | None = None,
+        output_directory: str = "reports",
+    ) -> None:
+        """Annotate the screenshot with the detected elements.
+        Creates an interactive HTML file with the detected elements
+        and saves it to the output directory.
+        The HTML file can be opened in a browser to see the annotated image.
+        The user can hover over the elements to see their names and text value
+        and click on the box to copy the text value to the clipboard.
+
+        Args:
+            screenshot (ImageSource | None, optional): The screenshot to annotate.
+                If `None`, takes a screenshot of the currently selected display.
+            model_composition (ModelComposition | None, optional): The composition
+                or name of the model(s) to be used for locating the elements.
+            output_directory (str, optional): The directory to save the annotated
+                image. Defaults to "reports".
+
+        Example Using VisionAgent:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                agent.annotate()
+            ```
+
+        Example Using AndroidVisionAgent:
+            ```python
+            from askui import AndroidVisionAgent
+
+            with AndroidVisionAgent() as agent:
+                agent.annotate()
+            ```
+
+        Example Using VisionAgent with custom screenshot and output directory:
+            ```python
+            from askui import VisionAgent
+
+            with VisionAgent() as agent:
+                agent.annotate(screenshot="screenshot.png", output_directory="htmls")
+            ```
+        """
+        if screenshot is None:
+            screenshot = self._agent_os.screenshot()
+
+        detected_elements = self.locate_all_elements(
+            screenshot=screenshot,
+            model_composition=model_composition,
+        )
+        AnnotationWriter(
+            image=screenshot,
+            elements=detected_elements,
+        ).write_to_file(output_directory)
 
     @telemetry.record_call(exclude={"until"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
