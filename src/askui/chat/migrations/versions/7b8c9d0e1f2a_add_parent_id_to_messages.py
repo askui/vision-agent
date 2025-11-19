@@ -17,7 +17,7 @@ down_revision: Union[str, None] = "5e6f7a8b9c0d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-_ROOT_MESSAGE_PARENT_ID = "msg_000000000000000000000000"
+_ROOT_MESSAGE_PARENT_ID = "000000000000000000000000"
 
 
 def upgrade() -> None:
