@@ -2,7 +2,6 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any
 
 from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
@@ -34,7 +33,6 @@ from askui.chat.api.runs.models import (
 )
 from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
-from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
@@ -67,6 +65,7 @@ class Runner:
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
         settings: Settings,
+        model: str | None = None,
     ) -> None:
         self._run_id = run_id
         self._workspace_id = workspace_id
@@ -76,6 +75,7 @@ class Runner:
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
         self._settings = settings
+        self._model: str | None = model
 
     def _retrieve_run(self) -> Run:
         return self._run_service.retrieve(
@@ -164,7 +164,7 @@ class Runner:
             )
             betas = tools.retrieve_tool_beta_flags()
             system = self._build_system()
-            model = self._settings.model
+            model = self._get_model()
             messages = syncify(self._chat_history_manager.retrieve_message_params)(
                 workspace_id=self._workspace_id,
                 thread_id=self._thread_id,
@@ -269,3 +269,8 @@ class Runner:
 
     def _should_abort(self, run: Run) -> bool:
         return run.status in ("cancelled", "cancelling", "expired")
+
+    def _get_model(self) -> str:
+        if self._model is not None:
+            return self._model
+        return self._settings.model
