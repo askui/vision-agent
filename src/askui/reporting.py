@@ -351,15 +351,15 @@ class SimpleHtmlReporter(Reporter):
 
 
 class AllureReporter(Reporter):
-
     def __init__(self) -> None:
         try:
             import allure  # type: ignore
         except ImportError:
-            raise ImportError(
-                "AllureReporter requires the allure-python-commons' , 'allure-pytest' or 'allure-behave' package. "
+            msg = (
+                "AllureReporter requires the allure-python-commons', 'allure-pytest' or 'allure-behave' package. "
                 "Please install it via 'pip install allure-python-commons'."
-            ) from None
+            )
+            raise ImportError(msg) from None
 
         self.allure = allure
 
@@ -375,7 +375,7 @@ class AllureReporter(Reporter):
                 images = image if isinstance(image, list) else [image]
                 for img in images:
                     img_bytes = io.BytesIO()
-                    img.save(img_bytes, format='PNG')
+                    img.save(img_bytes, format="PNG")
                     self.allure.attach(
                         img_bytes.getvalue(),
                         name="screenshot",
