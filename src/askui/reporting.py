@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import platform
 import random
@@ -347,3 +348,40 @@ class SimpleHtmlReporter(Reporter):
             f"{random.randint(0, 1000):03}.html"
         )
         report_path.write_text(html)
+
+
+class AllureReporter(Reporter):
+
+    def __init__(self) -> None:
+        try:
+            import allure  # type: ignore
+        except ImportError:
+            raise ImportError(
+                "AllureReporter requires the allure-python-commons' , 'allure-pytest' or 'allure-behave' package. "
+                "Please install it via 'pip install allure-python-commons'."
+            ) from None
+
+        self.allure = allure
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict[str, Any], list[Any]],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
+        with self.allure.step(f"{role}: {str(content)}"):
+            if image:
+                images = image if isinstance(image, list) else [image]
+                for img in images:
+                    img_bytes = io.BytesIO()
+                    img.save(img_bytes, format='PNG')
+                    self.allure.attach(
+                        img_bytes.getvalue(),
+                        name="screenshot",
+                        attachment_type=self.allure.attachment_type.PNG,
+                    )
+
+    @override
+    def generate(self) -> None:
+        pass
