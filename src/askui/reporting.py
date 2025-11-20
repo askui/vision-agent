@@ -351,7 +351,46 @@ class SimpleHtmlReporter(Reporter):
 
 
 class AllureReporter(Reporter):
+    """A reporter that integrates with Allure Framework for test reporting.
+
+    This reporter creates Allure test reports by recording agent interactions as test steps
+    and attaching screenshots. It requires one of the allure Python packages to be installed.
+
+    The AllureReporter uses eager loading - it immediately checks for the allure dependency
+    during initialization and raises an ImportError if not found.
+
+    Raises:
+        ImportError: If none of the required allure packages are installed during initialization.
+
+    Example:
+        ```python
+        from askui import VisionAgent
+        from askui.reporting import AllureReporter
+
+        with VisionAgent(reporter=[AllureReporter()]) as agent:
+            agent.act("Click the login button")
+            # Each action becomes an allure step with screenshots attached
+        ```
+
+    Note:
+        This reporter requires one of the following packages to be installed:
+        - allure-python-commons
+        - allure-pytest
+        - allure-behave
+
+        Install via: `pip install allure-python-commons`
+    """
+
     def __init__(self) -> None:
+        """Initialize the AllureReporter and import the allure module.
+
+        Performs eager loading of the allure module. If the module is not available,
+        raises ImportError immediately during initialization.
+
+        Raises:
+            ImportError: If the allure module cannot be imported. The error message
+                provides installation instructions.
+        """
         try:
             import allure  # type: ignore
         except ImportError:
@@ -370,6 +409,37 @@ class AllureReporter(Reporter):
         content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
+        """Add a message to the Allure report as a test step.
+
+        Creates an Allure test step with the provided role and content. If images
+        are provided, they are attached to the step as PNG screenshots.
+
+        Args:
+            role (str): The role of the message sender (e.g., "User", "Assistant").
+                This becomes part of the step name in the format "{role}: {content}".
+            content (str | dict | list): The message content. Complex objects are
+                converted to strings for the step name.
+            image (PIL.Image.Image | list[PIL.Image.Image], optional): PIL Image(s)
+                to attach as screenshots. Each image is converted to PNG format and
+                attached with the name "screenshot".
+
+        Example:
+            ```python
+            reporter = AllureReporter()
+
+            # Add a simple text message
+            reporter.add_message("User", "Click the submit button")
+
+            # Add message with screenshot
+            from PIL import Image
+            screenshot = Image.open("screenshot.png")
+            reporter.add_message("Agent", "Clicked button", image=screenshot)
+
+            # Add message with multiple screenshots
+            images = [Image.open("before.png"), Image.open("after.png")]
+            reporter.add_message("Agent", "Action completed", image=images)
+            ```
+        """
         with self.allure.step(f"{role}: {str(content)}"):
             if image:
                 images = image if isinstance(image, list) else [image]
@@ -384,4 +454,11 @@ class AllureReporter(Reporter):
 
     @override
     def generate(self) -> None:
-        pass
+        """Generate the final Allure report.
+
+        For AllureReporter, this method is a no-op since Allure reports are generated
+        in real-time as steps are added via `add_message()`. The actual report
+        generation is handled by the Allure framework itself when tests complete.
+
+        This method exists to satisfy the Reporter interface contract.
+        """
