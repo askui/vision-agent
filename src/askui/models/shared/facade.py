@@ -5,6 +5,7 @@ from typing_extensions import override
 from askui.locators.locators import Locator
 from askui.models.models import (
     ActModel,
+    DetectedElement,
     GetModel,
     LocateModel,
     ModelComposition,
@@ -65,3 +66,11 @@ class ModelFacade(ActModel, GetModel, LocateModel):
         model: ModelComposition | str,
     ) -> PointList:
         return self._locate_model.locate(locator, image, model)
+
+    @override
+    def locate_all_elements(
+        self,
+        image: ImageSource,
+        model: ModelComposition | str,
+    ) -> list[DetectedElement]:
+        return self._locate_model.locate_all_elements(image, model)
