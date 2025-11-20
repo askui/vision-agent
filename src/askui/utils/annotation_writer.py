@@ -241,7 +241,7 @@ class AnnotationWriter:
             </html>
             """
 
-    def write_to_file(self, output_directory: Path | str) -> Path:
+    def save_to_dir(self, annotation_dir: Path | str) -> Path:
         """
         Write the annotated HTML file to the output directory.
 
@@ -255,14 +255,14 @@ class AnnotationWriter:
         Returns:
             Path: The path to the written HTML file.
         """
-        if isinstance(output_directory, str):
-            output_directory = Path(output_directory)
-        if not output_directory.exists():
-            output_directory.mkdir(parents=True, exist_ok=True)
+        if isinstance(annotation_dir, str):
+            annotation_dir = Path(annotation_dir)
+        if not annotation_dir.exists():
+            annotation_dir.mkdir(parents=True, exist_ok=True)
 
         current_timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         file_name = f"annotated_image_{current_timestamp}.html"
-        file_path = output_directory / file_name
+        file_path = annotation_dir / file_name
         html_content = self._get_full_html()
 
         with file_path.open("w", encoding="utf-8") as f:

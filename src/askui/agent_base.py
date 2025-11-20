@@ -509,7 +509,7 @@ class AgentBase(ABC):  # noqa: B024
         )
         return self._locate(locator=locator, screenshot=screenshot, model=model)
 
-    @telemetry.record_call(exclude={"locator", "screenshot"})
+    @telemetry.record_call(exclude={"screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate_all_elements(
         self,
@@ -550,8 +550,8 @@ class AgentBase(ABC):  # noqa: B024
     def annotate(
         self,
         screenshot: InputSource | None = None,
+        annotation_dir: str = "annotations",
         model_composition: ModelComposition | None = None,
-        output_directory: str = "reports",
     ) -> None:
         """Annotate the screenshot with the detected elements.
         Creates an interactive HTML file with the detected elements
@@ -565,8 +565,8 @@ class AgentBase(ABC):  # noqa: B024
                 If `None`, takes a screenshot of the currently selected display.
             model_composition (ModelComposition | None, optional): The composition
                 or name of the model(s) to be used for locating the elements.
-            output_directory (str, optional): The directory to save the annotated
-                image. Defaults to "reports".
+            annotation_dir (str): The directory to save the annotated
+                image. Defaults to "annotations".
 
         Example Using VisionAgent:
             ```python
@@ -602,7 +602,7 @@ class AgentBase(ABC):  # noqa: B024
         AnnotationWriter(
             image=screenshot,
             elements=detected_elements,
-        ).write_to_file(output_directory)
+        ).save_to_dir(annotation_dir)
 
     @telemetry.record_call(exclude={"until"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
