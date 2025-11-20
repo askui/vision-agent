@@ -425,4 +425,3 @@ class AllureReporter(Reporter):
     @override
     def generate(self) -> None:
         """No-op for AllureReporter as reports are generated in real-time."""
-        pass
