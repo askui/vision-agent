@@ -409,37 +409,7 @@ class AllureReporter(Reporter):
         content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image]] = None,
     ) -> None:
-        """Add a message to the Allure report as a test step.
-
-        Creates an Allure test step with the provided role and content. If images
-        are provided, they are attached to the step as PNG screenshots.
-
-        Args:
-            role (str): The role of the message sender (e.g., "User", "Assistant").
-                This becomes part of the step name in the format "{role}: {content}".
-            content (str | dict | list): The message content. Complex objects are
-                converted to strings for the step name.
-            image (PIL.Image.Image | list[PIL.Image.Image], optional): PIL Image(s)
-                to attach as screenshots. Each image is converted to PNG format and
-                attached with the name "screenshot".
-
-        Example:
-            ```python
-            reporter = AllureReporter()
-
-            # Add a simple text message
-            reporter.add_message("User", "Click the submit button")
-
-            # Add message with screenshot
-            from PIL import Image
-            screenshot = Image.open("screenshot.png")
-            reporter.add_message("Agent", "Clicked button", image=screenshot)
-
-            # Add message with multiple screenshots
-            images = [Image.open("before.png"), Image.open("after.png")]
-            reporter.add_message("Agent", "Action completed", image=images)
-            ```
-        """
+        """Add a message as an Allure step with optional screenshots."""
         with self.allure.step(f"{role}: {str(content)}"):
             if image:
                 images = image if isinstance(image, list) else [image]
@@ -454,11 +424,5 @@ class AllureReporter(Reporter):
 
     @override
     def generate(self) -> None:
-        """Generate the final Allure report.
-
-        For AllureReporter, this method is a no-op since Allure reports are generated
-        in real-time as steps are added via `add_message()`. The actual report
-        generation is handled by the Allure framework itself when tests complete.
-
-        This method exists to satisfy the Reporter interface contract.
-        """
+        """No-op for AllureReporter as reports are generated in real-time."""
+        pass
