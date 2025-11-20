@@ -67,6 +67,7 @@ class Runner:
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
         settings: Settings,
+        last_message_id: str,
     ) -> None:
         self._run_id = run_id
         self._workspace_id = workspace_id
@@ -76,6 +77,7 @@ class Runner:
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
         self._settings = settings
+        self._last_message_id = last_message_id
 
     def _retrieve_run(self) -> Run:
         return self._run_service.retrieve(
@@ -139,7 +141,10 @@ class Runner:
                 assistant_id=self._assistant.id,
                 run_id=self._run_id,
                 message=on_message_cb_param.message,
+                parent_id=self._last_message_id,
             )
+            # Update the parent_id for the next message
+            self._last_message_id = created_message.id
             await send_stream.send(
                 MessageEvent(
                     data=created_message,
