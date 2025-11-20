@@ -227,8 +227,8 @@ class MessageService:
         """List messages in a tree path with pagination and filtering.
 
         Behavior:
-        - If `after` is provided: Returns path from after that node down to latest leaf in its subtree (excludes the `after` node itself)
-        - If `before` is provided: Returns path from root up to before that node (excludes the `before` node itself)
+        - If `before` is provided: Returns path from before that node down to latest leaf in its subtree (excludes the `after` node itself)
+        - If `after` is provided: Returns path from after that node up to root (excludes the `after` node itself)
         - If neither: Returns main branch (root to latest leaf in entire thread)
 
         The method always identifies a start_id (upper node) and end_id (leaf node),

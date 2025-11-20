@@ -19,34 +19,6 @@ def list_messages(
     query: ListQuery = ListQueryDep,
     message_service: MessageService = MessageServiceDep,
 ) -> ListResponse[Message]:
-    """List messages in a tree path.
-
-    Navigation behavior (only one of after/before can be specified):
-
-    - `after=msg_xyz`: Find the latest leaf in msg_xyz's subtree, return path from
-      msg_xyz DOWN to that leaf
-    - `before=msg_xyz`: Traverse UP from msg_xyz to the root
-    - Neither specified: Returns main branch (root → latest leaf in entire thread)
-
-    Each message includes its `parent_id` field for tree navigation.
-
-    Pagination:
-    - `order=asc`: Results ordered by ID ascending (oldest first)
-    - `order=desc`: Results ordered by ID descending (newest first)
-    - `limit`: Maximum number of messages to return
-
-    Args:
-        askui_workspace (WorkspaceId): The workspace ID from header.
-        thread_id (ThreadId): The thread ID.
-        query (ListQuery): Pagination parameters (after OR before, limit, order).
-        message_service (MessageService): The message service dependency.
-
-    Returns:
-        ListResponse[Message]: Paginated list of messages in the tree path.
-
-    Raises:
-        ValueError: If both `after` and `before` are specified.
-    """
     return message_service.list_(
         workspace_id=askui_workspace, thread_id=thread_id, query=query
     )
