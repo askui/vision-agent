@@ -243,14 +243,14 @@ class AnnotationWriter:
 
     def save_to_dir(self, annotation_dir: Path | str) -> Path:
         """
-        Write the annotated HTML file to the output directory.
+        Write the annotated HTML file to the annotation directory.
 
-        Creates the output directory if it doesn't exist and generates a
+        Creates the annotation directory if it doesn't exist and generates a
         timestamped filename for the HTML file.
 
         Args:
-            output_directory (Path | str, optional): The directory where the
-                HTML file will be saved. Defaults to "annotated_images".
+            annotation_dir (Path | str): The directory where the
+                HTML file will be saved.
 
         Returns:
             Path: The path to the written HTML file.

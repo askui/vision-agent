@@ -514,7 +514,7 @@ class AgentBase(ABC):  # noqa: B024
     def locate_all_elements(
         self,
         screenshot: Optional[InputSource] = None,
-        model_composition: ModelComposition | None = None,
+        model: ModelComposition | None = None,
     ) -> list[DetectedElement]:
         """Locate all elements in the current screen using AskUI Models.
 
@@ -523,7 +523,7 @@ class AgentBase(ABC):  # noqa: B024
                 locating the elements. Can be a path to an image file, a PIL Image
                 object or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model_composition (ModelComposition | None, optional): The model composition
+            model (ModelComposition | None, optional): The model composition
                  to be used for locating the elements.
 
         Returns:
@@ -542,20 +542,20 @@ class AgentBase(ABC):  # noqa: B024
             self._agent_os.screenshot() if screenshot is None else screenshot
         )
         return self._model_router.locate_all_elements(
-            image=_screenshot, model=model_composition or ModelName.ASKUI
+            image=_screenshot, model=model or ModelName.ASKUI
         )
 
-    @telemetry.record_call(exclude={"screenshot", "output_directory"})
+    @telemetry.record_call(exclude={"screenshot", "annotation_dir"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def annotate(
         self,
         screenshot: InputSource | None = None,
         annotation_dir: str = "annotations",
-        model_composition: ModelComposition | None = None,
+        model: ModelComposition | None = None,
     ) -> None:
         """Annotate the screenshot with the detected elements.
         Creates an interactive HTML file with the detected elements
-        and saves it to the output directory.
+        and saves it to the annotation directory.
         The HTML file can be opened in a browser to see the annotated image.
         The user can hover over the elements to see their names and text value
         and click on the box to copy the text value to the clipboard.
@@ -563,10 +563,11 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             screenshot (ImageSource | None, optional): The screenshot to annotate.
                 If `None`, takes a screenshot of the currently selected display.
-            model_composition (ModelComposition | None, optional): The composition
-                or name of the model(s) to be used for locating the elements.
             annotation_dir (str): The directory to save the annotated
                 image. Defaults to "annotations".
+            model (ModelComposition | None, optional): The composition
+                of the model(s) to be used for annotating the image.
+                If `None`, uses the default model.
 
         Example Using VisionAgent:
             ```python
@@ -584,12 +585,12 @@ class AgentBase(ABC):  # noqa: B024
                 agent.annotate()
             ```
 
-        Example Using VisionAgent with custom screenshot and output directory:
+        Example Using VisionAgent with custom screenshot and annotation directory:
             ```python
             from askui import VisionAgent
 
             with VisionAgent() as agent:
-                agent.annotate(screenshot="screenshot.png", output_directory="htmls")
+                agent.annotate(screenshot="screenshot.png", annotation_dir="htmls")
             ```
         """
         if screenshot is None:
@@ -597,7 +598,7 @@ class AgentBase(ABC):  # noqa: B024
 
         detected_elements = self.locate_all_elements(
             screenshot=screenshot,
-            model_composition=model_composition,
+            model=model,
         )
         AnnotationWriter(
             image=screenshot,
