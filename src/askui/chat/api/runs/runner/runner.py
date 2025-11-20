@@ -173,7 +173,6 @@ class Runner:
             messages = syncify(self._chat_history_manager.retrieve_message_params)(
                 workspace_id=self._workspace_id,
                 thread_id=self._thread_id,
-                last_message_id=self._last_message_id,
                 tools=tools.to_params(),
                 system=system,
                 model=model,

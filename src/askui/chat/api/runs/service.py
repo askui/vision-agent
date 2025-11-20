@@ -83,6 +83,14 @@ class RunService(RunnerRunService):
         )
         run = self._create(workspace_id, thread_id, params)
         send_stream, receive_stream = anyio.create_memory_object_stream[Event]()
+
+        if params.last_message_id:
+            last_message_id = params.last_message_id
+        else:
+            last_message_id = self._chat_history_manager.retrieve_last_message(
+                workspace_id=workspace_id,
+                thread_id=thread_id,
+            )
         runner = Runner(
             run_id=run.id,
             thread_id=thread_id,
@@ -92,7 +100,7 @@ class RunService(RunnerRunService):
             mcp_client_manager_manager=self._mcp_client_manager_manager,
             run_service=self,
             settings=self._settings,
-            last_message_id=params.last_message_id,
+            last_message_id=last_message_id,
         )
 
         async def event_generator() -> AsyncGenerator[Event, None]:

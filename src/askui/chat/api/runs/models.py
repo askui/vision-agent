@@ -41,7 +41,7 @@ class RunCreate(BaseModel):
 
     stream: bool = False
     assistant_id: AssistantId
-    last_message_id: MessageId
+    last_message_id: MessageId | None = None
 
 
 class RunStart(BaseModel):

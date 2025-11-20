@@ -44,6 +44,23 @@ class MessageService:
             raise NotFoundError(error_msg)
         return message_orm
 
+    def get_last_message_id(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId
+    ) -> MessageId:
+        """Get the last message ID in a thread. If no messages exist, return the root message ID."""
+        return (
+            self._session.execute(
+                select(MessageOrm.id)
+                .filter(
+                    MessageOrm.thread_id == thread_id,
+                    MessageOrm.workspace_id == workspace_id,
+                )
+                .order_by(desc(MessageOrm.id))
+                .limit(1)
+            ).scalar_one_or_none()
+            or ROOT_MESSAGE_PARENT_ID
+        )
+
     def create(
         self,
         workspace_id: WorkspaceId,
@@ -64,8 +81,13 @@ class MessageService:
             error_msg = f"Thread {thread_id} not found"
             raise NotFoundError(error_msg)
 
+        if (
+            params.parent_id is None
+        ):  # If no parent ID is provided, use the last message in the thread
+            params.parent_id = self.get_last_message_id(workspace_id, thread_id)
+
         # Validate parent message exists (if not root)
-        if params.parent_id != ROOT_MESSAGE_PARENT_ID:
+        if params.parent_id and params.parent_id != ROOT_MESSAGE_PARENT_ID:
             parent_message_orm: MessageOrm | None = (
                 self._session.query(MessageOrm)
                 .filter(
@@ -114,11 +136,11 @@ class MessageService:
 
         branch_root_id: str | None
         leaf_id: str | None
-        if query.before:
-            # Case 1: Set leaf_id to query.before and find the root by traversing up
-            leaf_id = query.before
+        if query.after:
+            # Case 1: Set leaf_id to query.after and find the root by traversing up
+            leaf_id = query.after
 
-            # Build CTE to traverse up the tree from 'before' node
+            # Build CTE to traverse up the tree from 'after' node
             _ancestors_cte = (
                 select(MessageOrm.id, MessageOrm.parent_id)
                 .filter(
@@ -149,9 +171,9 @@ class MessageService:
                 raise NotFoundError(error_msg)
 
         else:
-            # Case 2: Set branch_root_id to query.after or ROOT node, then find latest leaf
-            if query.after:
-                branch_root_id = query.after
+            # Case 2: Set branch_root_id to query.before or ROOT node, then find latest leaf
+            if query.before:
+                branch_root_id = query.before
             else:
                 # Get the latest root message
                 branch_root_id = self._session.execute(
@@ -191,9 +213,9 @@ class MessageService:
                 .limit(1)
             ).scalar_one_or_none()
 
-            # If no descendants found (e.g., query.after points to non-existent message)
+            # If no descendants found (e.g., query.before points to non-existent message)
             if leaf_id is None:
-                _msg_id = query.after if query.after else branch_root_id
+                _msg_id = query.before if query.before else branch_root_id
                 error_msg = f"Message {_msg_id} not found in thread {thread_id}"
                 raise NotFoundError(error_msg)
 
@@ -293,21 +315,13 @@ class MessageService:
         self,
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
-        last_message_id: str,
-        order: ListOrder = "desc",
+        order: ListOrder = "asc",
         batch_size: int = LIST_LIMIT_MAX,
     ) -> Iterator[Message]:
-        """Iterate through messages in batches from last_message_id up to root.
+        """Iterate through messages in batches."""
 
-        Includes last_message_id in the results (unlike cursor-based pagination).
-        """
-        # First, yield the starting message since list_ with before uses it as a cursor
-        starting_message = self.retrieve(workspace_id, thread_id, last_message_id)
-        yield starting_message
-
-        # Then iterate through the rest of the path
         has_more = True
-        last_id: str | None = last_message_id
+        last_id: str | None = None
         while has_more:
             list_messages_response = self.list_(
                 workspace_id=workspace_id,

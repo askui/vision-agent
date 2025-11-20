@@ -3,7 +3,7 @@ from anthropic.types.beta import BetaTextBlockParam, BetaToolUnionParam
 from askui.chat.api.messages.models import Message, MessageCreate
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
-from askui.chat.api.models import ThreadId, WorkspaceId
+from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.truncation_strategies import TruncationStrategyFactory
 
@@ -41,7 +41,6 @@ class ChatHistoryManager:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         model: str,
-        last_message_id: str,
         system: str | list[BetaTextBlockParam] | None,
         tools: list[BetaToolUnionParam],
     ) -> list[MessageParam]:
@@ -56,11 +55,20 @@ class ChatHistoryManager:
         for msg in self._message_service.iter(
             workspace_id=workspace_id,
             thread_id=thread_id,
-            last_message_id=last_message_id,
         ):
             anthropic_message = await self._message_translator.to_anthropic(msg)
             truncation_strategy.append_message(anthropic_message)
-        return list(reversed(truncation_strategy.messages))
+        return truncation_strategy.messages
+
+    def retrieve_last_message(
+        self,
+        workspace_id: WorkspaceId,
+        thread_id: ThreadId,
+    ) -> MessageId:
+        return self._message_service.get_last_message_id(
+            workspace_id=workspace_id,
+            thread_id=thread_id,
+        )
 
     async def append_message(
         self,

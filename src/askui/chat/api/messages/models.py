@@ -82,7 +82,7 @@ class MessageParam(BaseModel):
 class MessageBase(MessageParam):
     assistant_id: AssistantId | None = None
     run_id: RunId | None = None
-    parent_id: MessageId
+    parent_id: MessageId | None = None
 
 
 class MessageCreate(MessageBase):
