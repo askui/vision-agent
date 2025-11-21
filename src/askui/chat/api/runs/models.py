@@ -40,6 +40,7 @@ class RunCreate(BaseModel):
 
     stream: bool = False
     assistant_id: AssistantId
+    model: str | None = None
 
 
 class RunStart(BaseModel):
@@ -146,7 +147,7 @@ class Run(WorkspaceResource):
             thread_id=thread_id,
             created_at=now(),
             expires_at=now() + timedelta(minutes=10),
-            **params.model_dump(exclude={"stream"}),
+            **params.model_dump(exclude={"model", "stream"}),
         )
 
     @computed_field  # type: ignore[prop-decorator]
