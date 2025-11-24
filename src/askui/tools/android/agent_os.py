@@ -408,3 +408,17 @@ class AndroidAgentOs(ABC):
         Connects the adb client to the server.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def push(self, local_path: str, remote_path: str) -> None:
+        """
+        Pushes a file to the device.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def pull(self, remote_path: str, local_path: str) -> None:
+        """
+        Pulls a file from the device.
+        """
+        raise NotImplementedError

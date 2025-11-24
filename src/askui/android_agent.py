@@ -38,6 +38,30 @@ logger = logging.getLogger(__name__)
 
 
 class AndroidVisionAgent(AgentBase):
+    """
+    A vision-based agent that can interact with Android devices through computer vision and AI.
+
+    This agent can perform various UI interactions on Android devices like tapping, typing, swiping, and more.
+    It uses computer vision models to locate UI elements and execute actions on them.
+
+    Args:
+        reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
+        model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `tap()`, `get()`, `act()` etc. methods.
+        retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
+        models (ModelRegistry | None, optional): A registry of models to make available to the `AndroidVisionAgent` so that they can be selected using the `model` parameter of `AndroidVisionAgent` or the `model` parameter of its `tap()`, `get()`, `act()` etc. methods. Entries in the registry override entries in the default model registry.
+        model_provider (str | None, optional): The model provider to use for vision tasks.
+
+    Example:
+        ```python
+        from askui import AndroidVisionAgent
+
+        with AndroidVisionAgent() as agent:
+            agent.tap("Submit button")
+            agent.type("Hello World")
+            agent.act("Open settings menu")
+        ```
+    """
+
     @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
@@ -313,7 +337,7 @@ class AndroidVisionAgent(AgentBase):
         return ActSettings(
             messages=MessageSettings(
                 system=ANDROID_AGENT_SYSTEM_PROMPT,
-                thinking={"type": "enabled", "budget_tokens": 2048},
-                betas=[],
+                thinking={"type": "disabled"},
+                temperature=0.0,
             ),
         )

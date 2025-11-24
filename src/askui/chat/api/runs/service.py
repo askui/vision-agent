@@ -101,6 +101,7 @@ class RunService(RunnerRunService):
             run_service=self,
             settings=self._settings,
             last_message_id=last_message_id,
+            model=params.model,
         )
 
         async def event_generator() -> AsyncGenerator[Event, None]:

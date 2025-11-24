@@ -72,6 +72,13 @@ def github_login_screenshot(path_fixtures_screenshots: pathlib.Path) -> Image.Im
 
 
 @pytest.fixture
+def white_page_screenshot(path_fixtures_screenshots: pathlib.Path) -> Image.Image:
+    """Fixture providing the white page screenshot."""
+    screenshot_path = path_fixtures_screenshots / "white_page.png"
+    return Image.open(screenshot_path)
+
+
+@pytest.fixture
 def path_fixtures_github_com__icon(path_fixtures_images: pathlib.Path) -> pathlib.Path:
     """Fixture providing the path to the github com icon image."""
     return path_fixtures_images / "github_com__icon.png"

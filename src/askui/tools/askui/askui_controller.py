@@ -22,6 +22,9 @@ from askui.tools.agent_os import (
     ModifierKey,
     PcKey,
 )
+from askui.tools.askui.askui_controller_client_settings import (
+    AskUiControllerClientSettings,
+)
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
@@ -76,7 +79,12 @@ class AskUiControllerServer:
         commands = [str(path)]
         if args:
             commands.extend(args.split())
-        self._process = subprocess.Popen(commands)
+        if not logger.isEnabledFor(logging.DEBUG):
+            self._process = subprocess.Popen(
+                commands, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        else:
+            self._process = subprocess.Popen(commands)
         wait_for_port(23000)
 
     def start(self, clean_up: bool = False) -> None:
@@ -148,6 +156,7 @@ class AskUiControllerClient(AgentOs):
         reporter: Reporter = NULL_REPORTER,
         display: int = 1,
         controller_server: AskUiControllerServer | None = None,
+        settings: AskUiControllerClientSettings | None = None,
     ) -> None:
         self._stub: controller_v1.ControllerAPIStub | None = None
         self._channel: grpc.Channel | None = None
@@ -159,6 +168,7 @@ class AskUiControllerClient(AgentOs):
         self._reporter = reporter
         self._controller_server = controller_server or AskUiControllerServer()
         self._session_guid = "{" + str(uuid.uuid4()) + "}"
+        self._settings = settings or AskUiControllerClientSettings()
 
     @telemetry.record_call()
     @override
@@ -169,9 +179,10 @@ class AskUiControllerClient(AgentOs):
         This method starts the controller server, establishes a gRPC channel,
         creates a session, and sets up the initial display.
         """
-        self._controller_server.start()
+        if self._settings.server_autostart:
+            self._controller_server.start()
         self._channel = grpc.insecure_channel(
-            "localhost:23000",
+            self._settings.server_address,
             options=[
                 ("grpc.max_send_message_length", 2**30),
                 ("grpc.max_receive_message_length", 2**30),

@@ -18,6 +18,7 @@ from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
     MODEL_TYPES,
     ActModel,
+    DetectedElement,
     GetModel,
     LocateModel,
     Model,
@@ -145,7 +146,6 @@ def initialize_default_model_registry(  # noqa: C901
         ModelName.ASKUI__COMBO: askui_locate_model,
         ModelName.ASKUI__OCR: askui_locate_model,
         ModelName.ASKUI__PTA: askui_locate_model,
-        ModelName.CLAUDE__SONNET__4__20250514: lambda: anthropic_facade("anthropic"),
         ModelName.HF__SPACES__ASKUI__PTA_1: hf_spaces_handler,
         ModelName.HF__SPACES__QWEN__QWEN2_VL_2B_INSTRUCT: hf_spaces_handler,
         ModelName.HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT: hf_spaces_handler,
@@ -265,3 +265,17 @@ class ModelRouter:
             extra={"model": _model},
         )
         return m.locate(locator, screenshot, _model_composition or _model)
+
+    def locate_all_elements(
+        self,
+        image: ImageSource,
+        model: ModelComposition | str,
+    ) -> list[DetectedElement]:
+        _model = ModelName.ASKUI if isinstance(model, ModelComposition) else model
+        _model_composition = model if isinstance(model, ModelComposition) else None
+        m, _model = self._get_model(_model, "locate")
+        logger.debug(
+            "Routing locate_all_elements prediction to",
+            extra={"model": _model},
+        )
+        return m.locate_all_elements(image, model=_model_composition or _model)

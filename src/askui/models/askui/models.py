@@ -17,6 +17,7 @@ from askui.models.exceptions import (
     QueryUnexpectedResponseError,
 )
 from askui.models.models import (
+    DetectedElement,
     GetModel,
     LocateModel,
     ModelComposition,
@@ -130,6 +131,34 @@ class AskUiLocateModel(LocateModel):
             )
             for element in detected_elements
         ]
+
+    @override
+    def locate_all_elements(
+        self,
+        image: ImageSource,
+        model: ModelComposition | str,
+    ) -> list[DetectedElement]:
+        request_body: dict[str, Any] = {
+            "image": image.to_data_url(),
+            "instruction": "get all elements",
+        }
+
+        if isinstance(model, ModelComposition):
+            request_body["modelComposition"] = model.model_dump(by_alias=True)
+            logger.debug(
+                "Model composition",
+                extra={
+                    "modelComposition": json_lib.dumps(request_body["modelComposition"])
+                },
+            )
+
+        response = self._inference_api.post(path="/inference", json=request_body)
+        content = response.json()
+        assert content["type"] == "DETECTED_ELEMENTS", (
+            f"Received unknown content type {content['type']}"
+        )
+        detected_elements = content["data"]["detected_elements"]
+        return [DetectedElement.from_json(element) for element in detected_elements]
 
 
 class AskUiGetModel(GetModel):
