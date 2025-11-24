@@ -216,7 +216,7 @@ class MessageService:
             # If no descendants found (e.g., query.before points to non-existent message)
             if leaf_id is None:
                 _msg_id = query.before if query.before else branch_root_id
-                error_msg = f"Message {_msg_id} not found in thread {thread_id}"
+                error_msg = f"Message with id '{_msg_id}' not found"
                 raise NotFoundError(error_msg)
 
         return branch_root_id, leaf_id
