@@ -139,6 +139,30 @@ class MessageService:
             select(_descendants_cte.c.id).order_by(desc(_descendants_cte.c.id)).limit(1)
         ).scalar_one_or_none()
 
+    def _retrieve_branch_root(
+        self, leaf_id: MessageId, workspace_id: WorkspaceId, thread_id: ThreadId
+    ) -> str | None:
+        """Retrieve the branch root node by traversing up from a leaf node.
+
+        Args:
+            leaf_id (MessageId): The ID of the leaf message to start from.
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+
+        Returns:
+            str | None: The ID of the root node (with parent_id == ROOT_MESSAGE_PARENT_ID), or `None` if not found.
+        """
+        # Build CTE to traverse up the tree from leaf_id
+        _ancestors_cte = self._build_ancestors_cte(leaf_id, workspace_id, thread_id)
+
+        # Get the root node (the one with parent_id == ROOT_MESSAGE_PARENT_ID)
+        return self._session.execute(
+            select(MessageOrm.id).filter(
+                MessageOrm.id.in_(select(_ancestors_cte.c.id)),
+                MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
+            )
+        ).scalar_one_or_none()
+
     def _build_path_query(self, branch_root_id: str, leaf_id: str) -> Query[MessageOrm]:
         """Build a query for messages in the path from leaf to branch root.
 
@@ -270,16 +294,10 @@ class MessageService:
             # Case 1: Set leaf_id to query.after and find the root by traversing up
             leaf_id = query.after
 
-            # Build CTE to traverse up the tree from 'after' node
-            _ancestors_cte = self._build_ancestors_cte(leaf_id, workspace_id, thread_id)
-
-            # Get the root node (the one with parent_id == ROOT_MESSAGE_PARENT_ID)
-            branch_root_id = self._session.execute(
-                select(MessageOrm.id).filter(
-                    MessageOrm.id.in_(select(_ancestors_cte.c.id)),
-                    MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
-                )
-            ).scalar_one_or_none()
+            # Get the root node by traversing up from 'after' node
+            branch_root_id = self._retrieve_branch_root(
+                leaf_id, workspace_id, thread_id
+            )
 
             if branch_root_id is None:
                 error_msg = f"Message with id '{leaf_id}' not found"
