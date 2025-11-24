@@ -33,7 +33,7 @@ def upgrade() -> None:
     if not column_exists:
         op.add_column(
             "messages",
-            sa.Column("parent_id", sa.String(27), nullable=True),
+            sa.Column("parent_id", sa.String(24), nullable=True),
         )
 
     # Check if there are any messages with NULL parent_id that need updating
