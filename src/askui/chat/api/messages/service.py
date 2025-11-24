@@ -288,35 +288,41 @@ class MessageService:
             error_msg = "Cannot specify both 'after' and 'before' parameters"
             raise ValueError(error_msg)
 
+        # Determine cursor and direction based on after/before and order
+        # Key insight: (after+desc) and (before+asc) both traverse UP (towards root)
+        #              (after+asc) and (before+desc) both traverse DOWN (towards leaves)
+        _cursor = query.after or query.before
+        _should_traverse_up = (query.after and query.order == "desc") or (
+            query.before and query.order == "asc"
+        )
+
         path_start: str | None
         path_end: str | None
-        if query.after:
-            # Case 1: Set path_end to query.after and find the start by traversing up
-            path_end = query.after
 
-            # Get the start node by traversing up from 'after' node
-            path_start = self._retrieve_branch_root(path_end, workspace_id, thread_id)
-
-            if path_start is None:
-                error_msg = f"Message with id '{path_end}' not found"
-                raise NotFoundError(error_msg)
-
-        else:
-            # Case 2: Set path_start to query.before or ROOT node, then find the end
-            if query.before:
-                path_start = query.before
-            else:
-                # Get the latest root message
-                path_start = self._retrieve_latest_root(workspace_id, thread_id)
-
-                # If no messages exist yet, return None
+        if _cursor:
+            if _should_traverse_up:
+                # Traverse UP: set path_end to cursor and find path_start by going to root
+                path_end = _cursor
+                path_start = self._retrieve_branch_root(
+                    path_end, workspace_id, thread_id
+                )
                 if path_start is None:
-                    return None
+                    error_msg = f"Message with id '{path_end}' not found"
+                    raise NotFoundError(error_msg)
+            else:
+                # Traverse DOWN: set path_start to cursor and find path_end by going to leaf
+                path_start = _cursor
+                path_end = self._retrieve_latest_leaf(path_start)
+                if path_end is None:
+                    error_msg = f"Message with id '{path_start}' not found"
+                    raise NotFoundError(error_msg)
+        else:
+            # No pagination - get the full branch from latest root to latest leaf
+            path_start = self._retrieve_latest_root(workspace_id, thread_id)
+            if path_start is None:
+                return None
 
-            # Get the path end (highest ID) in the subtree
             path_end = self._retrieve_latest_leaf(path_start)
-
-            # If no descendants found (e.g., query.before points to non-existent message)
             if path_end is None:
                 _msg_id = path_start
                 error_msg = f"Message with id '{_msg_id}' not found"
@@ -330,12 +336,16 @@ class MessageService:
         """List messages in a tree path with pagination and filtering.
 
         Behavior:
-        - If `before` is provided: Returns path from before that node down to latest leaf in its subtree (excludes the `after` node itself)
-        - If `after` is provided: Returns path from after that node up to root (excludes the `after` node itself)
+        - If `after` is provided:
+          - With `order=desc`: Returns path from `after` node up to root (excludes `after` itself)
+          - With `order=asc`: Returns path from `after` node down to latest leaf (excludes `after` itself)
+        - If `before` is provided:
+          - With `order=asc`: Returns path from `before` node up to root (excludes `before` itself)
+          - With `order=desc`: Returns path from `before` node down to latest leaf (excludes `before` itself)
         - If neither: Returns main branch (root to latest leaf in entire thread)
 
-        The method always identifies a start_id (upper node) and end_id (leaf node),
-        then traverses from end_id up to start_id.
+        The method identifies a start_id (upper node) and end_id (leaf node),
+        traverses from end_id up to start_id, then applies the specified order.
 
         Args:
             workspace_id (WorkspaceId): The workspace ID.
@@ -407,7 +417,7 @@ class MessageService:
             list_messages_response = self.list_(
                 workspace_id=workspace_id,
                 thread_id=thread_id,
-                query=ListQuery(limit=batch_size, order=order, before=last_id),
+                query=ListQuery(limit=batch_size, order=order, after=last_id),
             )
             has_more = list_messages_response.has_more
             last_id = list_messages_response.last_id
