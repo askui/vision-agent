@@ -44,6 +44,29 @@ class MessageService:
             raise NotFoundError(error_msg)
         return message_orm
 
+    def _retrieve_latest_root(
+        self, workspace_id: WorkspaceId, thread_id: ThreadId
+    ) -> str | None:
+        """Retrieve the latest root message ID in a thread.
+
+        Args:
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+
+        Returns:
+            str | None: The ID of the latest root message, or `None` if no root messages exist.
+        """
+        return self._session.execute(
+            select(MessageOrm.id)
+            .filter(
+                MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .order_by(desc(MessageOrm.id))
+            .limit(1)
+        ).scalar_one_or_none()
+
     def retrieve_last_message_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId
     ) -> MessageId:
@@ -176,16 +199,7 @@ class MessageService:
                 branch_root_id = query.before
             else:
                 # Get the latest root message
-                branch_root_id = self._session.execute(
-                    select(MessageOrm.id)
-                    .filter(
-                        MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
-                        MessageOrm.thread_id == thread_id,
-                        MessageOrm.workspace_id == workspace_id,
-                    )
-                    .order_by(desc(MessageOrm.id))
-                    .limit(1)
-                ).scalar_one_or_none()
+                branch_root_id = self._retrieve_latest_root(workspace_id, thread_id)
 
                 # If no messages exist yet, return None
                 if branch_root_id is None:
