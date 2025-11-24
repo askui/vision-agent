@@ -36,44 +36,36 @@ def upgrade() -> None:
             sa.Column("parent_id", sa.String(24), nullable=True),
         )
 
-    # Check if there are any messages with NULL parent_id that need updating
-    null_parent_count_result = connection.execute(
-        sa.text("SELECT COUNT(*) FROM messages WHERE parent_id IS NULL")
-    )
-    null_parent_count = null_parent_count_result.scalar()
+    # Fetch all threads
+    threads_result = connection.execute(sa.text("SELECT id FROM threads"))
+    thread_ids = [row[0] for row in threads_result]
 
-    # Only update parent_ids if null_parent_count is not None and greater than 0
-    if null_parent_count is not None and null_parent_count > 0:
-        # Fetch all threads
-        threads_result = connection.execute(sa.text("SELECT id FROM threads"))
-        thread_ids = [row[0] for row in threads_result]
+    # For each thread, set up parent-child relationships
+    for thread_id in thread_ids:
+        # Get all messages in this thread, sorted by ID (which is time-ordered)
+        messages_result = connection.execute(
+            sa.text(
+                "SELECT id FROM messages WHERE thread_id = :thread_id ORDER BY id ASC"
+            ),
+            {"thread_id": thread_id},
+        )
+        message_ids = [row[0] for row in messages_result]
 
-        # For each thread, set up parent-child relationships
-        for thread_id in thread_ids:
-            # Get all messages in this thread, sorted by ID (which is time-ordered)
-            messages_result = connection.execute(
+        # Set parent_id for each message
+        for i, message_id in enumerate(message_ids):
+            if i == 0:
+                # First message in thread has root as parent
+                parent_id = _ROOT_MESSAGE_PARENT_ID
+            else:
+                # Each subsequent message's parent is the previous message
+                parent_id = message_ids[i - 1]
+
+            connection.execute(
                 sa.text(
-                    "SELECT id FROM messages WHERE thread_id = :thread_id ORDER BY id ASC"
+                    "UPDATE messages SET parent_id = :parent_id WHERE id = :message_id"
                 ),
-                {"thread_id": thread_id},
+                {"parent_id": parent_id, "message_id": message_id},
             )
-            message_ids = [row[0] for row in messages_result]
-
-            # Set parent_id for each message
-            for i, message_id in enumerate(message_ids):
-                if i == 0:
-                    # First message in thread has root as parent
-                    parent_id = _ROOT_MESSAGE_PARENT_ID
-                else:
-                    # Each subsequent message's parent is the previous message
-                    parent_id = message_ids[i - 1]
-
-                connection.execute(
-                    sa.text(
-                        "UPDATE messages SET parent_id = :parent_id WHERE id = :message_id"
-                    ),
-                    {"parent_id": parent_id, "message_id": message_id},
-                )
 
     # Make column non-nullable after setting all parent_ids (only if it was just created)
     if not column_exists:
