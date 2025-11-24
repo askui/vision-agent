@@ -1,6 +1,6 @@
 from typing import Any, Iterator
 
-from sqlalchemy import desc, select
+from sqlalchemy import CTE, desc, select
 from sqlalchemy.orm import Session
 
 from askui.chat.api.messages.models import (
@@ -66,6 +66,30 @@ class MessageService:
             .order_by(desc(MessageOrm.id))
             .limit(1)
         ).scalar_one_or_none()
+
+    def _build_descendants_cte(self, message_id: MessageId) -> CTE:
+        """Build a recursive CTE to traverse down the message tree from a given message.
+
+        Args:
+            message_id (MessageId): The ID of the message to start traversing from.
+
+        Returns:
+            CTE: A recursive common table expression that contains all descendants of the message.
+        """
+        # Build CTE to traverse down the tree from message_id
+        _descendants_cte = (
+            select(MessageOrm.id, MessageOrm.parent_id)
+            .filter(
+                MessageOrm.id == message_id,
+            )
+            .cte(name="descendants", recursive=True)
+        )
+
+        # Recursively traverse down
+        _descendants_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
+            MessageOrm.parent_id == _descendants_cte.c.id,
+        )
+        return _descendants_cte.union_all(_descendants_recursive)
 
     def retrieve_last_message_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId
@@ -206,19 +230,7 @@ class MessageService:
                     return None
 
             # Build CTE to traverse down the tree from branch_root_id
-            _descendants_cte = (
-                select(MessageOrm.id, MessageOrm.parent_id)
-                .filter(
-                    MessageOrm.id == branch_root_id,
-                )
-                .cte(name="descendants", recursive=True)
-            )
-
-            # Recursively traverse down
-            _descendants_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
-                MessageOrm.parent_id == _descendants_cte.c.id,
-            )
-            _descendants_cte = _descendants_cte.union_all(_descendants_recursive)
+            _descendants_cte = self._build_descendants_cte(branch_root_id)
 
             # Get the latest leaf (highest ID)
             leaf_id = self._session.execute(
