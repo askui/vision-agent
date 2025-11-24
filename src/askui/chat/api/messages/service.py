@@ -67,6 +67,37 @@ class MessageService:
             .limit(1)
         ).scalar_one_or_none()
 
+    def _build_ancestors_cte(
+        self, message_id: MessageId, workspace_id: WorkspaceId, thread_id: ThreadId
+    ) -> CTE:
+        """Build a recursive CTE to traverse up the message tree from a given message.
+
+        Args:
+            message_id (MessageId): The ID of the message to start traversing from.
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+
+        Returns:
+            CTE: A recursive common table expression that contains all ancestors of the message.
+        """
+        # Build CTE to traverse up the tree from message_id
+        _ancestors_cte = (
+            select(MessageOrm.id, MessageOrm.parent_id)
+            .filter(
+                MessageOrm.id == message_id,
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .cte(name="ancestors", recursive=True)
+        )
+
+        # Recursively traverse up until we hit ROOT_MESSAGE_PARENT_ID
+        _ancestors_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
+            MessageOrm.id == _ancestors_cte.c.parent_id,
+            _ancestors_cte.c.parent_id != ROOT_MESSAGE_PARENT_ID,
+        )
+        return _ancestors_cte.union_all(_ancestors_recursive)
+
     def _build_descendants_cte(self, message_id: MessageId) -> CTE:
         """Build a recursive CTE to traverse down the message tree from a given message.
 
@@ -188,22 +219,7 @@ class MessageService:
             leaf_id = query.after
 
             # Build CTE to traverse up the tree from 'after' node
-            _ancestors_cte = (
-                select(MessageOrm.id, MessageOrm.parent_id)
-                .filter(
-                    MessageOrm.id == leaf_id,
-                    MessageOrm.thread_id == thread_id,
-                    MessageOrm.workspace_id == workspace_id,
-                )
-                .cte(name="ancestors", recursive=True)
-            )
-
-            # Recursively traverse up until we hit ROOT_MESSAGE_PARENT_ID
-            _ancestors_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
-                MessageOrm.id == _ancestors_cte.c.parent_id,
-                _ancestors_cte.c.parent_id != ROOT_MESSAGE_PARENT_ID,
-            )
-            _ancestors_cte = _ancestors_cte.union_all(_ancestors_recursive)
+            _ancestors_cte = self._build_ancestors_cte(leaf_id, workspace_id, thread_id)
 
             # Get the root node (the one with parent_id == ROOT_MESSAGE_PARENT_ID)
             branch_root_id = self._session.execute(
