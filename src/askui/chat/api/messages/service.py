@@ -44,7 +44,7 @@ class MessageService:
             raise NotFoundError(error_msg)
         return message_orm
 
-    def get_last_message_id(
+    def retrieve_last_message_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId
     ) -> MessageId:
         """Get the last message ID in a thread. If no messages exist, return the root message ID."""
