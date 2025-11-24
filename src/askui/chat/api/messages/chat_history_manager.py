@@ -65,7 +65,7 @@ class ChatHistoryManager:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
     ) -> MessageId:
-        return self._message_service.get_last_message_id(
+        return self._message_service.retrieve_last_message_id(
             workspace_id=workspace_id,
             thread_id=thread_id,
         )

@@ -84,7 +84,7 @@ class MessageService:
         if (
             params.parent_id is None
         ):  # If no parent ID is provided, use the last message in the thread
-            params.parent_id = self.get_last_message_id(workspace_id, thread_id)
+            params.parent_id = self.retrieve_last_message_id(workspace_id, thread_id)
 
         # Validate parent message exists (if not root)
         if params.parent_id and params.parent_id != ROOT_MESSAGE_PARENT_ID:
