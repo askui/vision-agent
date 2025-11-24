@@ -163,32 +163,32 @@ class MessageService:
             )
         ).scalar_one_or_none()
 
-    def _build_path_query(self, branch_root_id: str, leaf_id: str) -> Query[MessageOrm]:
-        """Build a query for messages in the path from leaf to branch root.
+    def _build_path_query(self, path_start: str, path_end: str) -> Query[MessageOrm]:
+        """Build a query for messages in the path from end to start.
 
         Args:
-            branch_root_id (str): The ID of the branch root message (upper node).
-            leaf_id (str): The ID of the leaf message (lower node).
+            path_start (str): The ID of the path start message (upper node).
+            path_end (str): The ID of the path end message (lower node).
 
         Returns:
             Query[MessageOrm]: A query object for fetching messages in the path.
         """
-        # Build path from leaf_id up to branch_root_id using recursive CTE
-        # Start from leaf_id and traverse upward following parent_id until we reach branch_root_id
+        # Build path from path_end up to path_start using recursive CTE
+        # Start from path_end and traverse upward following parent_id until we reach path_start
         _path_cte = (
             select(MessageOrm.id, MessageOrm.parent_id)
             .filter(
-                MessageOrm.id == leaf_id,
+                MessageOrm.id == path_end,
             )
             .cte(name="path", recursive=True)
         )
 
-        # Recursively fetch parent nodes, stopping before we go past branch_root_id
+        # Recursively fetch parent nodes, stopping before we go past path_start
         # No need to filter by thread_id/workspace_id - parent_id relationship ensures correct path
         _path_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
             MessageOrm.id == _path_cte.c.parent_id,
-            # Stop recursion: don't fetch parent of branch_root_id
-            _path_cte.c.id != branch_root_id,
+            # Stop recursion: don't fetch parent of path_start
+            _path_cte.c.id != path_start,
         )
 
         _path_cte = _path_cte.union_all(_path_recursive)
@@ -266,9 +266,9 @@ class MessageService:
     def _get_path_endpoints(
         self, workspace_id: WorkspaceId, thread_id: ThreadId, query: ListQuery
     ) -> tuple[str, str] | None:
-        """Determine the branch root and leaf node IDs for path traversal.
+        """Determine the path start and end node IDs for path traversal.
 
-        Executes queries to get concrete ID values for the branch root and leaf nodes.
+        Executes queries to get concrete ID values for the path start and end nodes.
 
         Args:
             workspace_id (WorkspaceId): The workspace ID.
@@ -276,8 +276,8 @@ class MessageService:
             query (ListQuery): Pagination query (after/before, limit, order).
 
         Returns:
-            tuple[str, str] | None: A tuple of (branch_root_id, leaf_id) where branch_root_id is the
-                upper node (root) and leaf_id is the leaf node. Returns `None` if no messages exist
+            tuple[str, str] | None: A tuple of (path_start, path_end) where path_start is the
+                upper node and path_end is the lower node. Returns `None` if no messages exist
                 in the thread.
 
         Raises:
@@ -288,43 +288,41 @@ class MessageService:
             error_msg = "Cannot specify both 'after' and 'before' parameters"
             raise ValueError(error_msg)
 
-        branch_root_id: str | None
-        leaf_id: str | None
+        path_start: str | None
+        path_end: str | None
         if query.after:
-            # Case 1: Set leaf_id to query.after and find the root by traversing up
-            leaf_id = query.after
+            # Case 1: Set path_end to query.after and find the start by traversing up
+            path_end = query.after
 
-            # Get the root node by traversing up from 'after' node
-            branch_root_id = self._retrieve_branch_root(
-                leaf_id, workspace_id, thread_id
-            )
+            # Get the start node by traversing up from 'after' node
+            path_start = self._retrieve_branch_root(path_end, workspace_id, thread_id)
 
-            if branch_root_id is None:
-                error_msg = f"Message with id '{leaf_id}' not found"
+            if path_start is None:
+                error_msg = f"Message with id '{path_end}' not found"
                 raise NotFoundError(error_msg)
 
         else:
-            # Case 2: Set branch_root_id to query.before or ROOT node, then find latest leaf
+            # Case 2: Set path_start to query.before or ROOT node, then find the end
             if query.before:
-                branch_root_id = query.before
+                path_start = query.before
             else:
                 # Get the latest root message
-                branch_root_id = self._retrieve_latest_root(workspace_id, thread_id)
+                path_start = self._retrieve_latest_root(workspace_id, thread_id)
 
                 # If no messages exist yet, return None
-                if branch_root_id is None:
+                if path_start is None:
                     return None
 
-            # Get the latest leaf (highest ID) in the subtree
-            leaf_id = self._retrieve_latest_leaf(branch_root_id)
+            # Get the path end (highest ID) in the subtree
+            path_end = self._retrieve_latest_leaf(path_start)
 
             # If no descendants found (e.g., query.before points to non-existent message)
-            if leaf_id is None:
-                _msg_id = branch_root_id
+            if path_end is None:
+                _msg_id = path_start
                 error_msg = f"Message with id '{_msg_id}' not found"
                 raise NotFoundError(error_msg)
 
-        return branch_root_id, leaf_id
+        return path_start, path_end
 
     def list_(
         self, workspace_id: WorkspaceId, thread_id: ThreadId, query: ListQuery
@@ -351,17 +349,17 @@ class MessageService:
             ValueError: If both `after` and `before` parameters are specified.
             NotFoundError: If the specified message in `before` or `after` does not exist.
         """
-        # Step 1: Get concrete branch_root_id and leaf_id
+        # Step 1: Get concrete path_start and path_end
         _endpoints = self._get_path_endpoints(workspace_id, thread_id, query)
 
         # If no messages exist yet, return empty response
         if _endpoints is None:
             return ListResponse(data=[], has_more=False)
 
-        _branch_root_id, _leaf_id = _endpoints
+        _path_start, _path_end = _endpoints
 
-        # Step 2: Build path query from leaf_id up to branch_root_id
-        _query = self._build_path_query(_branch_root_id, _leaf_id)
+        # Step 2: Build path query from path_end up to path_start
+        _query = self._build_path_query(_path_start, _path_end)
 
         # Build all filters at once for better query planning
         _filters: list[Any] = []
