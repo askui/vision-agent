@@ -1,7 +1,7 @@
 from typing import Any, Iterator
 
 from sqlalchemy import CTE, desc, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from askui.chat.api.messages.models import (
     ROOT_MESSAGE_PARENT_ID,
@@ -121,6 +121,41 @@ class MessageService:
             MessageOrm.parent_id == _descendants_cte.c.id,
         )
         return _descendants_cte.union_all(_descendants_recursive)
+
+    def _build_path_query(self, branch_root_id: str, leaf_id: str) -> Query[MessageOrm]:
+        """Build a query for messages in the path from leaf to branch root.
+
+        Args:
+            branch_root_id (str): The ID of the branch root message (upper node).
+            leaf_id (str): The ID of the leaf message (lower node).
+
+        Returns:
+            Query[MessageOrm]: A query object for fetching messages in the path.
+        """
+        # Build path from leaf_id up to branch_root_id using recursive CTE
+        # Start from leaf_id and traverse upward following parent_id until we reach branch_root_id
+        _path_cte = (
+            select(MessageOrm.id, MessageOrm.parent_id)
+            .filter(
+                MessageOrm.id == leaf_id,
+            )
+            .cte(name="path", recursive=True)
+        )
+
+        # Recursively fetch parent nodes, stopping before we go past branch_root_id
+        # No need to filter by thread_id/workspace_id - parent_id relationship ensures correct path
+        _path_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
+            MessageOrm.id == _path_cte.c.parent_id,
+            # Stop recursion: don't fetch parent of branch_root_id
+            _path_cte.c.id != branch_root_id,
+        )
+
+        _path_cte = _path_cte.union_all(_path_recursive)
+
+        # Fetch messages with pagination and ordering
+        return self._session.query(MessageOrm).join(
+            _path_cte, MessageOrm.id == _path_cte.c.id
+        )
 
     def retrieve_last_message_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId
@@ -297,30 +332,8 @@ class MessageService:
 
         _branch_root_id, _leaf_id = _endpoints
 
-        # Step 2: Build path from leaf_id up to branch_root_id using recursive CTE
-        # Start from leaf_id and traverse upward following parent_id until we reach branch_root_id
-        _path_cte = (
-            select(MessageOrm.id, MessageOrm.parent_id)
-            .filter(
-                MessageOrm.id == _leaf_id,
-            )
-            .cte(name="path", recursive=True)
-        )
-
-        # Recursively fetch parent nodes, stopping before we go past branch_root_id
-        # No need to filter by thread_id/workspace_id - parent_id relationship ensures correct path
-        _path_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
-            MessageOrm.id == _path_cte.c.parent_id,
-            # Stop recursion: don't fetch parent of branch_root_id
-            _path_cte.c.id != _branch_root_id,
-        )
-
-        _path_cte = _path_cte.union_all(_path_recursive)
-
-        # Step 3: Fetch messages with pagination and ordering
-        _query = self._session.query(MessageOrm).join(
-            _path_cte, MessageOrm.id == _path_cte.c.id
-        )
+        # Step 2: Build path query from leaf_id up to branch_root_id
+        _query = self._build_path_query(_branch_root_id, _leaf_id)
 
         # Build all filters at once for better query planning
         _filters: list[Any] = []
