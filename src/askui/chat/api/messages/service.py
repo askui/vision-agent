@@ -167,7 +167,7 @@ class MessageService:
             ).scalar_one_or_none()
 
             if branch_root_id is None:
-                error_msg = f"Root message not found in thread {thread_id} for message {leaf_id}"
+                error_msg = f"Message with id '{leaf_id}' not found"
                 raise NotFoundError(error_msg)
 
         else:
