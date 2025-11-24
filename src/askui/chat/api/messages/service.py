@@ -122,6 +122,23 @@ class MessageService:
         )
         return _descendants_cte.union_all(_descendants_recursive)
 
+    def _retrieve_latest_leaf(self, message_id: MessageId) -> str | None:
+        """Retrieve the latest leaf node in the subtree rooted at the given message.
+
+        Args:
+            message_id (MessageId): The ID of the root message to start from.
+
+        Returns:
+            str | None: The ID of the latest leaf node (highest ID), or `None` if no descendants exist.
+        """
+        # Build CTE to traverse down the tree from message_id
+        _descendants_cte = self._build_descendants_cte(message_id)
+
+        # Get the latest leaf (highest ID)
+        return self._session.execute(
+            select(_descendants_cte.c.id).order_by(desc(_descendants_cte.c.id)).limit(1)
+        ).scalar_one_or_none()
+
     def _build_path_query(self, branch_root_id: str, leaf_id: str) -> Query[MessageOrm]:
         """Build a query for messages in the path from leaf to branch root.
 
@@ -280,15 +297,8 @@ class MessageService:
                 if branch_root_id is None:
                     return None
 
-            # Build CTE to traverse down the tree from branch_root_id
-            _descendants_cte = self._build_descendants_cte(branch_root_id)
-
-            # Get the latest leaf (highest ID)
-            leaf_id = self._session.execute(
-                select(_descendants_cte.c.id)
-                .order_by(desc(_descendants_cte.c.id))
-                .limit(1)
-            ).scalar_one_or_none()
+            # Get the latest leaf (highest ID) in the subtree
+            leaf_id = self._retrieve_latest_leaf(branch_root_id)
 
             # If no descendants found (e.g., query.before points to non-existent message)
             if leaf_id is None:
