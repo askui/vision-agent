@@ -219,14 +219,14 @@ class TestMessageServicePagination:
         _messages: list[Message],
     ) -> None:
         """Test iterating through messages in ascending order."""
-        _collected_messages: list[Message] = []
-        for _msg in _message_service.iter(
-            workspace_id=_workspace_id,
-            thread_id=_thread_id,
-            order="asc",
-            batch_size=3,
-        ):
-            _collected_messages.append(_msg)
+        _collected_messages: list[Message] = list(
+            _message_service.iter(
+                workspace_id=_workspace_id,
+                thread_id=_thread_id,
+                order="asc",
+                batch_size=3,
+            )
+        )
 
         # Should get all 10 messages in ascending order
         assert len(_collected_messages) == 10
@@ -242,14 +242,14 @@ class TestMessageServicePagination:
         _messages: list[Message],
     ) -> None:
         """Test iterating through messages in descending order."""
-        _collected_messages: list[Message] = []
-        for _msg in _message_service.iter(
-            workspace_id=_workspace_id,
-            thread_id=_thread_id,
-            order="desc",
-            batch_size=3,
-        ):
-            _collected_messages.append(_msg)
+        _collected_messages: list[Message] = list(
+            _message_service.iter(
+                workspace_id=_workspace_id,
+                thread_id=_thread_id,
+                order="desc",
+                batch_size=3,
+            )
+        )
 
         # Should get all 10 messages in descending order
         assert len(_collected_messages) == 10
@@ -288,8 +288,9 @@ class TestMessageServicePagination:
         _messages: list[Message],
     ) -> None:
         """Test listing messages in descending order with 'before' parameter."""
-        # Get messages before (i.e., after in the tree) message 3 in descending order
-        # Should get messages from message 3 down to the latest leaf (excluding message 3)
+        # Get messages before (i.e., after in the tree) message 3 in descending
+        # order. Should get messages from message 3 down to the latest leaf
+        # (excluding message 3)
         _response = _message_service.list_(
             workspace_id=_workspace_id,
             thread_id=_thread_id,
@@ -310,7 +311,7 @@ class TestMessageServicePagination:
         _thread_id: str,
         _messages: list[Message],
     ) -> None:
-        """Test listing messages in ascending order with 'before' parameter and pagination."""
+        """Test listing messages in ascending order with 'before' and pagination."""
         # Get 3 messages before message 7 in ascending order
         _response = _message_service.list_(
             workspace_id=_workspace_id,
@@ -334,7 +335,7 @@ class TestMessageServicePagination:
         _thread_id: str,
         _messages: list[Message],
     ) -> None:
-        """Test listing messages in descending order with 'before' parameter and pagination."""
+        """Test listing messages in descending order with 'before' and pagination."""
         # Get 3 messages before (after in tree) message 3 in descending order
         _response = _message_service.list_(
             workspace_id=_workspace_id,
