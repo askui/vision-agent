@@ -396,8 +396,13 @@ class VisionAgent(AgentBase):
     def _get_default_settings_for_act(self, model: str) -> ActSettings:
         if "claude-opus-4-5-20251101" in model:
             computer_use_beta_flag = COMPUTER_USE_20251124_BETA_FLAG
-        else:
+        elif (
+            "claude-sonnet-4-5-20250929" in model
+            or "claude-haiku-4-5-20251001" in model
+        ):
             computer_use_beta_flag = COMPUTER_USE_20250124_BETA_FLAG
+        else:
+            computer_use_beta_flag = ""
         return ActSettings(
             messages=MessageSettings(
                 system=COMPUTER_AGENT_SYSTEM_PROMPT,
