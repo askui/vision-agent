@@ -9,6 +9,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
+    COMPUTER_USE_20251124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
@@ -393,10 +394,14 @@ class VisionAgent(AgentBase):
 
     @override
     def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        if "claude-opus-4-5-20251101" in model:
+            computer_use_beta_flag = COMPUTER_USE_20251124_BETA_FLAG
+        else:
+            computer_use_beta_flag = COMPUTER_USE_20250124_BETA_FLAG
         return ActSettings(
             messages=MessageSettings(
                 system=COMPUTER_AGENT_SYSTEM_PROMPT,
-                betas=[COMPUTER_USE_20250124_BETA_FLAG],
+                betas=[computer_use_beta_flag],
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
         )
