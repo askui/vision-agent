@@ -12,7 +12,7 @@ from askui.chat.api.messages.orms import MessageOrm
 from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
 from askui.chat.api.threads.orms import ThreadOrm
 from askui.utils.api_utils import (
-    LIST_LIMIT_MAX,
+    LIST_LIMIT_DEFAULT,
     ListOrder,
     ListQuery,
     ListResponse,
@@ -407,7 +407,7 @@ class MessageService:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         order: ListOrder = "asc",
-        batch_size: int = LIST_LIMIT_MAX,
+        batch_size: int = LIST_LIMIT_DEFAULT,
     ) -> Iterator[Message]:
         """Iterate through messages in batches."""
 
