@@ -2,6 +2,7 @@ import logging
 from typing import Annotated, Literal, Optional
 
 from anthropic import Omit, omit
+from anthropic.types import AnthropicBetaParam
 from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import override
 
@@ -395,6 +396,7 @@ class VisionAgent(AgentBase):
 
     @override
     def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        computer_use_beta_flag: list[AnthropicBetaParam] | Omit
         if "claude-opus-4-5-20251101" in model:
             computer_use_beta_flag = [COMPUTER_USE_20251124_BETA_FLAG]
         elif (
@@ -403,7 +405,7 @@ class VisionAgent(AgentBase):
         ):
             computer_use_beta_flag = [COMPUTER_USE_20250124_BETA_FLAG]
         else:
-            computer_use_beta_flag: Omit = omit
+            computer_use_beta_flag = omit
         return ActSettings(
             messages=MessageSettings(
                 system=COMPUTER_AGENT_SYSTEM_PROMPT,
