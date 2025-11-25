@@ -1,4 +1,5 @@
 import base64
+import io
 import json
 import platform
 import random
@@ -347,3 +348,80 @@ class SimpleHtmlReporter(Reporter):
             f"{random.randint(0, 1000):03}.html"
         )
         report_path.write_text(html)
+
+
+class AllureReporter(Reporter):
+    """A reporter that integrates with Allure Framework for test reporting.
+
+    This reporter creates Allure test reports by recording agent interactions as test steps
+    and attaching screenshots. It requires one of the allure Python packages to be installed.
+
+    The AllureReporter uses eager loading - it immediately checks for the allure dependency
+    during initialization and raises an ImportError if not found.
+
+    Raises:
+        ImportError: If none of the required allure packages are installed during initialization.
+
+    Example:
+        ```python
+        from askui import VisionAgent
+        from askui.reporting import AllureReporter
+
+        with VisionAgent(reporter=[AllureReporter()]) as agent:
+            agent.act("Click the login button")
+            # Each action becomes an allure step with screenshots attached
+        ```
+
+    Note:
+        This reporter requires one of the following packages to be installed:
+        - allure-python-commons
+        - allure-pytest
+        - allure-behave
+
+        Install via: `pip install allure-python-commons`
+    """
+
+    def __init__(self) -> None:
+        """Initialize the AllureReporter and import the allure module.
+
+        Performs eager loading of the allure module. If the module is not available,
+        raises ImportError immediately during initialization.
+
+        Raises:
+            ImportError: If the allure module cannot be imported. The error message
+                provides installation instructions.
+        """
+        try:
+            import allure  # type: ignore
+        except ImportError:
+            msg = (
+                "AllureReporter requires the allure-python-commons', 'allure-pytest' or 'allure-behave' package. "
+                "Please install it via 'pip install allure-python-commons'."
+            )
+            raise ImportError(msg) from None
+
+        self.allure = allure
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict[str, Any], list[Any]],
+        image: Optional[Image.Image | list[Image.Image]] = None,
+    ) -> None:
+        """Add a message as an Allure step with optional screenshots."""
+        with self.allure.step(f"{role}: {str(content)}"):
+            if image:
+                images = image if isinstance(image, list) else [image]
+                for img in images:
+                    img_bytes = io.BytesIO()
+                    img.save(img_bytes, format="PNG")
+                    self.allure.attach(
+                        img_bytes.getvalue(),
+                        name="screenshot",
+                        attachment_type=self.allure.attachment_type.PNG,
+                    )
+
+    @override
+    def generate(self) -> None:
+        """No-op for AllureReporter as reports are generated in real-time."""
