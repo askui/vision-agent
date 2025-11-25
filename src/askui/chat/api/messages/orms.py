@@ -45,7 +45,6 @@ class MessageOrm(Base):
     )
     parent_id: Mapped[str] = mapped_column(
         MessageId,
-        ForeignKey("messages.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
