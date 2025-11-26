@@ -13,7 +13,7 @@ from askui.tools.android.tools import (
     AndroidKeyTapEventTool,
     AndroidScreenshotTool,
     AndroidSelectDeviceBySerialNumberTool,
-    AndroidSelectDisplayByIndex,
+    AndroidSelectDisplayByUniqueIDTool,
     AndroidShellTool,
     AndroidSwipeTool,
     AndroidTapTool,
@@ -27,7 +27,7 @@ ANDROID_AGENT_OS = PpadbAgentOs()
 ANDROID_AGENT_OS_FACADE = AndroidAgentOsFacade(ANDROID_AGENT_OS)
 TOOLS = [
     AndroidSelectDeviceBySerialNumberTool(ANDROID_AGENT_OS_FACADE),
-    AndroidSelectDisplayByIndex(ANDROID_AGENT_OS_FACADE),
+    AndroidSelectDisplayByUniqueIDTool(ANDROID_AGENT_OS_FACADE),
     AndroidGetConnectedDevicesSerialNumbersTool(ANDROID_AGENT_OS_FACADE),
     AndroidGetConnectedDisplaysInfosTool(ANDROID_AGENT_OS_FACADE),
     AndroidGetCurrentConnectedDeviceInfosTool(ANDROID_AGENT_OS_FACADE),
