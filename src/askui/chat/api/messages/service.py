@@ -59,7 +59,7 @@ class MessageService:
         return self._session.execute(
             select(MessageOrm.id)
             .filter(
-                MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
+                MessageOrm.parent_id.is_(None),
                 MessageOrm.thread_id == thread_id,
                 MessageOrm.workspace_id == workspace_id,
             )
@@ -91,10 +91,10 @@ class MessageService:
             .cte(name="ancestors", recursive=True)
         )
 
-        # Recursively traverse up until we hit ROOT_MESSAGE_PARENT_ID
+        # Recursively traverse up until we hit NULL (root message)
         _ancestors_recursive = select(MessageOrm.id, MessageOrm.parent_id).filter(
             MessageOrm.id == _ancestors_cte.c.parent_id,
-            _ancestors_cte.c.parent_id != ROOT_MESSAGE_PARENT_ID,
+            _ancestors_cte.c.parent_id.is_not(None),
         )
         return _ancestors_cte.union_all(_ancestors_recursive)
 
@@ -150,16 +150,16 @@ class MessageService:
             thread_id (ThreadId): The thread ID.
 
         Returns:
-            str | None: The ID of the root node (with parent_id == ROOT_MESSAGE_PARENT_ID), or `None` if not found.
+            str | None: The ID of the root node (with parent_id == NULL), or `None` if not found.
         """
         # Build CTE to traverse up the tree from leaf_id
         _ancestors_cte = self._build_ancestors_cte(leaf_id, workspace_id, thread_id)
 
-        # Get the root node (the one with parent_id == ROOT_MESSAGE_PARENT_ID)
+        # Get the root node (the one with parent_id == NULL)
         return self._session.execute(
             select(MessageOrm.id).filter(
                 MessageOrm.id.in_(select(_ancestors_cte.c.id)),
-                MessageOrm.parent_id == ROOT_MESSAGE_PARENT_ID,
+                MessageOrm.parent_id.is_(None),
             )
         ).scalar_one_or_none()
 

@@ -14,10 +14,12 @@ from askui.chat.api.db.orm.types import (
     ThreadId,
     UnixDatetime,
     create_prefixed_id_type,
+    create_sentinel_id_type,
 )
-from askui.chat.api.messages.models import Message
+from askui.chat.api.messages.models import ROOT_MESSAGE_PARENT_ID, Message
 
 MessageId = create_prefixed_id_type("msg")
+_ParentMessageId = create_sentinel_id_type("msg", ROOT_MESSAGE_PARENT_ID)
 
 
 class MessageOrm(Base):
@@ -44,8 +46,9 @@ class MessageOrm(Base):
         RunId, ForeignKey("runs.id", ondelete="SET NULL"), nullable=True
     )
     parent_id: Mapped[str] = mapped_column(
-        MessageId,
-        nullable=False,
+        _ParentMessageId,
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
 
