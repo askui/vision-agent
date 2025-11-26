@@ -67,11 +67,9 @@ def upgrade() -> None:
                 {"parent_id": parent_id, "message_id": message_id},
             )
 
-    # Make column non-nullable after setting all parent_ids (only if it was just created)
-    if not column_exists:
-        # Use batch_alter_table for SQLite compatibility
-        with op.batch_alter_table("messages") as batch_op:
-            batch_op.alter_column("parent_id", nullable=False)
+    # Use batch_alter_table for SQLite compatibility
+    with op.batch_alter_table("messages") as batch_op:
+        batch_op.alter_column("parent_id", nullable=False)
 
 
 def downgrade() -> None:
