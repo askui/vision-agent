@@ -193,7 +193,6 @@ class MessageService:
 
         _path_cte = _path_cte.union_all(_path_recursive)
 
-        # Fetch messages with pagination and ordering
         return self._session.query(MessageOrm).join(
             _path_cte, MessageOrm.id == _path_cte.c.id
         )
