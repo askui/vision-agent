@@ -463,32 +463,32 @@ class AndroidSelectDeviceBySerialNumberTool(Tool):
         return f"Device with the serial number {device_sn} was selected."
 
 
-class AndroidSelectDisplayByIndex(Tool):
+class AndroidSelectDisplayByUniqueIDTool(Tool):
     """
-    Select a display by its index.
+    Select a display by its unique ID.
     """
 
     def __init__(self, agent_os_facade: AndroidAgentOsFacade):
         super().__init__(
-            name="android_select_display_by_index_tool",
-            description="Can be used to select a display by its index.",
+            name="android_select_display_by_unique_id_tool",
+            description="Can be used to select a display by its unique ID.",
             input_schema={
                 "type": "object",
                 "properties": {
-                    "display_index": {
+                    "display_unique_id": {
                         "type": "integer",
-                        "description": "The index of the display to select.",
+                        "description": "The unique ID of the display to select.",
                     },
                 },
-                "required": ["display_index"],
+                "required": ["display_unique_id"],
             },
         )
         self._agent_os_facade = agent_os_facade
 
     @override
-    def __call__(self, display_index: int) -> str:
-        self._agent_os_facade.set_display_by_index(display_index)
-        return f"Display with the index {display_index} was selected."
+    def __call__(self, display_unique_id: int) -> str:
+        self._agent_os_facade.set_display_by_unique_id(display_unique_id)
+        return f"Display with the unique ID {display_unique_id} was selected."
 
 
 class AndroidConnectTool(Tool):

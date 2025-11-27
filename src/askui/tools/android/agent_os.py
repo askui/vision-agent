@@ -198,16 +198,16 @@ ANDROID_KEY = Literal[  # pylint: disable=C0103
 
 class AndroidDisplay:
     def __init__(
-        self, unique_display_id: int, display_name: str, display_index: int
+        self, unique_display_id: int, display_name: str, display_id: int
     ) -> None:
         self.unique_display_id: int = unique_display_id
         self.display_name: str = display_name
-        self.display_index: int = display_index
+        self.display_id: int = display_id
 
     def __repr__(self) -> str:
         return (
             f"AndroidDisplay(unique_display_id={self.unique_display_id}, "
-            f"display_name={self.display_name}, display_index={self.display_index})"
+            f"display_name={self.display_name}, display_id={self.display_id})"
         )
 
 
@@ -357,6 +357,13 @@ class AndroidAgentOs(ABC):
     def set_display_by_id(self, display_id: int) -> None:
         """
         Sets the active display for screen interactions by id.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_display_by_unique_id(self, display_unique_id: int) -> None:
+        """
+        Sets the active display for screen interactions by unique id.
         """
         raise NotImplementedError
 

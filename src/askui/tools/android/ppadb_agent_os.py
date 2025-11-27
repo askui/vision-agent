@@ -62,20 +62,22 @@ class PpadbAgentOs(AndroidAgentOs):
             "dumpsys SurfaceFlinger --display-id",
         )
 
-        index = 0
         for line in output.splitlines():
             if line.startswith("Display"):
                 match = re.match(
-                    r"Display (\d+) .* displayName=\"([^\"]*?)\"",
+                    r"Display (\d+) .* port=(\d+) .* displayName=\"([^\"]*?)\"",
                     line,
                 )
                 if match:
                     unique_display_id: int = int(match.group(1))
-                    display_name: str = match.group(2)
+                    port: int = int(match.group(2))
+                    display_id = port + 1
+                    if port == 0:
+                        display_id = 0
+                    display_name: str = match.group(3)
                     displays.append(
-                        AndroidDisplay(unique_display_id, display_name, index)
+                        AndroidDisplay(unique_display_id, display_name, display_id)
                     )
-                    index += 1
         if not displays:
             return [AndroidDisplay(0, "Default", 0)]
         return displays
@@ -98,11 +100,21 @@ class PpadbAgentOs(AndroidAgentOs):
             msg = "No displays connected"
             raise RuntimeError(msg)
         for display in self._displays:
-            if display.unique_display_id == display_id:
+            if display.display_id == display_id:
                 self._set_display(display)
                 return
         msg = f"Display ID {display_id} not found"
         raise RuntimeError(msg)
+
+    def set_display_by_unique_id(self, display_unique_id: int) -> None:
+        self._displays = self.get_connected_displays()
+        if not self._displays:
+            msg = "No displays connected"
+            raise RuntimeError(msg)
+        for display in self._displays:
+            if display.unique_display_id == display_unique_id:
+                self._set_display(display)
+                return
 
     def set_display_by_name(self, display_name: str) -> None:
         self._displays = self.get_connected_displays()
@@ -164,8 +176,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
-        self._device.shell(f"input -d {display_index} tap {x} {y}")
+        display_id: int = self._selected_display.display_id
+        self._device.shell(f"input -d {display_id} tap {x} {y}")
         self._mouse_position = (x, y)
 
     def swipe(
@@ -180,9 +192,9 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
+        display_id: int = self._selected_display.display_id
         self._device.shell(
-            f"input -d {display_index} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
+            f"input -d {display_id} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
 
@@ -198,9 +210,9 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
+        display_id: int = self._selected_display.display_id
         self._device.shell(
-            f"input -d {display_index} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
+            f"input -d {display_id} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
 
@@ -215,10 +227,10 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
+        display_id: int = self._selected_display.display_id
         escaped_text = shlex.quote(text)
         shell_safe_text = escaped_text.replace(" ", "%s")
-        self._device.shell(f"input -d {display_index} text {shell_safe_text}")
+        self._device.shell(f"input -d {display_id} text {shell_safe_text}")
 
     def key_tap(self, key: ANDROID_KEY) -> None:
         if key not in get_args(ANDROID_KEY):
@@ -228,8 +240,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
-        self._device.shell(f"input -d {display_index} keyevent {key}")
+        display_id: int = self._selected_display.display_id
+        self._device.shell(f"input -d {display_id} keyevent {key}")
 
     def key_combination(
         self, keys: List[ANDROID_KEY], duration_in_ms: int = 100
@@ -247,9 +259,9 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_index: int = self._selected_display.display_index
+        display_id: int = self._selected_display.display_id
         self._device.shell(
-            f"input -d {display_index} keycombination -t {duration_in_ms} {keys_string}"
+            f"input -d {display_id} keycombination -t {duration_in_ms} {keys_string}"
         )
 
     def _check_if_device_is_selected(self) -> None:

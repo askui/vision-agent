@@ -124,8 +124,9 @@ Your primary goal is to execute tasks efficiently and reliably while maintaining
         "android_get_connected_devices_serial_numbers_tool",
         "android_get_connected_displays_infos_tool",
         "android_get_current_connected_device_infos_tool",
+        "android_get_connected_device_display_infos_tool",
         "android_select_device_by_serial_number_tool",
-        "android_select_display_by_index_tool",
+        "android_select_display_by_unique_id_tool",
         "android_setup_helper",
     ],
 )

@@ -54,31 +54,30 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         )
 
     def tap(self, x: int, y: int) -> None:
-        scaled_x, scaled_y = self._scale_coordinates_back(x, y)
-        self._agent_os.tap(scaled_x, scaled_y)
+        x, y = self._scale_coordinates_back(x, y)
+        self._agent_os.tap(x, y)
         self._reporter.add_message("AndroidAgentOS", f"Tapped on {x}, {y}")
 
     def swipe(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
-        scaled_x1, scaled_y1 = self._scale_coordinates_back(x1, y1)
-        scaled_x2, scaled_y2 = self._scale_coordinates_back(x2, y2)
-        self._agent_os.swipe(scaled_x1, scaled_y1, scaled_x2, scaled_y2, duration_in_ms)
+        x1, y1 = self._scale_coordinates_back(x1, y1)
+        x2, y2 = self._scale_coordinates_back(x2, y2)
+        self._agent_os.swipe(x1, y1, x2, y2, duration_in_ms)
         self._reporter.add_message(
-            "AndroidAgentOS", f"Swiped from {x1}, {y1} to {x2}, {y2}"
+            "AndroidAgentOS",
+            f"Swiped from {x1}, {y1} to {x2}, {y2} in {duration_in_ms}ms",
         )
 
     def drag_and_drop(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
-        scaled_x1, scaled_y1 = self._scale_coordinates_back(x1, y1)
-        scaled_x2, scaled_y2 = self._scale_coordinates_back(x2, y2)
-        self._agent_os.drag_and_drop(
-            scaled_x1, scaled_y1, scaled_x2, scaled_y2, duration_in_ms
-        )
+        x1, y1 = self._scale_coordinates_back(x1, y1)
+        x2, y2 = self._scale_coordinates_back(x2, y2)
+        self._agent_os.drag_and_drop(x1, y1, x2, y2, duration_in_ms)
         self._reporter.add_message(
             "AndroidAgentOS",
-            f"Dragged and dropped from {x1}, {y1} to {x2}, {y2}",
+            f"Dragged and dropped from {x1}, {y1} to {x2}, {y2} in {duration_in_ms}ms",
         )
 
     def type(self, text: str) -> None:
@@ -116,6 +115,13 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         self._real_screen_resolution = None
         self._reporter.add_message(
             "AndroidAgentOS", f"Set display by index: {display_index}"
+        )
+
+    def set_display_by_unique_id(self, display_unique_id: int) -> None:
+        self._agent_os.set_display_by_unique_id(display_unique_id)
+        self._real_screen_resolution = None
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Set display by unique id: {display_unique_id}"
         )
 
     def set_display_by_id(self, display_id: int) -> None:
