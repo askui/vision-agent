@@ -437,3 +437,55 @@ class MessageService:
         message_orm = self._find_by_id(workspace_id, thread_id, message_id)
         self._session.delete(message_orm)
         self._session.commit()
+
+    def list_siblings(
+        self,
+        workspace_id: WorkspaceId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+    ) -> list[Message]:
+        """List all sibling messages for a given message.
+
+        Sibling messages are messages that share the same `parent_id` as the specified message.
+        The specified message itself is included in the results.
+        Results are sorted by ID (chronological order, as IDs are BSON-based).
+
+        Args:
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+            message_id (MessageId): The message ID to find siblings for.
+
+        Returns:
+            list[Message]: List of sibling messages sorted by ID.
+
+        Raises:
+            NotFoundError: If the specified message does not exist.
+        """
+        # Query for all sibling messages using a subquery to get parent_id
+        _parent_id_subquery = (
+            select(MessageOrm.parent_id)
+            .filter(
+                MessageOrm.id == message_id,
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .scalar_subquery()
+        )
+
+        orms = (
+            self._session.query(MessageOrm)
+            .filter(
+                MessageOrm.parent_id.is_not_distinct_from(_parent_id_subquery),
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .order_by(desc(MessageOrm.id))
+            .all()
+        )
+
+        # Validate that the message exists (if no results, message doesn't exist)
+        if not orms:
+            error_msg = f"Message {message_id} not found in thread {thread_id}"
+            raise NotFoundError(error_msg)
+
+        return [orm.to_model() for orm in orms]
