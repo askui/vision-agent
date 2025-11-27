@@ -24,6 +24,38 @@ def list_messages(
     )
 
 
+@router.get("/{message_id}/siblings")
+def list_siblings(
+    askui_workspace: Annotated[WorkspaceId, Header()],
+    thread_id: ThreadId,
+    message_id: MessageId,
+    message_service: MessageService = MessageServiceDep,
+) -> list[Message]:
+    """List all sibling messages for a given message.
+
+    Sibling messages are messages that share the same `parent_id` as the specified message.
+    The specified message itself is included in the results.
+    Results are sorted by ID (chronological order, as IDs are BSON-based).
+
+    Args:
+        askui_workspace (WorkspaceId): The workspace ID from header.
+        thread_id (ThreadId): The thread ID.
+        message_id (MessageId): The message ID to find siblings for.
+        message_service (MessageService): The message service dependency.
+
+    Returns:
+        list[Message]: List of sibling messages sorted by ID.
+
+    Raises:
+        NotFoundError: If the specified message does not exist.
+    """
+    return message_service.list_siblings(
+        workspace_id=askui_workspace,
+        thread_id=thread_id,
+        message_id=message_id,
+    )
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_message(
     askui_workspace: Annotated[WorkspaceId, Header()],
