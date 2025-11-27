@@ -1,3 +1,4 @@
+import time
 from typing import get_args
 
 from PIL import Image
@@ -62,15 +63,42 @@ class AndroidTapTool(Tool):
                         "type": "integer",
                         "description": "The y coordinate of the tap gesture in pixels.",
                     },
+                    "repeat": {
+                        "type": "integer",
+                        "description": "The number of times to repeat the tap gesture.",
+                        "default": 1,
+                    },
+                    "repeat_delay_in_ms": {
+                        "type": "integer",
+                        "description": (
+                            "The repeat delay between taps in milliseconds."
+                            "must be a positive integer. Default is 50ms."
+                        ),
+                        "default": 50,
+                    },
                 },
-                "required": ["x", "y"],
+                "required": ["x", "y", "repeat", "repeat_delay_in_ms"],
             },
         )
         self._agent_os_facade = agent_os_facade
 
     @override
-    def __call__(self, x: int, y: int) -> str:
-        self._agent_os_facade.tap(x, y)
+    def __call__(
+        self, x: int, y: int, repeat: int = 1, repeat_delay_in_ms: int = 50
+    ) -> str:
+        if repeat_delay_in_ms < 0:
+            error_message: str = (
+                "Delay between taps must be a positive integer."
+                f"Got {repeat_delay_in_ms}."
+            )
+            raise ValueError(error_message)
+
+        if repeat < 1:
+            error_msg: str = f"Number of taps must be a positive integer. Got {repeat}."
+            raise ValueError(error_msg)
+        for _ in range(repeat):
+            self._agent_os_facade.tap(x, y)
+            time.sleep(repeat_delay_in_ms / 1000)
         return f"Tapped at ({x}, {y})"
 
 
