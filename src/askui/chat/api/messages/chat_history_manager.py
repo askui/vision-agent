@@ -6,6 +6,7 @@ from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.truncation_strategies import TruncationStrategyFactory
+from askui.utils.api_utils import NotFoundError
 
 
 class ChatHistoryManager:
@@ -65,10 +66,13 @@ class ChatHistoryManager:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
     ) -> MessageId:
-        return self._message_service.retrieve_last_message_id(
-            workspace_id=workspace_id,
-            thread_id=thread_id,
+        last_message_id = self._message_service.retrieve_last_message_id(
+            workspace_id, thread_id
         )
+        if last_message_id is None:
+            error_msg = f"No messages found in thread {thread_id}"
+            raise NotFoundError(error_msg)
+        return last_message_id
 
     async def append_message(
         self,
