@@ -94,7 +94,7 @@ class AndroidTapTool(Tool):
             raise ValueError(error_message)
 
         if repeat < 1:
-            error_msg: str = f"Number of taps must be a positive integer.Got {repeat}."
+            error_msg: str = f"Number of taps must be a positive integer. Got {repeat}."
             raise ValueError(error_msg)
         for _ in range(repeat):
             self._agent_os_facade.tap(x, y)
