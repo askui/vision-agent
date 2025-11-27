@@ -152,6 +152,17 @@ def forbidden_error_handler(
     )
 
 
+@app.exception_handler(ValueError)
+def value_error_handler(
+    request: Request,  # noqa: ARG001
+    exc: ValueError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"detail": str(exc)},
+    )
+
+
 @app.exception_handler(Exception)
 def catch_all_exception_handler(
     request: Request,  # noqa: ARG001

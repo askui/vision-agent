@@ -10,7 +10,7 @@ from asyncer import asyncify, syncify
 from askui.chat.api.assistants.models import Assistant
 from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
-from askui.chat.api.models import RunId, ThreadId, WorkspaceId
+from askui.chat.api.models import MessageId, RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.events.done_events import DoneEvent
 from askui.chat.api.runs.events.error_events import (
     ErrorEvent,
@@ -65,6 +65,7 @@ class Runner:
         mcp_client_manager_manager: McpClientManagerManager,
         run_service: RunnerRunService,
         settings: Settings,
+        last_message_id: MessageId,
         model: str | None = None,
     ) -> None:
         self._run_id = run_id
@@ -75,6 +76,7 @@ class Runner:
         self._mcp_client_manager_manager = mcp_client_manager_manager
         self._run_service = run_service
         self._settings = settings
+        self._last_message_id = last_message_id
         self._model: str | None = model
 
     def _retrieve_run(self) -> Run:
@@ -139,7 +141,10 @@ class Runner:
                 assistant_id=self._assistant.id,
                 run_id=self._run_id,
                 message=on_message_cb_param.message,
+                parent_id=self._last_message_id,
             )
+            # Update the parent_id for the next message
+            self._last_message_id = created_message.id
             await send_stream.send(
                 MessageEvent(
                     data=created_message,
