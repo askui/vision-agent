@@ -74,26 +74,26 @@ class AndroidVisionAgent(AgentBase):
     ) -> None:
         self.os = PpadbAgentOs()
         reporter = CompositeReporter(reporters=reporters)
-        act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
+        self.act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
         super().__init__(
             reporter=reporter,
             model=model,
             retry=retry,
             models=models,
             tools=[
-                AndroidScreenshotTool(act_agent_os_facade),
-                AndroidTapTool(act_agent_os_facade),
-                AndroidTypeTool(act_agent_os_facade),
-                AndroidDragAndDropTool(act_agent_os_facade),
-                AndroidKeyTapEventTool(act_agent_os_facade),
-                AndroidSwipeTool(act_agent_os_facade),
-                AndroidKeyCombinationTool(act_agent_os_facade),
-                AndroidShellTool(act_agent_os_facade),
-                AndroidSelectDeviceBySerialNumberTool(act_agent_os_facade),
-                AndroidSelectDisplayByUniqueIDTool(act_agent_os_facade),
-                AndroidGetConnectedDevicesSerialNumbersTool(act_agent_os_facade),
-                AndroidGetConnectedDisplaysInfosTool(act_agent_os_facade),
-                AndroidGetCurrentConnectedDeviceInfosTool(act_agent_os_facade),
+                AndroidScreenshotTool(self.act_agent_os_facade),
+                AndroidTapTool(self.act_agent_os_facade),
+                AndroidTypeTool(self.act_agent_os_facade),
+                AndroidDragAndDropTool(self.act_agent_os_facade),
+                AndroidKeyTapEventTool(self.act_agent_os_facade),
+                AndroidSwipeTool(self.act_agent_os_facade),
+                AndroidKeyCombinationTool(self.act_agent_os_facade),
+                AndroidShellTool(self.act_agent_os_facade),
+                AndroidSelectDeviceBySerialNumberTool(self.act_agent_os_facade),
+                AndroidSelectDisplayByUniqueIDTool(self.act_agent_os_facade),
+                AndroidGetConnectedDevicesSerialNumbersTool(self.act_agent_os_facade),
+                AndroidGetConnectedDisplaysInfosTool(self.act_agent_os_facade),
+                AndroidGetCurrentConnectedDeviceInfosTool(self.act_agent_os_facade),
                 ExceptionTool(),
             ],
             agent_os=self.os,

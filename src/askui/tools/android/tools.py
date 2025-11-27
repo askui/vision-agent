@@ -1,3 +1,4 @@
+import time
 from typing import get_args
 
 from PIL import Image
@@ -62,15 +63,44 @@ class AndroidTapTool(Tool):
                         "type": "integer",
                         "description": "The y coordinate of the tap gesture in pixels.",
                     },
+                    "number_of_taps": {
+                        "type": "integer",
+                        "description": "The number of taps to perform.",
+                        "default": 1,
+                    },
+                    "delay_between_taps_in_ms": {
+                        "type": "integer",
+                        "description": (
+                            "The delay between taps in milliseconds."
+                            "must be a positive integer and smaller than 5000."
+                        ),
+                        "default": 0,
+                    },
                 },
-                "required": ["x", "y"],
+                "required": ["x", "y", "number_of_taps", "delay_between_taps_in_ms"],
             },
         )
         self._agent_os_facade = agent_os_facade
 
     @override
-    def __call__(self, x: int, y: int) -> str:
-        self._agent_os_facade.tap(x, y)
+    def __call__(
+        self, x: int, y: int, number_of_taps: int = 1, delay_between_taps_in_ms: int = 0
+    ) -> str:
+        if delay_between_taps_in_ms < 0 or delay_between_taps_in_ms > 5000:
+            error_message: str = (
+                "Delay between taps must be a positive integer and smaller than 5000."
+                f"Got {delay_between_taps_in_ms}."
+            )
+            raise ValueError(error_message)
+
+        if number_of_taps < 1:
+            error_msg: str = (
+                f"Number of taps must be a positive integer.Got {number_of_taps}."
+            )
+            raise ValueError(error_msg)
+        for _ in range(number_of_taps):
+            self._agent_os_facade.tap(x, y)
+            time.sleep(delay_between_taps_in_ms / 1000)
         return f"Tapped at ({x}, {y})"
 
 
