@@ -63,44 +63,42 @@ class AndroidTapTool(Tool):
                         "type": "integer",
                         "description": "The y coordinate of the tap gesture in pixels.",
                     },
-                    "number_of_taps": {
+                    "repeat": {
                         "type": "integer",
-                        "description": "The number of taps to perform.",
+                        "description": "The number of times to repeat the tap gesture.",
                         "default": 1,
                     },
-                    "delay_between_taps_in_ms": {
+                    "repeat_delay_in_ms": {
                         "type": "integer",
                         "description": (
-                            "The delay between taps in milliseconds."
-                            "must be a positive integer and smaller than 5000."
+                            "The repeat delay between taps in milliseconds."
+                            "must be a positive integer. Default is 50ms."
                         ),
-                        "default": 0,
+                        "default": 50,
                     },
                 },
-                "required": ["x", "y", "number_of_taps", "delay_between_taps_in_ms"],
+                "required": ["x", "y", "repeat", "repeat_delay_in_ms"],
             },
         )
         self._agent_os_facade = agent_os_facade
 
     @override
     def __call__(
-        self, x: int, y: int, number_of_taps: int = 1, delay_between_taps_in_ms: int = 0
+        self, x: int, y: int, repeat: int = 1, repeat_delay_in_ms: int = 50
     ) -> str:
-        if delay_between_taps_in_ms < 0 or delay_between_taps_in_ms > 5000:
+        if repeat_delay_in_ms < 0:
             error_message: str = (
-                "Delay between taps must be a positive integer and smaller than 5000."
-                f"Got {delay_between_taps_in_ms}."
+                "Delay between taps must be a positive integer."
+                f"Got {repeat_delay_in_ms}."
             )
             raise ValueError(error_message)
 
-        if number_of_taps < 1:
-            error_msg: str = (
-                f"Number of taps must be a positive integer.Got {number_of_taps}."
-            )
+        if repeat < 1:
+            error_msg: str = f"Number of taps must be a positive integer.Got {repeat}."
             raise ValueError(error_msg)
-        for _ in range(number_of_taps):
+        for _ in range(repeat):
             self._agent_os_facade.tap(x, y)
-            time.sleep(delay_between_taps_in_ms / 1000)
+            time.sleep(repeat_delay_in_ms / 1000)
         return f"Tapped at ({x}, {y})"
 
 
