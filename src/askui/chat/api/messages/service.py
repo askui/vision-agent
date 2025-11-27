@@ -199,20 +199,17 @@ class MessageService:
 
     def retrieve_last_message_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId
-    ) -> MessageId:
+    ) -> MessageId | None:
         """Get the last message ID in a thread. If no messages exist, return the root message ID."""
-        return (
-            self._session.execute(
-                select(MessageOrm.id)
-                .filter(
-                    MessageOrm.thread_id == thread_id,
-                    MessageOrm.workspace_id == workspace_id,
-                )
-                .order_by(desc(MessageOrm.id))
-                .limit(1)
-            ).scalar_one_or_none()
-            or ROOT_MESSAGE_PARENT_ID
-        )
+        return self._session.execute(
+            select(MessageOrm.id)
+            .filter(
+                MessageOrm.thread_id == thread_id,
+                MessageOrm.workspace_id == workspace_id,
+            )
+            .order_by(desc(MessageOrm.id))
+            .limit(1)
+        ).scalar_one_or_none()
 
     def create(
         self,
@@ -237,7 +234,12 @@ class MessageService:
         if (
             params.parent_id is None
         ):  # If no parent ID is provided, use the last message in the thread
-            params.parent_id = self.retrieve_last_message_id(workspace_id, thread_id)
+            parent_id = self.retrieve_last_message_id(workspace_id, thread_id)
+
+            # if the thread is empty, use the root message parent ID
+            if parent_id is None:
+                parent_id = ROOT_MESSAGE_PARENT_ID
+            params.parent_id = parent_id
 
         # Validate parent message exists (if not root)
         if params.parent_id and params.parent_id != ROOT_MESSAGE_PARENT_ID:
@@ -317,14 +319,12 @@ class MessageService:
                     raise NotFoundError(error_msg)
         else:
             # No pagination - get the full branch from latest root to latest leaf
-            path_start = self._retrieve_latest_root(workspace_id, thread_id)
-            if path_start is None:
-                return None
-
-            path_end = self._retrieve_latest_leaf(path_start)
+            path_end = self.retrieve_last_message_id(workspace_id, thread_id)
             if path_end is None:
-                _msg_id = path_start
-                error_msg = f"Message with id '{_msg_id}' not found"
+                return None
+            path_start = self._retrieve_branch_root(path_end, workspace_id, thread_id)
+            if path_start is None:
+                error_msg = f"Message with id '{path_end}' not found"
                 raise NotFoundError(error_msg)
 
         return path_start, path_end
