@@ -64,7 +64,8 @@ class CacheWriter:
         messages_json = [m.model_dump() for m in self.messages]
         with cache_file_path.open("w", encoding="utf-8") as f:
             json.dump(messages_json, f, indent=4)
-        logger.info(f"Cache File written at {str(cache_file_path)}")
+        info_msg = f"Cache File written at {str(cache_file_path)}"
+        logger.info(info_msg)
         self.reset()
 
     @staticmethod

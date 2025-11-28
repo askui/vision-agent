@@ -19,12 +19,15 @@ class RetrieveCachedTestExecutions(Tool):
     def __init__(self, cache_dir: str, trajectories_format: str = ".json") -> None:
         super().__init__(
             name="retrieve_available_trajectories_tool",
-            description="""
-            Use this tool to list all available pre-recorded trajectory files in the trajectories directory.
-            These trajectories represent successful UI interaction sequences that can be replayed using the execute_trajectory_tool.
-            Call this tool first to see which trajectories are available before executing one.
-            The tool returns a list of file paths to available trajectory files.
-            """,
+            description=(
+                "Use this tool to list all available pre-recorded trajectory "
+                "files in the trajectories directory. These trajectories "
+                "represent successful UI interaction sequences that can be "
+                "replayed using the execute_trajectory_tool. Call this tool "
+                "first to see which trajectories are available before "
+                "executing one. The tool returns a list of file paths to "
+                "available trajectory files."
+            ),
         )
         self._cache_dir = Path(cache_dir)
         self._trajectories_format = trajectories_format
@@ -44,7 +47,8 @@ class RetrieveCachedTestExecutions(Tool):
         ]
 
         if not available:
-            logger.warning(f"Warning: No trajectory files found in {self._cache_dir}")
+            warning_msg = f"Warning: No trajectory files found in {self._cache_dir}"
+            logger.warning(warning_msg)
 
         return available
 
@@ -57,24 +61,30 @@ class ExecuteCachedExecution(Tool):
     def __init__(self) -> None:
         super().__init__(
             name="execute_cached_executions_tool",
-            description="""
-            Execute a pre-recorded trajectory to automatically perform a sequence of UI interactions.
-            This tool replays mouse movements, clicks, and typing actions from a previously successful execution.
-
-            Before using this tool:
-            1. Use retrieve_available_trajectories_tool to see which trajectory files are available
-            2. Select the appropriate trajectory file path from the returned list
-            3. Pass the full file path to this tool
-
-            The trajectory will be executed step-by-step, and you should verify the results afterward.
-            Note: Trajectories may fail if the UI state has changed since they were recorded.
-            """,
+            description=(
+                "Execute a pre-recorded trajectory to automatically perform a "
+                "sequence of UI interactions. This tool replays mouse movements, "
+                "clicks, and typing actions from a previously successful execution.\n\n"
+                "Before using this tool:\n"
+                "1. Use retrieve_available_trajectories_tool to see which "
+                "trajectory files are available\n"
+                "2. Select the appropriate trajectory file path from the "
+                "returned list\n"
+                "3. Pass the full file path to this tool\n\n"
+                "The trajectory will be executed step-by-step, and you should "
+                "verify the results afterward. Note: Trajectories may fail if "
+                "the UI state has changed since they were recorded."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {
                     "trajectory_file": {
                         "type": "string",
-                        "description": "Full path to the trajectory file (use retrieve_available_trajectories_tool to find available files)",
+                        "description": (
+                            "Full path to the trajectory file (use "
+                            "retrieve_available_trajectories_tool to find "
+                            "available files)"
+                        ),
                     },
                 },
                 "required": ["trajectory_file"],
@@ -82,7 +92,7 @@ class ExecuteCachedExecution(Tool):
         )
 
     def set_toolbox(self, toolbox: ToolCollection) -> None:
-        """Set the AgentOS/AskUiControllerClient reference for executing UI actions"""
+        """Set the AgentOS/AskUiControllerClient reference for executing actions."""
         self._toolbox = toolbox
 
     @override
@@ -94,13 +104,17 @@ class ExecuteCachedExecution(Tool):
             raise RuntimeError(error_msg)
 
         if not Path(trajectory_file).is_file():
-            error_msg = f"Trajectory file not found: {trajectory_file}\n Use retrieve_available_trajectories_tool to see available files."
+            error_msg = (
+                f"Trajectory file not found: {trajectory_file}\n"
+                "Use retrieve_available_trajectories_tool to see available files."
+            )
             logger.error(error_msg)
             raise FileNotFoundError(error_msg)
 
         # Load and execute trajectory
         trajectory = CacheWriter.read_cache_file(Path(trajectory_file))
-        logger.info(f"Executing cached trajectory from {trajectory_file}")
+        info_msg = f"Executing cached trajectory from {trajectory_file}"
+        logger.info(info_msg)
         for step in trajectory:
             if (
                 "screenshot" in step.name
@@ -110,9 +124,17 @@ class ExecuteCachedExecution(Tool):
             try:
                 self._toolbox.run([step])
             except Exception as e:
-                logger.error(f"An error occured during the cached execution: {e}")
-                return f"An error occured while executing the trajectory from {trajectory_file}. Please verify the UI state and continue without cache."
+                error_msg = f"An error occured during the cached execution: {e}"
+                logger.exception(error_msg)
+                return (
+                    f"An error occured while executing the trajectory from "
+                    f"{trajectory_file}. Please verify the UI state and "
+                    "continue without cache."
+                )
             time.sleep(2)
 
         logger.info("Finished executing cached trajectory")
-        return f"Successfully executed trajectory from {trajectory_file}. Please verify the UI state."
+        return (
+            f"Successfully executed trajectory from {trajectory_file}. "
+            "Please verify the UI state."
+        )
