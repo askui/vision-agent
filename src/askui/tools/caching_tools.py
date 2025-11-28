@@ -33,9 +33,9 @@ class RetrieveCachedTestExecutions(Tool):
     @validate_call
     def __call__(self) -> list[str]:  # type: ignore
         if not Path.is_dir(self._cache_dir):
-            raise FileNotFoundError(
-                f"Trajectories directory not found: {self._cache_dir}"
-            )
+            error_msg = f"Trajectories directory not found: {self._cache_dir}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
 
         available = [
             str(f)
@@ -89,13 +89,14 @@ class ExecuteCachedExecution(Tool):
     @validate_call
     def __call__(self, trajectory_file: str) -> str:
         if not hasattr(self, "_toolbox"):
-            raise RuntimeError("Toolbox not set. Call set_toolbox() first.")
+            error_msg = "Toolbox not set. Call set_toolbox() first."
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
 
         if not Path(trajectory_file).is_file():
-            raise FileNotFoundError(
-                f"Trajectory file not found: {trajectory_file}\n"
-                f"Use retrieve_available_trajectories_tool to see available files."
-            )
+            error_msg = f"Trajectory file not found: {trajectory_file}\n Use retrieve_available_trajectories_tool to see available files."
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
 
         # Load and execute trajectory
         trajectory = CacheWriter.read_cache_file(Path(trajectory_file))
@@ -109,7 +110,7 @@ class ExecuteCachedExecution(Tool):
             try:
                 self._toolbox.run([step])
             except Exception as e:
-                logger.warning(f"An error occured during the cached execution: {e}")
+                logger.error(f"An error occured during the cached execution: {e}")
                 return f"An error occured while executing the trajectory from {trajectory_file}. Please verify the UI state and continue without cache."
             time.sleep(2)
 
