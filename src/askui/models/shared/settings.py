@@ -8,6 +8,7 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
+COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
 
 class MessageSettings(BaseModel):
