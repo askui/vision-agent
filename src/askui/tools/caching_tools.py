@@ -38,7 +38,7 @@ class RetrieveCachedTestExecutions(Tool):
             )
 
         available = [
-            str(self._cache_dir / f)
+            str(f)
             for f in self._cache_dir.iterdir()
             if str(f).endswith(self._trajectories_format)
         ]
