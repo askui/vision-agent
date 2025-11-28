@@ -248,12 +248,15 @@ class AgentBase(ABC):  # noqa: B024
         _model = self._get_model(model, "act")
         _settings = settings or self._get_default_settings_for_act(_model)
 
+        caching_tools: list[Tool] = []
         if caching_strategy in ["read", "both"]:
             cached_execution_tool = ExecuteCachedExecution()
-            caching_tools: list[Tool] = [
-                RetrieveCachedTestExecutions(cache_dir),
-                cached_execution_tool,
-            ]
+            caching_tools.extend(
+                [
+                    RetrieveCachedTestExecutions(cache_dir),
+                    cached_execution_tool,
+                ]
+            )
             if isinstance(_settings.messages.system, str):
                 _settings.messages.system = (
                     _settings.messages.system + "\n" + CACHE_USE_PROMPT
@@ -267,8 +270,6 @@ class AgentBase(ABC):  # noqa: B024
                 ]
             else:  # Omit or None
                 _settings.messages.system = CACHE_USE_PROMPT
-        else:
-            caching_tools: list[Tool] = []
 
         if isinstance(tools, list):
             tools = caching_tools + tools
@@ -279,7 +280,7 @@ class AgentBase(ABC):  # noqa: B024
         _tools = self._build_tools(tools, _model)
 
         if caching_strategy in ["read", "both"]:
-            cached_execution_tool.set_toolbox(_tools)  # type: ignore
+            cached_execution_tool.set_toolbox(_tools)
 
         if caching_strategy in ["write", "both"]:
             cache_writer = CacheWriter(cache_dir, cache_filename)

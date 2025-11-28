@@ -222,4 +222,4 @@ def test_execute_cached_execution_set_toolbox() -> None:
 
     # After setting toolbox, should be able to access it
     assert hasattr(tool, "_toolbox")
-    assert tool._toolbox == mock_toolbox  # type: ignore
+    assert tool._toolbox == mock_toolbox

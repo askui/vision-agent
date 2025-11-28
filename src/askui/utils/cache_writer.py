@@ -44,14 +44,14 @@ class CacheWriter:
             file_name += ".json"
         self.file_name = file_name
 
-    def reset(self, file_name: str = ""):
+    def reset(self, file_name: str = "") -> None:
         self.messages = []
         if file_name and not file_name.endswith(".json"):
             file_name += ".json"
         self.file_name = file_name
         self.was_cached_execution = False
 
-    def generate(self):
+    def generate(self) -> None:
         if self.was_cached_execution:
             logger.info("Will not write cache file as this was a cached execution")
             return
