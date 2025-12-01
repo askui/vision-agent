@@ -1,8 +1,7 @@
 import logging
-from typing import Annotated, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Literal, Optional
 
 from anthropic import Omit, omit
-from anthropic.types import AnthropicBetaParam
 from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import override
 
@@ -29,6 +28,9 @@ from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
+
+if TYPE_CHECKING:
+    from anthropic.types import AnthropicBetaParam
 
 logger = logging.getLogger(__name__)
 
