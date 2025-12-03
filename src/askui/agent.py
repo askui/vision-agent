@@ -1,6 +1,7 @@
 import logging
-from typing import Annotated, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Literal, Optional
 
+from anthropic import Omit, omit
 from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import override
 
@@ -9,6 +10,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
+    COMPUTER_USE_20251124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
@@ -26,6 +28,9 @@ from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
+
+if TYPE_CHECKING:
+    from anthropic.types import AnthropicBetaParam
 
 logger = logging.getLogger(__name__)
 
@@ -393,10 +398,20 @@ class VisionAgent(AgentBase):
 
     @override
     def _get_default_settings_for_act(self, model: str) -> ActSettings:
+        computer_use_beta_flag: list[AnthropicBetaParam] | Omit
+        if "claude-opus-4-5-20251101" in model:
+            computer_use_beta_flag = [COMPUTER_USE_20251124_BETA_FLAG]
+        elif (
+            "claude-sonnet-4-5-20250929" in model
+            or "claude-haiku-4-5-20251001" in model
+        ):
+            computer_use_beta_flag = [COMPUTER_USE_20250124_BETA_FLAG]
+        else:
+            computer_use_beta_flag = omit
         return ActSettings(
             messages=MessageSettings(
                 system=COMPUTER_AGENT_SYSTEM_PROMPT,
-                betas=[COMPUTER_USE_20250124_BETA_FLAG],
+                betas=computer_use_beta_flag,
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
         )
