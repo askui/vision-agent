@@ -242,7 +242,10 @@ class AgentBase(ABC):  # noqa: B024
 
             with VisionAgent() as agent:
                 agent.act(
-                    goal="Fill out the login form with username 'admin' and password 'secret123'",
+                    goal=(
+                        "Fill out the login form with "
+                        "username 'admin' and password 'secret123'"
+                    ),
                     caching_settings=CachingSettings(
                         strategy="write",
                         cache_dir=".cache",
