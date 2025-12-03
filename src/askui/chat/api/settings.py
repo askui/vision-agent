@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from askui.chat.api.mcp_configs.models import McpConfig, RemoteMCPServer
 from askui.chat.api.telemetry.integrations.fastapi.settings import TelemetrySettings
 from askui.chat.api.telemetry.logs.settings import LogFilter, LogSettings
+from askui.telemetry.otel import OtelSettings
 from askui.utils.datetime_utils import now
 
 
@@ -112,4 +113,8 @@ class Settings(BaseSettings):
                 ],
             ),
         ),
+    )
+    otel: OtelSettings = Field(
+        default_factory=OtelSettings,
+        description="OpenTelemetry configuration settings",
     )
