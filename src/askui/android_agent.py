@@ -8,7 +8,7 @@ from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
-from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import ANDROID_AGENT_SYSTEM_PROMPT
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs

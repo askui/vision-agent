@@ -1,6 +1,10 @@
 import logging
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
+
+if TYPE_CHECKING:
+    from anthropic.types.beta import BetaTextBlockParam
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
@@ -138,12 +142,26 @@ class Agent(ActModel):
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
+        from anthropic import Omit
+
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
+
+        # Convert ActSystemPrompt to string if present, handle Omit
+        system_prompt_raw = _settings.messages.system
+        system_prompt: str | list[BetaTextBlockParam] | None
+        if not isinstance(system_prompt_raw, (str, list, Omit)):
+            # It's an ActSystemPrompt instance, convert to string
+            system_prompt = str(system_prompt_raw)
+        elif isinstance(system_prompt_raw, Omit):
+            system_prompt = None
+        else:
+            system_prompt = system_prompt_raw
+
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
-                system=_settings.messages.system or None,
+                system=system_prompt,
                 messages=messages,
                 model=model,
             )
