@@ -3,15 +3,10 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from typing_extensions import Literal
-
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 
 logger = logging.getLogger(__name__)
-
-
-CACHING_STRATEGY = Literal["read", "write", "both", "no"]
 
 
 class CacheWriter:

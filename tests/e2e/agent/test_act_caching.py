@@ -9,6 +9,7 @@ import pytest
 from askui.agent import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
+from askui.models.shared.settings import CachingSettings
 
 
 def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
@@ -22,8 +23,10 @@ def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
         # Act with read caching strategy
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="read",
-            cache_dir=str(cache_dir),
+            caching_settings=CachingSettings(
+                strategy="read",
+                cache_dir=str(cache_dir),
+            ),
         )
         assert True
 
@@ -37,9 +40,11 @@ def test_act_with_caching_strategy_write(vision_agent: VisionAgent) -> None:
         # Act with write caching strategy
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="write",
-            cache_dir=str(cache_dir),
-            cache_filename=cache_filename,
+            caching_settings=CachingSettings(
+                strategy="write",
+                cache_dir=str(cache_dir),
+                filename=cache_filename,
+            ),
         )
 
         # Verify cache file was created
@@ -60,9 +65,11 @@ def test_act_with_caching_strategy_both(vision_agent: VisionAgent) -> None:
         # Act with both caching strategies
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="both",
-            cache_dir=str(cache_dir),
-            cache_filename=cache_filename,
+            caching_settings=CachingSettings(
+                strategy="both",
+                cache_dir=str(cache_dir),
+                filename=cache_filename,
+            ),
         )
 
         # Verify new cache file was created
@@ -78,8 +85,10 @@ def test_act_with_caching_strategy_no(vision_agent: VisionAgent) -> None:
         # Act without caching
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="no",
-            cache_dir=str(cache_dir),
+            caching_settings=CachingSettings(
+                strategy="no",
+                cache_dir=str(cache_dir),
+            ),
         )
 
         # Verify no cache files were created
@@ -96,9 +105,11 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
         # Act with custom cache settings
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="write",
-            cache_dir=str(custom_cache_dir),
-            cache_filename=custom_filename,
+            caching_settings=CachingSettings(
+                strategy="write",
+                cache_dir=str(custom_cache_dir),
+                filename=custom_filename,
+            ),
         )
 
         # Verify custom cache directory and file were created
@@ -120,8 +131,10 @@ def test_act_with_on_message_and_write_caching_raises_error(
         with pytest.raises(ValueError, match="Cannot use on_message callback"):
             vision_agent.act(
                 goal="Tell me a joke",
-                caching_strategy="write",
-                cache_dir=str(temp_dir),
+                caching_settings=CachingSettings(
+                    strategy="write",
+                    cache_dir=str(temp_dir),
+                ),
                 on_message=dummy_callback,
             )
 
@@ -139,8 +152,10 @@ def test_act_with_on_message_and_both_caching_raises_error(
         with pytest.raises(ValueError, match="Cannot use on_message callback"):
             vision_agent.act(
                 goal="Tell me a joke",
-                caching_strategy="both",
-                cache_dir=str(temp_dir),
+                caching_settings=CachingSettings(
+                    strategy="both",
+                    cache_dir=str(temp_dir),
+                ),
                 on_message=dummy_callback,
             )
 
@@ -154,9 +169,11 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
         # Act with caching
         vision_agent.act(
             goal="Tell me a joke",
-            caching_strategy="write",
-            cache_dir=str(cache_dir),
-            cache_filename=cache_filename,
+            caching_settings=CachingSettings(
+                strategy="write",
+                cache_dir=str(cache_dir),
+                filename=cache_filename,
+            ),
         )
 
         # Read and verify cache file structure

@@ -4,6 +4,7 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
+from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, field_validator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,7 +15,7 @@ from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings
+from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.caching import CACHE_USE_PROMPT
 from askui.tools.agent_os import AgentOs
@@ -24,7 +25,7 @@ from askui.tools.caching_tools import (
     RetrieveCachedTestExecutions,
 )
 from askui.utils.annotation_writer import AnnotationWriter
-from askui.utils.cache_writer import CACHING_STRATEGY, CacheWriter
+from askui.utils.cache_writer import CacheWriter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
@@ -186,9 +187,7 @@ class AgentBase(ABC):  # noqa: B024
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
         settings: ActSettings | None = None,
-        caching_strategy: CACHING_STRATEGY = "no",
-        cache_dir: str = ".cache",
-        cache_filename: str = "",
+        caching_settings: CachingSettings | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -203,17 +202,17 @@ class AgentBase(ABC):  # noqa: B024
             model (str | None, optional): The composition or name of the model(s) to
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
-                it returns `None`, stops and does not add the message.
+                it returns `None`, stops and does not add the message. Cannot be used
+                with caching_settings strategy "write" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
             settings (AgentSettings | None, optional): The settings for the agent.
                 Defaults to a default settings depending on the selected model.
-            caching_strategy (CACHING_STRATEGY): The caching strategy that is used.
-                Defaults to `no`
-            cache_dir (str): The directory that is used to read and write cache files.
-                Defaults to `.cache`
-            cache_filename (str): The filename of the caching file that might be written
-                Defaults to `"`
+            caching_settings (CachingSettings | None, optional): The caching settings
+                for the act execution. Controls recording and replaying of action
+                sequences (trajectories). Available strategies: "no" (default, no
+                caching), "write" (record actions to cache file), "read" (replay from
+                cached trajectories), "both" (read and write). Defaults to no caching.
 
         Returns:
             None
@@ -222,8 +221,11 @@ class AgentBase(ABC):  # noqa: B024
             MaxTokensExceededError: If the model reaches the maximum token limit
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
+            ValueError: If on_message callback is provided with caching strategy
+                "write" or "both".
 
         Example:
+            Basic usage without caching:
             ```python
             from askui import VisionAgent
 
@@ -231,6 +233,55 @@ class AgentBase(ABC):  # noqa: B024
                 agent.act("Open the settings menu")
                 agent.act("Search for 'printer' in the search box")
                 agent.act("Log in with username 'admin' and password '1234'")
+            ```
+
+            Recording actions to a cache file:
+            ```python
+            from askui import VisionAgent
+            from askui.models.shared.settings import CachingSettings
+
+            with VisionAgent() as agent:
+                agent.act(
+                    goal="Fill out the login form with username 'admin' and password 'secret123'",
+                    caching_settings=CachingSettings(
+                        strategy="write",
+                        cache_dir=".cache",
+                        filename="login_flow.json"
+                    )
+                )
+            ```
+
+            Replaying cached actions:
+            ```python
+            from askui import VisionAgent
+            from askui.models.shared.settings import CachingSettings
+
+            with VisionAgent() as agent:
+                agent.act(
+                    goal="Log in to the application",
+                    caching_settings=CachingSettings(
+                        strategy="read",
+                        cache_dir=".cache"
+                    )
+                )
+                # Agent will automatically find and use "login_flow.json"
+            ```
+
+            Using both read and write modes:
+            ```python
+            from askui import VisionAgent
+            from askui.models.shared.settings import CachingSettings
+
+            with VisionAgent() as agent:
+                agent.act(
+                    goal="Complete the checkout process",
+                    caching_settings=CachingSettings(
+                        strategy="both",
+                        cache_dir=".cache",
+                        filename="checkout.json"
+                    )
+                )
+                # Agent can use existing caches and will record new actions
             ```
         """
         goal_str = (
@@ -248,47 +299,17 @@ class AgentBase(ABC):  # noqa: B024
         _model = self._get_model(model, "act")
         _settings = settings or self._get_default_settings_for_act(_model)
 
-        caching_tools: list[Tool] = []
-        if caching_strategy in ["read", "both"]:
-            cached_execution_tool = ExecuteCachedExecution()
-            caching_tools.extend(
-                [
-                    RetrieveCachedTestExecutions(cache_dir),
-                    cached_execution_tool,
-                ]
-            )
-            if isinstance(_settings.messages.system, str):
-                _settings.messages.system = (
-                    _settings.messages.system + "\n" + CACHE_USE_PROMPT
-                )
-            elif isinstance(_settings.messages.system, list):
-                # Append as a new text block
-                from anthropic.types.beta import BetaTextBlockParam
+        _caching_settings: CachingSettings = (
+            caching_settings or self._get_default_caching_settings_for_act(_model)
+        )
 
-                _settings.messages.system = _settings.messages.system + [
-                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
-                ]
-            else:  # Omit or None
-                _settings.messages.system = CACHE_USE_PROMPT
-
-        if isinstance(tools, list):
-            tools = caching_tools + tools
-        elif isinstance(tools, ToolCollection):
-            tools.append_tool(*caching_tools)
-        else:
-            tools = caching_tools
+        tools, on_message, cached_execution_tool = self._patch_act_with_cache(
+            _caching_settings, _settings, tools, on_message
+        )
         _tools = self._build_tools(tools, _model)
 
-        if caching_strategy in ["read", "both"]:
+        if cached_execution_tool:
             cached_execution_tool.set_toolbox(_tools)
-
-        if caching_strategy in ["write", "both"]:
-            cache_writer = CacheWriter(cache_dir, cache_filename)
-            if on_message is None:
-                on_message = cache_writer.add_message_cb
-            else:
-                error_message = "Cannot use on_message callback when writing Cache"
-                raise ValueError(error_message)
 
         self._model_router.act(
             messages=messages,
@@ -308,8 +329,76 @@ class AgentBase(ABC):  # noqa: B024
             return ToolCollection(default_tools) + tools
         return ToolCollection(tools=default_tools)
 
+    def _patch_act_with_cache(
+        self,
+        caching_settings: CachingSettings,
+        settings: ActSettings,
+        tools: list[Tool] | ToolCollection | None,
+        on_message: OnMessageCb | None,
+    ) -> tuple[
+        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedExecution | None
+    ]:
+        """Patch act settings and tools with caching functionality.
+
+        Args:
+            caching_settings: The caching settings to apply
+            settings: The act settings to modify
+            tools: The tools list to extend with caching tools
+            on_message: The message callback (may be replaced for write mode)
+
+        Returns:
+            A tuple of (modified_tools, modified_on_message, cached_execution_tool)
+        """
+        caching_tools: list[Tool] = []
+        cached_execution_tool: ExecuteCachedExecution | None = None
+
+        # Setup read mode: add caching tools and modify system prompt
+        if caching_settings.strategy in ["read", "both"]:
+            cached_execution_tool = ExecuteCachedExecution()
+            caching_tools.extend(
+                [
+                    RetrieveCachedTestExecutions(caching_settings.cache_dir),
+                    cached_execution_tool,
+                ]
+            )
+            if isinstance(settings.messages.system, str):
+                settings.messages.system = (
+                    settings.messages.system + "\n" + CACHE_USE_PROMPT
+                )
+            elif isinstance(settings.messages.system, list):
+                # Append as a new text block
+                settings.messages.system = settings.messages.system + [
+                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
+                ]
+            else:  # Omit or None
+                settings.messages.system = CACHE_USE_PROMPT
+
+        # Add caching tools to the tools list
+        if isinstance(tools, list):
+            tools = caching_tools + tools
+        elif isinstance(tools, ToolCollection):
+            tools.append_tool(*caching_tools)
+        else:
+            tools = caching_tools
+
+        # Setup write mode: create cache writer and set message callback
+        if caching_settings.strategy in ["write", "both"]:
+            cache_writer = CacheWriter(
+                caching_settings.cache_dir, caching_settings.filename
+            )
+            if on_message is None:
+                on_message = cache_writer.add_message_cb
+            else:
+                error_message = "Cannot use on_message callback when writing Cache"
+                raise ValueError(error_message)
+
+        return tools, on_message, cached_execution_tool
+
     def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
         return ActSettings()
+
+    def _get_default_caching_settings_for_act(self, model: str) -> CachingSettings:  # noqa: ARG002
+        return CachingSettings()
 
     def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
         return self._tools
