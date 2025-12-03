@@ -4,6 +4,7 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
+from anthropic import omit
 from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, field_validator, validate_call
@@ -375,6 +376,11 @@ class AgentBase(ABC):  # noqa: B024
                 settings.messages.system = settings.messages.system + [
                     BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
                 ]
+            elif not isinstance(settings.messages.system, (type(omit), type(None))):
+                # It's an ActSystemPrompt instance, convert to string and append
+                settings.messages.system = (
+                    str(settings.messages.system) + "\n" + CACHE_USE_PROMPT
+                )
             else:  # Omit or None
                 settings.messages.system = CACHE_USE_PROMPT
 

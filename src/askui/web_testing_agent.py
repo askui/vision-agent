@@ -8,7 +8,7 @@ from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
 )
-from askui.prompts.system import TESTING_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import TESTING_AGENT_SYSTEM_PROMPT
 from askui.tools.testing.execution_tools import (
     CreateExecutionTool,
     DeleteExecutionTool,

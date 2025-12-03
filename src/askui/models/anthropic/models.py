@@ -21,8 +21,8 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
 )
 from askui.models.shared.messages_api import MessagesApi
-from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema
+from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import (
     ImageSource,

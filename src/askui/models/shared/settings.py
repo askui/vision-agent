@@ -8,6 +8,8 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
+from askui.models.shared.prompts import ActSystemPrompt
+
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
@@ -19,7 +21,7 @@ class MessageSettings(BaseModel):
 
     betas: list[AnthropicBetaParam] | Omit = omit
     max_tokens: int = 4096
-    system: str | list[BetaTextBlockParam] | Omit = omit
+    system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
     temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)
