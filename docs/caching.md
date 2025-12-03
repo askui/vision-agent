@@ -20,12 +20,15 @@ The caching mechanism supports four strategies, configured via the `caching_sett
 Caching is configured using the `CachingSettings` class:
 
 ```python
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
 
 caching_settings = CachingSettings(
     strategy="write",        # One of: "read", "write", "both", "no"
     cache_dir=".cache",      # Directory to store cache files
-    filename="my_test.json"  # Filename for the cache file (optional for write mode)
+    filename="my_test.json", # Filename for the cache file (optional for write mode)
+    execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+        delay_time_between_action=0.5  # Delay in seconds between each cached action
+    )
 )
 ```
 
@@ -34,6 +37,27 @@ caching_settings = CachingSettings(
 - **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
 - **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
 - **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
+- **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
+
+### Execution Settings
+
+The `CachedExecutionToolSettings` class allows you to configure how cached trajectories are executed:
+
+```python
+from askui.models.shared.settings import CachedExecutionToolSettings
+
+execution_settings = CachedExecutionToolSettings(
+    delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
+)
+```
+
+#### Parameters
+
+- **`delay_time_between_action`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements have time to respond before the next action is executed. Defaults to `0.5` seconds.
+
+You can adjust this value based on your application's responsiveness:
+- For faster applications or quick interactions, you might use a smaller delay (e.g., `0.1` or `0.2` seconds)
+- For slower applications or complex UI updates, you might need a longer delay (e.g., `1.0` or `2.0` seconds)
 
 ## Usage Examples
 
@@ -82,6 +106,32 @@ When using `strategy="read"`, the agent receives two additional tools:
 2. **`execute_cached_executions_tool`**: Executes a specific cached trajectory
 
 The agent will automatically check if a relevant cached trajectory exists and use it if appropriate. After executing a cached trajectory, the agent will verify the results and make corrections if needed.
+
+### Using Custom Execution Settings
+
+You can customize the delay between cached actions to match your application's responsiveness:
+
+```python
+from askui import VisionAgent
+from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+
+with VisionAgent() as agent:
+    agent.act(
+        goal="Fill out the login form",
+        caching_settings=CachingSettings(
+            strategy="read",
+            cache_dir=".cache",
+            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+                delay_time_between_action=1.0  # Wait 1 second between each action
+            )
+        )
+    )
+```
+
+This is particularly useful when:
+- Your application has animations or transitions that need time to complete
+- UI elements take time to become interactive after appearing
+- You're testing on slower hardware or environments
 
 ### Using Both Strategies
 
@@ -164,9 +214,11 @@ In read mode:
 2. A special system prompt (`CACHE_USE_PROMPT`) is appended to instruct the agent on how to use trajectories
 3. The agent can call `retrieve_available_trajectories_tool` to see available cache files
 4. The agent can call `execute_cached_executions_tool` with a trajectory file path to replay it
-5. During replay, each tool use block is executed sequentially with a 2-second delay between actions
+5. During replay, each tool use block is executed sequentially with a configurable delay between actions (default: 0.5 seconds)
 6. Screenshot and trajectory retrieval tools are skipped during replay
 7. The agent is instructed to verify results after replay and make corrections if needed
+
+The delay between actions can be customized using `CachedExecutionToolSettings` to accommodate different application response times.
 
 ## Limitations
 
@@ -180,7 +232,7 @@ Here's a complete example showing how to record and replay a test:
 
 ```python
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
 
 # Step 1: Record a successful login flow
 print("Recording login flow...")
@@ -202,6 +254,9 @@ with VisionAgent() as agent:
         caching_settings=CachingSettings(
             strategy="read",
             cache_dir="test_cache"
+            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+                delay_time_between_action=1.0
+            )
         )
     )
 ```

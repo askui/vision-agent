@@ -5,6 +5,7 @@ from pathlib import Path
 from pydantic import validate_call
 from typing_extensions import override
 
+from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
 from ..utils.cache_writer import CacheWriter
 
@@ -58,7 +59,7 @@ class ExecuteCachedTrajectory(Tool):
     Execute a predefined trajectory to fast-forward through UI interactions
     """
 
-    def __init__(self) -> None:
+    def __init__(self, settings: CachedExecutionToolSettings | None = None) -> None:
         super().__init__(
             name="execute_cached_executions_tool",
             description=(
@@ -90,6 +91,9 @@ class ExecuteCachedTrajectory(Tool):
                 "required": ["trajectory_file"],
             },
         )
+        if not settings:
+            settings = CachedExecutionToolSettings()
+        self._settings = settings
 
     def set_toolbox(self, toolbox: ToolCollection) -> None:
         """Set the AgentOS/AskUiControllerClient reference for executing actions."""
@@ -131,7 +135,7 @@ class ExecuteCachedTrajectory(Tool):
                     f"{trajectory_file}. Please verify the UI state and "
                     "continue without cache."
                 )
-            time.sleep(2)
+            time.sleep(self._settings.delay_time_between_action)
 
         logger.info("Finished executing cached trajectory")
         return (

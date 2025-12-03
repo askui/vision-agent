@@ -4,10 +4,11 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from askui.models.shared.settings import CachedExecutionToolSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
@@ -223,3 +224,110 @@ def test_execute_cached_execution_set_toolbox() -> None:
     # After setting toolbox, should be able to access it
     assert hasattr(tool, "_toolbox")
     assert tool._toolbox == mock_toolbox
+
+
+def test_execute_cached_execution_initializes_with_default_settings() -> None:
+    """Test that ExecuteCachedTrajectory uses default settings when none provided."""
+    tool = ExecuteCachedTrajectory()
+
+    # Should have default settings initialized
+    assert hasattr(tool, "_settings")
+
+
+def test_execute_cached_execution_initializes_with_custom_settings() -> None:
+    """Test that ExecuteCachedTrajectory accepts custom settings."""
+    custom_settings = CachedExecutionToolSettings(delay_time_between_action=1.0)
+    tool = ExecuteCachedTrajectory(settings=custom_settings)
+
+    # Should have custom settings initialized
+    assert hasattr(tool, "_settings")
+
+
+def test_execute_cached_execution_uses_delay_time_between_actions() -> None:
+    """Test that ExecuteCachedTrajectory uses the configured delay time."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_file = Path(temp_dir) / "test_trajectory.json"
+
+        # Create a trajectory with 3 actions
+        trajectory: list[dict[str, Any]] = [
+            {
+                "id": "tool1",
+                "name": "click_tool",
+                "input": {"x": 100, "y": 200},
+                "type": "tool_use",
+            },
+            {
+                "id": "tool2",
+                "name": "type_tool",
+                "input": {"text": "hello"},
+                "type": "tool_use",
+            },
+            {
+                "id": "tool3",
+                "name": "move_tool",
+                "input": {"x": 300, "y": 400},
+                "type": "tool_use",
+            },
+        ]
+
+        with cache_file.open("w", encoding="utf-8") as f:
+            json.dump(trajectory, f)
+
+        # Execute with custom delay time
+        custom_settings = CachedExecutionToolSettings(delay_time_between_action=0.1)
+        tool = ExecuteCachedTrajectory(settings=custom_settings)
+        mock_toolbox = MagicMock(spec=ToolCollection)
+        tool.set_toolbox(mock_toolbox)
+
+        # Mock time.sleep to verify it's called with correct delay
+        with patch("time.sleep") as mock_sleep:
+            result = tool(trajectory_file=str(cache_file))
+
+            # Verify success
+            assert "Successfully executed trajectory" in result
+            # Verify sleep was called 3 times (once after each action)
+            assert mock_sleep.call_count == 3
+            # Verify it was called with the configured delay time
+            for call in mock_sleep.call_args_list:
+                assert call[0][0] == 0.1
+
+
+def test_execute_cached_execution_default_delay_time() -> None:
+    """Test that ExecuteCachedTrajectory uses default delay time of 0.5s."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_file = Path(temp_dir) / "test_trajectory.json"
+
+        # Create a trajectory with 2 actions
+        trajectory: list[dict[str, Any]] = [
+            {
+                "id": "tool1",
+                "name": "click_tool",
+                "input": {"x": 100, "y": 200},
+                "type": "tool_use",
+            },
+            {
+                "id": "tool2",
+                "name": "type_tool",
+                "input": {"text": "hello"},
+                "type": "tool_use",
+            },
+        ]
+
+        with cache_file.open("w", encoding="utf-8") as f:
+            json.dump(trajectory, f)
+
+        # Execute with default settings
+        tool = ExecuteCachedTrajectory()
+        mock_toolbox = MagicMock(spec=ToolCollection)
+        tool.set_toolbox(mock_toolbox)
+
+        # Mock time.sleep to verify default delay is used
+        with patch("time.sleep") as mock_sleep:
+            result = tool(trajectory_file=str(cache_file))
+
+            # Verify success
+            assert "Successfully executed trajectory" in result
+            # Verify sleep was called with default delay of 0.5s
+            assert mock_sleep.call_count == 2
+            for call in mock_sleep.call_args_list:
+                assert call[0][0] == 0.5

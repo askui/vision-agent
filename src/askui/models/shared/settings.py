@@ -30,7 +30,14 @@ class ActSettings(BaseModel):
     messages: MessageSettings = Field(default_factory=MessageSettings)
 
 
+class CachedExecutionToolSettings(BaseModel):
+    delay_time_between_action: float = 0.5
+
+
 class CachingSettings(BaseModel):
     strategy: CACHING_STRATEGY = "no"
     cache_dir: str = ".cache"
     filename: str = ""
+    execute_cached_trajectory_tool_settings: CachedExecutionToolSettings = (
+        CachedExecutionToolSettings()
+    )

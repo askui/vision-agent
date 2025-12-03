@@ -357,7 +357,9 @@ class AgentBase(ABC):  # noqa: B024
 
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:
-            cached_execution_tool = ExecuteCachedExecution()
+            cached_execution_tool = ExecuteCachedTrajectory(
+                caching_settings.execute_cached_trajectory_tool_settings
+            )
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
