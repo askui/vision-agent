@@ -10,7 +10,7 @@ import pytest
 
 from askui.models.shared.tools import ToolCollection
 from askui.tools.caching_tools import (
-    ExecuteCachedExecution,
+    ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
 
@@ -81,13 +81,13 @@ def test_retrieve_cached_test_executions_respects_custom_format() -> None:
 
 def test_execute_cached_execution_initializes_without_toolbox() -> None:
     """Test that ExecuteCachedExecution can be initialized without toolbox."""
-    tool = ExecuteCachedExecution()
+    tool = ExecuteCachedTrajectory()
     assert tool.name == "execute_cached_executions_tool"
 
 
 def test_execute_cached_execution_raises_error_without_toolbox() -> None:
     """Test that ExecuteCachedExecution raises error when toolbox not set."""
-    tool = ExecuteCachedExecution()
+    tool = ExecuteCachedTrajectory()
 
     with pytest.raises(RuntimeError, match="Toolbox not set"):
         tool(trajectory_file="some_file.json")
@@ -95,7 +95,7 @@ def test_execute_cached_execution_raises_error_without_toolbox() -> None:
 
 def test_execute_cached_execution_raises_error_when_file_not_found() -> None:
     """Test that ExecuteCachedExecution raises error if trajectory file doesn't exist"""
-    tool = ExecuteCachedExecution()
+    tool = ExecuteCachedTrajectory()
     mock_toolbox = MagicMock(spec=ToolCollection)
     tool.set_toolbox(mock_toolbox)
 
@@ -128,7 +128,7 @@ def test_execute_cached_execution_executes_trajectory() -> None:
             json.dump(trajectory, f)
 
         # Execute the trajectory
-        tool = ExecuteCachedExecution()
+        tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
         tool.set_toolbox(mock_toolbox)
 
@@ -171,7 +171,7 @@ def test_execute_cached_execution_skips_screenshot_tools() -> None:
             json.dump(trajectory, f)
 
         # Execute the trajectory
-        tool = ExecuteCachedExecution()
+        tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
         tool.set_toolbox(mock_toolbox)
 
@@ -201,7 +201,7 @@ def test_execute_cached_execution_handles_errors_gracefully() -> None:
             json.dump(trajectory, f)
 
         # Execute the trajectory with a failing tool
-        tool = ExecuteCachedExecution()
+        tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox.run.side_effect = Exception("Tool execution failed")
         tool.set_toolbox(mock_toolbox)
@@ -215,7 +215,7 @@ def test_execute_cached_execution_handles_errors_gracefully() -> None:
 
 def test_execute_cached_execution_set_toolbox() -> None:
     """Test that set_toolbox properly sets the toolbox reference."""
-    tool = ExecuteCachedExecution()
+    tool = ExecuteCachedTrajectory()
     mock_toolbox = MagicMock(spec=ToolCollection)
 
     tool.set_toolbox(mock_toolbox)

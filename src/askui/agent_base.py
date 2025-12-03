@@ -21,7 +21,7 @@ from askui.prompts.caching import CACHE_USE_PROMPT
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
-    ExecuteCachedExecution,
+    ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
 from askui.utils.annotation_writer import AnnotationWriter
@@ -339,7 +339,7 @@ class AgentBase(ABC):  # noqa: B024
         tools: list[Tool] | ToolCollection | None,
         on_message: OnMessageCb | None,
     ) -> tuple[
-        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedExecution | None
+        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedTrajectory | None
     ]:
         """Patch act settings and tools with caching functionality.
 
@@ -353,7 +353,7 @@ class AgentBase(ABC):  # noqa: B024
             A tuple of (modified_tools, modified_on_message, cached_execution_tool)
         """
         caching_tools: list[Tool] = []
-        cached_execution_tool: ExecuteCachedExecution | None = None
+        cached_execution_tool: ExecuteCachedTrajectory | None = None
 
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:

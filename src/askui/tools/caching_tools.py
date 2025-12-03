@@ -53,7 +53,7 @@ class RetrieveCachedTestExecutions(Tool):
         return available
 
 
-class ExecuteCachedExecution(Tool):
+class ExecuteCachedTrajectory(Tool):
     """
     Execute a predefined trajectory to fast-forward through UI interactions
     """
