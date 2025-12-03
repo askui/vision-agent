@@ -9,7 +9,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from askui.chat.api.messages.models import Message
+from askui.chat.api.messages.models import ROOT_MESSAGE_PARENT_ID, Message
 from askui.chat.api.messages.orms import MessageOrm
 from askui.chat.api.messages.service import MessageService
 from askui.chat.api.threads.models import Thread
@@ -111,6 +111,7 @@ class TestMessagesAPI:
         workspace_id = UUID(test_headers["askui-workspace"])
         mock_message = Message(
             id="msg_test123",
+            parent_id=ROOT_MESSAGE_PARENT_ID,
             object="thread.message",
             created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
@@ -184,6 +185,7 @@ class TestMessagesAPI:
             mock_message = Message(
                 id=f"msg_test{i}",
                 object="thread.message",
+                parent_id=ROOT_MESSAGE_PARENT_ID if i == 0 else f"msg_test{i - 1}",
                 created_at=datetime.fromtimestamp(1234567890 + i, tz=timezone.utc),
                 thread_id="thread_test123",
                 role="user" if i % 2 == 0 else "assistant",
@@ -380,6 +382,7 @@ class TestMessagesAPI:
         mock_message = Message(
             id="msg_test123",
             object="thread.message",
+            parent_id=ROOT_MESSAGE_PARENT_ID,
             created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             role="user",
@@ -464,6 +467,7 @@ class TestMessagesAPI:
         mock_message = Message(
             id="msg_test123",
             object="thread.message",
+            parent_id=ROOT_MESSAGE_PARENT_ID,
             created_at=datetime.fromtimestamp(1234567890, tz=timezone.utc),
             thread_id="thread_test123",
             role="user",
