@@ -165,4 +165,5 @@ reports/
 .DS_Store
 /chat
 /askui_chat.db
+.cache/
 
