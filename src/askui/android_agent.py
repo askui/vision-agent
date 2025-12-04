@@ -8,6 +8,7 @@ from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
+from askui.models.shared.tools import Tool
 from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
@@ -70,6 +71,7 @@ class AndroidVisionAgent(AgentBase):
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
+        act_tools: list[Tool] | None = None,
         model_provider: str | None = None,
     ) -> None:
         self.os = PpadbAgentOs()
@@ -95,7 +97,8 @@ class AndroidVisionAgent(AgentBase):
                 AndroidGetConnectedDisplaysInfosTool(self.act_agent_os_facade),
                 AndroidGetCurrentConnectedDeviceInfosTool(self.act_agent_os_facade),
                 ExceptionTool(),
-            ],
+            ]
+            + (act_tools or []),
             agent_os=self.os,
             model_provider=model_provider,
         )
