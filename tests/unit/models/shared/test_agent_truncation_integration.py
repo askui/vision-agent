@@ -74,7 +74,7 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Verify API was called
-        mock_api.create_message.assert_called_once()
+        mock_api.create_message.assert_called_once()  # type: ignore[attr-defined]
 
     def test_agent_uses_simple_strategy_when_explicitly_set(
         self, caplog: pytest.LogCaptureFixture
@@ -100,7 +100,7 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Verify API was called
-        mock_api.create_message.assert_called_once()
+        mock_api.create_message.assert_called_once()  # type: ignore[attr-defined]
 
     def test_agent_uses_latest_image_only_strategy_when_configured(
         self, caplog: pytest.LogCaptureFixture
@@ -128,7 +128,7 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Verify API was called
-        mock_api.create_message.assert_called_once()
+        mock_api.create_message.assert_called_once()  # type: ignore[attr-defined]
 
     def test_agent_latest_image_only_strategy_removes_old_images(self) -> None:
         """Test that latest_image_only strategy actually removes old images."""
@@ -152,7 +152,7 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Get the messages that were sent to the API
-        call_args = mock_api.create_message.call_args
+        call_args = mock_api.create_message.call_args  # type: ignore[attr-defined]
         sent_messages = call_args.kwargs["messages"]
 
         # First message should have image replaced
@@ -187,7 +187,7 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Get the messages that were sent to the API
-        call_args = mock_api.create_message.call_args
+        call_args = mock_api.create_message.call_args  # type: ignore[attr-defined]
         sent_messages = call_args.kwargs["messages"]
 
         # Both messages should still have images
@@ -243,7 +243,7 @@ class TestAgentTruncationStrategyIntegration:
             )
 
         # Verify both calls were made
-        assert mock_api.create_message.call_count == 2
+        assert mock_api.create_message.call_count == 2  # type: ignore[attr-defined]
 
     def test_backwards_compatibility_with_no_settings(self) -> None:
         """Test that Agent works without any settings (backwards compatibility)."""
@@ -259,4 +259,4 @@ class TestAgentTruncationStrategyIntegration:
         )
 
         # Verify API was called
-        mock_api.create_message.assert_called_once()
+        mock_api.create_message.assert_called_once()  # type: ignore[attr-defined]

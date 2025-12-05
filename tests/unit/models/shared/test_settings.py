@@ -25,7 +25,7 @@ class TestTruncationStrategySettings:
     def test_rejects_invalid_strategy(self) -> None:
         """Test that invalid strategy values are rejected."""
         with pytest.raises(ValidationError):
-            TruncationStrategySettings(strategy="invalid_strategy")  # type: ignore
+            TruncationStrategySettings(strategy="invalid_strategy")  # pyright: ignore[reportArgumentType]
 
     def test_serialization(self) -> None:
         """Test that settings can be serialized."""

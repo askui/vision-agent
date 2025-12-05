@@ -8,6 +8,8 @@ from typing_extensions import override
 
 from askui.models.shared.agent_message_param import (
     CacheControlEphemeralParam,
+    ContentBlockParam,
+    ImageBlockParam,
     MessageParam,
     TextBlockParam,
 )
@@ -420,7 +422,7 @@ class LatestImageOnlyTruncationStrategy(SimpleTruncationStrategy):
         if not isinstance(message.content, list):
             return
 
-        new_content = []
+        new_content: list[ContentBlockParam] = []
         for block in message.content:
             if block.type == "image":
                 # Replace image with text placeholder
@@ -430,7 +432,7 @@ class LatestImageOnlyTruncationStrategy(SimpleTruncationStrategy):
             elif block.type == "tool_result":
                 # Handle images inside tool_result blocks
                 if isinstance(block.content, list):
-                    new_tool_result_content = []
+                    new_tool_result_content: list[TextBlockParam | ImageBlockParam] = []
                     for inner_block in block.content:
                         if inner_block.type == "image":
                             new_tool_result_content.append(
