@@ -1,7 +1,7 @@
 import logging
-from typing_extensions import Literal
 
 import pytest
+from typing_extensions import Literal
 
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
@@ -115,7 +115,9 @@ def _has_placeholder_in_message(message: MessageParam) -> bool:
 class TestLatestImageOnlyTruncationStrategy:
     """Tests for LatestImageOnlyTruncationStrategy."""
 
-    def test_keeps_only_latest_image_in_conversation(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_keeps_only_latest_image_in_conversation(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that only the latest image is kept and older ones are replaced."""
         messages = [
             _create_text_message("user", "First message"),
@@ -194,7 +196,9 @@ class TestLatestImageOnlyTruncationStrategy:
         # Last message should keep both images
         assert _has_image_in_message(result_messages[2])
         assert isinstance(result_messages[2].content, list)
-        image_count = sum(1 for block in result_messages[2].content if block.type == "image")
+        image_count = sum(
+            1 for block in result_messages[2].content if block.type == "image"
+        )
         assert image_count == 2
 
     def test_handles_images_in_tool_result_blocks(self) -> None:
@@ -249,7 +253,10 @@ class TestLatestImageOnlyTruncationStrategy:
 
         # Last message: both text and image should be kept
         assert isinstance(result_messages[2].content, list)
-        assert any(b.type == "text" and b.text == "Now look at this" for b in result_messages[2].content)
+        assert any(
+            b.type == "text" and b.text == "Now look at this"
+            for b in result_messages[2].content
+        )
         assert _has_image_in_message(result_messages[2])
 
     def test_handles_conversation_with_no_images(self) -> None:
