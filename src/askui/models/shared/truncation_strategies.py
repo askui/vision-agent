@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -11,6 +12,8 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
 )
 from askui.models.shared.token_counter import SimpleTokenCounter, TokenCounter
+
+logger = logging.getLogger(__name__)
 
 # needs to be below limits imposed by endpoint
 MAX_INPUT_TOKENS = 100_000
@@ -323,6 +326,126 @@ class SimpleTruncationStrategy(TruncationStrategy):
         return loops
 
 
+class LatestImageOnlyTruncationStrategy(SimpleTruncationStrategy):
+    """Truncation strategy that keeps only the latest image to save tokens.
+
+    Extends SimpleTruncationStrategy by keeping only the most recent image
+    in the conversation history. All older images are replaced with text
+    placeholders to significantly reduce token consumption.
+
+    This strategy maintains the same truncation logic as SimpleTruncationStrategy
+    but adds automatic removal of old images before returning messages.
+
+    WARNING: This is an experimental feature. Keeping only the latest image may
+    affect model performance in scenarios where historical visual context is important.
+
+    Args:
+        Same as SimpleTruncationStrategy.
+    """
+
+    def __init__(
+        self,
+        tools: list[BetaToolUnionParam] | None,
+        system: str | list[BetaTextBlockParam] | None,
+        messages: list[MessageParam],
+        model: str,
+        max_input_tokens: int = MAX_INPUT_TOKENS,
+        input_token_truncation_threshold: Annotated[
+            float, Field(gt=0.0, lt=1.0)
+        ] = 0.75,
+        max_messages: int = MAX_MESSAGES,
+        message_truncation_threshold: Annotated[float, Field(gt=0.0, lt=1.0)] = 0.75,
+        token_counter: TokenCounter | None = None,
+    ) -> None:
+        super().__init__(
+            tools=tools,
+            system=system,
+            messages=messages,
+            model=model,
+            max_input_tokens=max_input_tokens,
+            input_token_truncation_threshold=input_token_truncation_threshold,
+            max_messages=max_messages,
+            message_truncation_threshold=message_truncation_threshold,
+            token_counter=token_counter,
+        )
+        # Log warning on first use
+        logger.warning(
+            "Using experimental LatestImageOnlyTruncationStrategy. "
+            "This strategy removes old images from conversation history to save "
+            "tokens. Only the most recent image is kept. This may affect model "
+            "performance in scenarios requiring historical visual context."
+        )
+
+    @property
+    @override
+    def messages(self) -> list[MessageParam]:
+        self._move_cache_control_to_last_non_tool_result_user_message()
+        self._remove_old_images_from_messages()
+        return self._messages
+
+    def _remove_old_images_from_messages(self) -> None:
+        """Remove all images except those in the last message containing images."""
+        # Find the index of the last message that contains images
+        last_image_message_index = -1
+        for i in reversed(range(len(self._messages))):
+            if self._message_has_image(self._messages[i]):
+                last_image_message_index = i
+                break
+
+        # If no images found, nothing to do
+        if last_image_message_index == -1:
+            return
+
+        # Remove images from all messages before the last one with images
+        for i in range(last_image_message_index):
+            self._remove_images_from_message(self._messages[i])
+
+    def _message_has_image(self, message: MessageParam) -> bool:
+        """Check if a message contains any image blocks."""
+        if not isinstance(message.content, list):
+            return False
+
+        for block in message.content:
+            if block.type == "image":
+                return True
+            # Check inside tool_result blocks
+            if block.type == "tool_result" and isinstance(block.content, list):
+                for inner_block in block.content:
+                    if inner_block.type == "image":
+                        return True
+        return False
+
+    def _remove_images_from_message(self, message: MessageParam) -> None:
+        """Replace all image blocks in a message with text placeholders."""
+        if not isinstance(message.content, list):
+            return
+
+        new_content = []
+        for block in message.content:
+            if block.type == "image":
+                # Replace image with text placeholder
+                new_content.append(
+                    TextBlockParam(text="[Image removed to save tokens]")
+                )
+            elif block.type == "tool_result":
+                # Handle images inside tool_result blocks
+                if isinstance(block.content, list):
+                    new_tool_result_content = []
+                    for inner_block in block.content:
+                        if inner_block.type == "image":
+                            new_tool_result_content.append(
+                                TextBlockParam(text="[Image removed to save tokens]")
+                            )
+                        else:
+                            new_tool_result_content.append(inner_block)
+                    block.content = new_tool_result_content
+                new_content.append(block)
+            else:
+                new_content.append(block)
+
+        message.content = new_content
+
+
 class TruncationStrategyFactory:
     def create_truncation_strategy(
         self,
@@ -364,6 +487,63 @@ class SimpleTruncationStrategyFactory(TruncationStrategyFactory):
         model: str,
     ) -> TruncationStrategy:
         return SimpleTruncationStrategy(
+            tools=tools,
+            system=system,
+            messages=messages,
+            model=model,
+            max_input_tokens=self._max_input_tokens,
+            input_token_truncation_threshold=self._input_token_truncation_threshold,
+            max_messages=self._max_messages,
+            message_truncation_threshold=self._message_truncation_threshold,
+            token_counter=self._token_counter,
+        )
+
+
+class LatestImageOnlyTruncationStrategyFactory(TruncationStrategyFactory):
+    """Factory for creating LatestImageOnlyTruncationStrategy instances.
+
+    Creates truncation strategies that keep only the latest image from conversation
+    history to save tokens.
+
+    WARNING: This is an experimental feature. A warning will be displayed when
+    the strategy is first created.
+
+    Args:
+        max_input_tokens (int, optional): Maximum input tokens allowed.
+            Defaults to 100,000.
+        input_token_truncation_threshold (float, optional): Fraction of max tokens
+            to truncate at. Defaults to 0.75.
+        max_messages (int, optional): Maximum messages allowed. Defaults to 100,000.
+        message_truncation_threshold (float, optional): Fraction of max messages
+            to truncate at. Defaults to 0.75.
+        token_counter (TokenCounter | None, optional): Token counter instance.
+            Defaults to SimpleTokenCounter.
+    """
+
+    def __init__(
+        self,
+        max_input_tokens: int = MAX_INPUT_TOKENS,
+        input_token_truncation_threshold: Annotated[
+            float, Field(gt=0.0, lt=1.0)
+        ] = 0.75,
+        max_messages: int = MAX_MESSAGES,
+        message_truncation_threshold: Annotated[float, Field(gt=0.0, lt=1.0)] = 0.75,
+        token_counter: TokenCounter | None = None,
+    ) -> None:
+        self._max_input_tokens = max_input_tokens
+        self._input_token_truncation_threshold = input_token_truncation_threshold
+        self._max_messages = max_messages
+        self._message_truncation_threshold = message_truncation_threshold
+        self._token_counter = token_counter or SimpleTokenCounter()
+
+    def create_truncation_strategy(
+        self,
+        tools: list[BetaToolUnionParam] | None,
+        system: str | list[BetaTextBlockParam] | None,
+        messages: list[MessageParam],
+        model: str,
+    ) -> TruncationStrategy:
+        return LatestImageOnlyTruncationStrategy(
             tools=tools,
             system=system,
             messages=messages,

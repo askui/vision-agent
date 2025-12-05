@@ -37,7 +37,11 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from .models.shared.settings import ActSettings, MessageSettings
+from .models.shared.settings import (
+    ActSettings,
+    MessageSettings,
+    TruncationStrategySettings,
+)
 from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
@@ -100,6 +104,7 @@ __all__ = [
     "Tool",
     "ToolResultBlockParam",
     "ToolUseBlockParam",
+    "TruncationStrategySettings",
     "UrlImageSourceParam",
     "VisionAgent",
 ]

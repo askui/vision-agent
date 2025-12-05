@@ -14,6 +14,7 @@ from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
+    LatestImageOnlyTruncationStrategyFactory,
     SimpleTruncationStrategyFactory,
     TruncationStrategy,
     TruncationStrategyFactory,
@@ -140,13 +141,20 @@ class Agent(ActModel):
     ) -> None:
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
-        truncation_strategy = (
-            self._truncation_strategy_factory.create_truncation_strategy(
-                tools=_tool_collection.to_params(),
-                system=_settings.messages.system or None,
-                messages=messages,
-                model=model,
-            )
+
+        # Create truncation strategy factory based on settings
+        truncation_strategy_factory: TruncationStrategyFactory
+        if _settings.truncation.strategy == "latest_image_only":
+            truncation_strategy_factory = LatestImageOnlyTruncationStrategyFactory()
+        else:
+            # Use default factory from initialization if "simple" or use default
+            truncation_strategy_factory = self._truncation_strategy_factory
+
+        truncation_strategy = truncation_strategy_factory.create_truncation_strategy(
+            tools=_tool_collection.to_params(),
+            system=_settings.messages.system or None,
+            messages=messages,
+            model=model,
         )
         self._step(
             model=model,
