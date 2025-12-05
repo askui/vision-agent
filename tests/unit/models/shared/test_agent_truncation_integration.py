@@ -1,10 +1,10 @@
 """Integration tests for Agent.act() with different truncation strategies."""
 
 import logging
-from typing_extensions import Literal
 from unittest.mock import Mock
 
 import pytest
+from typing_extensions import Literal
 
 from askui.models.shared.agent import Agent
 from askui.models.shared.agent_message_param import (
