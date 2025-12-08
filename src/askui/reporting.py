@@ -62,7 +62,7 @@ class NullReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None,
+        image: Optional[Image.Image | list[Image.Image]] = None, ## add anonated image and perform the draw during the call to save time.
     ) -> None:
         pass
 

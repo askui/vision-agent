@@ -9,7 +9,13 @@ from PIL import Image
 from ppadb.client import Client as AdbClient
 from ppadb.device import Device as AndroidDevice
 
-from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
+from askui.reporting import NULL_REPORTER, Reporter
+from askui.tools.android.agent_os import (
+    ANDROID_KEY,
+    AndroidAgentOs,
+    AndroidDisplay,
+    UnknownAndroidDisplay,
+)
 
 
 class PpadbAgentOs(AndroidAgentOs):
@@ -17,12 +23,16 @@ class PpadbAgentOs(AndroidAgentOs):
     This class is used to control the Android device.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self, reporter: Reporter = NULL_REPORTER, device_sn: str | None = None
+    ) -> None:
         self._client: Optional[AdbClient] = None
         self._device: Optional[AndroidDevice] = None
         self._mouse_position: tuple[int, int] = (0, 0)
         self._displays: list[AndroidDisplay] = []
         self._selected_display: Optional[AndroidDisplay] = None
+        self._reporter: Reporter = reporter
+        self._device_sn: str | None = device_sn
 
     def connect_adb_client(self) -> None:
         if self._client is not None:
@@ -30,6 +40,7 @@ class PpadbAgentOs(AndroidAgentOs):
             raise RuntimeError(msg)
         try:
             self._client = AdbClient()
+            self._reporter.add_message("AndroidAgentOS", "Connected to adb client")
         except Exception as e:  # noqa: BLE001
             msg = f""" Failed to connect the adb client to the server.
             Make sure the adb server is running.
@@ -43,16 +54,22 @@ class PpadbAgentOs(AndroidAgentOs):
     def connect(self) -> None:
         self.connect_adb_client()
         self.set_device_by_index(0)
+        if self._device_sn:
+            self.set_device_by_serial_number(self._device_sn)
         assert self._device is not None
         self._device.wait_boot_complete()
 
     def disconnect(self) -> None:
         self._client = None
         self._device = None
+        self._reporter.add_message("AndroidAgentOS", "Disconnected from adb client")
 
     def _set_display(self, display: AndroidDisplay) -> None:
         self._selected_display = display
         self._mouse_position = (0, 0)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Display'{str(display)}' set as active"
+        )
 
     def get_connected_displays(self) -> list[AndroidDisplay]:
         self._check_if_device_is_selected()
@@ -79,7 +96,7 @@ class PpadbAgentOs(AndroidAgentOs):
                         AndroidDisplay(unique_display_id, display_name, display_id)
                     )
         if not displays:
-            return [AndroidDisplay(0, "Default", 0)]
+            return [UnknownAndroidDisplay()]
         return displays
 
     def set_display_by_index(self, display_index: int = 0) -> None:
@@ -115,6 +132,8 @@ class PpadbAgentOs(AndroidAgentOs):
             if display.unique_display_id == display_unique_id:
                 self._set_display(display)
                 return
+        msg = f"Display unique ID {display_unique_id} not found"
+        raise RuntimeError(msg)
 
     def set_display_by_name(self, display_name: str) -> None:
         self._displays = self.get_connected_displays()
@@ -176,8 +195,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
-        self._device.shell(f"input -d {display_id} tap {x} {y}")
+        display_flag = self._selected_display.get_display_flag()
+        self._device.shell(f"input {display_flag} tap {x} {y}")
         self._mouse_position = (x, y)
 
     def swipe(
@@ -192,9 +211,9 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
+        display_flag = self._selected_display.get_display_flag()
         self._device.shell(
-            f"input -d {display_id} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
+            f"input {display_flag} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
 
@@ -210,9 +229,9 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
+        display_flag = self._selected_display.get_display_flag()
         self._device.shell(
-            f"input -d {display_id} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
+            f"input {display_flag} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
 
@@ -227,10 +246,10 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
+        display_flag = self._selected_display.get_display_flag()
         escaped_text = shlex.quote(text)
         shell_safe_text = escaped_text.replace(" ", "%s")
-        self._device.shell(f"input -d {display_id} text {shell_safe_text}")
+        self._device.shell(f"input {display_flag} text {shell_safe_text}")
 
     def key_tap(self, key: ANDROID_KEY) -> None:
         if key not in get_args(ANDROID_KEY):
@@ -240,8 +259,8 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
-        self._device.shell(f"input -d {display_id} keyevent {key}")
+        display_flag = self._selected_display.get_display_flag()
+        self._device.shell(f"input {display_flag} keyevent {key}")
 
     def key_combination(
         self, keys: List[ANDROID_KEY], duration_in_ms: int = 100
@@ -259,9 +278,13 @@ class PpadbAgentOs(AndroidAgentOs):
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
-        display_id: int = self._selected_display.display_id
+        display_flag = self._selected_display.get_display_flag()
         self._device.shell(
-            f"input -d {display_id} keycombination -t {duration_in_ms} {keys_string}"
+            f"input {display_flag} keycombination -t {duration_in_ms} {keys_string}"
+        )
+        self._reporter.add_message(
+            "AndroidAgentOS",
+            f"Key combination: {keys_string} performed in {duration_in_ms}ms",
         )
 
     def _check_if_device_is_selected(self) -> None:
@@ -325,6 +348,9 @@ class PpadbAgentOs(AndroidAgentOs):
             msg = f"Local path {local_path} does not exist"
             raise FileNotFoundError(msg)
         self._device.push(local_path, remote_path)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Pushed file from '{local_path}' to '{remote_path}'"
+        )
 
     def pull(self, remote_path: str, local_path: str) -> None:
         """
@@ -334,3 +360,6 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._device is not None
         Path.mkdir(Path.absolute(Path(local_path).parent), exist_ok=True)
         self._device.pull(remote_path, local_path)
+        self._reporter.add_message(
+            "AndroidAgentOS", f"Pulled file from '{remote_path}' to '{local_path}'"
+        )

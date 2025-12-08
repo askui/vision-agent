@@ -210,6 +210,33 @@ class AndroidDisplay:
             f"display_name={self.display_name}, display_id={self.display_id})"
         )
 
+    def get_display_flag(self) -> str:
+        """
+        Returns the display ID flag for shell commands.
+
+        Returns:
+            str: The display ID flag in the format `-d {display_id}`.
+        """
+        return f"-d {self.display_id}"
+
+
+class UnknownAndroidDisplay(AndroidDisplay):
+    """
+    Fallback display for when the Agent OS is not able to determine the displays.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(0, "Unknown", 0)
+
+    def get_display_flag(self) -> str:
+        """
+        Returns an empty string as the display flag for shell commands.
+
+        Returns:
+            str: An empty string since the display is unknown.
+        """
+        return ""
+
 
 class AndroidAgentOs(ABC):
     """
