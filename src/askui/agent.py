@@ -404,6 +404,10 @@ class VisionAgent(AgentBase):
         elif (
             "claude-sonnet-4-5-20250929" in model
             or "claude-haiku-4-5-20251001" in model
+            or "claude-opus-4-1-20250805" in model
+            or "claude-opus-4-20250514" in model
+            or "claude-sonnet-4-20250514" in model
+            or "claude-3-7-sonnet-20250219" in model
         ):
             computer_use_beta_flag = [COMPUTER_USE_20250124_BETA_FLAG]
         else:
