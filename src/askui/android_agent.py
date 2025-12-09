@@ -45,6 +45,7 @@ class AndroidVisionAgent(AgentBase):
     It uses computer vision models to locate UI elements and execute actions on them.
 
     Args:
+        device_sn (str | None, optional): The serial number of the device to use. If `None`, the first connected device is used.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `tap()`, `get()`, `act()` etc. methods.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
@@ -66,15 +67,16 @@ class AndroidVisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
+        device_sn: str | None = None,
         reporters: list[Reporter] | None = None,
         model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
         models: ModelRegistry | None = None,
         model_provider: str | None = None,
     ) -> None:
-        self.os = PpadbAgentOs()
         reporter = CompositeReporter(reporters=reporters)
-        self.act_agent_os_facade = AndroidAgentOsFacade(self.os, reporter)
+        self.os = PpadbAgentOs(device_sn=device_sn, reporter=reporter)
+        self.act_agent_os_facade = AndroidAgentOsFacade(self.os)
         super().__init__(
             reporter=reporter,
             model=model,

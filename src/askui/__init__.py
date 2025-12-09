@@ -1,6 +1,6 @@
 """AskUI Vision Agent"""
 
-__version__ = "0.22.7"
+__version__ = "0.22.8"
 
 import logging
 import os

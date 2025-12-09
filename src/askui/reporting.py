@@ -15,6 +15,8 @@ from jinja2 import Template
 from PIL import Image
 from typing_extensions import TypedDict, override
 
+from askui.utils.annotated_image import AnnotatedImage
+
 
 class Reporter(ABC):
     """Abstract base class for reporters. Cannot be instantiated directly.
@@ -27,7 +29,7 @@ class Reporter(ABC):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None,
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message to the report.
 
@@ -62,7 +64,7 @@ class NullReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None, ## add anonated image and perform the draw during the call to save time.
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         pass
 
@@ -93,7 +95,7 @@ class CompositeReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None,
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message to the report."""
         for reporter in self._reporters:
@@ -122,7 +124,6 @@ class SimpleHtmlReporter(Reporter):
 
     def __init__(self, report_dir: str = "reports") -> None:
         self.report_dir = Path(report_dir)
-        self.report_dir.mkdir(exist_ok=True)
         self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
 
@@ -151,13 +152,15 @@ class SimpleHtmlReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None,
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message to the report."""
         if image is None:
             _images = []
         elif isinstance(image, list):
             _images = image
+        elif isinstance(image, AnnotatedImage):
+            _images = image.get_images()
         else:
             _images = [image]
 
@@ -347,6 +350,7 @@ class SimpleHtmlReporter(Reporter):
             self.report_dir / f"report_{datetime.now(tz=timezone.utc):%Y%m%d%H%M%S%f}"
             f"{random.randint(0, 1000):03}.html"
         )
+        self.report_dir.mkdir(parents=True, exist_ok=True)
         report_path.write_text(html)
 
 
@@ -407,12 +411,18 @@ class AllureReporter(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[Image.Image | list[Image.Image]] = None,
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message as an Allure step with optional screenshots."""
         with self.allure.step(f"{role}: {str(content)}"):
             if image:
-                images = image if isinstance(image, list) else [image]
+                images: list[Image.Image] = []
+                if isinstance(image, AnnotatedImage):
+                    images.extend(image.get_images())
+                elif isinstance(image, list):
+                    images.extend(image)
+                else:
+                    images.append(image)
                 for img in images:
                     img_bytes = io.BytesIO()
                     img.save(img_bytes, format="PNG")
