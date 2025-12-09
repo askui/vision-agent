@@ -205,39 +205,41 @@ class SimpleHtmlReporter(Reporter):
                         --text-primary: #e0e0e0;
                         --text-secondary: #b0b0b0;
                         --text-muted: #888;
-                        --accent-primary: rgb(111, 0, 255);
-                        --accent-secondary: lime;
+                        --accent-primary: rgb(34, 197, 94);
+                        --accent-secondary: rgb(22, 163, 74);
                         --section-bg: rgba(30, 30, 46, 0.8);
-                        --section-border: rgba(111, 0, 255, 0.3);
+                        --section-border: rgba(34, 197, 94, 0.3);
                         --table-bg: rgba(20, 20, 35, 0.6);
-                        --table-border: rgba(111, 0, 255, 0.2);
-                        --header-bg-start: rgba(111, 0, 255, 0.2);
-                        --header-bg-end: rgba(111, 0, 255, 0.1);
+                        --table-border: rgba(34, 197, 94, 0.2);
+                        --table-header-text: #fff;
+                        --header-bg-start: rgba(34, 197, 94, 0.2);
+                        --header-bg-end: rgba(34, 197, 94, 0.1);
                         --scrollbar-track: rgba(20, 20, 35, 0.5);
-                        --scrollbar-thumb: rgba(111, 0, 255, 0.5);
-                        --scrollbar-thumb-hover: rgb(111, 0, 255);
+                        --scrollbar-thumb: rgba(34, 197, 94, 0.5);
+                        --scrollbar-thumb-hover: rgb(34, 197, 94);
                         --code-bg: rgba(0, 0, 0, 0.4);
                         --shadow-color: rgba(0, 0, 0, 0.3);
                     }
 
                     [data-theme="light"] {
-                        --bg-gradient-start: #f5f5f7;
-                        --bg-gradient-end: #ffffff;
-                        --text-primary: #1d1d1f;
-                        --text-secondary: #6e6e73;
-                        --text-muted: #86868b;
-                        --accent-primary: rgb(111, 0, 255);
-                        --accent-secondary: #00a86b;
-                        --section-bg: rgba(255, 255, 255, 0.9);
-                        --section-border: rgba(111, 0, 255, 0.2);
-                        --table-bg: rgba(245, 245, 247, 0.8);
-                        --table-border: rgba(111, 0, 255, 0.15);
-                        --header-bg-start: rgba(111, 0, 255, 0.1);
-                        --header-bg-end: rgba(111, 0, 255, 0.05);
-                        --scrollbar-track: rgba(245, 245, 247, 0.8);
-                        --scrollbar-thumb: rgba(111, 0, 255, 0.3);
-                        --scrollbar-thumb-hover: rgb(111, 0, 255);
-                        --code-bg: rgba(245, 245, 247, 0.8);
+                        --bg-gradient-start: #ffffff;
+                        --bg-gradient-end: #f4f4f5;
+                        --text-primary: #0a0a0b;
+                        --text-secondary: #52525b;
+                        --text-muted: #71717a;
+                        --accent-primary: rgb(34, 197, 94);
+                        --accent-secondary: rgb(22, 163, 74);
+                        --section-bg: #ffffff;
+                        --section-border: #e4e4e7;
+                        --table-bg: #f4f4f5;
+                        --table-border: #e4e4e7;
+                        --table-header-text: #0a0a0b;
+                        --header-bg-start: rgba(34, 197, 94, 0.1);
+                        --header-bg-end: rgba(34, 197, 94, 0.05);
+                        --scrollbar-track: #f4f4f5;
+                        --scrollbar-thumb: rgba(34, 197, 94, 0.3);
+                        --scrollbar-thumb-hover: rgb(34, 197, 94);
+                        --code-bg: #f1f5f9;
                         --shadow-color: rgba(0, 0, 0, 0.1);
                     }
 
@@ -266,7 +268,7 @@ class SimpleHtmlReporter(Reporter):
                         border-radius: 16px;
                         padding: 30px 40px;
                         margin-bottom: 40px;
-                        box-shadow: 0 8px 32px rgba(111, 0, 255, 0.3);
+                        box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
                         backdrop-filter: blur(10px);
                         position: relative;
                         transition: background 0.3s ease, border-color 0.3s ease;
@@ -304,7 +306,7 @@ class SimpleHtmlReporter(Reporter):
 
                     .theme-toggle:hover {
                         border-color: var(--accent-secondary);
-                        box-shadow: 0 4px 12px rgba(111, 0, 255, 0.4);
+                        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
                     }
 
                     .theme-toggle-slider {
@@ -376,8 +378,8 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     th {
-                        background: linear-gradient(135deg, rgba(111, 0, 255, 0.3) 0%, rgba(111, 0, 255, 0.2) 100%);
-                        color: #fff;
+                        background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(34, 197, 94, 0.2) 100%);
+                        color: var(--table-header-text);
                         font-weight: 600;
                         text-transform: uppercase;
                         font-size: 0.85em;
@@ -389,11 +391,11 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .assistant {
-                        background-color: rgba(111, 0, 255, 0.05);
+                        background-color: rgba(34, 197, 94, 0.05);
                     }
 
                     .assistant:hover {
-                        background-color: rgba(111, 0, 255, 0.1);
+                        background-color: rgba(34, 197, 94, 0.1);
                         transition: background-color 0.2s ease;
                     }
 
@@ -407,11 +409,11 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .system {
-                        background-color: rgba(0, 255, 0, 0.05);
+                        background-color: rgba(22, 163, 74, 0.05);
                     }
 
                     .system:hover {
-                        background-color: rgba(0, 255, 0, 0.1);
+                        background-color: rgba(22, 163, 74, 0.1);
                         transition: background-color 0.2s ease;
                     }
 
@@ -441,25 +443,25 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .show-more {
-                        color: rgb(111, 0, 255);
+                        color: rgb(34, 197, 94);
                         cursor: pointer;
                         text-decoration: none;
                         margin-top: 10px;
                         display: inline-block;
                         padding: 8px 16px;
-                        background: rgba(111, 0, 255, 0.1);
-                        border: 1px solid rgba(111, 0, 255, 0.3);
+                        background: rgba(34, 197, 94, 0.1);
+                        border: 1px solid #e4e4e7;
                         border-radius: 6px;
                         transition: all 0.2s ease;
                         font-weight: 500;
                     }
 
                     .show-more:hover {
-                        background: rgba(111, 0, 255, 0.2);
-                        border-color: rgb(111, 0, 255);
-                        color: lime;
+                        background: rgba(34, 197, 94, 0.2);
+                        border-color: #d4d4d8;
+                        color: rgb(22, 163, 74);
                         transform: translateY(-1px);
-                        box-shadow: 0 4px 12px rgba(111, 0, 255, 0.3);
+                        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
                     }
 
                     .message-image {
@@ -467,15 +469,15 @@ class SimpleHtmlReporter(Reporter):
                         max-height: 600px;
                         margin: 15px 0;
                         border-radius: 8px;
-                        border: 2px solid rgba(111, 0, 255, 0.3);
+                        border: 2px solid #e4e4e7;
                         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
                         transition: all 0.3s ease;
                         cursor: pointer;
                     }
 
                     .message-image:hover {
-                        border-color: lime;
-                        box-shadow: 0 6px 24px rgba(111, 0, 255, 0.5);
+                        border-color: rgb(34, 197, 94);
+                        box-shadow: 0 6px 24px rgba(34, 197, 94, 0.5);
                         transform: scale(1.02);
                     }
 
@@ -497,7 +499,7 @@ class SimpleHtmlReporter(Reporter):
 
                     .json-content {
                         background: rgba(0, 0, 0, 0.3);
-                        border: 1px solid rgba(111, 0, 255, 0.2);
+                        border: 1px solid #e4e4e7;
                         border-radius: 8px;
                         margin: 10px 0;
                         overflow: hidden;
@@ -513,9 +515,9 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .role-assistant {
-                        background: rgba(111, 0, 255, 0.2);
-                        color: rgb(111, 0, 255);
-                        border: 1px solid rgba(111, 0, 255, 0.4);
+                        background: rgba(34, 197, 94, 0.2);
+                        color: rgb(34, 197, 94);
+                        border: 1px solid rgba(34, 197, 94, 0.4);
                     }
 
                     .role-user {
@@ -525,9 +527,9 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .role-system {
-                        background: rgba(0, 255, 0, 0.15);
-                        color: lime;
-                        border: 1px solid rgba(0, 255, 0, 0.3);
+                        background: rgba(22, 163, 74, 0.15);
+                        color: rgb(22, 163, 74);
+                        border: 1px solid rgba(22, 163, 74, 0.3);
                     }
 
                     .timestamp {

@@ -120,7 +120,7 @@ class AndroidVisionAgent(AgentBase):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def tap(
         self,
-        target: str | Locator | tuple[int, int],
+        target: str | Locator | Point,
         model: ModelComposition | str | None = None,
     ) -> None:
         """
@@ -226,6 +226,10 @@ class AndroidVisionAgent(AgentBase):
                 agent.key_combination(["HOME", "BACK"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
             ```
         """
+        self._reporter.add_message(
+            "User",
+            f"key_combination(keys=[{', '.join(keys)}], duration_in_ms={duration_in_ms})",
+        )
         self.os.key_combination(keys, duration_in_ms)
 
     @telemetry.record_call()
@@ -249,6 +253,7 @@ class AndroidVisionAgent(AgentBase):
                 agent.shell("dumpsys battery")  # Displays battery information
             ```
         """
+        self._reporter.add_message("User", f"shell(command='{command}')")
         return self.os.shell(command)
 
     @telemetry.record_call()
@@ -279,6 +284,10 @@ class AndroidVisionAgent(AgentBase):
                 agent.drag_and_drop(100, 100, 200, 200)  # Drags and drops from (100, 100) to (200, 200)
                 agent.drag_and_drop(100, 100, 200, 200, duration_in_ms=2000)  # Drags and drops from (100, 100) to (200, 200) with a 2000ms duration
         """
+        self._reporter.add_message(
+            "User",
+            f"drag_and_drop(x1={x1}, y1={y1}, x2={x2}, y2={y2}, duration_in_ms={duration_in_ms})",
+        )
         self.os.drag_and_drop(x1, y1, x2, y2, duration_in_ms)
 
     @telemetry.record_call()
@@ -309,6 +318,10 @@ class AndroidVisionAgent(AgentBase):
                 agent.swipe(100, 100, 200, 200)  # Swipes from (100, 100) to (200, 200)
                 agent.swipe(100, 100, 200, 200, duration_in_ms=2000)  # Swipes from (100, 100) to (200, 200) with a 2000ms duration
         """
+        self._reporter.add_message(
+            "User",
+            f"swipe(x1={x1}, y1={y1}, x2={x2}, y2={y2}, duration_in_ms={duration_in_ms})",
+        )
         self.os.swipe(x1, y1, x2, y2, duration_in_ms)
 
     @telemetry.record_call(
@@ -332,6 +345,10 @@ class AndroidVisionAgent(AgentBase):
             with AndroidVisionAgent() as agent:
                 agent.set_device_by_serial_number("Pixel 6")  # Sets the active device to the Pixel 6
         """
+        self._reporter.add_message(
+            "User",
+            f"set_device_by_serial_number(device_sn='{device_sn}')",
+        )
         self.os.set_device_by_serial_number(device_sn)
 
     @override

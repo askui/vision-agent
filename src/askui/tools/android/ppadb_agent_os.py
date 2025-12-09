@@ -71,7 +71,7 @@ class PpadbAgentOs(AndroidAgentOs):
         self._mouse_position = (0, 0)
         self._reporter.add_message(
             "AndroidAgentOS",
-            f"Display'{str(display)}' set as active",
+            f"Display '{str(display)}' set as active",
             AnnotatedImage(self._screenshot_without_reporting),
         )
 
@@ -160,12 +160,11 @@ class PpadbAgentOs(AndroidAgentOs):
             )
             raise RuntimeError(msg)
         self._device = devices[device_index]
-        self.set_display_by_index(0)
         self._reporter.add_message(
             "AndroidAgentOS",
             f"Device {self._device.serial} set as active",
-            AnnotatedImage(self._screenshot_without_reporting),
         )
+        self.set_display_by_index(0)
 
     def set_device_by_serial_number(self, device_sn: str) -> None:
         devices = self._get_connected_devices()
