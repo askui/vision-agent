@@ -183,67 +183,311 @@ class SimpleHtmlReporter(Reporter):
         - Syntax-highlighted JSON content
         """
         template_str = """
-        <html>
+        <!DOCTYPE html>
+        <html lang="en">
             <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Vision Agent Report - {{ timestamp }}</title>
                 <link rel="stylesheet"
-                    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+                    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
                 <script
                     src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js">
                 </script>
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    * {
+                        box-sizing: border-box;
+                    }
+
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                            sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        color: #e0e0e0;
+                        line-height: 1.6;
+                        min-height: 100vh;
+                    }
+
+                    .container {
+                        max-width: 1400px;
+                        margin: 0 auto;
+                        padding: 40px 20px;
+                    }
+
+                    .header {
+                        background: linear-gradient(135deg, rgba(111, 0, 255, 0.2) 0%, rgba(111, 0, 255, 0.1) 100%);
+                        border: 2px solid rgb(111, 0, 255);
+                        border-radius: 16px;
+                        padding: 30px 40px;
+                        margin-bottom: 40px;
+                        box-shadow: 0 8px 32px rgba(111, 0, 255, 0.3);
+                        backdrop-filter: blur(10px);
+                    }
+
+                    .header h1 {
+                        margin: 0 0 10px 0;
+                        font-size: 2.5em;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, rgb(111, 0, 255) 0%, lime 100%);
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    }
+
+                    .header p {
+                        margin: 0;
+                        color: #b0b0b0;
+                        font-size: 0.95em;
+                    }
+
+                    .section {
+                        background: rgba(30, 30, 46, 0.8);
+                        border: 1px solid rgba(111, 0, 255, 0.3);
+                        border-radius: 12px;
+                        padding: 30px;
+                        margin-bottom: 30px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                        backdrop-filter: blur(10px);
+                    }
+
+                    .section h2 {
+                        margin: 0 0 20px 0;
+                        font-size: 1.8em;
+                        font-weight: 600;
+                        color: rgb(111, 0, 255);
+                        border-bottom: 2px solid rgba(111, 0, 255, 0.3);
+                        padding-bottom: 10px;
+                    }
+
                     table {
                         width: 100%;
-                        border-collapse: collapse;
+                        border-collapse: separate;
+                        border-spacing: 0;
                         margin-bottom: 20px;
+                        background: rgba(20, 20, 35, 0.6);
+                        border-radius: 8px;
+                        overflow: hidden;
                     }
+
                     th, td {
-                        padding: 8px;
+                        padding: 16px;
                         text-align: left;
-                        border: 1px solid #ddd;
+                        border-bottom: 1px solid rgba(111, 0, 255, 0.2);
                     }
-                    th { background-color: #f2f2f2; }
-                    .assistant { background-color: #f8f8f8; }
-                    .user { background-color: #fff; }
+
+                    th {
+                        background: linear-gradient(135deg, rgba(111, 0, 255, 0.3) 0%, rgba(111, 0, 255, 0.2) 100%);
+                        color: #fff;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        font-size: 0.85em;
+                        letter-spacing: 0.5px;
+                    }
+
+                    tr:last-child td {
+                        border-bottom: none;
+                    }
+
+                    .assistant {
+                        background-color: rgba(111, 0, 255, 0.05);
+                    }
+
+                    .assistant:hover {
+                        background-color: rgba(111, 0, 255, 0.1);
+                        transition: background-color 0.2s ease;
+                    }
+
+                    .user {
+                        background-color: rgba(20, 20, 35, 0.4);
+                    }
+
+                    .user:hover {
+                        background-color: rgba(20, 20, 35, 0.6);
+                        transition: background-color 0.2s ease;
+                    }
+
+                    .system {
+                        background-color: rgba(0, 255, 0, 0.05);
+                    }
+
+                    .system:hover {
+                        background-color: rgba(0, 255, 0, 0.1);
+                        transition: background-color 0.2s ease;
+                    }
+
                     .system-info {
                         width: auto;
                         min-width: 50%;
                     }
-                    .package-list {
-                        font-family: monospace;
+
+                    .system-info td {
+                        color: #d0d0d0;
                     }
+
+                    .package-list {
+                        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
+                            'Source Code Pro', monospace;
+                        font-size: 0.9em;
+                        line-height: 1.8;
+                        color: #c0c0c0;
+                    }
+
                     .hidden-packages {
                         display: none !important;
                     }
+
                     .visible-packages {
                         display: block !important;
                     }
+
                     .show-more {
-                        color: blue;
+                        color: rgb(111, 0, 255);
                         cursor: pointer;
-                        text-decoration: underline;
-                        margin-top: 5px;
+                        text-decoration: none;
+                        margin-top: 10px;
                         display: inline-block;
+                        padding: 8px 16px;
+                        background: rgba(111, 0, 255, 0.1);
+                        border: 1px solid rgba(111, 0, 255, 0.3);
+                        border-radius: 6px;
+                        transition: all 0.2s ease;
+                        font-weight: 500;
                     }
+
+                    .show-more:hover {
+                        background: rgba(111, 0, 255, 0.2);
+                        border-color: rgb(111, 0, 255);
+                        color: lime;
+                        transform: translateY(-1px);
+                        box-shadow: 0 4px 12px rgba(111, 0, 255, 0.3);
+                    }
+
                     .message-image {
-                        max-width: 800px;
+                        max-width: 100%;
                         max-height: 600px;
-                        margin: 10px 0;
+                        margin: 15px 0;
+                        border-radius: 8px;
+                        border: 2px solid rgba(111, 0, 255, 0.3);
+                        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                        transition: all 0.3s ease;
+                        cursor: pointer;
                     }
+
+                    .message-image:hover {
+                        border-color: lime;
+                        box-shadow: 0 6px 24px rgba(111, 0, 255, 0.5);
+                        transform: scale(1.02);
+                    }
+
                     pre {
                         margin: 0;
                         white-space: pre-wrap;
+                        word-wrap: break-word;
                     }
+
                     pre code {
-                        padding: 10px !important;
-                        border-radius: 4px;
+                        padding: 20px !important;
+                        border-radius: 8px;
                         font-size: 14px;
+                        display: block;
+                        background: rgba(0, 0, 0, 0.4) !important;
+                        border: 1px solid rgba(111, 0, 255, 0.2);
                     }
+
                     .json-content {
-                        background-color: #f6f8fa;
-                        border-radius: 4px;
-                        margin: 5px 0;
+                        background: rgba(0, 0, 0, 0.3);
+                        border: 1px solid rgba(111, 0, 255, 0.2);
+                        border-radius: 8px;
+                        margin: 10px 0;
+                        overflow: hidden;
+                    }
+
+                    .role-badge {
+                        display: inline-block;
+                        padding: 6px 12px;
+                        border-radius: 6px;
+                        font-size: 0.85em;
+                        font-weight: 600;
+                        letter-spacing: 0.5px;
+                    }
+
+                    .role-assistant {
+                        background: rgba(111, 0, 255, 0.2);
+                        color: rgb(111, 0, 255);
+                        border: 1px solid rgba(111, 0, 255, 0.4);
+                    }
+
+                    .role-user {
+                        background: rgba(255, 255, 255, 0.1);
+                        color: #fff;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                    }
+
+                    .role-system {
+                        background: rgba(0, 255, 0, 0.15);
+                        color: lime;
+                        border: 1px solid rgba(0, 255, 0, 0.3);
+                    }
+
+                    .timestamp {
+                        color: #888;
+                        font-size: 0.9em;
+                        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
+                            'Source Code Pro', monospace;
+                    }
+
+                    .content-cell {
+                        color: #e0e0e0;
+                        max-width: 800px;
+                    }
+
+                    @media (max-width: 768px) {
+                        .container {
+                            padding: 20px 10px;
+                        }
+
+                        .header {
+                            padding: 20px;
+                        }
+
+                        .header h1 {
+                            font-size: 1.8em;
+                        }
+
+                        .section {
+                            padding: 20px;
+                        }
+
+                        th, td {
+                            padding: 12px 8px;
+                            font-size: 0.9em;
+                        }
+
+                        .message-image {
+                            max-width: 100%;
+                        }
+                    }
+
+                    /* Scrollbar styling */
+                    ::-webkit-scrollbar {
+                        width: 12px;
+                        height: 12px;
+                    }
+
+                    ::-webkit-scrollbar-track {
+                        background: rgba(20, 20, 35, 0.5);
+                    }
+
+                    ::-webkit-scrollbar-thumb {
+                        background: rgba(111, 0, 255, 0.5);
+                        border-radius: 6px;
+                    }
+
+                    ::-webkit-scrollbar-thumb:hover {
+                        background: rgb(111, 0, 255);
                     }
                 </style>
                 <script>
@@ -268,73 +512,85 @@ class SimpleHtmlReporter(Reporter):
 
                     document.addEventListener('DOMContentLoaded', (event) => {
                         document.querySelectorAll('pre code').forEach((block) => {
-                            hljs.highlightBlock(block);
+                            hljs.highlightElement(block);
                         });
                     });
                 </script>
             </head>
             <body>
-                <h1>Vision Agent Report</h1>
-                <p>Generated: {{ timestamp }}</p>
+                <div class="container">
+                    <div class="header">
+                        <h1>Vision Agent Report</h1>
+                        <p>Generated: {{ timestamp }}</p>
+                    </div>
 
-                <h2>System Information</h2>
-                <table class="system-info">
-                    <tr>
-                        <th>Platform</th>
-                        <td>{{ system_info.platform }}</td>
-                    </tr>
-                    <tr>
-                        <th>Python Version</th>
-                        <td>{{ system_info.python_version }}</td>
-                    </tr>
-                    <tr>
-                        <th>Installed Packages</th>
-                        <td class="package-list">
-                            {% for package in system_info.packages[:5] %}
-                            {{ package }}<br>
-                            {% endfor %}
-                            {% if system_info.packages|length > 5 %}
-                                <div id="hiddenPackages" class="hidden-packages">
-                                {% for package in system_info.packages[5:] %}
+                    <div class="section">
+                        <h2>System Information</h2>
+                        <table class="system-info">
+                            <tr>
+                                <th>Platform</th>
+                                <td>{{ system_info.platform }}</td>
+                            </tr>
+                            <tr>
+                                <th>Python Version</th>
+                                <td>{{ system_info.python_version }}</td>
+                            </tr>
+                            <tr>
+                                <th>Installed Packages</th>
+                                <td class="package-list">
+                                    {% for package in system_info.packages[:5] %}
                                     {{ package }}<br>
-                                {% endfor %}
-                                </div>
-                                <span id="toggleButton" class="show-more"
-                                    onclick="togglePackages()">Show more...</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                </table>
+                                    {% endfor %}
+                                    {% if system_info.packages|length > 5 %}
+                                        <div id="hiddenPackages" class="hidden-packages">
+                                        {% for package in system_info.packages[5:] %}
+                                            {{ package }}<br>
+                                        {% endfor %}
+                                        </div>
+                                        <span id="toggleButton" class="show-more"
+                                            onclick="togglePackages()">Show more...</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
 
-                <h2>Conversation Log</h2>
-                <table>
-                    <tr>
-                        <th>Time</th>
-                        <th>Role</th>
-                        <th>Content</th>
-                    </tr>
-                    {% for msg in messages %}
-                        <tr class="{{ msg.role.lower() }}">
-                            <td>{{ msg.timestamp.strftime('%H:%M:%S') }}</td>
-                            <td>{{ msg.role }}</td>
-                            <td>
-                                {% if msg.is_json %}
-                                    <div class="json-content">
-                                        <pre><code class="json">{{ msg.content }}</code></pre>
-                                    </div>
-                                {% else %}
-                                    {{ msg.content }}
-                                {% endif %}
-                                {% for image in msg.images %}
-                                    <br>
-                                    <img src="data:image/png;base64,{{ image }}"
-                                        class="message-image"
-                                        alt="Message image">
-                                {% endfor %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </table>
+                    <div class="section">
+                        <h2>Conversation Log</h2>
+                        <table>
+                            <tr>
+                                <th>Time</th>
+                                <th>Role</th>
+                                <th>Content</th>
+                            </tr>
+                            {% for msg in messages %}
+                                <tr class="{{ msg.role.lower() }}">
+                                    <td class="timestamp">{{ msg.timestamp.strftime('%H:%M:%S') }} UTC</td>
+                                    <td>
+                                        <span class="role-badge role-{{ msg.role.lower() }}">
+                                            {{ msg.role }}
+                                        </span>
+                                    </td>
+                                    <td class="content-cell">
+                                        {% if msg.is_json %}
+                                            <div class="json-content">
+                                                <pre><code class="json">{{ msg.content }}</code></pre>
+                                            </div>
+                                        {% else %}
+                                            {{ msg.content }}
+                                        {% endif %}
+                                        {% for image in msg.images %}
+                                            <br>
+                                            <img src="data:image/png;base64,{{ image }}"
+                                                class="message-image"
+                                                alt="Message image">
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
             </body>
         </html>
         """

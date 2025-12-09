@@ -26,7 +26,7 @@ from askui.tools.agent_os import (
     ModifierKey,
     PcKey,
 )
-from askui.utils.image_utils import draw_point_on_image
+from askui.utils.annotated_image import AnnotatedImage
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class PynputAgentOs(AgentOs):
         self._reporter.add_message(
             "AgentOS",
             f"mouse_move({x}, {y})",
-            draw_point_on_image(self.screenshot(report=False), x, y, size=5),
+            AnnotatedImage(lambda: self.screenshot(report=False), point_list=[(x, y)]),
         )
         self._mouse.position = (x, y)
 
