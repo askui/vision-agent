@@ -50,7 +50,7 @@ class ActSettings(BaseModel):
     messages: MessageSettings = Field(default_factory=MessageSettings)
     truncation: TruncationStrategySettings = Field(
         default_factory=TruncationStrategySettings
-
+    )
 
 class CachedExecutionToolSettings(BaseModel):
     delay_time_between_action: float = 0.5
