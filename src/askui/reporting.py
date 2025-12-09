@@ -199,16 +199,59 @@ class SimpleHtmlReporter(Reporter):
                         box-sizing: border-box;
                     }
 
+                    :root {
+                        --bg-gradient-start: #1a1a2e;
+                        --bg-gradient-end: #16213e;
+                        --text-primary: #e0e0e0;
+                        --text-secondary: #b0b0b0;
+                        --text-muted: #888;
+                        --accent-primary: rgb(111, 0, 255);
+                        --accent-secondary: lime;
+                        --section-bg: rgba(30, 30, 46, 0.8);
+                        --section-border: rgba(111, 0, 255, 0.3);
+                        --table-bg: rgba(20, 20, 35, 0.6);
+                        --table-border: rgba(111, 0, 255, 0.2);
+                        --header-bg-start: rgba(111, 0, 255, 0.2);
+                        --header-bg-end: rgba(111, 0, 255, 0.1);
+                        --scrollbar-track: rgba(20, 20, 35, 0.5);
+                        --scrollbar-thumb: rgba(111, 0, 255, 0.5);
+                        --scrollbar-thumb-hover: rgb(111, 0, 255);
+                        --code-bg: rgba(0, 0, 0, 0.4);
+                        --shadow-color: rgba(0, 0, 0, 0.3);
+                    }
+
+                    [data-theme="light"] {
+                        --bg-gradient-start: #f5f5f7;
+                        --bg-gradient-end: #ffffff;
+                        --text-primary: #1d1d1f;
+                        --text-secondary: #6e6e73;
+                        --text-muted: #86868b;
+                        --accent-primary: rgb(111, 0, 255);
+                        --accent-secondary: #00a86b;
+                        --section-bg: rgba(255, 255, 255, 0.9);
+                        --section-border: rgba(111, 0, 255, 0.2);
+                        --table-bg: rgba(245, 245, 247, 0.8);
+                        --table-border: rgba(111, 0, 255, 0.15);
+                        --header-bg-start: rgba(111, 0, 255, 0.1);
+                        --header-bg-end: rgba(111, 0, 255, 0.05);
+                        --scrollbar-track: rgba(245, 245, 247, 0.8);
+                        --scrollbar-thumb: rgba(111, 0, 255, 0.3);
+                        --scrollbar-thumb-hover: rgb(111, 0, 255);
+                        --code-bg: rgba(245, 245, 247, 0.8);
+                        --shadow-color: rgba(0, 0, 0, 0.1);
+                    }
+
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
                             'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
                             sans-serif;
                         margin: 0;
                         padding: 0;
-                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                        color: #e0e0e0;
+                        background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+                        color: var(--text-primary);
                         line-height: 1.6;
                         min-height: 100vh;
+                        transition: background 0.3s ease, color 0.3s ease;
                     }
 
                     .container {
@@ -218,20 +261,22 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .header {
-                        background: linear-gradient(135deg, rgba(111, 0, 255, 0.2) 0%, rgba(111, 0, 255, 0.1) 100%);
-                        border: 2px solid rgb(111, 0, 255);
+                        background: linear-gradient(135deg, var(--header-bg-start) 0%, var(--header-bg-end) 100%);
+                        border: 2px solid var(--accent-primary);
                         border-radius: 16px;
                         padding: 30px 40px;
                         margin-bottom: 40px;
                         box-shadow: 0 8px 32px rgba(111, 0, 255, 0.3);
                         backdrop-filter: blur(10px);
+                        position: relative;
+                        transition: background 0.3s ease, border-color 0.3s ease;
                     }
 
                     .header h1 {
                         margin: 0 0 10px 0;
                         font-size: 2.5em;
                         font-weight: 700;
-                        background: linear-gradient(135deg, rgb(111, 0, 255) 0%, lime 100%);
+                        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
                         -webkit-background-clip: text;
                         -webkit-text-fill-color: transparent;
                         background-clip: text;
@@ -239,27 +284,77 @@ class SimpleHtmlReporter(Reporter):
 
                     .header p {
                         margin: 0;
-                        color: #b0b0b0;
+                        color: var(--text-secondary);
                         font-size: 0.95em;
                     }
 
+                    .theme-toggle {
+                        position: absolute;
+                        top: 30px;
+                        right: 40px;
+                        background: var(--section-bg);
+                        border: 2px solid var(--accent-primary);
+                        border-radius: 25px;
+                        width: 60px;
+                        height: 30px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 2px 8px var(--shadow-color);
+                    }
+
+                    .theme-toggle:hover {
+                        border-color: var(--accent-secondary);
+                        box-shadow: 0 4px 12px rgba(111, 0, 255, 0.4);
+                    }
+
+                    .theme-toggle-slider {
+                        position: absolute;
+                        top: 3px;
+                        left: 3px;
+                        width: 24px;
+                        height: 24px;
+                        background: var(--accent-primary);
+                        border-radius: 50%;
+                        transition: all 0.3s ease;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                    }
+
+                    [data-theme="light"] .theme-toggle-slider {
+                        transform: translateX(30px);
+                        background: var(--accent-secondary);
+                    }
+
+                    .theme-toggle-slider::before {
+                        content: '🌙';
+                        position: absolute;
+                    }
+
+                    [data-theme="light"] .theme-toggle-slider::before {
+                        content: '☀️';
+                    }
+
                     .section {
-                        background: rgba(30, 30, 46, 0.8);
-                        border: 1px solid rgba(111, 0, 255, 0.3);
+                        background: var(--section-bg);
+                        border: 1px solid var(--section-border);
                         border-radius: 12px;
                         padding: 30px;
                         margin-bottom: 30px;
-                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                        box-shadow: 0 4px 20px var(--shadow-color);
                         backdrop-filter: blur(10px);
+                        transition: background 0.3s ease, border-color 0.3s ease;
                     }
 
                     .section h2 {
                         margin: 0 0 20px 0;
                         font-size: 1.8em;
                         font-weight: 600;
-                        color: rgb(111, 0, 255);
-                        border-bottom: 2px solid rgba(111, 0, 255, 0.3);
+                        color: var(--accent-primary);
+                        border-bottom: 2px solid var(--section-border);
                         padding-bottom: 10px;
+                        transition: color 0.3s ease, border-color 0.3s ease;
                     }
 
                     table {
@@ -267,15 +362,17 @@ class SimpleHtmlReporter(Reporter):
                         border-collapse: separate;
                         border-spacing: 0;
                         margin-bottom: 20px;
-                        background: rgba(20, 20, 35, 0.6);
+                        background: var(--table-bg);
                         border-radius: 8px;
                         overflow: hidden;
+                        transition: background 0.3s ease;
                     }
 
                     th, td {
                         padding: 16px;
                         text-align: left;
-                        border-bottom: 1px solid rgba(111, 0, 255, 0.2);
+                        border-bottom: 1px solid var(--table-border);
+                        transition: border-color 0.3s ease;
                     }
 
                     th {
@@ -324,7 +421,7 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .system-info td {
-                        color: #d0d0d0;
+                        color: var(--text-primary);
                     }
 
                     .package-list {
@@ -332,7 +429,7 @@ class SimpleHtmlReporter(Reporter):
                             'Source Code Pro', monospace;
                         font-size: 0.9em;
                         line-height: 1.8;
-                        color: #c0c0c0;
+                        color: var(--text-secondary);
                     }
 
                     .hidden-packages {
@@ -393,8 +490,9 @@ class SimpleHtmlReporter(Reporter):
                         border-radius: 8px;
                         font-size: 14px;
                         display: block;
-                        background: rgba(0, 0, 0, 0.4) !important;
-                        border: 1px solid rgba(111, 0, 255, 0.2);
+                        background: var(--code-bg) !important;
+                        border: 1px solid var(--section-border);
+                        transition: background 0.3s ease, border-color 0.3s ease;
                     }
 
                     .json-content {
@@ -433,14 +531,14 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     .timestamp {
-                        color: #888;
+                        color: var(--text-muted);
                         font-size: 0.9em;
                         font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
                             'Source Code Pro', monospace;
                     }
 
                     .content-cell {
-                        color: #e0e0e0;
+                        color: var(--text-primary);
                         max-width: 800px;
                     }
 
@@ -478,16 +576,16 @@ class SimpleHtmlReporter(Reporter):
                     }
 
                     ::-webkit-scrollbar-track {
-                        background: rgba(20, 20, 35, 0.5);
+                        background: var(--scrollbar-track);
                     }
 
                     ::-webkit-scrollbar-thumb {
-                        background: rgba(111, 0, 255, 0.5);
+                        background: var(--scrollbar-thumb);
                         border-radius: 6px;
                     }
 
                     ::-webkit-scrollbar-thumb:hover {
-                        background: rgb(111, 0, 255);
+                        background: var(--scrollbar-thumb-hover);
                     }
                 </style>
                 <script>
@@ -510,7 +608,27 @@ class SimpleHtmlReporter(Reporter):
                         }
                     }
 
-                    document.addEventListener('DOMContentLoaded', (event) => {
+                    function toggleTheme() {
+                        const html = document.documentElement;
+                        const currentTheme = html.getAttribute('data-theme');
+                        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                        html.setAttribute('data-theme', newTheme);
+
+                        // Update highlight.js theme
+                        const link = document.querySelector('link[href*="highlight.js"]');
+                        if (link) {
+                            link.href = newTheme === 'light'
+                                ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css'
+                                : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css';
+                            setTimeout(() => {
+                                document.querySelectorAll('pre code').forEach((block) => {
+                                    hljs.highlightElement(block);
+                                });
+                            }, 100);
+                        }
+                    }
+
+                    document.addEventListener('DOMContentLoaded', () => {
                         document.querySelectorAll('pre code').forEach((block) => {
                             hljs.highlightElement(block);
                         });
@@ -520,6 +638,9 @@ class SimpleHtmlReporter(Reporter):
             <body>
                 <div class="container">
                     <div class="header">
+                        <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+                            <div class="theme-toggle-slider"></div>
+                        </div>
                         <h1>Vision Agent Report</h1>
                         <p>Generated: {{ timestamp }}</p>
                     </div>
