@@ -1,5 +1,6 @@
 import logging
 
+from opentelemetry import context, trace
 from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
@@ -21,6 +22,7 @@ from askui.models.shared.truncation_strategies import (
 from askui.reporting import NULL_REPORTER, Reporter
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class Agent(ActModel):
@@ -76,6 +78,9 @@ class Agent(ActModel):
         Returns:
             None
         """
+        step_span = tracer.start_span("_step")
+        ctx = trace.set_span_in_context(step_span)
+        token = context.attach(ctx)
         if truncation_strategy.messages[-1].role == "user":
             response_message = self._messages_api.create_message(
                 messages=truncation_strategy.messages,
@@ -92,6 +97,8 @@ class Agent(ActModel):
                 on_message, response_message, truncation_strategy.messages
             )
             if message_by_assistant is None:
+                context.detach(token)
+                step_span.end()
                 return
             message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
             logger.debug(message_by_assistant_dict)
@@ -111,6 +118,8 @@ class Agent(ActModel):
                 tool_result_message_dict = tool_result_message.model_dump(mode="json")
                 logger.debug(tool_result_message_dict)
                 truncation_strategy.append_message(tool_result_message)
+                context.detach(token)
+                step_span.end()
                 self._step(
                     model=model,
                     tool_collection=tool_collection,
@@ -119,6 +128,7 @@ class Agent(ActModel):
                     truncation_strategy=truncation_strategy,
                 )
 
+    @tracer.start_as_current_span("_call_on_message")
     def _call_on_message(
         self,
         on_message: OnMessageCb | None,
@@ -130,6 +140,7 @@ class Agent(ActModel):
         return on_message(OnMessageCbParam(message=message, messages=messages))
 
     @override
+    @tracer.start_as_current_span("act")
     def act(
         self,
         messages: list[MessageParam],
@@ -156,6 +167,7 @@ class Agent(ActModel):
             truncation_strategy=truncation_strategy,
         )
 
+    @tracer.start_as_current_span("_use_tools")
     def _use_tools(
         self,
         message: MessageParam,
@@ -187,6 +199,7 @@ class Agent(ActModel):
             role="user",
         )
 
+    @tracer.start_as_current_span("_handle_stop_reason")
     def _handle_stop_reason(self, message: MessageParam, max_tokens: int) -> None:
         if message.stop_reason == "max_tokens":
             raise MaxTokensExceededError(max_tokens)
