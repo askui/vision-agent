@@ -52,6 +52,7 @@ class ActSettings(BaseModel):
         default_factory=TruncationStrategySettings
     )
 
+
 class CachedExecutionToolSettings(BaseModel):
     delay_time_between_action: float = 0.5
 
