@@ -105,10 +105,16 @@ StopReason = Literal[
 ]
 
 
+class UsageParam(BaseModel):
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
 class MessageParam(BaseModel):
     role: Literal["user", "assistant"]
     content: str | list[ContentBlockParam]
     stop_reason: StopReason | None = None
+    usage: UsageParam | None = None
 
 
 __all__ = [

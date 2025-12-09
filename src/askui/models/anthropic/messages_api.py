@@ -67,7 +67,10 @@ class AnthropicMessagesApi(MessagesApi):
         temperature: float | Omit = omit,
     ) -> MessageParam:
         _messages = [
-            cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
+            cast(
+                "BetaMessageParam",
+                message.model_dump(exclude={"stop_reason", "usage"}),
+            )
             for message in messages
         ]
         response = self._client.beta.messages.create(  # type: ignore[misc]
