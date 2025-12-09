@@ -73,3 +73,38 @@ def setup_opentelemetry_tracing(app: FastAPI, settings: OtelSettings) -> None:
     FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
     HTTPXClientInstrumentor().instrument()
     SQLAlchemyInstrumentor().instrument()
+
+
+def setup_opentelemetry_tracing_for_vision_agent(settings: OtelSettings) -> None:
+    """
+    Set up OpenTelemetry tracing for VisionAgent
+
+    Args:
+        settings (OtelSettings): OpenTelemetry configuration settings containing
+            endpoint, secret, service name, and version.
+
+    Returns:
+        None
+
+    """
+    resource = Resource.create(
+        {
+            "service.name": settings.service_name,
+            "service.version": settings.service_version,
+            "cluster.name": settings.cluster_name,
+        }
+    )
+    provider = TracerProvider(resource=resource)
+
+    otlp_exporter = OTLPSpanExporter(
+        endpoint=settings.endpoint,
+        headers={"authorization": f"Basic {settings.secret.get_secret_value()}"},  # type: ignore[union-attr]
+    )
+
+    span_processor = BatchSpanProcessor(otlp_exporter)
+
+    provider.add_span_processor(span_processor)
+
+    trace.set_tracer_provider(provider)
+
+    HTTPXClientInstrumentor().instrument()

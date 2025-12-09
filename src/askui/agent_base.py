@@ -18,6 +18,10 @@ from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.caching import CACHE_USE_PROMPT
+from askui.telemetry.otel import (
+    OtelSettings,
+    setup_opentelemetry_tracing_for_vision_agent,
+)
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
@@ -188,6 +192,7 @@ class AgentBase(ABC):  # noqa: B024
         tools: list[Tool] | ToolCollection | None = None,
         settings: ActSettings | None = None,
         caching_settings: CachingSettings | None = None,
+        tracing_settings: OtelSettings | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -213,6 +218,7 @@ class AgentBase(ABC):  # noqa: B024
                 sequences (trajectories). Available strategies: "no" (default, no
                 caching), "write" (record actions to cache file), "read" (replay from
                 cached trajectories), "both" (read and write). Defaults to no caching.
+            tracing_settings (OtelSettings | None, optional): Settings for tracing.
 
         Returns:
             None
@@ -313,6 +319,9 @@ class AgentBase(ABC):  # noqa: B024
 
         if cached_execution_tool:
             cached_execution_tool.set_toolbox(_tools)
+
+        if tracing_settings is not None:
+            setup_opentelemetry_tracing_for_vision_agent(tracing_settings)
 
         self._model_router.act(
             messages=messages,
