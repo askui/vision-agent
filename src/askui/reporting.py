@@ -18,6 +18,19 @@ from typing_extensions import TypedDict, override
 from askui.utils.annotated_image import AnnotatedImage
 
 
+def normalize_to_pil_images(
+    image: Image.Image | list[Image.Image] | AnnotatedImage | None,
+) -> list[Image.Image]:
+    """Normalize various image input types to a list of PIL images."""
+    if image is None:
+        return []
+    if isinstance(image, AnnotatedImage):
+        return image.get_images()
+    if isinstance(image, list):
+        return image
+    return [image]
+
+
 class Reporter(ABC):
     """Abstract base class for reporters. Cannot be instantiated directly.
 
@@ -155,14 +168,7 @@ class SimpleHtmlReporter(Reporter):
         image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message to the report."""
-        if image is None:
-            _images = []
-        elif isinstance(image, list):
-            _images = image
-        elif isinstance(image, AnnotatedImage):
-            _images = image.get_images()
-        else:
-            _images = [image]
+        _images = normalize_to_pil_images(image)
 
         message = {
             "timestamp": datetime.now(tz=timezone.utc),
@@ -688,7 +694,7 @@ class SimpleHtmlReporter(Reporter):
                             </tr>
                             {% for msg in messages %}
                                 <tr class="{{ msg.role.lower() }}">
-                                    <td class="timestamp">{{ msg.timestamp.strftime('%H:%M:%S') }} UTC</td>
+                                    <td class="timestamp">{{ msg.timestamp.strftime('%H:%M:%S.%f')[:-3] }} UTC</td>
                                     <td>
                                         <span class="role-badge role-{{ msg.role.lower() }}">
                                             {{ msg.role }}
@@ -795,14 +801,8 @@ class AllureReporter(Reporter):
         """Add a message as an Allure step with optional screenshots."""
         with self.allure.step(f"{role}: {str(content)}"):
             if image:
-                images: list[Image.Image] = []
-                if isinstance(image, AnnotatedImage):
-                    images.extend(image.get_images())
-                elif isinstance(image, list):
-                    images.extend(image)
-                else:
-                    images.append(image)
-                for img in images:
+                _images = normalize_to_pil_images(image)
+                for img in _images:
                     img_bytes = io.BytesIO()
                     img.save(img_bytes, format="PNG")
                     self.allure.attach(

@@ -16,16 +16,26 @@ from askui.tools.android.agent_os import (
     AndroidDisplay,
     UnknownAndroidDisplay,
 )
+from askui.tools.android.android_agent_os_error import AndroidAgentOsError
 from askui.utils.annotated_image import AnnotatedImage
 
 
 class PpadbAgentOs(AndroidAgentOs):
     """
     This class is used to control the Android device.
+
+    Args:
+        reporter (Reporter): Reporter used for reporting with the `AndroidAgentOs`.
+        device_identifier (str | int): The Android device to connect to.
+            Can be either a serial number (as a `str`) or an index (as an `int`)
+            representing the position in the `adb devices` list. Index `0` refers
+            to the first device. Defaults to `0`.
     """
 
+    _REPORTER_ROLE_NAME: str = "AndroidAgentOS"
+
     def __init__(
-        self, reporter: Reporter = NULL_REPORTER, device_sn: str | None = None
+        self, reporter: Reporter = NULL_REPORTER, device_identifier: str | int = 0
     ) -> None:
         self._client: Optional[AdbClient] = None
         self._device: Optional[AndroidDevice] = None
@@ -33,15 +43,18 @@ class PpadbAgentOs(AndroidAgentOs):
         self._displays: list[AndroidDisplay] = []
         self._selected_display: Optional[AndroidDisplay] = None
         self._reporter: Reporter = reporter
-        self._device_sn: str | None = device_sn
+        self._device_identifier: str | int = device_identifier
 
     def connect_adb_client(self) -> None:
         if self._client is not None:
             msg = "Adb client is already connected"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         try:
             self._client = AdbClient()
-            self._reporter.add_message("AndroidAgentOS", "Connected to adb client")
+            self._reporter.add_message(
+                self._REPORTER_ROLE_NAME,
+                "Connected to adb client",
+            )
         except Exception as e:  # noqa: BLE001
             msg = f""" Failed to connect the adb client to the server.
             Make sure the adb server is running.
@@ -50,29 +63,31 @@ class PpadbAgentOs(AndroidAgentOs):
             If you are using an emulator, make sure the emulator is running.
             The error message: {e}
             """
-            raise RuntimeError(msg)  # noqa: B904
+            raise AndroidAgentOsError(msg)  # noqa: B904
 
     def connect(self) -> None:
         self.connect_adb_client()
-        if self._device_sn:
-            self.set_device_by_serial_number(self._device_sn)
+        if isinstance(self._device_identifier, str):
+            self.set_device_by_serial_number(self._device_identifier)
         else:
-            self.set_device_by_index(0)
+            self.set_device_by_index(self._device_identifier)
         assert self._device is not None
         self._device.wait_boot_complete()
 
     def disconnect(self) -> None:
         self._client = None
         self._device = None
-        self._reporter.add_message("AndroidAgentOS", "Disconnected from adb client")
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "Disconnected from adb client",
+        )
 
     def _set_display(self, display: AndroidDisplay) -> None:
         self._selected_display = display
         self._mouse_position = (0, 0)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Display '{str(display)}' set as active",
-            AnnotatedImage(self._screenshot_without_reporting),
         )
 
     def get_connected_displays(self) -> list[AndroidDisplay]:
@@ -112,44 +127,44 @@ class PpadbAgentOs(AndroidAgentOs):
                 f"Display index {display_index} out of range it must be less than "
                 f"{len(self._displays)}."
             )
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         self._set_display(self._displays[display_index])
 
     def set_display_by_id(self, display_id: int) -> None:
         self._displays = self.get_connected_displays()
         if not self._displays:
             msg = "No displays connected"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         for display in self._displays:
             if display.display_id == display_id:
                 self._set_display(display)
                 return
         msg = f"Display ID {display_id} not found"
-        raise RuntimeError(msg)
+        raise AndroidAgentOsError(msg)
 
     def set_display_by_unique_id(self, display_unique_id: int) -> None:
         self._displays = self.get_connected_displays()
         if not self._displays:
             msg = "No displays connected"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         for display in self._displays:
             if display.unique_display_id == display_unique_id:
                 self._set_display(display)
                 return
         msg = f"Display unique ID {display_unique_id} not found"
-        raise RuntimeError(msg)
+        raise AndroidAgentOsError(msg)
 
     def set_display_by_name(self, display_name: str) -> None:
         self._displays = self.get_connected_displays()
         if not self._displays:
             msg = "No displays connected"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         for display in self._displays:
             if display.display_name == display_name:
                 self._set_display(display)
                 return
         msg = f"Display name {display_name} not found"
-        raise RuntimeError(msg)
+        raise AndroidAgentOsError(msg)
 
     def set_device_by_index(self, device_index: int = 0) -> None:
         devices = self._get_connected_devices()
@@ -158,10 +173,10 @@ class PpadbAgentOs(AndroidAgentOs):
                 f"Device index {device_index} out of range it must be less than "
                 f"{len(devices)}."
             )
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         self._device = devices[device_index]
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Device {self._device.serial} set as active",
         )
         self.set_display_by_index(0)
@@ -173,13 +188,13 @@ class PpadbAgentOs(AndroidAgentOs):
                 self._device = device
                 self.set_display_by_index(0)
                 self._reporter.add_message(
-                    "AndroidAgentOS",
+                    self._REPORTER_ROLE_NAME,
                     f"Device {self._device.serial} set as active",
                     AnnotatedImage(self._screenshot_without_reporting),
                 )
                 return
         msg = f"Device name {device_sn} not found"
-        raise RuntimeError(msg)
+        raise AndroidAgentOsError(msg)
 
     def _screenshot_without_reporting(self) -> Image.Image:
         self._check_if_device_is_selected()
@@ -198,7 +213,7 @@ class PpadbAgentOs(AndroidAgentOs):
 
     def screenshot(self) -> Image.Image:
         screenshot = self._screenshot_without_reporting()
-        self._reporter.add_message("AndroidAgentOS", "screenshot()", screenshot)
+        self._reporter.add_message(self._REPORTER_ROLE_NAME, "screenshot()", screenshot)
         return screenshot
 
     def shell(self, command: str) -> str:
@@ -207,7 +222,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._device is not None
         response: str = self._device.shell(command)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"shell(command='{command}') -> '{response}'",
         )
         return response
@@ -219,14 +234,14 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"tap(x={x}, y={y})",
             AnnotatedImage(self._screenshot_without_reporting, [(x, y)]),
         )
         self._device.shell(f"input {display_flag} tap {x} {y}")
         self._mouse_position = (x, y)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"After tap(x={x}, y={y})",
             AnnotatedImage(self._screenshot_without_reporting, [(x, y)]),
         )
@@ -245,7 +260,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             (
                 f"Swiping from (x1={x1}, y1={y1}) to (x2={x2}, y2={y2}) "
                 f"in {duration_in_ms}ms"
@@ -257,7 +272,7 @@ class PpadbAgentOs(AndroidAgentOs):
         )
         self._mouse_position = (x2, y2)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"After swiping from (x1={x1}, y1={y1}) to (x2={x2}, y2={y2})",
             AnnotatedImage(self._screenshot_without_reporting, [(x2, y2)]),
         )
@@ -276,7 +291,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Dragging and dropping from (x1={x1}, y1={y1}) to (x2={x2}, y2={y2})",
             AnnotatedImage(self._screenshot_without_reporting, [(x1, y1)]),
         )
@@ -287,7 +302,7 @@ class PpadbAgentOs(AndroidAgentOs):
         self._mouse_position = (x2, y2)
 
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"After drag and drop from (x1={x1}, y1={y1}) to (x2={x2}, y2={y2})",
             AnnotatedImage(self._screenshot_without_reporting, [(x2, y2)]),
         )
@@ -298,7 +313,7 @@ class PpadbAgentOs(AndroidAgentOs):
                 f"Text contains non-printable characters: {text} "
                 + "or special characters which are not supported by the device"
             )
-            raise RuntimeError(error_msg_nonprintable)
+            raise AndroidAgentOsError(error_msg_nonprintable)
         self._check_if_device_is_selected()
         self._check_if_display_is_selected()
         assert self._device is not None
@@ -307,14 +322,14 @@ class PpadbAgentOs(AndroidAgentOs):
         escaped_text = shlex.quote(text)
         shell_safe_text = escaped_text.replace(" ", "%s")
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Typing text: '{text}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
         self._device.shell(f"input {display_flag} text {shell_safe_text}")
 
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"After typing text: '{text}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
@@ -322,20 +337,20 @@ class PpadbAgentOs(AndroidAgentOs):
     def key_tap(self, key: ANDROID_KEY) -> None:
         if key not in get_args(ANDROID_KEY):
             error_msg_invalid_key: str = f"Invalid key: {key}"
-            raise RuntimeError(error_msg_invalid_key)
+            raise AndroidAgentOsError(error_msg_invalid_key)
         self._check_if_device_is_selected()
         self._check_if_display_is_selected()
         assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Tapping key: '{key}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
         self._device.shell(f"input {display_flag} keyevent {key}")
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"After tapping key: '{key}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
@@ -345,11 +360,11 @@ class PpadbAgentOs(AndroidAgentOs):
     ) -> None:
         if any(key not in get_args(ANDROID_KEY) for key in keys):
             error_msg_invalid_keys: str = f"Invalid key: {keys}"
-            raise RuntimeError(error_msg_invalid_keys)
+            raise AndroidAgentOsError(error_msg_invalid_keys)
 
         if len(keys) < 2:
             error_msg_too_few: str = "Key combination must contain at least 2 keys"
-            raise RuntimeError(error_msg_too_few)
+            raise AndroidAgentOsError(error_msg_too_few)
 
         keys_string = " ".join(keys)
         self._check_if_device_is_selected()
@@ -358,7 +373,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"Performing key combination: '{keys_string}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
@@ -366,7 +381,7 @@ class PpadbAgentOs(AndroidAgentOs):
             f"input {display_flag} keycombination -t {duration_in_ms} {keys_string}"
         )
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"key_combination(keys=[{', '.join(keys)}], duration_in_ms={duration_in_ms})",  # noqa: E501
             AnnotatedImage(self._screenshot_without_reporting),
         )
@@ -376,18 +391,18 @@ class PpadbAgentOs(AndroidAgentOs):
 
         if not self._device:
             msg = "No device is selected, did you call on of the set_device methods?"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
 
         for device in devices:
             if device.serial == self._device.serial:
                 return
         msg = f"Device {self._device.serial} not found in connected devices"
-        raise RuntimeError(msg)
+        raise AndroidAgentOsError(msg)
 
     def _check_if_display_is_selected(self) -> None:
         if self._selected_display is None:
             msg = "No display is selected, did you call on of  the set_display methods?"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
 
     def _get_connected_devices(self) -> list[AndroidDevice]:
         """
@@ -395,14 +410,14 @@ class PpadbAgentOs(AndroidAgentOs):
         """
         if not self._client:
             msg = "No adb client is connected, did you call the connect method?"
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         devices: list[AndroidDevice] = self._client.devices()
         if not devices:
             msg = """No devices are connected,
             If you are using an emulator, make sure the emulator is running.
             If you are using a real device, make sure the device is connected.
             """
-            raise RuntimeError(msg)
+            raise AndroidAgentOsError(msg)
         return devices
 
     def get_connected_devices_serial_numbers(self) -> list[str]:
@@ -412,7 +427,7 @@ class PpadbAgentOs(AndroidAgentOs):
         devices: list[AndroidDevice] = self._get_connected_devices()
         device_serial_numbers: list[str] = [device.serial for device in devices]
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"get_connected_devices_serial_numbers() -> {device_serial_numbers}",
         )
         return device_serial_numbers
@@ -426,7 +441,7 @@ class PpadbAgentOs(AndroidAgentOs):
         assert self._device is not None
         assert self._selected_display is not None
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             (
                 "get_selected_device_infos() -> "
                 f"Selected device serial number: '{self._device.serial}' "
@@ -446,7 +461,7 @@ class PpadbAgentOs(AndroidAgentOs):
             raise FileNotFoundError(msg)
         self._device.push(local_path, remote_path)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"push(local_path='{local_path}', remote_path='{remote_path}')",
         )
 
@@ -459,6 +474,6 @@ class PpadbAgentOs(AndroidAgentOs):
         Path.mkdir(Path.absolute(Path(local_path).parent), exist_ok=True)
         self._device.pull(remote_path, local_path)
         self._reporter.add_message(
-            "AndroidAgentOS",
+            self._REPORTER_ROLE_NAME,
             f"pull(remote_path='{remote_path}', local_path='{local_path}')",
         )
