@@ -1,7 +1,11 @@
 import logging
+from typing import TYPE_CHECKING
 
 from anthropic import Omit
 from typing_extensions import override
+
+if TYPE_CHECKING:
+    from anthropic.types.beta import BetaTextBlockParam
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
@@ -144,6 +148,7 @@ class Agent(ActModel):
         _tool_collection = tools or ToolCollection()
         # Convert ActSystemPrompt to string if present, handle Omit
         system_prompt_raw = _settings.messages.system
+        system_prompt: str | list[BetaTextBlockParam] | None
         if isinstance(system_prompt_raw, ActSystemPrompt):
             system_prompt = str(system_prompt_raw)
         elif isinstance(system_prompt_raw, Omit):
