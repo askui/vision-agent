@@ -24,6 +24,7 @@ from askui.chat.api.runs.orms import RunOrm
 from askui.chat.api.runs.runner.runner import Runner, RunnerRunService
 from askui.chat.api.settings import Settings
 from askui.utils.api_utils import ListResponse, NotFoundError
+from desktop_notifier import DEFAULT_SOUND, DesktopNotifier
 
 
 class RunService(RunnerRunService):
@@ -43,6 +44,7 @@ class RunService(RunnerRunService):
         self._chat_history_manager = chat_history_manager
         self._settings = settings
         self._event_service = EventService(settings.data_dir, self)
+        self._notifier = DesktopNotifier(app_name="askui")
 
     def _find_by_id(
         self, workspace_id: WorkspaceId | None, thread_id: ThreadId, run_id: RunId
@@ -136,6 +138,11 @@ class RunService(RunnerRunService):
                                 if isinstance(event, DoneEvent) or isinstance(
                                     event, ErrorEvent
                                 ):
+                                    await self._notifier.send(
+                                        sound=DEFAULT_SOUND,
+                                        title="Your agent is done!",
+                                        message="Caesr is waiting for your input",
+                                    )
                                     break
                             except anyio.EndOfStream:
                                 break
