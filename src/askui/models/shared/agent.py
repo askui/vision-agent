@@ -83,7 +83,12 @@ class Agent(ActModel):
             UsageParam: Accumulated token usage with input_tokens and output_tokens.
         """
         if accumulated_usage is None:
-            accumulated_usage = UsageParam(input_tokens=0, output_tokens=0)
+            accumulated_usage = UsageParam(
+                input_tokens=0,
+                output_tokens=0,
+                cache_creation_input_tokens=0,
+                cache_read_input_tokens=0,
+            )
         step_span = tracer.start_span("_step")
         ctx = trace.set_span_in_context(step_span)
         token = context.attach(ctx)
@@ -107,9 +112,23 @@ class Agent(ActModel):
                 accumulated_usage.output_tokens = (
                     accumulated_usage.output_tokens or 0
                 ) + (response_message.usage.output_tokens or 0)
+                accumulated_usage.cache_creation_input_tokens = (
+                    accumulated_usage.cache_creation_input_tokens or 0
+                ) + (response_message.usage.cache_creation_input_tokens or 0)
+                accumulated_usage.cache_read_input_tokens = (
+                    accumulated_usage.cache_read_input_tokens or 0
+                ) + (response_message.usage.cache_read_input_tokens or 0)
 
             step_span.set_attributes(
                 {
+                    "cache_creation_input_tokens": response_message.usage.cache_creation_input_tokens
+                    or 0
+                    if response_message.usage
+                    else 0,
+                    "cache_read_input_tokens": response_message.usage.cache_read_input_tokens
+                    or 0
+                    if response_message.usage
+                    else 0,
                     "input_tokens": response_message.usage.input_tokens or 0
                     if response_message.usage
                     else 0,
@@ -200,6 +219,10 @@ class Agent(ActModel):
             {
                 "input_tokens": accumulated_usage.input_tokens or 0,
                 "output_tokens": accumulated_usage.output_tokens or 0,
+                "cache_creation_input_tokens": accumulated_usage.cache_creation_input_tokens
+                or 0,
+                "cache_read_input_tokens": accumulated_usage.cache_read_input_tokens
+                or 0,
             }
         )
 

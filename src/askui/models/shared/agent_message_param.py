@@ -108,6 +108,8 @@ StopReason = Literal[
 class UsageParam(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
 
 
 class MessageParam(BaseModel):
