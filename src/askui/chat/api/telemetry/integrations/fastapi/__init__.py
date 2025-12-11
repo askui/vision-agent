@@ -9,7 +9,7 @@ from askui.chat.api.telemetry.logs import propagate_logs_up, setup_logging, sile
 from .fastapi_middleware import (
     AccessLoggingMiddleware,
     ExceptionHandlingMiddleware,
-    ProcessTimingMiddleware,
+    # ProcessTimingMiddleware,
     TracingMiddleware,
 )
 from .structlog_processors import merge_starlette_contextvars
@@ -28,7 +28,7 @@ def instrument(
     propagate_logs_up(["uvicorn", "uvicorn.error"])
     app.add_middleware(ExceptionHandlingMiddleware)
     app.add_middleware(TracingMiddleware)
-    app.add_middleware(ProcessTimingMiddleware)
+    # app.add_middleware(ProcessTimingMiddleware)
     app.add_middleware(AccessLoggingMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     app.add_middleware(RawContextMiddleware)
