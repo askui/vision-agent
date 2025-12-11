@@ -121,11 +121,13 @@ class Agent(ActModel):
 
             step_span.set_attributes(
                 {
-                    "cache_creation_input_tokens": response_message.usage.cache_creation_input_tokens
+                    "cache_creation_input_tokens":
+                        response_message.usage.cache_creation_input_tokens
                     or 0
                     if response_message.usage
                     else 0,
-                    "cache_read_input_tokens": response_message.usage.cache_read_input_tokens
+                    "cache_read_input_tokens":
+                        response_message.usage.cache_read_input_tokens
                     or 0
                     if response_message.usage
                     else 0,
@@ -219,8 +221,8 @@ class Agent(ActModel):
             {
                 "input_tokens": accumulated_usage.input_tokens or 0,
                 "output_tokens": accumulated_usage.output_tokens or 0,
-                "cache_creation_input_tokens": accumulated_usage.cache_creation_input_tokens
-                or 0,
+                "cache_creation_input_tokens":
+                    accumulated_usage.cache_creation_input_tokens or 0,
                 "cache_read_input_tokens": accumulated_usage.cache_read_input_tokens
                 or 0,
             }
