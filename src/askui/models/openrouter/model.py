@@ -8,8 +8,8 @@ from typing_extensions import override
 
 from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel
-from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
+from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
