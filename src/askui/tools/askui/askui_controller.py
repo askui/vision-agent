@@ -49,7 +49,7 @@ from askui.tools.askui.command_helpers import (
     create_text_command,
     create_update_render_object_command,
 )
-from askui.utils.image_utils import draw_point_on_image
+from askui.utils.annotated_image import AnnotatedImage
 
 from ..utils import process_exists, wait_for_port
 from .exceptions import AskUiControllerOperationTimeoutError
@@ -361,7 +361,7 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message(
             "AgentOS",
             f"mouse_move({x}, {y})",
-            draw_point_on_image(self.screenshot(report=False), x, y, size=5),
+            AnnotatedImage(lambda: self.screenshot(report=False), point_list=[(x, y)]),
         )
         self._run_recorder_action(
             acion_class_id=controller_v1_pbs.ActionClassID_MouseMove,

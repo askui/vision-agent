@@ -747,14 +747,18 @@ class AgentBase(ABC):  # noqa: B024
         if screenshot is None:
             screenshot = self._agent_os.screenshot()
 
+        self._reporter.add_message("User", "annotate screenshot with detected elements")
         detected_elements = self.locate_all_elements(
             screenshot=screenshot,
             model=model,
         )
-        AnnotationWriter(
+        annotated_html = AnnotationWriter(
             image=screenshot,
             elements=detected_elements,
         ).save_to_dir(annotation_dir)
+        self._reporter.add_message(
+            "AnnotationWriter", f"annotated HTML file saved to '{annotated_html}'"
+        )
 
     @telemetry.record_call(exclude={"until"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

@@ -56,13 +56,13 @@ class AnnotationWriter:
 
                 .bbox {
                     position: absolute;
-                    border: 2px solid rgb(111, 0, 255);
+                    border: 2px solid rgb(150, 61, 189);
                     cursor: pointer;
                     box-sizing: border-box;
                 }
 
                 .bbox:hover {
-                    border-color: lime;
+                    border-color: rgb(22, 163, 74);
                 }
 
                 .tooltip {

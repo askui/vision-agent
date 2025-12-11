@@ -25,6 +25,7 @@ from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
 from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
+from askui.utils.annotated_image import AnnotatedImage
 
 
 class ReporterMock(Reporter):
@@ -33,7 +34,7 @@ class ReporterMock(Reporter):
         self,
         role: str,
         content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[PILImage.Image | list[PILImage.Image]] = None,
+        image: Optional[PILImage.Image | list[PILImage.Image] | AnnotatedImage] = None,
     ) -> None:
         pass
 
