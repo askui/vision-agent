@@ -7,7 +7,7 @@ from typing import Any
 
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CacheFile
+from askui.models.shared.settings import CacheFile, CacheWriterSettings
 from askui.utils.cache_writer import CacheWriter
 
 
@@ -142,7 +142,13 @@ def test_cache_writer_generate_writes_file() -> None:
     """Test that generate() writes messages to a JSON file in v0.1 format."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="output.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="output.json",
+            cache_writer_settings=CacheWriterSettings(
+                placeholder_identification_strategy="preset"
+            ),
+        )
 
         # Add some tool use blocks
         tool_use1 = ToolUseBlockParam(
@@ -192,7 +198,13 @@ def test_cache_writer_generate_auto_names_file() -> None:
     """Test that generate() auto-generates filename if not provided."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="",
+            cache_writer_settings=CacheWriterSettings(
+                placeholder_identification_strategy="preset"
+            ),
+        )
 
         tool_use = ToolUseBlockParam(
             id="id1",
@@ -360,7 +372,13 @@ def test_cache_writer_generate_resets_after_writing() -> None:
     """Test that generate() calls reset() after writing the file."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                placeholder_identification_strategy="preset"
+            ),
+        )
 
         cache_writer.messages = [
             ToolUseBlockParam(
@@ -381,7 +399,13 @@ def test_cache_writer_detects_and_stores_placeholders() -> None:
     """Test that CacheWriter detects placeholders and stores them in metadata."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                placeholder_identification_strategy="preset"
+            ),
+        )
 
         # Add tool use blocks with placeholders
         cache_writer.messages = [
@@ -417,7 +441,13 @@ def test_cache_writer_empty_placeholders_when_none_found() -> None:
     """Test that placeholders dict is empty when no placeholders exist."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                placeholder_identification_strategy="preset"
+            ),
+        )
 
         # Add tool use blocks without placeholders
         cache_writer.messages = [
