@@ -306,13 +306,15 @@ class AgentBase(ABC):  # noqa: B024
             caching_settings or self._get_default_caching_settings_for_act(_model)
         )
 
-        tools, on_message, cached_execution_tool = self._patch_act_with_cache(
-            _caching_settings, _settings, tools, on_message
-        )
         _tools = self._build_tools(tools, _model)
 
-        if cached_execution_tool:
-            cached_execution_tool.set_toolbox(_tools)
+        if _caching_settings.strategy != "no":
+            on_message = self._patch_act_with_cache(
+                _caching_settings, _settings, _tools, on_message, goal_str
+            )
+            logger.info(
+                f"Starting agent act with caching enabled (strategy={_caching_settings.strategy})"
+            )
 
         self._model_router.act(
             messages=messages,
@@ -336,36 +338,40 @@ class AgentBase(ABC):  # noqa: B024
         self,
         caching_settings: CachingSettings,
         settings: ActSettings,
-        tools: list[Tool] | ToolCollection | None,
+        toolbox: ToolCollection,
         on_message: OnMessageCb | None,
-    ) -> tuple[
-        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedTrajectory | None
-    ]:
-        """Patch act settings and tools with caching functionality.
+        goal: str | None = None,
+    ) -> OnMessageCb | None:
+        """Patch act settings and toolbox with caching functionality.
 
         Args:
             caching_settings: The caching settings to apply
             settings: The act settings to modify
-            tools: The tools list to extend with caching tools
+            toolbox: The toolbox to extend with caching tools
             on_message: The message callback (may be replaced for write mode)
+            goal: The goal string (used for cache metadata)
 
         Returns:
-            A tuple of (modified_tools, modified_on_message, cached_execution_tool)
+            modified_on_message
         """
+        logger.debug("Setting up caching")
         caching_tools: list[Tool] = []
-        cached_execution_tool: ExecuteCachedTrajectory | None = None
 
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:
-            cached_execution_tool = ExecuteCachedTrajectory(
-                caching_settings.execute_cached_trajectory_tool_settings
-            )
+            from askui.tools.caching_tools import VerifyCacheExecution
+
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
-                    cached_execution_tool,
+                    ExecuteCachedTrajectory(
+                        toolbox=toolbox,
+                        settings=caching_settings.execute_cached_trajectory_tool_settings,
+                    ),
+                    VerifyCacheExecution(),
                 ]
             )
+
             if isinstance(settings.messages.system, str):
                 settings.messages.system = (
                     settings.messages.system + "\n" + CACHE_USE_PROMPT
@@ -377,27 +383,30 @@ class AgentBase(ABC):  # noqa: B024
                 ]
             else:  # Omit or None
                 settings.messages.system = CACHE_USE_PROMPT
+            logger.debug("Added cache usage instructions to system prompt")
 
-        # Add caching tools to the tools list
-        if isinstance(tools, list):
-            tools = caching_tools + tools
-        elif isinstance(tools, ToolCollection):
-            tools.append_tool(*caching_tools)
-        else:
-            tools = caching_tools
+        # Add caching tools to the toolbox
+        if caching_tools:
+            toolbox.append_tool(*caching_tools)
 
         # Setup write mode: create cache writer and set message callback
+        cache_writer = None
         if caching_settings.strategy in ["write", "both"]:
             cache_writer = CacheWriter(
-                caching_settings.cache_dir, caching_settings.filename
+                cache_dir=caching_settings.cache_dir,
+                file_name=caching_settings.filename,
+                caching_settings=caching_settings,
+                toolbox=toolbox,
+                goal=goal,
             )
             if on_message is None:
                 on_message = cache_writer.add_message_cb
             else:
                 error_message = "Cannot use on_message callback when writing Cache"
+                logger.error(error_message)
                 raise ValueError(error_message)
 
-        return tools, on_message, cached_execution_tool
+        return on_message
 
     def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
         return ActSettings()
