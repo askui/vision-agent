@@ -381,3 +381,13 @@ def test_get_system_info(controller_client: AskUiControllerClient) -> None:
         assert system_info.label is not None
         assert system_info.version is not None
         assert system_info.architecture is not None
+
+
+def test_get_active_process(controller_client: AskUiControllerClient) -> None:
+    with controller_client:
+        active_process = controller_client.get_active_process()
+
+        assert active_process is not None
+        assert active_process.process is not None
+        assert active_process.process.name is not None
+        assert active_process.process.id is not None

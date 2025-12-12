@@ -38,6 +38,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     ClearRenderObjectsCommand,
     Command,
     DeleteRenderObjectCommand,
+    GetActiveProcessCommand,
     GetMousePositionCommand,
     GetSystemInfoCommand,
     Guid,
@@ -54,8 +55,10 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
     AskUIAgentOSSendResponseSchema,
+    GetActiveProcessResponse,
+    GetActiveProcessResponseModel,
     GetSystemInfoResponse,
-    SystemInfoResponse,
+    GetSystemInfoResponseModel,
 )
 from askui.utils.annotated_image import AnnotatedImage
 
@@ -1213,7 +1216,7 @@ class AskUiControllerClient(AgentOs):
         command = ClearRenderObjectsCommand()
         self._send_command(command)
 
-    def get_system_info(self) -> SystemInfoResponse:
+    def get_system_info(self) -> GetSystemInfoResponseModel:
         """
         Get the system information.
 
@@ -1226,4 +1229,19 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message("AgentOS", "get_system_info()")
         command = GetSystemInfoCommand()
         res: GetSystemInfoResponse = self._send_command(command).message.command
+        return res.response
+
+    def get_active_process(self) -> GetActiveProcessResponseModel:
+        """
+        Get the active process.
+
+        Returns:
+            GetActiveProcessResponseModel: The active process.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "get_active_process()")
+        command = GetActiveProcessCommand()
+        res: GetActiveProcessResponse = self._send_command(command).message.command
         return res.response

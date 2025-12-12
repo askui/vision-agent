@@ -10,7 +10,7 @@ from typing import Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, RootModel, conint, constr
 
 
-class SystemInfoResponse(BaseModel):
+class GetSystemInfoResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -20,7 +20,7 @@ class SystemInfoResponse(BaseModel):
     architecture: Optional[str] = None
 
 
-class Response3(BaseModel):
+class GetRenderObjectInfoResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -28,7 +28,7 @@ class Response3(BaseModel):
     height: Optional[int] = None
 
 
-class Response4(BaseModel):
+class GetRenderTextWordBreakIndexResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -190,7 +190,7 @@ class Value(Enum):
     Fn = 'Fn'
 
 
-class Response5(BaseModel):
+class WaitForKeyPressResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -205,7 +205,7 @@ class Process(BaseModel):
     name: str
 
 
-class Response6(BaseModel):
+class GetActiveProcessResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -222,7 +222,7 @@ class Window(BaseModel):
     processName: str
 
 
-class Response7(BaseModel):
+class GetActiveWindowResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -252,10 +252,10 @@ class ActionId(RootModel[conint(ge=0, le=2147483647)]):
 class GetSystemInfoResponse(BaseModel):
     name: Literal['GetSystemInfo']
     actionId: ActionId
-    response: Optional[SystemInfoResponse] = None
+    response: GetSystemInfoResponseModel
 
 
-class Response1(BaseModel):
+class GetMousePositionResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -265,7 +265,7 @@ class Response1(BaseModel):
 class GetMousePositionResponse(BaseModel):
     name: Literal['GetMousePosition']
     actionId: ActionId
-    response: Response1
+    response: GetMousePositionResponseModel
 
 
 class SetMousePositionResponse(BaseModel):
@@ -273,7 +273,7 @@ class SetMousePositionResponse(BaseModel):
     actionId: ActionId
 
 
-class Response2(BaseModel):
+class AddRenderObjectResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -283,7 +283,7 @@ class Response2(BaseModel):
 class AddRenderObjectResponse(BaseModel):
     name: Literal['AddRenderObject']
     actionId: ActionId
-    response: Response2
+    response: AddRenderObjectResponseModel
 
 
 class UpdateRenderObjectResponse(BaseModel):
@@ -294,7 +294,7 @@ class UpdateRenderObjectResponse(BaseModel):
 class GetRenderObjectInfoResponse(BaseModel):
     name: Literal['GetRenderObjectInfo']
     actionId: ActionId
-    response: Optional[Response3] = None
+    response: Optional[GetRenderObjectInfoResponseModel] = None
 
 
 class DeleteRenderObjectResponse(BaseModel):
@@ -310,13 +310,13 @@ class ClearRenderObjectsResponse(BaseModel):
 class GetRenderTextWordBreakIndexResponse(BaseModel):
     name: Literal['GetRenderTextWordBreakIndex']
     actionId: ActionId
-    response: Response4
+    response: GetRenderTextWordBreakIndexResponseModel
 
 
 class WaitForKeyPressResponse(BaseModel):
     name: Literal['WaitForKeyPress']
     actionId: ActionId
-    response: Optional[Response5] = None
+    response: Optional[WaitForKeyPressResponseModel] = None
 
 
 class LoadKeyMapResponse(BaseModel):
@@ -342,7 +342,7 @@ class ClearCharacterMapResponse(BaseModel):
 class GetActiveProcessResponse(BaseModel):
     name: Literal['GetActiveProcess']
     actionId: ActionId
-    response: Response6
+    response: GetActiveProcessResponseModel
 
 
 class SetActiveProcessResponse(BaseModel):
@@ -353,7 +353,7 @@ class SetActiveProcessResponse(BaseModel):
 class GetActiveWindowResponse(BaseModel):
     name: Literal['GetActiveWindow']
     actionId: ActionId
-    response: Response7
+    response: GetActiveWindowResponseModel
 
 
 class SetActiveWindowResponse(BaseModel):
@@ -366,11 +366,6 @@ class Message(BaseModel):
         GetSystemInfoResponse,
         GetMousePositionResponse,
         SetMousePositionResponse,
-        AddRenderObjectResponse,
-        UpdateRenderObjectResponse,
-        GetRenderObjectInfoResponse,
-        DeleteRenderObjectResponse,
-        ClearRenderObjectsResponse,
         GetRenderTextWordBreakIndexResponse,
         WaitForKeyPressResponse,
         LoadKeyMapResponse,
