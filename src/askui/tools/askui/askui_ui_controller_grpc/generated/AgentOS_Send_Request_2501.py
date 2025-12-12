@@ -23,7 +23,7 @@ class Parameter(RootModel[List[ParameterEnum]]):
 
 class GetSystemInfoCommand(BaseModel):
     name: Literal['GetSystemInfo'] = 'GetSystemInfo'
-    parameters: List[Parameter] = Field(..., max_length=1, min_length=1)
+    parameters: List[Parameter] = Field(default=[Parameter(root=[ParameterEnum.platform, ParameterEnum.label, ParameterEnum.version, ParameterEnum.architecture])], max_length=1, min_length=1)
 
 
 class GetMousePositionCommand(BaseModel):

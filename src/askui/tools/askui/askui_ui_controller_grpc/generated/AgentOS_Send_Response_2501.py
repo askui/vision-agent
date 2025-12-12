@@ -10,7 +10,7 @@ from typing import Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, RootModel, conint, constr
 
 
-class Response(BaseModel):
+class SystemInfoResponse(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -252,7 +252,7 @@ class ActionId(RootModel[conint(ge=0, le=2147483647)]):
 class GetSystemInfoResponse(BaseModel):
     name: Literal['GetSystemInfo']
     actionId: ActionId
-    response: Optional[Response] = None
+    response: Optional[SystemInfoResponse] = None
 
 
 class Response1(BaseModel):

@@ -370,3 +370,14 @@ def test_clear_render_objects(controller_client: AskUiControllerClient) -> None:
         controller_client.render_quad(style2)
 
         controller_client.clear_render_objects()
+
+
+def test_get_system_info(controller_client: AskUiControllerClient) -> None:
+    """Test getting system information"""
+    with controller_client:
+        system_info = controller_client.get_system_info()
+        assert system_info is not None
+        assert system_info.platform is not None
+        assert system_info.label is not None
+        assert system_info.version is not None
+        assert system_info.architecture is not None

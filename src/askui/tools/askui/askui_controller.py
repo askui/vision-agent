@@ -39,6 +39,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     Command,
     DeleteRenderObjectCommand,
     GetMousePositionCommand,
+    GetSystemInfoCommand,
     Guid,
     Header,
     Length,
@@ -53,6 +54,8 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
     AskUIAgentOSSendResponseSchema,
+    GetSystemInfoResponse,
+    SystemInfoResponse,
 )
 from askui.utils.annotated_image import AnnotatedImage
 
@@ -1209,3 +1212,18 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message("AgentOS", "clear_render_objects()")
         command = ClearRenderObjectsCommand()
         self._send_command(command)
+
+    def get_system_info(self) -> SystemInfoResponse:
+        """
+        Get the system information.
+
+        Returns:
+            SystemInfo: The system information.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "get_system_info()")
+        command = GetSystemInfoCommand()
+        res: GetSystemInfoResponse = self._send_command(command).message.command
+        return res.response
