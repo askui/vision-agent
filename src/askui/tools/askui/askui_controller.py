@@ -33,21 +33,26 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+    AddRenderObjectCommand,
+    AskUIAgentOSSendRequestSchema,
+    ClearRenderObjectsCommand,
+    Command,
+    DeleteRenderObjectCommand,
+    GetMousePositionCommand,
+    Guid,
+    Header,
+    Length,
+    Location,
+    Message,
+    RenderImage,
+    RenderObjectId,
     RenderObjectStyle,
+    RenderText,
+    SetMousePositionCommand,
+    UpdateRenderObjectCommand,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
     AskUIAgentOSSendResponseSchema,
-)
-from askui.tools.askui.command_helpers import (
-    create_clear_render_objects_command,
-    create_delete_render_object_command,
-    create_get_mouse_position_command,
-    create_image_command,
-    create_line_command,
-    create_quad_command,
-    create_set_mouse_position_command,
-    create_text_command,
-    create_update_render_object_command,
 )
 from askui.utils.annotated_image import AnnotatedImage
 
@@ -1008,9 +1013,9 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
         )
 
-    def _send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+    def _send_command(self, command: Command) -> AskUIAgentOSSendResponseSchema:
         """
-        Send a general message to the controller.
+        Send a general command to the controller.
 
         Args:
             message (str): The message to send to the controller.
@@ -1023,13 +1028,20 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
 
-        self._reporter.add_message("AgentOS", f'send_message("{message}")')
+        header = Header(authentication=Guid(root=self._session_guid))
+        message = Message(header=header, command=command)
+
+        request = AskUIAgentOSSendRequestSchema(message=message)
+
+        request_str = request.model_dump_json(exclude_none=True, by_alias=True)
+
+        self._reporter.add_message("AgentOS", f'send_message("{request_str}")')
 
         response: controller_v1_pbs.Response_Send = self._stub.Send(
-            controller_v1_pbs.Request_Send(message=message)
+            controller_v1_pbs.Request_Send(message=request_str)
         )
 
-        return response
+        return AskUIAgentOSSendResponseSchema.model_validate_json(response.message)
 
     @telemetry.record_call()
     def get_mouse_position(self) -> Coordinate:
@@ -1042,15 +1054,11 @@ class AskUiControllerClient(AgentOs):
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
-        req_json = create_get_mouse_position_command(
-            self._session_guid
-        ).model_dump_json(exclude_none=True)
         self._reporter.add_message("AgentOS", "get_mouse_position()")
-        res = self._send_message(req_json)
-        parsed_res = AskUIAgentOSSendResponseSchema.model_validate_json(res.message)
+        res = self._send_command(GetMousePositionCommand())
         return Coordinate(
-            x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
-            y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
+            x=res.message.command.response.position.x.root,  # type: ignore[union-attr]
+            y=res.message.command.response.position.y.root,  # type: ignore[union-attr]
         )
 
     @telemetry.record_call()
@@ -1065,11 +1073,10 @@ class AskUiControllerClient(AgentOs):
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
-        req_json = create_set_mouse_position_command(
-            x, y, self._session_guid
-        ).model_dump_json(exclude_none=True)
+        location = Location(x=Length(root=x), y=Length(root=y))
+        command = SetMousePositionCommand(parameters=[location])
         self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
-        self._send_message(req_json)
+        self._send_command(command)
 
     @telemetry.record_call()
     def render_quad(self, style: RenderObjectStyle) -> int:
@@ -1086,14 +1093,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"render_quad({style})")
-        req_json = create_quad_command(style, self._session_guid).model_dump_json(
-            exclude_none=True, by_alias=True
-        )
-        res = self._send_message(req_json)
-        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        command = AddRenderObjectCommand(parameters=["Quad", style])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def render_line(self, style: RenderObjectStyle, points: list[Coordinate]) -> int:
@@ -1111,14 +1113,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
-        req = create_line_command(style, points, self._session_guid).model_dump_json(
-            exclude_none=True, by_alias=True
-        )
-        res = self._send_message(req)
-        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        command = AddRenderObjectCommand(parameters=["Line", style, points])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call(exclude={"image_data"})
     def render_image(self, style: RenderObjectStyle, image_data: str) -> int:
@@ -1136,15 +1133,11 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
-        req = create_image_command(
-            style, image_data, self._session_guid
-        ).model_dump_json(exclude_none=True)
-        res = self._send_message(req)
+        image = RenderImage(root=image_data)
+        command = AddRenderObjectCommand(parameters=["Image", style, image])
+        res = self._send_command(command)
 
-        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def render_text(self, style: RenderObjectStyle, content: str) -> int:
@@ -1162,15 +1155,10 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
-
-        req = create_text_command(style, content, self._session_guid).model_dump_json(
-            exclude_none=True, by_alias=True
-        )
-        res = self._send_message(req)
-        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        text = RenderText(root=content)
+        command = AddRenderObjectCommand(parameters=["Text", style, text])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def update_render_object(self, object_id: int, style: RenderObjectStyle) -> None:
@@ -1190,10 +1178,9 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message(
             "AgentOS", f"update_render_object({object_id}, {style})"
         )
-        req = create_update_render_object_command(
-            object_id, style, self._session_guid
-        ).model_dump_json(exclude_none=True)
-        self._send_message(req)
+        render_object_id = RenderObjectId(root=object_id)
+        command = UpdateRenderObjectCommand(parameters=[render_object_id, style])
+        self._send_command(command)
 
     @telemetry.record_call()
     def delete_render_object(self, object_id: int) -> None:
@@ -1207,10 +1194,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
-        req = create_delete_render_object_command(
-            object_id, self._session_guid
-        ).model_dump_json(exclude_none=True)
-        self._send_message(req)
+        render_object_id = RenderObjectId(root=object_id)
+        command = DeleteRenderObjectCommand(parameters=[render_object_id])
+        self._send_command(command)
 
     @telemetry.record_call()
     def clear_render_objects(self) -> None:
@@ -1221,7 +1207,5 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized"
         )
         self._reporter.add_message("AgentOS", "clear_render_objects()")
-        req = create_clear_render_objects_command(self._session_guid).model_dump_json(
-            exclude_none=True
-        )
-        self._send_message(req)
+        command = ClearRenderObjectsCommand()
+        self._send_command(command)

@@ -10,9 +10,9 @@ from askui.tools.agent_os import Coordinate
 from askui.tools.askui.askui_controller import (
     AskUiControllerClient,
     AskUiControllerServer,
+    RenderObjectStyle,
 )
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
-from askui.tools.askui.command_helpers import create_style
 
 
 @pytest.fixture
@@ -209,7 +209,7 @@ def test_get_mouse_position(controller_client: AskUiControllerClient) -> None:
 def test_render_quad(controller_client: AskUiControllerClient) -> None:
     """Test adding a quad render object to the display"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=0.9,
             height=100,
             top="200px",
@@ -226,7 +226,7 @@ def test_render_quad(controller_client: AskUiControllerClient) -> None:
 def test_render_line(controller_client: AskUiControllerClient) -> None:
     """Test rendering a line object to the display"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             color="#00ff00",
             line_width=4,
             opacity=0.8,
@@ -243,7 +243,7 @@ def test_render_image(
 ) -> None:
     """Test rendering an image object to the display"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=200,
             height=200,
             top=200,
@@ -263,7 +263,7 @@ def test_render_image(
 def test_render_text(controller_client: AskUiControllerClient) -> None:
     """Test rendering a text object to the display"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=300,
             height=50,
             top=100,
@@ -280,7 +280,7 @@ def test_render_text(controller_client: AskUiControllerClient) -> None:
 def test_update_render_object(controller_client: AskUiControllerClient) -> None:
     """Test updating an existing render object"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=0.9,
             height=100,
             top="200px",
@@ -292,7 +292,7 @@ def test_update_render_object(controller_client: AskUiControllerClient) -> None:
         object_id = controller_client.render_quad(style)
         assert object_id is not None
 
-        update_style = create_style(
+        update_style = RenderObjectStyle(
             width=0.5,
             height=100,
             top="200px",
@@ -307,7 +307,7 @@ def test_update_render_object(controller_client: AskUiControllerClient) -> None:
 def test_update_text_object(controller_client: AskUiControllerClient) -> None:
     """Test updating an existing render object"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=300,
             height=50,
             top=100,
@@ -320,7 +320,7 @@ def test_update_text_object(controller_client: AskUiControllerClient) -> None:
         object_id = controller_client.render_text(style, "Hello World!")
         assert object_id is not None
 
-        update_style = create_style(
+        update_style = RenderObjectStyle(
             width=0.5,
             height=100,
             top="200px",
@@ -335,7 +335,7 @@ def test_update_text_object(controller_client: AskUiControllerClient) -> None:
 def test_delete_render_object(controller_client: AskUiControllerClient) -> None:
     """Test deleting an existing render object"""
     with controller_client:
-        style = create_style(
+        style = RenderObjectStyle(
             width=1.0,
             height=100,
             color="#ff0000",
@@ -351,14 +351,14 @@ def test_delete_render_object(controller_client: AskUiControllerClient) -> None:
 def test_clear_render_objects(controller_client: AskUiControllerClient) -> None:
     """Test clearing all render objects"""
     with controller_client:
-        style1 = create_style(
+        style1 = RenderObjectStyle(
             width=100,
             height=50,
             color="#ff0000",
             top=100,
             left=100,
         )
-        style2 = create_style(
+        style2 = RenderObjectStyle(
             width=200,
             height=100,
             color="#00ff00",

@@ -7,7 +7,15 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, confloat, constr, conint
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    confloat,
+    conint,
+    constr
+)
 
 
 class GetMousePositionCommand(BaseModel):
@@ -70,7 +78,7 @@ class Color(
     ]
 
 
-class Location2(BaseModel):
+class Location(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
@@ -92,6 +100,7 @@ class RenderObjectId(RootModel[conint(ge=0, le=18446744073709551615)]):
 class RenderObjectStyle(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
+        validate_by_name=True,
     )
     top: Optional[Length] = None
     left: Optional[Length] = None
@@ -106,8 +115,8 @@ class RenderObjectStyle(BaseModel):
     line_width: Optional[Length] = Field(None, alias='line-width')
 
 
-class RenderLinePoints(RootModel[List[Location2]]):
-    root: List[Location2] = Field(..., max_length=64, min_length=2)
+class RenderLinePoints(RootModel[List[Location]]):
+    root: List[Location] = Field(..., max_length=64, min_length=2)
 
 
 class RenderImage(
@@ -133,19 +142,21 @@ class Header(BaseModel):
     authentication: Guid
 
 
+Command = Union[
+    GetMousePositionCommand,
+    SetMousePositionCommand,
+    AddRenderObjectCommand,
+    UpdateRenderObjectCommand,
+    DeleteRenderObjectCommand,
+    ClearRenderObjectsCommand,
+]
+
 class Message(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
     header: Header
-    command: Union[
-        GetMousePositionCommand,
-        SetMousePositionCommand,
-        AddRenderObjectCommand,
-        UpdateRenderObjectCommand,
-        DeleteRenderObjectCommand,
-        ClearRenderObjectsCommand,
-    ]
+    command: Command
 
 
 class AskUIAgentOSSendRequestSchema(BaseModel):
