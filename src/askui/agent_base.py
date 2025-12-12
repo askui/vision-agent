@@ -395,7 +395,7 @@ class AgentBase(ABC):  # noqa: B024
             cache_writer = CacheWriter(
                 cache_dir=caching_settings.cache_dir,
                 file_name=caching_settings.filename,
-                caching_settings=caching_settings,
+                cache_writer_settings=caching_settings.cache_writer_settings,
                 toolbox=toolbox,
                 goal=goal,
             )
