@@ -11,12 +11,15 @@ from askui.tools.askui.askui_controller import (
     AskUiControllerClient,
     AskUiControllerServer,
 )
+from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.command_helpers import create_style
 
 
 @pytest.fixture
 def controller_server() -> AskUiControllerServer:
-    return AskUiControllerServer()
+    return AskUiControllerServer(
+        settings=AskUiControllerSettings(controller_args="--showOverlay true")
+    )
 
 
 @pytest.fixture
