@@ -134,38 +134,41 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["GetMousePosition"]
+                  "const": "GetMousePosition"
                 },
                 "parameters": {
                   "type": "array"
                 }
               },
-              "required": ["name"]
+              "required": ["name"],
+              "title": "GetMousePositionCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["SetMousePosition"]
+                  "const": "SetMousePosition"
                 },
                 "parameters": {
                   "type": "array",
                   "prefixItems": [
                     {
-                      "$ref": "#/definitions/location2"
+                      "$ref": "#/definitions/location2",
+                      "title": "setmouseposition_param1"
                     }
                   ],
                   "minItems": 1,
                   "maxItems": 1
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "SetMousePositionCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["AddRenderObject"]
+                  "const": "AddRenderObject"
                 },
                 "parameters": {
                   "type": "array",
@@ -234,13 +237,14 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "AddRenderObjectCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["UpdateRenderObject"]
+                  "const": "UpdateRenderObject"
                 },
                 "parameters": {
                   "type": "array",
@@ -307,13 +311,14 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "UpdateRenderObjectCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["DeleteRenderObject"]
+                  "const": "DeleteRenderObject"
                 },
                 "parameters": {
                   "type": "array",
@@ -330,19 +335,21 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "DeleteRenderObjectCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["ClearRenderObjects"]
+                  "const": "ClearRenderObjects"
                 },
                 "parameters": {
                   "type": "array"
                 }
               },
-              "required": ["name"]
+              "required": ["name"],
+              "title": "ClearRenderObjectsCommand"
             }
           ]
         }

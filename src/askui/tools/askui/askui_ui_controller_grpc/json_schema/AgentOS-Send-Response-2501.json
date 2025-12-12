@@ -51,7 +51,7 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["GetMousePosition"]
+                  "const": "GetMousePosition"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -67,25 +67,27 @@
                   "required": ["position"]
                 }
               },
-              "required": ["name", "actionId", "response"]
+              "required": ["name", "actionId", "response"],
+              "title": "GetMousePositionResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["SetMousePosition"]
+                  "const": "SetMousePosition"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "SetMousePositionResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["AddRenderObject"]
+                  "const": "AddRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -101,43 +103,47 @@
                   "required": ["id"]
                 }
               },
-              "required": ["name", "actionId", "response"]
+              "required": ["name", "actionId", "response"],
+              "title": "AddRenderObjectResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["UpdateRenderObject"]
+                  "const": "UpdateRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "UpdateRenderObjectResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["DeleteRenderObject"]
+                  "const": "DeleteRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "DeleteRenderObjectResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["ClearRenderObjects"]
+                  "const": "ClearRenderObjects"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "ClearRenderObjectsResponse"
             }
           ]
         }

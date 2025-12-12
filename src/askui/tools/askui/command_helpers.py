@@ -3,29 +3,23 @@ from typing_extensions import Annotated, Union
 
 from askui.tools.agent_os import Coordinate
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
-    AskuiAgentosSendRequestSchema,
-    Command,
-    Command1,
-    Command2,
-    Command3,
-    Command4,
-    Command5,
+    AddRenderObjectCommand,
+    AskUIAgentOSSendRequestSchema,
+    ClearRenderObjectsCommand,
+    DeleteRenderObjectCommand,
+    GetMousePositionCommand,
     Guid,
     Header,
     Length,
     Location2,
     Message,
-    Name,
-    Name1,
-    Name2,
-    Name3,
-    Name4,
-    Name5,
     RenderImage,
     RenderLinePoints,
     RenderObjectId,
     RenderObjectStyle,
     RenderText,
+    SetMousePositionCommand,
+    UpdateRenderObjectCommand,
 )
 
 LengthType = Union[
@@ -74,73 +68,72 @@ def create_style(
 
 def create_get_mouse_position_command(
     session_guid: str,
-) -> AskuiAgentosSendRequestSchema:
-    command = Command(name=Name.GetMousePosition)
+) -> AskUIAgentOSSendRequestSchema:
+    command = GetMousePositionCommand()
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_set_mouse_position_command(
     x: int, y: int, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
+) -> AskUIAgentOSSendRequestSchema:
     location = Location2(x=Length(root=x), y=Length(root=y))
-    command = Command1(name=Name1.SetMousePosition, parameters=[location])
+    command = SetMousePositionCommand(parameters=[location])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_quad_command(
     style: RenderObjectStyle, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
+) -> AskUIAgentOSSendRequestSchema:
     renderStyle = RenderObjectStyle(**style.model_dump(exclude_none=True))
-    command = Command2(name=Name2.AddRenderObject, parameters=["Quad", renderStyle])
+    command = AddRenderObjectCommand(parameters=["Quad", renderStyle])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_line_command(
     style: RenderObjectStyle, points: list[Coordinate], session_guid: str
-) -> AskuiAgentosSendRequestSchema:
-    command = Command2(
-        name=Name2.AddRenderObject,
+) -> AskUIAgentOSSendRequestSchema:
+    command = AddRenderObjectCommand(
         parameters=["Line", style, create_render_line_points(points)],
     )
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_image_command(
     style: RenderObjectStyle, image_data: str, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
+) -> AskUIAgentOSSendRequestSchema:
     image = RenderImage(root=image_data)
-    command = Command2(name=Name2.AddRenderObject, parameters=["Image", style, image])
+    command = AddRenderObjectCommand(parameters=["Image", style, image])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_text_command(
     style: RenderObjectStyle, text_content: str, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
+) -> AskUIAgentOSSendRequestSchema:
     text = RenderText(root=text_content)
-    command = Command2(name=Name2.AddRenderObject, parameters=["Text", style, text])
+    command = AddRenderObjectCommand(parameters=["Text", style, text])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_render_line_points(points: list[Coordinate]) -> RenderLinePoints:
@@ -157,33 +150,33 @@ def create_render_object_id(object_id: int) -> RenderObjectId:
 
 def create_update_render_object_command(
     object_id: int, style: RenderObjectStyle, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
-    command = Command3(name=Name3.UpdateRenderObject, parameters=[object_id, style])
+) -> AskUIAgentOSSendRequestSchema:
+    command = UpdateRenderObjectCommand(parameters=[object_id, style])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_delete_render_object_command(
     object_id: int, session_guid: str
-) -> AskuiAgentosSendRequestSchema:
-    render_object_id = create_render_object_id(object_id)
-    command = Command4(name=Name4.DeleteRenderObject, parameters=[render_object_id])
+) -> AskUIAgentOSSendRequestSchema:
+    render_object_id = RenderObjectId(root=object_id)
+    command = DeleteRenderObjectCommand(parameters=[render_object_id])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)
 
 
 def create_clear_render_objects_command(
     session_guid: str,
-) -> AskuiAgentosSendRequestSchema:
-    command = Command5(name=Name5.ClearRenderObjects, parameters=[])
+) -> AskUIAgentOSSendRequestSchema:
+    command = ClearRenderObjectsCommand(parameters=[])
 
     header = Header(authentication=Guid(root=session_guid))
     message = Message(header=header, command=command)
 
-    return AskuiAgentosSendRequestSchema(message=message)
+    return AskUIAgentOSSendRequestSchema(message=message)

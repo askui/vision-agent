@@ -36,7 +36,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     RenderObjectStyle,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
-    AskuiAgentosSendResponseSchema,
+    AskUIAgentOSSendResponseSchema,
 )
 from askui.tools.askui.command_helpers import (
     create_clear_render_objects_command,
@@ -1044,10 +1044,10 @@ class AskUiControllerClient(AgentOs):
         )
         req_json = create_get_mouse_position_command(
             self._session_guid
-        ).model_dump_json(exclude_unset=True)
+        ).model_dump_json(exclude_none=True)
         self._reporter.add_message("AgentOS", "get_mouse_position()")
         res = self._send_message(req_json)
-        parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
+        parsed_res = AskUIAgentOSSendResponseSchema.model_validate_json(res.message)
         return Coordinate(
             x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
             y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
@@ -1067,7 +1067,7 @@ class AskUiControllerClient(AgentOs):
         )
         req_json = create_set_mouse_position_command(
             x, y, self._session_guid
-        ).model_dump_json(exclude_unset=True)
+        ).model_dump_json(exclude_none=True)
         self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
         self._send_message(req_json)
 
@@ -1087,10 +1087,10 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", f"render_quad({style})")
         req_json = create_quad_command(style, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
+            exclude_none=True, by_alias=True
         )
         res = self._send_message(req_json)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
             res.message
         )
         return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
@@ -1112,10 +1112,10 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
         req = create_line_command(style, points, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
+            exclude_none=True, by_alias=True
         )
         res = self._send_message(req)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
             res.message
         )
         return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
@@ -1138,10 +1138,10 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
         req = create_image_command(
             style, image_data, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
+        ).model_dump_json(exclude_none=True)
         res = self._send_message(req)
 
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
             res.message
         )
         return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
@@ -1164,10 +1164,10 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
 
         req = create_text_command(style, content, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
+            exclude_none=True, by_alias=True
         )
         res = self._send_message(req)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
+        parsed_response = AskUIAgentOSSendResponseSchema.model_validate_json(
             res.message
         )
         return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
@@ -1192,7 +1192,7 @@ class AskUiControllerClient(AgentOs):
         )
         req = create_update_render_object_command(
             object_id, style, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
+        ).model_dump_json(exclude_none=True)
         self._send_message(req)
 
     @telemetry.record_call()
@@ -1209,7 +1209,7 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
         req = create_delete_render_object_command(
             object_id, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
+        ).model_dump_json(exclude_none=True)
         self._send_message(req)
 
     @telemetry.record_call()
@@ -1222,6 +1222,6 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", "clear_render_objects()")
         req = create_clear_render_objects_command(self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
+            exclude_none=True
         )
         self._send_message(req)
