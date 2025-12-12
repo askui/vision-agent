@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -19,6 +20,11 @@ from askui.models.shared.truncation_strategies import (
     TruncationStrategyFactory,
 )
 from askui.reporting import NULL_REPORTER, Reporter
+from askui.utils.cache_execution_manager import CacheExecutionManager
+
+if TYPE_CHECKING:
+    from askui.models.shared.settings import CacheFile
+    from askui.utils.trajectory_executor import TrajectoryExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +56,98 @@ class Agent(ActModel):
         self._truncation_strategy_factory = (
             truncation_strategy_factory or SimpleTruncationStrategyFactory()
         )
+        # Cache execution manager handles all cache-related logic
+        self._cache_manager = CacheExecutionManager(reporter)
+        # Store current tool collection for cache executor access
+        self._tool_collection: ToolCollection | None = None
+
+
+    def _get_agent_response(
+        self,
+        model: str,
+        truncation_strategy: TruncationStrategy,
+        tool_collection: ToolCollection,
+        settings: ActSettings,
+        on_message: OnMessageCb,
+    ) -> MessageParam | None:
+        """Get response from agent API.
+
+        Args:
+            model: Model to use
+            truncation_strategy: Message truncation strategy
+            tool_collection: Available tools
+            settings: Agent settings
+            on_message: Callback for messages
+
+        Returns:
+            Assistant message or None if cancelled by callback
+        """
+        response_message = self._messages_api.create_message(
+            messages=truncation_strategy.messages,
+            model=model,
+            tools=tool_collection,
+            max_tokens=settings.messages.max_tokens,
+            betas=settings.messages.betas,
+            system=settings.messages.system,
+            thinking=settings.messages.thinking,
+            tool_choice=settings.messages.tool_choice,
+            temperature=settings.messages.temperature,
+        )
+
+        message_by_assistant = self._call_on_message(
+            on_message, response_message, truncation_strategy.messages
+        )
+        if message_by_assistant is None:
+            return None
+
+        message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
+        logger.debug(message_by_assistant_dict)
+        truncation_strategy.append_message(message_by_assistant)
+        self._reporter.add_message(self.__class__.__name__, message_by_assistant_dict)
+
+        return message_by_assistant
+
+    def _process_tool_execution(
+        self,
+        message_by_assistant: MessageParam,
+        tool_collection: ToolCollection,
+        on_message: OnMessageCb,
+        truncation_strategy: TruncationStrategy,
+        model: str,
+        settings: ActSettings,
+    ) -> None:
+        """Process tool execution and continue if needed.
+
+        Args:
+            message_by_assistant: Assistant message with potential tool uses
+            tool_collection: Available tools
+            on_message: Callback for messages
+            truncation_strategy: Message truncation strategy
+            model: Model to use
+            settings: Agent settings
+        """
+        tool_result_message = self._use_tools(message_by_assistant, tool_collection)
+        if not tool_result_message:
+            return
+
+        tool_result_message = self._call_on_message(
+            on_message, tool_result_message, truncation_strategy.messages
+        )
+        if not tool_result_message:
+            return
+
+        tool_result_message_dict = tool_result_message.model_dump(mode="json")
+        logger.debug(tool_result_message_dict)
+        truncation_strategy.append_message(tool_result_message)
+
+        # Continue with next step recursively
+        self._step(
+            model=model,
+            tool_collection=tool_collection,
+            on_message=on_message,
+            settings=settings,
+            truncation_strategy=truncation_strategy,
+        )
 
     def _step(
         self,
@@ -65,59 +163,55 @@ class Agent(ActModel):
         blocks, this method is going to return immediately, as there is nothing to act
         upon.
 
+        When executing from cache (cache execution mode), messages from the cache
+        executor are added to the truncation strategy, which automatically manages
+        message history size by removing old messages when needed.
+
         Args:
             model (str): The model to use for message creation.
             on_message (OnMessageCb): Callback on new messages
             settings (AgentSettings): The settings for the step.
             tool_collection (ToolCollection): The tools to use for the step.
             truncation_strategy (TruncationStrategy): The truncation strategy to use
-                for the step.
+                for the step. Manages message history size automatically.
 
         Returns:
             None
         """
+        # Get or generate assistant message
         if truncation_strategy.messages[-1].role == "user":
-            response_message = self._messages_api.create_message(
-                messages=truncation_strategy.messages,
-                model=model,
-                tools=tool_collection,
-                max_tokens=settings.messages.max_tokens,
-                betas=settings.messages.betas,
-                system=settings.messages.system,
-                thinking=settings.messages.thinking,
-                tool_choice=settings.messages.tool_choice,
-                temperature=settings.messages.temperature,
-            )
-            message_by_assistant = self._call_on_message(
-                on_message, response_message, truncation_strategy.messages
+            # Try to execute from cache first
+            if self._cache_manager.handle_execution_step(
+                on_message,
+                truncation_strategy,
+                model,
+                tool_collection,
+                settings,
+                self.__class__.__name__,
+                self._step,
+            ):
+                return  # Cache step handled and recursion occurred
+
+            # Normal flow: get agent response
+            message_by_assistant = self._get_agent_response(
+                model, truncation_strategy, tool_collection, settings, on_message
             )
             if message_by_assistant is None:
                 return
-            message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
-            logger.debug(message_by_assistant_dict)
-            truncation_strategy.append_message(message_by_assistant)
-            self._reporter.add_message(
-                self.__class__.__name__, message_by_assistant_dict
-            )
         else:
+            # Last message is already from assistant
             message_by_assistant = truncation_strategy.messages[-1]
+
+        # Check stop reason and process tools
         self._handle_stop_reason(message_by_assistant, settings.messages.max_tokens)
-        if tool_result_message := self._use_tools(
-            message_by_assistant, tool_collection
-        ):
-            if tool_result_message := self._call_on_message(
-                on_message, tool_result_message, truncation_strategy.messages
-            ):
-                tool_result_message_dict = tool_result_message.model_dump(mode="json")
-                logger.debug(tool_result_message_dict)
-                truncation_strategy.append_message(tool_result_message)
-                self._step(
-                    model=model,
-                    tool_collection=tool_collection,
-                    on_message=on_message,
-                    settings=settings,
-                    truncation_strategy=truncation_strategy,
-                )
+        self._process_tool_execution(
+            message_by_assistant,
+            tool_collection,
+            on_message,
+            truncation_strategy,
+            model,
+            settings,
+        )
 
     def _call_on_message(
         self,
@@ -129,6 +223,27 @@ class Agent(ActModel):
             return message
         return on_message(OnMessageCbParam(message=message, messages=messages))
 
+    def _setup_cache_tools(self, tool_collection: ToolCollection) -> None:
+        """Set agent reference on caching tools.
+
+        This allows caching tools to access the agent state for
+        cache execution and verification.
+
+        Args:
+            tool_collection: The tool collection to search for cache tools
+        """
+        # Import here to avoid circular dependency
+        from askui.tools.caching_tools import (
+            ExecuteCachedTrajectory,
+            VerifyCacheExecution,
+        )
+
+        # Iterate through tools and set agent on caching tools
+        for tool_name, tool in tool_collection.get_tools().items():
+            if isinstance(tool, (ExecuteCachedTrajectory, VerifyCacheExecution)):
+                tool.set_agent(self)
+                logger.debug("Set agent reference on %s", tool_name)
+
     @override
     def act(
         self,
@@ -138,8 +253,17 @@ class Agent(ActModel):
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
+        # Reset cache execution state at the start of each act() call
+        self._cache_manager.reset_state()
+
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
+        # Store tool collection so it can be accessed by caching tools
+        self._tool_collection = _tool_collection
+
+        # Set agent reference on ExecuteCachedTrajectory tools
+        self._setup_cache_tools(_tool_collection)
+
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
@@ -192,3 +316,60 @@ class Agent(ActModel):
             raise MaxTokensExceededError(max_tokens)
         if message.stop_reason == "refusal":
             raise ModelRefusalError
+
+    # Public methods for cache management (used by caching tools)
+    # These delegate to the CacheExecutionManager
+    def activate_cache_execution(
+        self,
+        executor: "TrajectoryExecutor",
+        cache_file: "CacheFile",
+        cache_file_path: str,
+    ) -> None:
+        """Activate cache execution mode.
+
+        Args:
+            executor: The trajectory executor to use
+            cache_file: The cache file being executed
+            cache_file_path: Path to the cache file
+        """
+        self._cache_manager.activate_execution(executor, cache_file, cache_file_path)
+
+    def get_cache_info(self) -> tuple["CacheFile | None", str | None]:
+        """Get current cache file and path.
+
+        Returns:
+            Tuple of (cache_file, cache_file_path)
+        """
+        return self._cache_manager.get_cache_info()
+
+    def is_cache_verification_pending(self) -> bool:
+        """Check if cache verification is pending.
+
+        Returns:
+            True if verification is pending
+        """
+        return self._cache_manager.is_cache_verification_pending()
+
+    def update_cache_metadata_on_completion(self, success: bool) -> None:
+        """Update cache metadata after execution completion (public API).
+
+        Args:
+            success: Whether the execution was successful
+        """
+        self._cache_manager.update_metadata_on_completion(success)
+
+    def update_cache_metadata_on_failure(
+        self, step_index: int, error_message: str
+    ) -> None:
+        """Update cache metadata after execution failure (public API).
+
+        Args:
+            step_index: The step index where failure occurred
+            error_message: The error message
+        """
+        self._cache_manager.update_metadata_on_failure(step_index, error_message)
+
+    def clear_cache_state(self) -> None:
+        """Clear cache execution state."""
+        self._cache_manager.clear_cache_state()
+
