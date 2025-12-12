@@ -8,7 +8,11 @@ from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.model_router import create_api_client
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CacheFile, CacheMetadata, CachingSettings
+from askui.models.shared.settings import (
+    CacheFile,
+    CacheMetadata,
+    CacheWriterSettings,
+)
 from askui.models.shared.tools import ToolCollection
 from askui.utils.placeholder_handler import PlaceholderHandler
 from askui.utils.placeholder_identifier import identify_placeholders
@@ -21,7 +25,7 @@ class CacheWriter:
         self,
         cache_dir: str = ".cache",
         file_name: str = "",
-        caching_settings: CachingSettings | None = None,
+        cache_writer_settings: CacheWriterSettings | None = None,
         toolbox: ToolCollection | None = None,
         goal: str | None = None,
     ) -> None:
@@ -32,14 +36,10 @@ class CacheWriter:
             file_name += ".json"
         self.file_name = file_name
         self.was_cached_execution = False
-        self._caching_settings = caching_settings or CachingSettings()
+        self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
         self._goal = goal
         self._toolbox: ToolCollection | None = None
-        # Get messages_api for placeholder identification
-        self._messages_api = AnthropicMessagesApi(
-            client=create_api_client(api_provider="askui"),
-            locator_serializer=VlmLocatorSerializer(),
-        )
+
         # Set toolbox for cache writer so it can check which tools are cacheable
         self._toolbox = toolbox
 
@@ -106,10 +106,20 @@ class CacheWriter:
         goal_to_save = self._goal
         placeholders_dict: dict[str, str] = {}
 
-        if self._caching_settings.auto_identify_placeholders and self.messages:
+        if (
+            self._cache_writer_settings.placeholder_identification_strategy == "llm"
+            and self.messages
+        ):
+            # Get messages_api for placeholder identification
+            messages_api = AnthropicMessagesApi(
+                client=create_api_client(
+                    self._cache_writer_settings.llm_placeholder_id_api_provider
+                ),
+                locator_serializer=VlmLocatorSerializer(),
+            )
             placeholders_dict, placeholder_definitions = identify_placeholders(
                 trajectory=self.messages,
-                messages_api=self._messages_api,
+                messages_api=messages_api,
             )
             n_placeholders = len(placeholder_definitions)
             # Replace actual values with {{placeholder_name}} syntax in trajectory
@@ -169,7 +179,7 @@ class CacheWriter:
         result: list[ToolUseBlockParam] = []
         for tool_block in trajectory:
             # Check if this tool is cacheable
-            tool = self._toolbox._tool_map.get(tool_block.name)
+            tool = self._toolbox.get_tools().get(tool_block.name)
 
             # If tool is not cacheable, blank out its input
             if tool is not None and not tool.is_cacheable:

@@ -24,13 +24,15 @@ The caching mechanism supports four strategies, configured via the `caching_sett
 Caching is configured using the `CachingSettings` class:
 
 ```python
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings, CacheWriterSettings
 
 caching_settings = CachingSettings(
     strategy="write",        # One of: "read", "write", "both", "no"
     cache_dir=".cache",      # Directory to store cache files
     filename="my_test.json", # Filename for the cache file (optional for write mode)
-    auto_identify_placeholders=True,  # Auto-detect dynamic values (default: True)
+    cache_writer_settings=CacheWriterSettings(
+        placeholder_identification_strategy="llm",
+      )  # Auto-detect dynamic values (default: "llm")
     execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
         delay_time_between_action=0.5  # Delay in seconds between each cached action
     )
@@ -42,8 +44,13 @@ caching_settings = CachingSettings(
 - **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
 - **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
 - **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
-- **`auto_identify_placeholders`**: **New in v0.1!** When `True` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `False`, only manually specified placeholders (using `{{...}}` syntax) are detected. See [Automatic Placeholder Identification](#automatic-placeholder-identification).
+- **`CacheWriterSettings`**: **New in v0.1!** Configuration for the Cache Writer See [CacheWriter Settings](#cachewriter-settings) below.
 - **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
+
+### CacheWriter Settings
+
+- `placeholder_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified placeholders (using `{{...}}` syntax) are detected. See [Automatic Placeholder Identification](#automatic-placeholder-identification).
+- `llm_placeholder_id_api_provider`: The provider of that will be used for for the llm in the placeholder identification (will only be used if `placeholder_identification_strategy`is set to `llm`). Defaults to `askui`.
 
 ### Execution Settings
 
@@ -466,7 +473,7 @@ In write mode, the `CacheWriter` class:
 2. Extracts tool use blocks from the messages
 3. Stores tool blocks in memory during execution
 4. When agent finishes (on `stop_reason="end_turn"`):
-   - **Automatically identifies placeholders** using AI (if `auto_identify_placeholders=True`)
+   - **Automatically identifies placeholders** using AI (if `placeholder_identification_strategy=llm`)
      - Analyzes trajectory to find dynamic values (dates, usernames, IDs, etc.)
      - Generates descriptive placeholder definitions
      - Replaces identified values with `{{placeholder_name}}` syntax in trajectory
@@ -636,7 +643,7 @@ Valid placeholder names:
 
 #### How It Works
 
-When `auto_identify_placeholders=True` (the default), the system:
+When `placeholder_identification_strategy=llm` (the default), the system:
 
 1. **Records the trajectory** as normal during agent execution
 2. **Analyzes the trajectory** using an LLM to identify dynamic values such as:
@@ -693,11 +700,13 @@ If you prefer manual placeholder control:
 ```python
 caching_settings = CachingSettings(
     strategy="write",
-    auto_identify_placeholders=False  # Only detect {{...}} syntax
+    cache_writer_settings = CacheWriterSettings(
+        placeholder_identification_strategy="default"  # Only detect {{...}} syntax
+    )
 )
 ```
 
-With `auto_identify_placeholders=False`, only manually specified placeholders using the `{{...}}` syntax will be detected.
+With `placeholder_identification_strategy=default`, only manually specified placeholders using the `{{...}}` syntax will be detected.
 
 #### Logging
 

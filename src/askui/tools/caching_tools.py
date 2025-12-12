@@ -850,13 +850,7 @@ class VerifyCacheExecution(Tool):
         # Update cache metadata based on verification result
         if success:
             self._agent.update_cache_metadata_on_completion(success=True)
-            result_msg = (
-                f"✓ Cache verification successful: {verification_notes}\n\n"
-                "The cached trajectory execution achieved the target "
-                "system state correctly. "
-                "You may now proceed with any additional tasks or "
-                "conclude the execution."
-            )
+            result_msg = f"✓ Cache verification successful: {verification_notes}"
             logger.info(result_msg)
         else:
             error_msg = (

@@ -11,12 +11,14 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
+from askui.models.anthropic.factory import AnthropicApiProvider
 from askui.models.shared.agent_message_param import ToolUseBlockParam
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
 CACHING_STRATEGY = Literal["read", "write", "both", "no"]
+PLACEHOLDER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
 
 
 class MessageSettings(BaseModel):
@@ -40,14 +42,19 @@ class CachedExecutionToolSettings(BaseModel):
     delay_time_between_action: float = 0.5
 
 
+class CacheWriterSettings(BaseModel):
+    placeholder_identification_strategy: PLACEHOLDER_IDENTIFICATION_STRATEGY = "llm"
+    llm_placeholder_id_api_provider: AnthropicApiProvider = "askui"
+
+
 class CachingSettings(BaseModel):
     strategy: CACHING_STRATEGY = "no"
     cache_dir: str = ".cache"
     filename: str = ""
-    auto_identify_placeholders: bool = True
     execute_cached_trajectory_tool_settings: CachedExecutionToolSettings = (
         CachedExecutionToolSettings()
     )
+    cache_writer_settings: CacheWriterSettings = CacheWriterSettings()
 
 
 class CacheFailure(BaseModel):
