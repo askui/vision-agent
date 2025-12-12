@@ -63,7 +63,10 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
 from askui.utils.annotated_image import AnnotatedImage
 
 from ..utils import process_exists, wait_for_port
-from .exceptions import AskUiControllerOperationTimeoutError
+from .exceptions import (
+    AskUiControllerInvalidCommandError,
+    AskUiControllerOperationTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1024,11 +1027,15 @@ class AskUiControllerClient(AgentOs):
         Send a general command to the controller.
 
         Args:
-            message (str): The message to send to the controller.
+            command (Command): The command to send to the controller.
 
         Returns:
-            controller_v1_pbs.Response_Send: Response containing
+            AskUIAgentOSSendResponseSchema: Response containing
                 the message from the controller.
+
+        Raises:
+            AskUiControllerInvalidCommandError: If the command fails schema validation
+                on the server side.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -1043,9 +1050,15 @@ class AskUiControllerClient(AgentOs):
 
         self._reporter.add_message("AgentOS", f'send_message("{request_str}")')
 
-        response: controller_v1_pbs.Response_Send = self._stub.Send(
-            controller_v1_pbs.Request_Send(message=request_str)
-        )
+        try:
+            response: controller_v1_pbs.Response_Send = self._stub.Send(
+                controller_v1_pbs.Request_Send(message=request_str)
+            )
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
+                details = e.details() if e.details() else None
+                raise AskUiControllerInvalidCommandError(details) from e
+            raise
 
         return AskUIAgentOSSendResponseSchema.model_validate_json(response.message)
 
