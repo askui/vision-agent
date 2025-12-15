@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from askui.models.shared.agent_message_param import MessageParam, TextBlockParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.agent_on_message_cb import OnMessageCb, OnMessageCbParam
 from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.reporting import Reporter
+from askui.utils.cache_manager import CacheManager
 from askui.utils.trajectory_executor import ExecutionResult
 
 if TYPE_CHECKING:
@@ -281,7 +282,6 @@ class CacheExecutionManager:
         """Call on_message callback if provided."""
         if on_message is None:
             return message
-        from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 
         return on_message(OnMessageCbParam(message=message, messages=messages))
 
@@ -295,8 +295,6 @@ class CacheExecutionManager:
             return
 
         try:
-            from askui.utils.cache_manager import CacheManager
-
             cache_manager = CacheManager()
             cache_manager.record_execution_attempt(self._cache_file, success=success)
 
@@ -309,7 +307,7 @@ class CacheExecutionManager:
                     indent=2,
                     default=str,
                 )
-            logger.debug("Updated cache metadata: %s", cache_path.name)
+            logger.info("Updated cache metadata: %s", cache_path.name)
         except Exception:
             logger.exception("Failed to update cache metadata")
 
@@ -324,8 +322,6 @@ class CacheExecutionManager:
             return
 
         try:
-            from askui.utils.cache_manager import CacheManager
-
             cache_manager = CacheManager()
             cache_manager.record_execution_attempt(self._cache_file, success=False)
             cache_manager.record_step_failure(
