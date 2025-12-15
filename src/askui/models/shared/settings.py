@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
 from askui.models.anthropic.factory import AnthropicApiProvider
-from askui.models.shared.agent_message_param import ToolUseBlockParam
+from askui.models.shared.agent_message_param import ToolUseBlockParam, UsageParam
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
@@ -69,6 +69,7 @@ class CacheMetadata(BaseModel):
     created_at: datetime
     goal: Optional[str] = None
     last_executed_at: Optional[datetime] = None
+    token_usage: UsageParam | None = None
     execution_attempts: int = 0
     failures: list[CacheFailure] = Field(default_factory=list)
     is_valid: bool = True

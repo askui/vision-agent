@@ -57,6 +57,21 @@ class Reporter(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Add usage statistics summary to the report.
+
+        Called at the end of an act() execution with accumulated token usage.
+
+        Args:
+            usage (dict[str, int | None]): Accumulated usage statistics containing:
+                - input_tokens: Total input tokens sent to API
+                - output_tokens: Total output tokens generated
+                - cache_creation_input_tokens: Tokens written to prompt cache
+                - cache_read_input_tokens: Tokens read from prompt cache
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def generate(self) -> None:
         """Generates the final report.
 
@@ -79,6 +94,10 @@ class NullReporter(Reporter):
         content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
+        pass
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
         pass
 
     @override
@@ -120,6 +139,12 @@ class CompositeReporter(Reporter):
         for report in self._reporters:
             report.generate()
 
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Add usage summary to all reporters."""
+        for reporter in self._reporters:
+            reporter.add_usage_summary(usage)
+
 
 class SystemInfo(TypedDict):
     platform: str
@@ -139,6 +164,7 @@ class SimpleHtmlReporter(Reporter):
         self.report_dir = Path(report_dir)
         self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
+        self.usage_summary: dict[str, int | None] | None = None
 
     def _collect_system_info(self) -> SystemInfo:
         """Collect system and Python information"""
@@ -178,6 +204,11 @@ class SimpleHtmlReporter(Reporter):
             "images": [self._image_to_base64(img) for img in _images],
         }
         self.messages.append(message)
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Store usage summary for inclusion in the report."""
+        self.usage_summary = usage
 
     @override
     def generate(self) -> None:
@@ -684,6 +715,7 @@ class SimpleHtmlReporter(Reporter):
                         </table>
                     </div>
 
+<<<<<<< HEAD
                     <div class="section">
                         <h2>Conversation Log</h2>
                         <table>
@@ -720,6 +752,55 @@ class SimpleHtmlReporter(Reporter):
                         </table>
                     </div>
                 </div>
+=======
+                {% if usage_summary %}
+                <h2>Token Usage</h2>
+                <table class="system-info">
+                    {% if usage_summary.get('input_tokens') is not none %}
+                    <tr>
+                        <th>Input Tokens</th>
+                        <td>{{ "{:,}".format(usage_summary.get('input_tokens')) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if usage_summary.get('output_tokens') is not none %}
+                    <tr>
+                        <th>Output Tokens</th>
+                        <td>{{ "{:,}".format(usage_summary.get('output_tokens')) }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                {% endif %}
+
+                <h2>Conversation Log</h2>
+                <table>
+                    <tr>
+                        <th>Time</th>
+                        <th>Role</th>
+                        <th>Content</th>
+                    </tr>
+                    {% for msg in messages %}
+                        <tr class="{{ msg.role.lower() }}">
+                            <td>{{ msg.timestamp.strftime('%H:%M:%S') }}</td>
+                            <td>{{ msg.role }}</td>
+                            <td>
+                                {% if msg.is_json %}
+                                    <div class="json-content">
+                                        <pre><code class="json">{{ msg.content }}</code></pre>
+                                    </div>
+                                {% else %}
+                                    {{ msg.content }}
+                                {% endif %}
+                                {% for image in msg.images %}
+                                    <br>
+                                    <img src="data:image/png;base64,{{ image }}"
+                                        class="message-image"
+                                        alt="Message image">
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+>>>>>>> c3fbf84 (feat(caching): add token usage to cache writer and reporters)
             </body>
         </html>
         """
@@ -729,6 +810,7 @@ class SimpleHtmlReporter(Reporter):
             timestamp=datetime.now(tz=timezone.utc),
             messages=self.messages,
             system_info=self.system_info,
+            usage_summary=self.usage_summary,
         )
 
         report_path = (
@@ -810,6 +892,10 @@ class AllureReporter(Reporter):
                         name="screenshot",
                         attachment_type=self.allure.attachment_type.PNG,
                     )
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """No-op for AllureReporter as usage is not part of Allure reports."""
 
     @override
     def generate(self) -> None:
