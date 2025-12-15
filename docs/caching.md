@@ -921,21 +921,41 @@ with open(".cache/old_cache.json", "w") as f:
 Here's a complete example showing advanced v0.1 features:
 
 ```python
+import logging
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import CachingSettings
+from askui.models.shared.tools import Tool
+from askui.reporting import SimpleHtmlReporter
 
-# Step 1: Record a workflow with dynamic values
-print("Recording user registration flow...")
-with VisionAgent() as agent:
-    agent.act(
-        goal="Register a new user with email 'john@example.com' and today's date",
-        caching_settings=CachingSettings(
-            strategy="write",
-            cache_dir="test_cache",
-            filename="user_registration.json"
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
+
+class PrintTool(Tool):
+    def __init__(self) -> None:
+        super().__init__(
+            name="print_tool",
+            description="""
+                Print something to the console
+            """,
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": """
+                    The text that should be printed to the console
+                    """,
+                    },
+                },
+                "required": ["text"],
+            },
         )
-    )
-# Cache file now contains placeholders for email and date
+        self.is_cacheable = False
+
+    # Agent will detect placeholders and provide new values:
+    def __call__(self, text: str) -> None:
+        print(text)
 
 # Step 2: Replay with different values
 print("\nReplaying registration with new user...")
@@ -954,36 +974,32 @@ with VisionAgent() as agent:
             )
         )
     )
-# Agent will detect placeholders and provide new values:
-# - email: "jane@example.com"
-# - date: "2025-12-11"
 
-# Step 3: Handle partial failure and resume
-print("\nTesting with non-cacheable debug step...")
-with VisionAgent() as agent:
-    agent.act(
-        goal="Register user and debug if issues occur",
-        caching_settings=CachingSettings(
-            strategy="read",
-            cache_dir="test_cache"
-        )
+
+if __name__ == "__main__":
+    goal = """Please open a new window in google chrome by right clicking on the icon in the Dock at the bottom of the screen.
+            Then, navigate to www.askui.com and print a brief summary all the screens that you have seen during the execution.
+            Describe them one by one, e.g. 1. Screen: Lorem Ipsum, 2. Screen: ....
+            One sentence per screen is sufficient.
+            Do not scroll on the screens for that!
+            Just summarize the content that is or was visible on the screen.
+            If available, you can use cache file at caching_demo.json
+            """
+    caching_settings = CachingSettings(
+        strategy="both", cache_dir=".askui_cache", filename="caching_demo.json"
     )
-# If trajectory includes a non-cacheable debug tool:
-# 1. Execution pauses with NEEDS_AGENT status
-# 2. Agent manually executes debug tool
-# 3. Agent uses ExecuteCachedTrajectory with start_from_step_index to resume
-# 4. Remaining steps execute successfully
+    # first act will create the cache file
+    with VisionAgent(
+        display=1, reporters=[SimpleHtmlReporter()], act_tools=[PrintTool()]
+    ) as agent:
+        agent.act(goal, caching_settings=caching_settings)
 
-# Step 4: Monitor cache health
-print("\nChecking cache metadata...")
-cache_file = CacheWriter.read_cache_file(Path("test_cache/user_registration.json"))
-print(f"Execution attempts: {cache_file.metadata.execution_attempts}")
-print(f"Failures: {len(cache_file.metadata.failures)}")
-print(f"Valid: {cache_file.metadata.is_valid}")
-if cache_file.metadata.failures:
-    print("Recent failures:")
-    for failure in cache_file.metadata.failures[-3:]:
-        print(f"  - Step {failure.step_index}: {failure.error_message}")
+    # second act will read and execute the cached file
+    goal = goal.replace("www.askui.com", "www.caesr.ai")
+    with VisionAgent(
+        display=1, reporters=[SimpleHtmlReporter()], act_tools=[PrintTool()]
+    ) as agent:
+        agent.act(goal, caching_settings=caching_settings)
 ```
 
 ## Future Enhancements
