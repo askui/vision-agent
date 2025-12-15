@@ -596,8 +596,17 @@ def test_trajectory_executor_message_history_on_pause() -> None:
     assert results[0].status == "SUCCESS"
     assert results[1].status == "NEEDS_AGENT"
 
-    # Message history should include first step's execution
-    assert len(results[1].message_history) == 2  # First step: assistant + user
+    # Message history should include only the successfully executed cacheable step:
+    # 1. First step: assistant message (tool use)
+    # 2. First step: user message (tool result)
+    # The non-cacheable tool is NOT in message history - instead it's in tool_result
+    assert len(results[1].message_history) == 2
+    assert results[1].message_history[0].role == "assistant"  # First cacheable tool use
+    assert results[1].message_history[1].role == "user"  # First tool result
+
+    # The non-cacheable tool should be in tool_result for reference
+    assert results[1].tool_result is not None
+    assert results[1].tool_result.name == "non_cacheable"
 
 
 def test_trajectory_executor_message_history_order() -> None:

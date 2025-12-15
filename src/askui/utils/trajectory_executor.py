@@ -120,10 +120,14 @@ class TrajectoryExecutor:
             logger.info(
                 f"Pausing at step {step_index}: {step.name} (non-cacheable tool)"
             )
+            # Return result with current tool step info for the agent to handle
+            # Note: We don't add any messages here - the cache manager will
+            # inject a user message explaining what needs to be done
             return ExecutionResult(
                 status="NEEDS_AGENT",
                 step_index=step_index,
-                message_history=self.message_history,
+                message_history=self.message_history.copy(),
+                tool_result=step,  # Pass the tool use block for reference
             )
 
         # Visual validation (future feature - currently always passes)
