@@ -52,7 +52,7 @@ class Agent(ActModel):
             truncation_strategy_factory or SimpleTruncationStrategyFactory()
         )
         # Cache execution manager handles all cache-related logic
-        self._cache_manager = CacheExecutionManager(reporter)
+        self._cache_execution_manager = CacheExecutionManager(reporter)
         # Store current tool collection for cache executor access
         self._tool_collection: ToolCollection | None = None
 
@@ -169,7 +169,7 @@ class Agent(ActModel):
         # Get or generate assistant message
         if truncation_strategy.messages[-1].role == "user":
             # Try to execute from cache first
-            should_recurse = self._cache_manager.handle_execution_step(
+            should_recurse = self._cache_execution_manager.handle_execution_step(
                 on_message,
                 truncation_strategy,
                 self.__class__.__name__,
@@ -241,7 +241,7 @@ class Agent(ActModel):
         # Iterate through tools and set agent on caching tools
         for tool_name, tool in tool_collection.get_tools().items():
             if isinstance(tool, (ExecuteCachedTrajectory, VerifyCacheExecution)):
-                tool.set_cache_execution_manager(self._cache_manager)
+                tool.set_cache_execution_manager(self._cache_execution_manager)
                 logger.debug("Set agent reference on %s", tool_name)
 
     @override
@@ -254,7 +254,7 @@ class Agent(ActModel):
         settings: ActSettings | None = None,
     ) -> None:
         # Reset cache execution state at the start of each act() call
-        self._cache_manager.reset_state()
+        self._cache_execution_manager.reset_state()
 
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
