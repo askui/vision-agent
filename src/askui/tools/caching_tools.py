@@ -8,12 +8,12 @@ from typing_extensions import override
 
 from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
+from ..utils.cache_execution_manager import CacheExecutionManager
 from ..utils.cache_manager import CacheManager
 from ..utils.cache_writer import CacheWriter
 from ..utils.placeholder_handler import PlaceholderHandler
 
 if TYPE_CHECKING:
-    from ..models.shared.agent import Agent
     from ..models.shared.agent_message_param import ToolUseBlockParam
     from ..models.shared.settings import CacheFile
     from ..utils.trajectory_executor import TrajectoryExecutor
@@ -198,16 +198,18 @@ class ExecuteCachedTrajectory(Tool):
         if not settings:
             settings = CachedExecutionToolSettings()
         self._settings = settings
-        self._agent: "Agent | None" = None  # Will be set by set_agent()
+        self._cache_execution_manager: CacheExecutionManager | None = None
         self._toolbox = toolbox
 
-    def set_agent(self, agent: "Agent") -> None:
+    def set_cache_execution_manager(
+        self, cache_execution_manager: CacheExecutionManager
+    ) -> None:
         """Set the agent reference for cache execution mode activation.
 
         Args:
             agent: The Agent instance that will execute the cached trajectory
         """
-        self._agent = agent
+        self._cache_execution_manager = cache_execution_manager
 
     def _validate_trajectory_file(self, trajectory_file: str) -> str | None:
         """Validate that trajectory file exists.
@@ -390,8 +392,8 @@ class ExecuteCachedTrajectory(Tool):
         )
 
         # Validate agent is set
-        if not self._agent:
-            error_msg = "Agent not set. Call set_agent() first."
+        if not self._cache_execution_manager:
+            error_msg = "Cache Execution Manager not set. Call set_cache_execution_manager() first."
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
@@ -437,7 +439,7 @@ class ExecuteCachedTrajectory(Tool):
         )
 
         # Store executor and cache info in agent state
-        self._agent.activate_cache_execution(
+        self._cache_execution_manager.activate_execution(
             executor=executor,
             cache_file=cache_file,
             cache_file_path=trajectory_file,
@@ -799,11 +801,17 @@ class VerifyCacheExecution(Tool):
             },
         )
         self.is_cacheable = False  # Verification is not cacheable
-        self._agent: "Agent | None" = None
+        self._cache_execution_manager: CacheExecutionManager | None = None
 
-    def set_agent(self, agent: "Agent") -> None:
-        """Set agent reference for metadata updates."""
-        self._agent = agent
+    def set_cache_execution_manager(
+        self, cache_execution_manager: CacheExecutionManager
+    ) -> None:
+        """Set the agent reference for cache execution mode activation.
+
+        Args:
+            agent: The Agent instance that will execute the cached trajectory
+        """
+        self._cache_execution_manager = cache_execution_manager
 
     @override
     @validate_call
@@ -822,14 +830,15 @@ class VerifyCacheExecution(Tool):
             success,
             verification_notes,
         )
-
-        if not self._agent:
-            error_msg = "Agent not set. Cannot record verification result."
+        if not self._cache_execution_manager:
+            error_msg = (
+                "Cache Execution Manager not set. Cannot record verification result."
+            )
             logger.error(error_msg)
             return error_msg
 
         # Check if there's a cache file to update (more reliable than checking flag)
-        cache_file, cache_file_path = self._agent.get_cache_info()
+        cache_file, cache_file_path = self._cache_execution_manager.get_cache_info()
         if not (cache_file and cache_file_path):
             warning_msg = (
                 "No cache file to update. "
@@ -841,7 +850,7 @@ class VerifyCacheExecution(Tool):
         # Debug log if verification flag wasn't explicitly set
         # (This can happen if verification is called directly without the flag,
         # but we still proceed since we have the cache file)
-        if not self._agent.is_cache_verification_pending():
+        if not self._cache_execution_manager.is_cache_verification_pending():
             logger.debug(
                 "Verification flag not set, but cache file exists. "
                 "This is normal for direct verification calls."
@@ -849,7 +858,7 @@ class VerifyCacheExecution(Tool):
 
         # Update cache metadata based on verification result
         if success:
-            self._agent.update_cache_metadata_on_completion(success=True)
+            self._cache_execution_manager.update_metadata_on_completion(success=True)
             result_msg = f"✓ Cache verification successful: {verification_notes}"
             logger.info(result_msg)
         else:
@@ -857,7 +866,7 @@ class VerifyCacheExecution(Tool):
                 f"Cache execution did not lead to target system state: "
                 f"{verification_notes}"
             )
-            self._agent.update_cache_metadata_on_failure(
+            self._cache_execution_manager.update_metadata_on_failure(
                 step_index=-1,  # -1 indicates verification failure
                 error_message=error_msg,
             )
@@ -874,6 +883,6 @@ class VerifyCacheExecution(Tool):
             logger.warning(result_msg)
 
         # Clear verification flag and cache references after verification
-        self._agent.clear_cache_state()
+        self._cache_execution_manager.clear_cache_state()
 
         return result_msg
