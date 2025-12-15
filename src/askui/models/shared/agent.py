@@ -1,5 +1,4 @@
 import logging
-from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -21,10 +20,6 @@ from askui.models.shared.truncation_strategies import (
 )
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.utils.cache_execution_manager import CacheExecutionManager
-
-if TYPE_CHECKING:
-    from askui.models.shared.settings import CacheFile
-    from askui.utils.trajectory_executor import TrajectoryExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +55,6 @@ class Agent(ActModel):
         self._cache_manager = CacheExecutionManager(reporter)
         # Store current tool collection for cache executor access
         self._tool_collection: ToolCollection | None = None
-
 
     def _get_agent_response(
         self,
@@ -241,7 +235,7 @@ class Agent(ActModel):
         # Iterate through tools and set agent on caching tools
         for tool_name, tool in tool_collection.get_tools().items():
             if isinstance(tool, (ExecuteCachedTrajectory, VerifyCacheExecution)):
-                tool.set_agent(self)
+                tool.set_cache_execution_manager(self._cache_manager)
                 logger.debug("Set agent reference on %s", tool_name)
 
     @override
@@ -316,60 +310,3 @@ class Agent(ActModel):
             raise MaxTokensExceededError(max_tokens)
         if message.stop_reason == "refusal":
             raise ModelRefusalError
-
-    # Public methods for cache management (used by caching tools)
-    # These delegate to the CacheExecutionManager
-    def activate_cache_execution(
-        self,
-        executor: "TrajectoryExecutor",
-        cache_file: "CacheFile",
-        cache_file_path: str,
-    ) -> None:
-        """Activate cache execution mode.
-
-        Args:
-            executor: The trajectory executor to use
-            cache_file: The cache file being executed
-            cache_file_path: Path to the cache file
-        """
-        self._cache_manager.activate_execution(executor, cache_file, cache_file_path)
-
-    def get_cache_info(self) -> tuple["CacheFile | None", str | None]:
-        """Get current cache file and path.
-
-        Returns:
-            Tuple of (cache_file, cache_file_path)
-        """
-        return self._cache_manager.get_cache_info()
-
-    def is_cache_verification_pending(self) -> bool:
-        """Check if cache verification is pending.
-
-        Returns:
-            True if verification is pending
-        """
-        return self._cache_manager.is_cache_verification_pending()
-
-    def update_cache_metadata_on_completion(self, success: bool) -> None:
-        """Update cache metadata after execution completion (public API).
-
-        Args:
-            success: Whether the execution was successful
-        """
-        self._cache_manager.update_metadata_on_completion(success)
-
-    def update_cache_metadata_on_failure(
-        self, step_index: int, error_message: str
-    ) -> None:
-        """Update cache metadata after execution failure (public API).
-
-        Args:
-            step_index: The step index where failure occurred
-            error_message: The error message
-        """
-        self._cache_manager.update_metadata_on_failure(step_index, error_message)
-
-    def clear_cache_state(self) -> None:
-        """Clear cache execution state."""
-        self._cache_manager.clear_cache_state()
-

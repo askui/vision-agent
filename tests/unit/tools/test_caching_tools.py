@@ -9,14 +9,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from askui.models.shared.agent import Agent
-from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import CachedExecutionToolSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
+from askui.utils.cache_execution_manager import CacheExecutionManager
 
 
 # ============================================================================
@@ -219,11 +218,11 @@ def test_execute_cached_execution_initializes_with_toolbox() -> None:
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
     assert tool.name == "execute_cached_executions_tool"
     assert tool._toolbox is mock_toolbox  # noqa: SLF001
-    assert tool._agent is None  # noqa: SLF001
+    assert tool._cache_execution_manager is None  # noqa: SLF001
 
 
-def test_execute_cached_execution_raises_error_without_agent() -> None:
-    """Test that ExecuteCachedTrajectory raises error when agent not set."""
+def test_execute_cached_execution_raises_error_without_cache_manager() -> None:
+    """Test that ExecuteCachedTrajectory raises error when cache manager not set."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test.json"
         cache_data = {
@@ -244,7 +243,7 @@ def test_execute_cached_execution_raises_error_without_agent() -> None:
         mock_toolbox = MagicMock(spec=ToolCollection)
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
 
-        with pytest.raises(RuntimeError, match="Agent not set"):
+        with pytest.raises(RuntimeError, match="Cache Execution Manager not set"):
             tool(trajectory_file=str(cache_file))
 
 
@@ -252,9 +251,8 @@ def test_execute_cached_execution_returns_error_when_file_not_found() -> None:
     """Test that ExecuteCachedTrajectory returns error message if file doesn't exist."""
     mock_toolbox = MagicMock(spec=ToolCollection)
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    mock_agent = MagicMock(spec=Agent)
-    mock_agent._tool_collection = mock_toolbox
-    tool.set_agent(mock_agent)
+    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
+    tool.set_cache_execution_manager(mock_cache_manager)
 
     result = tool(trajectory_file="/non/existent/file.json")
 
@@ -300,15 +298,13 @@ def test_execute_cached_execution_activates_cache_mode() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent with toolbox
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         # Create and configure tool
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         # Call the tool
         result = tool(trajectory_file=str(cache_file))
@@ -318,10 +314,11 @@ def test_execute_cached_execution_activates_cache_mode() -> None:
         assert "✓ Cache execution mode activated" in result
         assert "2 cached steps" in result
 
-        # Verify cache info was set using public API
-        cache_file_obj, cache_file_path = mock_agent.get_cache_info()
-        assert cache_file_obj is not None
-        assert cache_file_path == str(cache_file)
+        # Verify activate_execution was called on the cache manager
+        mock_cache_manager.activate_execution.assert_called_once()
+        # Verify the cache file path was passed correctly
+        call_args = mock_cache_manager.activate_execution.call_args
+        assert call_args.kwargs["cache_file_path"] == str(cache_file)
 
 
 def test_execute_cached_execution_works_with_toolbox() -> None:
@@ -354,14 +351,13 @@ def test_execute_cached_execution_works_with_toolbox() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
 
         # Create tool with toolbox
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file))
 
@@ -370,15 +366,15 @@ def test_execute_cached_execution_works_with_toolbox() -> None:
         assert "✓ Cache execution mode activated" in result
 
 
-def test_execute_cached_execution_set_agent() -> None:
-    """Test that set_agent properly sets reference."""
+def test_execute_cached_execution_set_cache_manager() -> None:
+    """Test that set_cache_execution_manager properly sets reference."""
     mock_toolbox = MagicMock(spec=ToolCollection)
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    mock_agent = MagicMock(spec=Agent)
+    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
 
-    tool.set_agent(mock_agent)
+    tool.set_cache_execution_manager(mock_cache_manager)
 
-    assert tool._agent == mock_agent  # noqa: SLF001
+    assert tool._cache_execution_manager == mock_cache_manager  # noqa: SLF001
     assert tool._toolbox == mock_toolbox  # noqa: SLF001
 
 
@@ -436,14 +432,12 @@ def test_execute_cached_execution_with_placeholders() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(
             trajectory_file=str(cache_file),
@@ -490,13 +484,11 @@ def test_execute_cached_execution_missing_placeholders() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file))
 
@@ -526,14 +518,12 @@ def test_execute_cached_execution_no_placeholders_backward_compat() -> None:
             json.dump(trajectory, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file))
 
@@ -572,14 +562,12 @@ def test_continue_cached_trajectory_from_middle() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file), start_from_step_index=2)
 
@@ -614,14 +602,12 @@ def test_continue_cached_trajectory_invalid_step_index_negative() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file), start_from_step_index=-1)
 
@@ -655,14 +641,12 @@ def test_continue_cached_trajectory_invalid_step_index_too_large() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file), start_from_step_index=5)
 
@@ -718,14 +702,12 @@ def test_continue_cached_trajectory_with_placeholders() -> None:
             json.dump(cache_data, f)
 
         # Create mock agent
-        mock_messages_api = MagicMock(spec=MessagesApi)
-        mock_agent = Agent(messages_api=mock_messages_api)
+        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
         mock_toolbox._tool_map = {}
-        mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_agent(mock_agent)
+        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(
             trajectory_file=str(cache_file),
@@ -765,14 +747,12 @@ def test_execute_cached_trajectory_warns_if_invalid(tmp_path, caplog):
         json.dump(cache_data, f)
 
     # Create mock agent
-    mock_messages_api = MagicMock(spec=MessagesApi)
-    mock_agent = Agent(messages_api=mock_messages_api)
+    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
     mock_toolbox = MagicMock(spec=ToolCollection)
     mock_toolbox._tool_map = {}
-    mock_agent._tool_collection = mock_toolbox  # noqa: SLF001
 
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    tool.set_agent(mock_agent)
+    tool.set_cache_execution_manager(mock_cache_manager)
 
     result = tool(trajectory_file=str(cache_file))
 
