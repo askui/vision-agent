@@ -1,6 +1,6 @@
 """Tests for cache manager."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -41,16 +41,16 @@ def sample_cache_file():
 def test_cache_manager_default_initialization():
     """Test cache manager initializes with default validator."""
     manager = CacheManager()
-    assert manager.validator is not None
-    assert isinstance(manager.validator, CompositeCacheValidator)
-    assert len(manager.validator.validators) == 3  # 3 built-in validators
+    assert manager.validators is not None
+    assert isinstance(manager.validators, CompositeCacheValidator)
+    assert len(manager.validators.validators) == 3  # 3 built-in validators
 
 
 def test_cache_manager_custom_validator():
     """Test cache manager with custom validator."""
     custom_validator = StepFailureCountValidator(max_failures_per_step=5)
-    manager = CacheManager(validator=custom_validator)
-    assert manager.validator is custom_validator
+    manager = CacheManager(validators=[custom_validator])
+    assert manager.validators.validators[0] is custom_validator
 
 
 # Record Execution Attempt Tests
@@ -179,13 +179,14 @@ def test_record_step_failure_different_steps(sample_cache_file):
 def test_should_invalidate_delegates_to_validator(sample_cache_file):
     """Test that should_invalidate delegates to the validator."""
     mock_validator = MagicMock(spec=CacheValidator)
+    mock_validator.get_name.return_value = "Mock Validator"
     mock_validator.should_invalidate.return_value = (True, "Test reason")
 
-    manager = CacheManager(validator=mock_validator)
+    manager = CacheManager(validators=[mock_validator])
     should_inv, reason = manager.should_invalidate(sample_cache_file, step_index=1)
 
     assert should_inv is True
-    assert reason == "Test reason"
+    assert reason == "Mock Validator: Test reason"
     mock_validator.should_invalidate.assert_called_once_with(sample_cache_file, 1)
 
 
@@ -369,10 +370,8 @@ def test_full_workflow_below_threshold(sample_cache_file):
 def test_workflow_with_custom_validator(sample_cache_file):
     """Test workflow with custom validator with lower threshold."""
     # Custom validator with lower threshold
-    custom_validator = CompositeCacheValidator(
-        [StepFailureCountValidator(max_failures_per_step=2)]
-    )
-    manager = CacheManager(validator=custom_validator)
+    custom_validator = [StepFailureCountValidator(max_failures_per_step=2)]
+    manager = CacheManager(validators=custom_validator)
 
     # Record 2 failures (enough to trigger custom validator)
     for i in range(2):

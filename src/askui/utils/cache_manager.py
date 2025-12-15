@@ -35,15 +35,15 @@ class CacheManager:
         manager = CacheManager(validator=custom_validator)
     """
 
-    def __init__(self, validator: Optional[CacheValidator] = None):
+    def __init__(self, validators: Optional[list[CacheValidator]] = None):
         """Initialize cache manager.
 
         Args:
             validator: Custom validator or None to use default composite validator
         """
-        if validator is None:
+        if validators is None:
             # Default validator with built-in strategies
-            self.validator = CompositeCacheValidator(
+            self.validators = CompositeCacheValidator(
                 [
                     StepFailureCountValidator(max_failures_per_step=3),
                     TotalFailureRateValidator(min_attempts=10, max_failure_rate=0.5),
@@ -51,7 +51,7 @@ class CacheManager:
                 ]
             )
         else:
-            self.validator = validator
+            self.validators = CompositeCacheValidator(validators)
 
     def record_execution_attempt(
         self,
@@ -107,7 +107,7 @@ class CacheManager:
         Returns:
             Tuple of (should_invalidate: bool, reason: Optional[str])
         """
-        return self.validator.should_invalidate(cache_file, step_index)
+        return self.validators.should_invalidate(cache_file, step_index)
 
     def invalidate_cache(self, cache_file: CacheFile, reason: str) -> None:
         """Mark cache as invalid.
