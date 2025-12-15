@@ -1,6 +1,10 @@
 # Caching (Experimental)
 
+<<<<<<< HEAD
 **CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the caching_strategy to `no`.**
+=======
+**CAUTION: THIS FEATURE IS STILL IN ALPHA STATE AND SUBJECT TO CHANGE! USE AT YOUR OWN RISK. IN CASE YOU RUN INTO ISSUES YOU CAN JUST DISABLE THE FEATURE BY REMOVING THE CACHING_SETTINGS OR SETTING THE CACHING STRATEGY TO `no`.**
+>>>>>>> bda523e (chore(caching): explicitly mention that caching is experimental in the docs)
 
 The caching mechanism allows you to record and replay agent action sequences (trajectories) for faster and more robust test execution. This feature is particularly useful for regression testing, where you want to replay known-good interaction sequences to verify that your application still behaves correctly.
 
