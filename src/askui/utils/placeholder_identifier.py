@@ -93,7 +93,9 @@ Return only the JSON object with identified placeholders. Be thorough but conser
             response_text = response_text.split("```")[1].split("```")[0].strip()
 
         placeholder_data = json.loads(response_text)
-        logger.debug(f"Successfully parsed JSON response with {len(placeholder_data.get('placeholders', []))} placeholders")
+        logger.debug(
+            f"Successfully parsed JSON response with {len(placeholder_data.get('placeholders', []))} placeholders"
+        )
 
         # Convert to our data structures
         placeholder_definitions = [
@@ -103,9 +105,7 @@ Return only the JSON object with identified placeholders. Be thorough but conser
             for p in placeholder_data.get("placeholders", [])
         ]
 
-        placeholder_dict = {
-            p.name: p.description for p in placeholder_definitions
-        }
+        placeholder_dict = {p.name: p.description for p in placeholder_definitions}
 
         if placeholder_definitions:
             logger.info(

@@ -128,9 +128,7 @@ class CacheManager:
         cache_file.metadata.is_valid = True
         cache_file.metadata.invalidation_reason = None
 
-    def get_failure_count_for_step(
-        self, cache_file: CacheFile, step_index: int
-    ) -> int:
+    def get_failure_count_for_step(self, cache_file: CacheFile, step_index: int) -> int:
         """Get number of failures for a specific step.
 
         Args:

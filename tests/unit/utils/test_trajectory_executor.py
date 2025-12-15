@@ -158,7 +158,10 @@ def test_trajectory_executor_executes_retrieve_trajectories_tool() -> None:
     assert result.step_index == 0  # First step executed
     assert mock_toolbox.run.call_count == 1
     # Verify retrieve tool was called
-    assert mock_toolbox.run.call_args[0][0][0].name == "retrieve_available_trajectories_tool"
+    assert (
+        mock_toolbox.run.call_args[0][0][0].name
+        == "retrieve_available_trajectories_tool"
+    )
 
 
 def test_trajectory_executor_pauses_at_non_cacheable_tool() -> None:
@@ -412,7 +415,9 @@ def test_trajectory_executor_builds_message_history() -> None:
     mock_toolbox._tool_map = {}
 
     trajectory = [
-        ToolUseBlockParam(id="tool1", name="test_tool", input={"x": 100}, type="tool_use")
+        ToolUseBlockParam(
+            id="tool1", name="test_tool", input={"x": 100}, type="tool_use"
+        )
     ]
 
     executor = TrajectoryExecutor(
@@ -484,9 +489,7 @@ def test_trajectory_executor_message_history_contains_tool_use_id() -> None:
     ]
     mock_toolbox._tool_map = {}
 
-    trajectory = [
-        ToolUseBlockParam(id="1", name="tool", input={}, type="tool_use")
-    ]
+    trajectory = [ToolUseBlockParam(id="1", name="tool", input={}, type="tool_use")]
 
     executor = TrajectoryExecutor(
         trajectory=trajectory, toolbox=mock_toolbox, delay_time=0
@@ -516,9 +519,7 @@ def test_trajectory_executor_message_history_includes_text_result() -> None:
     ]
     mock_toolbox._tool_map = {}
 
-    trajectory = [
-        ToolUseBlockParam(id="1", name="tool", input={}, type="tool_use")
-    ]
+    trajectory = [ToolUseBlockParam(id="1", name="tool", input={}, type="tool_use")]
 
     executor = TrajectoryExecutor(
         trajectory=trajectory, toolbox=mock_toolbox, delay_time=0
@@ -822,7 +823,9 @@ def test_validate_step_visually_hook_called_when_enabled() -> None:
     assert results[0].status == "SUCCESS"
 
 
-@pytest.mark.skip(reason="Visual validation fields not yet implemented - future feature")
+@pytest.mark.skip(
+    reason="Visual validation fields not yet implemented - future feature"
+)
 def test_visual_validation_fields_on_tool_use_block() -> None:
     """Test that ToolUseBlockParam supports visual validation fields.
 

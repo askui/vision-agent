@@ -26,10 +26,10 @@ def sample_cache_file():
             is_valid=True,
         ),
         trajectory=[
+            ToolUseBlockParam(id="1", name="click", input={"x": 100}, type="tool_use"),
             ToolUseBlockParam(
-                id="1", name="click", input={"x": 100}, type="tool_use"
+                id="2", name="type", input={"text": "test"}, type="tool_use"
             ),
-            ToolUseBlockParam(id="2", name="type", input={"text": "test"}, type="tool_use"),
         ],
         placeholders={},
     )
@@ -97,10 +97,14 @@ def test_record_execution_attempt_failure_without_info(sample_cache_file):
     initial_attempts = sample_cache_file.metadata.execution_attempts
     initial_failures = len(sample_cache_file.metadata.failures)
 
-    manager.record_execution_attempt(sample_cache_file, success=False, failure_info=None)
+    manager.record_execution_attempt(
+        sample_cache_file, success=False, failure_info=None
+    )
 
     assert sample_cache_file.metadata.execution_attempts == initial_attempts + 1
-    assert len(sample_cache_file.metadata.failures) == initial_failures  # No new failure added
+    assert (
+        len(sample_cache_file.metadata.failures) == initial_failures
+    )  # No new failure added
 
 
 # Record Step Failure Tests
@@ -110,7 +114,9 @@ def test_record_step_failure_first_failure(sample_cache_file):
     """Test recording the first failure at a step."""
     manager = CacheManager()
 
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="First error")
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="First error"
+    )
 
     assert len(sample_cache_file.metadata.failures) == 1
     failure = sample_cache_file.metadata.failures[0]
@@ -123,9 +129,15 @@ def test_record_step_failure_multiple_at_same_step(sample_cache_file):
     """Test recording multiple failures at the same step."""
     manager = CacheManager()
 
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="Error 1")
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="Error 2")
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="Error 3")
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="Error 1"
+    )
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="Error 2"
+    )
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="Error 3"
+    )
 
     assert len(sample_cache_file.metadata.failures) == 3
     assert sample_cache_file.metadata.failures[0].failure_count_at_step == 1
@@ -137,14 +149,24 @@ def test_record_step_failure_different_steps(sample_cache_file):
     """Test recording failures at different steps."""
     manager = CacheManager()
 
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="Error at step 1")
-    manager.record_step_failure(sample_cache_file, step_index=2, error_message="Error at step 2")
-    manager.record_step_failure(sample_cache_file, step_index=1, error_message="Another at step 1")
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="Error at step 1"
+    )
+    manager.record_step_failure(
+        sample_cache_file, step_index=2, error_message="Error at step 2"
+    )
+    manager.record_step_failure(
+        sample_cache_file, step_index=1, error_message="Another at step 1"
+    )
 
     assert len(sample_cache_file.metadata.failures) == 3
 
-    step_1_failures = [f for f in sample_cache_file.metadata.failures if f.step_index == 1]
-    step_2_failures = [f for f in sample_cache_file.metadata.failures if f.step_index == 2]
+    step_1_failures = [
+        f for f in sample_cache_file.metadata.failures if f.step_index == 1
+    ]
+    step_2_failures = [
+        f for f in sample_cache_file.metadata.failures if f.step_index == 2
+    ]
 
     assert len(step_1_failures) == 2
     assert len(step_2_failures) == 1
@@ -313,7 +335,7 @@ def test_full_workflow_with_failure_detection(sample_cache_file):
     # Record 3 failures at step 1 (default threshold is 3)
     for i in range(3):
         manager.record_step_failure(
-            sample_cache_file, step_index=1, error_message=f"Error {i+1}"
+            sample_cache_file, step_index=1, error_message=f"Error {i + 1}"
         )
 
     # Check if should invalidate
@@ -333,7 +355,7 @@ def test_full_workflow_below_threshold(sample_cache_file):
     # Record 2 failures at step 1 (below default threshold of 3)
     for i in range(2):
         manager.record_step_failure(
-            sample_cache_file, step_index=1, error_message=f"Error {i+1}"
+            sample_cache_file, step_index=1, error_message=f"Error {i + 1}"
         )
 
     # Check if should invalidate
@@ -355,7 +377,7 @@ def test_workflow_with_custom_validator(sample_cache_file):
     # Record 2 failures (enough to trigger custom validator)
     for i in range(2):
         manager.record_step_failure(
-            sample_cache_file, step_index=1, error_message=f"Error {i+1}"
+            sample_cache_file, step_index=1, error_message=f"Error {i + 1}"
         )
 
     should_inv, reason = manager.should_invalidate(sample_cache_file, step_index=1)
