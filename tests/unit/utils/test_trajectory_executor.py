@@ -36,7 +36,12 @@ def test_trajectory_executor_initialization() -> None:
 def test_trajectory_executor_execute_simple_step() -> None:
     """Test executing a simple step."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Tool result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Tool result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -61,7 +66,12 @@ def test_trajectory_executor_execute_simple_step() -> None:
 def test_trajectory_executor_execute_all_steps() -> None:
     """Test executing all steps in a trajectory."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -89,7 +99,12 @@ def test_trajectory_executor_execute_all_steps() -> None:
 def test_trajectory_executor_executes_screenshot_tools() -> None:
     """Test that screenshot tools are executed (not skipped)."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Screenshot result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Screenshot result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -114,7 +129,12 @@ def test_trajectory_executor_executes_screenshot_tools() -> None:
 def test_trajectory_executor_executes_retrieve_trajectories_tool() -> None:
     """Test that retrieve_available_trajectories_tool is executed (not skipped)."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Trajectory list"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Trajectory list")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -144,7 +164,12 @@ def test_trajectory_executor_executes_retrieve_trajectories_tool() -> None:
 def test_trajectory_executor_pauses_at_non_cacheable_tool() -> None:
     """Test that execution pauses at non-cacheable tools."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
 
     # Create mock tools in the toolbox
     cacheable_tool = MagicMock()
@@ -206,7 +231,12 @@ def test_trajectory_executor_substitutes_placeholders() -> None:
 
     def capture_run(steps):  # type: ignore
         captured_steps.extend(steps)
-        return ["Result"]
+        return [
+            ToolResultBlockParam(
+                tool_use_id="1",
+                content=[TextBlockParam(type="text", text="Result")],
+            )
+        ]
 
     mock_toolbox = MagicMock(spec=ToolCollection)
     mock_toolbox.run = capture_run
@@ -308,7 +338,12 @@ def test_trajectory_executor_skip_at_end_does_nothing() -> None:
 def test_trajectory_executor_completed_status_when_done() -> None:
     """Test that executor returns COMPLETED when all steps are done."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [ToolUseBlockParam(id="1", name="tool1", input={}, type="tool_use")]
@@ -335,7 +370,12 @@ def test_trajectory_executor_execute_all_stops_on_failure() -> None:
         call_count[0] += 1
         if call_count[0] == 2:
             raise Exception("Second call fails")
-        return ["Result"]
+        return [
+            ToolResultBlockParam(
+                tool_use_id="1",
+                content=[TextBlockParam(type="text", text="Result")],
+            )
+        ]
 
     mock_toolbox = MagicMock(spec=ToolCollection)
     mock_toolbox.run = mock_run
@@ -363,7 +403,12 @@ def test_trajectory_executor_execute_all_stops_on_failure() -> None:
 def test_trajectory_executor_builds_message_history() -> None:
     """Test that executor builds message history during execution."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result1"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result1")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -398,7 +443,12 @@ def test_trajectory_executor_builds_message_history() -> None:
 def test_trajectory_executor_message_history_accumulates() -> None:
     """Test that message history accumulates across multiple steps."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -426,11 +476,16 @@ def test_trajectory_executor_message_history_accumulates() -> None:
 def test_trajectory_executor_message_history_contains_tool_use_id() -> None:
     """Test that tool result has correct tool_use_id matching tool use."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Success"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Success")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
-        ToolUseBlockParam(id="unique_id_123", name="tool", input={}, type="tool_use")
+        ToolUseBlockParam(id="1", name="tool", input={}, type="tool_use")
     ]
 
     executor = TrajectoryExecutor(
@@ -447,13 +502,18 @@ def test_trajectory_executor_message_history_contains_tool_use_id() -> None:
     assert isinstance(tool_use, ToolUseBlockParam)
     assert isinstance(tool_result, ToolResultBlockParam)
     assert tool_result.tool_use_id == tool_use.id
-    assert tool_result.tool_use_id == "unique_id_123"
+    assert tool_result.tool_use_id == "1"
 
 
 def test_trajectory_executor_message_history_includes_text_result() -> None:
     """Test that tool results include text content."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Tool executed successfully"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Tool executed successfully")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -503,7 +563,12 @@ def test_trajectory_executor_message_history_on_failure() -> None:
 def test_trajectory_executor_message_history_on_pause() -> None:
     """Test that message history is included when execution pauses."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
 
     cacheable_tool = MagicMock()
     cacheable_tool.is_cacheable = True
@@ -538,7 +603,12 @@ def test_trajectory_executor_message_history_on_pause() -> None:
 def test_trajectory_executor_message_history_order() -> None:
     """Test that message history maintains correct order."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -577,7 +647,12 @@ def test_trajectory_executor_message_history_order() -> None:
 def test_visual_validation_disabled_by_default() -> None:
     """Test that visual validation is disabled by default."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -606,7 +681,12 @@ def test_visual_validation_disabled_by_default() -> None:
 def test_visual_validation_enabled_flag() -> None:
     """Test that visual validation flag can be enabled."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
@@ -653,7 +733,12 @@ def test_validate_step_visually_hook_exists() -> None:
 def test_validate_step_visually_always_passes_when_disabled() -> None:
     """Test that validation always passes when disabled (default behavior)."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     # Create step with visual validation fields
@@ -684,7 +769,12 @@ def test_validate_step_visually_always_passes_when_disabled() -> None:
 def test_validate_step_visually_hook_called_when_enabled() -> None:
     """Test that validate_step_visually is called when enabled."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox.run.return_value = ["Result"]
+    mock_toolbox.run.return_value = [
+        ToolResultBlockParam(
+            tool_use_id="1",
+            content=[TextBlockParam(type="text", text="Result")],
+        )
+    ]
     mock_toolbox._tool_map = {}
 
     trajectory = [
