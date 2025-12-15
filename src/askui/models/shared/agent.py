@@ -4,7 +4,7 @@ from typing_extensions import override
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.models import ActModel
-from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import MessageParam, UsageParam
 from askui.models.shared.agent_on_message_cb import (
     NULL_ON_MESSAGE_CB,
     OnMessageCb,
@@ -93,6 +93,8 @@ class Agent(ActModel):
         )
         if message_by_assistant is None:
             return None
+
+        self._accumulate_usage(message_by_assistant.usage)  # type: ignore
 
         message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
         logger.debug(message_by_assistant_dict)
@@ -252,7 +254,8 @@ class Agent(ActModel):
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
-        # Reset cache execution state at the start of each act() call
+        # reset states
+        self.accumulated_usage: UsageParam = UsageParam()
         self._cache_execution_manager.reset_state()
 
         _settings = settings or ActSettings()
@@ -278,6 +281,9 @@ class Agent(ActModel):
             tool_collection=_tool_collection,
             truncation_strategy=truncation_strategy,
         )
+
+        # Report accumulated usage statistics
+        self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
 
     def _use_tools(
         self,
@@ -315,3 +321,17 @@ class Agent(ActModel):
             raise MaxTokensExceededError(max_tokens)
         if message.stop_reason == "refusal":
             raise ModelRefusalError
+
+    def _accumulate_usage(self, step_usage: UsageParam) -> None:
+        self.accumulated_usage.input_tokens = (
+            self.accumulated_usage.input_tokens or 0
+        ) + (step_usage.input_tokens or 0)
+        self.accumulated_usage.output_tokens = (
+            self.accumulated_usage.output_tokens or 0
+        ) + (step_usage.output_tokens or 0)
+        self.accumulated_usage.cache_creation_input_tokens = (
+            self.accumulated_usage.cache_creation_input_tokens or 0
+        ) + (step_usage.cache_creation_input_tokens or 0)
+        self.accumulated_usage.cache_read_input_tokens = (
+            self.accumulated_usage.cache_read_input_tokens or 0
+        ) + (step_usage.cache_read_input_tokens or 0)

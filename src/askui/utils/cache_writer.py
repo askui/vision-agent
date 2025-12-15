@@ -6,7 +6,11 @@ from pathlib import Path
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.model_router import create_api_client
-from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ToolUseBlockParam,
+    UsageParam,
+)
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import (
     CacheFile,
@@ -39,12 +43,13 @@ class CacheWriter:
         self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
         self._goal = goal
         self._toolbox: ToolCollection | None = None
+        self._accumulated_usage = UsageParam()
 
         # Set toolbox for cache writer so it can check which tools are cacheable
         self._toolbox = toolbox
 
     def add_message_cb(self, param: OnMessageCbParam) -> MessageParam:
-        """Add a message to cache."""
+        """Add a message to cache and accumulate usage statistics."""
         if param.message.role == "assistant":
             contents = param.message.content
             if isinstance(contents, list):
@@ -53,6 +58,11 @@ class CacheWriter:
                         self.messages.append(content)
                         if content.name == "execute_cached_executions_tool":
                             self.was_cached_execution = True
+
+            # Accumulate usage from assistant messages
+            if param.message.usage:
+                self._accumulate_usage(param.message.usage)
+
         if param.message.stop_reason == "end_turn":
             self.generate()
 
@@ -69,6 +79,7 @@ class CacheWriter:
             file_name += ".json"
         self.file_name = file_name
         self.was_cached_execution = False
+        self._accumulated_usage = UsageParam()
 
     def generate(self) -> None:
         if self.was_cached_execution:
@@ -219,6 +230,7 @@ class CacheWriter:
                 version="0.1",
                 created_at=datetime.now(tz=timezone.utc),
                 goal=goal_to_save,
+                token_usage=self._accumulated_usage,
             ),
             trajectory=trajectory_to_save,
             placeholders=placeholders_dict,
@@ -227,6 +239,25 @@ class CacheWriter:
         with cache_file_path.open("w", encoding="utf-8") as f:
             json.dump(cache_file.model_dump(mode="json"), f, indent=4)
         logger.info(f"Cache file successfully written: {cache_file_path} ")
+
+    def _accumulate_usage(self, step_usage: UsageParam) -> None:
+        """Accumulate usage statistics from a single API call.
+
+        Args:
+            step_usage: Usage from a single message
+        """
+        self._accumulated_usage.input_tokens = (
+            self._accumulated_usage.input_tokens or 0
+        ) + (step_usage.input_tokens or 0)
+        self._accumulated_usage.output_tokens = (
+            self._accumulated_usage.output_tokens or 0
+        ) + (step_usage.output_tokens or 0)
+        self._accumulated_usage.cache_creation_input_tokens = (
+            self._accumulated_usage.cache_creation_input_tokens or 0
+        ) + (step_usage.cache_creation_input_tokens or 0)
+        self._accumulated_usage.cache_read_input_tokens = (
+            self._accumulated_usage.cache_read_input_tokens or 0
+        ) + (step_usage.cache_read_input_tokens or 0)
 
     @staticmethod
     def read_cache_file(cache_file_path: Path) -> CacheFile:
