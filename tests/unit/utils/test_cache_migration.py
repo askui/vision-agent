@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -10,7 +11,7 @@ from askui.utils.cache_migration import CacheMigration, CacheMigrationError
 
 
 @pytest.fixture
-def temp_cache_dir(tmp_path):
+def temp_cache_dir(tmp_path: Path) -> Path:
     """Create a temporary cache directory."""
     cache_dir = tmp_path / "caches"
     cache_dir.mkdir()
@@ -18,7 +19,7 @@ def temp_cache_dir(tmp_path):
 
 
 @pytest.fixture
-def v1_cache_data():
+def v1_cache_data() -> list[dict[str, Any]]:
     """Sample v0.0 cache data (just a trajectory list)."""
     return [
         {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
@@ -27,7 +28,7 @@ def v1_cache_data():
 
 
 @pytest.fixture
-def v2_cache_data():
+def v2_cache_data() -> dict[str, Any]:
     """Sample v0.1 cache data (with metadata)."""
     return {
         "metadata": {
@@ -49,7 +50,7 @@ def v2_cache_data():
 # Initialization Tests
 
 
-def test_cache_migration_initialization():
+def test_cache_migration_initialization() -> None:
     """Test CacheMigration initializes with correct defaults."""
     migration = CacheMigration()
     assert migration.backup is False
@@ -59,7 +60,7 @@ def test_cache_migration_initialization():
     assert migration.error_count == 0
 
 
-def test_cache_migration_initialization_with_backup():
+def test_cache_migration_initialization_with_backup() -> None:
     """Test CacheMigration initializes with backup enabled."""
     migration = CacheMigration(backup=True, backup_suffix=".bak")
     assert migration.backup is True
@@ -69,7 +70,9 @@ def test_cache_migration_initialization_with_backup():
 # Single File Migration Tests
 
 
-def test_migrate_file_v1_to_v2(temp_cache_dir, v1_cache_data):
+def test_migrate_file_v1_to_v2(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test migrating a v0.0 cache file to v0.1."""
     cache_file = temp_cache_dir / "test.json"
     with cache_file.open("w") as f:
@@ -92,7 +95,9 @@ def test_migrate_file_v1_to_v2(temp_cache_dir, v1_cache_data):
     assert "placeholders" in data
 
 
-def test_migrate_file_already_v2(temp_cache_dir, v2_cache_data):
+def test_migrate_file_already_v2(
+    temp_cache_dir: Path, v2_cache_data: dict[str, Any]
+) -> None:
     """Test that v0.1 files are skipped."""
     cache_file = temp_cache_dir / "test.json"
     with cache_file.open("w") as f:
@@ -105,7 +110,9 @@ def test_migrate_file_already_v2(temp_cache_dir, v2_cache_data):
     assert "Already v0.1" in message
 
 
-def test_migrate_file_dry_run(temp_cache_dir, v1_cache_data):
+def test_migrate_file_dry_run(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test dry run doesn't modify files."""
     cache_file = temp_cache_dir / "test.json"
     with cache_file.open("w") as f:
@@ -124,7 +131,9 @@ def test_migrate_file_dry_run(temp_cache_dir, v1_cache_data):
     assert cache_file.read_text() == original_content
 
 
-def test_migrate_file_creates_backup(temp_cache_dir, v1_cache_data):
+def test_migrate_file_creates_backup(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test that backup is created when requested."""
     cache_file = temp_cache_dir / "test.json"
     with cache_file.open("w") as f:
@@ -145,7 +154,7 @@ def test_migrate_file_creates_backup(temp_cache_dir, v1_cache_data):
     assert backup_data == v1_cache_data
 
 
-def test_migrate_file_not_found(temp_cache_dir):
+def test_migrate_file_not_found(temp_cache_dir: Path) -> None:
     """Test handling of missing file."""
     cache_file = temp_cache_dir / "nonexistent.json"
 
@@ -156,7 +165,7 @@ def test_migrate_file_not_found(temp_cache_dir):
     assert "File not found" in message
 
 
-def test_migrate_file_invalid_json(temp_cache_dir):
+def test_migrate_file_invalid_json(temp_cache_dir: Path) -> None:
     """Test handling of invalid JSON."""
     cache_file = temp_cache_dir / "invalid.json"
     cache_file.write_text("not valid json{")
@@ -171,7 +180,9 @@ def test_migrate_file_invalid_json(temp_cache_dir):
 # Directory Migration Tests
 
 
-def test_migrate_directory_multiple_files(temp_cache_dir, v1_cache_data):
+def test_migrate_directory_multiple_files(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test migrating multiple files in a directory."""
     # Create several v0.0 cache files
     for i in range(3):
@@ -188,7 +199,11 @@ def test_migrate_directory_multiple_files(temp_cache_dir, v1_cache_data):
     assert stats["errors"] == 0
 
 
-def test_migrate_directory_mixed_versions(temp_cache_dir, v1_cache_data, v2_cache_data):
+def test_migrate_directory_mixed_versions(
+    temp_cache_dir: Path,
+    v1_cache_data: list[dict[str, Any]],
+    v2_cache_data: dict[str, Any],
+) -> None:
     """Test migrating directory with mixed v0.0 and v0.1 files."""
     # Create v0.0 files
     for i in range(2):
@@ -211,7 +226,9 @@ def test_migrate_directory_mixed_versions(temp_cache_dir, v1_cache_data, v2_cach
     assert stats["errors"] == 0
 
 
-def test_migrate_directory_dry_run(temp_cache_dir, v1_cache_data):
+def test_migrate_directory_dry_run(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test dry run on directory doesn't modify files."""
     cache_file = temp_cache_dir / "test.json"
     with cache_file.open("w") as f:
@@ -227,7 +244,9 @@ def test_migrate_directory_dry_run(temp_cache_dir, v1_cache_data):
     assert cache_file.read_text() == original_content
 
 
-def test_migrate_directory_with_pattern(temp_cache_dir, v1_cache_data):
+def test_migrate_directory_with_pattern(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test migrating directory with custom file pattern."""
     # Create files with different extensions
     for ext in ["json", "cache", "txt"]:
@@ -245,7 +264,7 @@ def test_migrate_directory_with_pattern(temp_cache_dir, v1_cache_data):
     assert stats["migrated"] == 1
 
 
-def test_migrate_directory_not_found():
+def test_migrate_directory_not_found() -> None:
     """Test handling of non-existent directory."""
     migration = CacheMigration()
 
@@ -253,7 +272,7 @@ def test_migrate_directory_not_found():
         migration.migrate_directory(Path("/nonexistent/directory"))
 
 
-def test_migrate_directory_empty(temp_cache_dir):
+def test_migrate_directory_empty(temp_cache_dir: Path) -> None:
     """Test migrating empty directory."""
     migration = CacheMigration()
     stats = migration.migrate_directory(temp_cache_dir, dry_run=False)
@@ -264,7 +283,9 @@ def test_migrate_directory_empty(temp_cache_dir):
     assert stats["errors"] == 0
 
 
-def test_migrate_directory_with_errors(temp_cache_dir, v1_cache_data):
+def test_migrate_directory_with_errors(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test directory migration handles errors gracefully."""
     # Create valid v0.0 file
     valid_file = temp_cache_dir / "valid.json"
@@ -284,7 +305,9 @@ def test_migrate_directory_with_errors(temp_cache_dir, v1_cache_data):
     assert stats["skipped"] == 0
 
 
-def test_migrate_directory_creates_backups(temp_cache_dir, v1_cache_data):
+def test_migrate_directory_creates_backups(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test directory migration creates backups for all files."""
     # Create v0.0 files
     for i in range(2):
@@ -306,7 +329,9 @@ def test_migrate_directory_creates_backups(temp_cache_dir, v1_cache_data):
 # Integration Tests
 
 
-def test_full_migration_workflow(temp_cache_dir, v1_cache_data):
+def test_full_migration_workflow(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test complete migration workflow from v0.0 to v0.1."""
     # Create v0.0 cache
     cache_file = temp_cache_dir / "workflow_test.json"
@@ -339,7 +364,9 @@ def test_full_migration_workflow(temp_cache_dir, v1_cache_data):
     assert "Already v0.1" in message
 
 
-def test_migration_preserves_trajectory_data(temp_cache_dir, v1_cache_data):
+def test_migration_preserves_trajectory_data(
+    temp_cache_dir: Path, v1_cache_data: list[dict[str, Any]]
+) -> None:
     """Test that migration preserves all trajectory data."""
     cache_file = temp_cache_dir / "preserve_test.json"
     with cache_file.open("w") as f:

@@ -241,7 +241,7 @@ def test_substitute_placeholders_simple_string() -> None:
         tool_block, {"current_date": "2025-12-11"}
     )
 
-    assert result.input["text"] == "Today is 2025-12-11"
+    assert result.input["text"] == "Today is 2025-12-11"  # type: ignore[index]
     assert result.id == tool_block.id
     assert result.name == tool_block.name
 
@@ -262,7 +262,7 @@ def test_substitute_placeholders_multiple() -> None:
         tool_block, {"user_name": "Alice", "current_date": "2025-12-11"}
     )
 
-    assert result.input["text"] == "Hello Alice, date is 2025-12-11"
+    assert result.input["text"] == "Hello Alice, date is 2025-12-11"  # type: ignore[index]
 
 
 def test_substitute_placeholders_nested_dict() -> None:
@@ -281,8 +281,8 @@ def test_substitute_placeholders_nested_dict() -> None:
         tool_block, {"var1": "value1", "var2": "value2"}
     )
 
-    assert result.input["outer"]["inner"]["text"] == "Value: value1"
-    assert result.input["another"] == "value2"
+    assert result.input["outer"]["inner"]["text"] == "Value: value1"  # type: ignore[index]
+    assert result.input["another"] == "value2"  # type: ignore[index]
 
 
 def test_substitute_placeholders_in_list() -> None:
@@ -298,9 +298,9 @@ def test_substitute_placeholders_in_list() -> None:
         tool_block, {"item1": "value1", "item2": "value2"}
     )
 
-    assert result.input["items"][0] == "value1"
-    assert result.input["items"][1] == "static"
-    assert result.input["items"][2]["nested"] == "value2"
+    assert result.input["items"][0] == "value1"  # type: ignore[index]
+    assert result.input["items"][1] == "static"  # type: ignore[index]
+    assert result.input["items"][2]["nested"] == "value2"  # type: ignore[index]
 
 
 def test_substitute_placeholders_no_change_if_no_placeholders() -> None:
@@ -328,7 +328,7 @@ def test_substitute_placeholders_partial_substitution() -> None:
 
     result = PlaceholderHandler.substitute_placeholders(tool_block, {"var1": "value1"})
 
-    assert result.input["text"] == "value1 and {{var2}}"
+    assert result.input["text"] == "value1 and {{var2}}"  # type: ignore[index]
 
 
 def test_substitute_placeholders_preserves_original() -> None:
@@ -340,7 +340,7 @@ def test_substitute_placeholders_preserves_original() -> None:
         type="tool_use",
     )
 
-    original_input = tool_block.input.copy()
+    original_input = tool_block.input.copy()  # type: ignore[attr-defined]
     PlaceholderHandler.substitute_placeholders(tool_block, {"var1": "value1"})
 
     # Original should be unchanged
@@ -361,7 +361,7 @@ def test_substitute_placeholders_with_special_characters() -> None:
         tool_block, {"pattern": r".*[test]$"}
     )
 
-    assert result.input["text"] == r"Pattern: .*[test]$"
+    assert result.input["text"] == r"Pattern: .*[test]$"  # type: ignore[index]
 
 
 def test_substitute_placeholders_same_placeholder_multiple_times() -> None:
@@ -375,4 +375,4 @@ def test_substitute_placeholders_same_placeholder_multiple_times() -> None:
 
     result = PlaceholderHandler.substitute_placeholders(tool_block, {"var": "value"})
 
-    assert result.input["text"] == "value is value is value"
+    assert result.input["text"] == "value is value is value"  # type: ignore[index]

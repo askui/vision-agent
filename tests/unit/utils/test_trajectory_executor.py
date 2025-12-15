@@ -498,8 +498,8 @@ def test_trajectory_executor_message_history_contains_tool_use_id() -> None:
     result = executor.execute_next_step()
 
     # Get tool use and tool result
-    tool_use = result.message_history[0].content[0]  # type: ignore
-    tool_result = result.message_history[1].content[0]  # type: ignore
+    tool_use = result.message_history[0].content[0]
+    tool_result = result.message_history[1].content[0]
 
     # Verify tool_use_id matches
     assert isinstance(tool_use, ToolUseBlockParam)
@@ -528,7 +528,7 @@ def test_trajectory_executor_message_history_includes_text_result() -> None:
     result = executor.execute_next_step()
 
     # Get tool result
-    tool_result_block = result.message_history[1].content[0]  # type: ignore
+    tool_result_block = result.message_history[1].content[0]
     assert isinstance(tool_result_block, ToolResultBlockParam)
 
     # Verify text content is included
@@ -643,12 +643,12 @@ def test_trajectory_executor_message_history_order() -> None:
     assert final_history[3].role == "user"  # Step 2 result
 
     # Verify step order in tool use
-    tool_use_1 = final_history[0].content[0]  # type: ignore
-    tool_use_2 = final_history[2].content[0]  # type: ignore
+    tool_use_1 = final_history[0].content[0]
+    tool_use_2 = final_history[2].content[0]
     assert isinstance(tool_use_1, ToolUseBlockParam)
     assert isinstance(tool_use_2, ToolUseBlockParam)
-    assert tool_use_1.input == {"step": 1}  # type: ignore
-    assert tool_use_2.input == {"step": 2}  # type: ignore
+    assert tool_use_1.input == {"step": 1}
+    assert tool_use_2.input == {"step": 2}
 
 
 # Visual Validation Extension Point Tests
@@ -809,11 +809,11 @@ def test_validate_step_visually_hook_called_when_enabled() -> None:
     original_validate = executor.validate_step_visually
     validation_called = []
 
-    def mock_validate(step, screenshot=None):
+    def mock_validate(step, screenshot=None) -> tuple[bool, str | None]:  # type: ignore[no-untyped-def]
         validation_called.append(step)
         return original_validate(step, screenshot)
 
-    executor.validate_step_visually = mock_validate
+    executor.validate_step_visually = mock_validate  # type: ignore[assignment]
 
     # Execute trajectory
     results = executor.execute_all()
@@ -844,13 +844,13 @@ def test_visual_validation_fields_on_tool_use_block() -> None:
     )
 
     # Fields should be accessible
-    assert step.visual_hash == "a8f3c9e14b7d2056"
-    assert step.visual_validation_required is True
+    assert step.visual_hash == "a8f3c9e14b7d2056"  # type: ignore[attr-defined]
+    assert step.visual_validation_required is True  # type: ignore[attr-defined]
 
     # Default values should work
     step_default = ToolUseBlockParam(
         id="2", name="type", input={"text": "hello"}, type="tool_use"
     )
 
-    assert step_default.visual_hash is None
-    assert step_default.visual_validation_required is False
+    assert step_default.visual_hash is None  # type: ignore[attr-defined]
+    assert step_default.visual_validation_required is False  # type: ignore[attr-defined]
