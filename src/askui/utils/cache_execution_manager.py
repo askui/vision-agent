@@ -120,7 +120,12 @@ class CacheExecutionManager:
                 agent_class_name,
             )
         if result.status == "NEEDS_AGENT":
-            return self._handle_cache_needs_agent(result)
+            return self._handle_cache_needs_agent(
+                result,
+                on_message,
+                truncation_strategy,
+                agent_class_name,
+            )
         if result.status == "COMPLETED":
             return self._handle_cache_completed(truncation_strategy)
         # result.status == "FAILED"
@@ -169,23 +174,62 @@ class CacheExecutionManager:
         # Return True to indicate caller should recurse
         return True
 
-    def _handle_cache_needs_agent(self, result: ExecutionResult) -> bool:
-        """Handle cache execution pausing for non-cacheable tool."""
+    def _handle_cache_needs_agent(
+        self,
+        result: ExecutionResult,
+        on_message: OnMessageCb,
+        truncation_strategy: TruncationStrategy,
+        agent_class_name: str,
+    ) -> bool:
+        """Handle cache execution pausing for non-cacheable tool.
+
+        Injects a user message explaining that cache execution paused and
+        what the agent needs to execute next.
+
+        Returns:
+            False to indicate normal agent flow should continue
+        """
         logger.info(
             "Paused cache execution at step %d "
             "(non-cacheable tool - agent will handle this step)",
             result.step_index,
         )
         self._executing_from_cache = False
+
+        # Get the tool that needs to be executed
+        tool_to_execute = result.tool_result  # This is the ToolUseBlockParam
+
+        # Create a user message explaining what needs to be done
+        if tool_to_execute:
+            instruction_message = MessageParam(
+                role="user",
+                content=[
+                    TextBlockParam(
+                        type="text",
+                        text=(
+                            f"Cache execution paused at step {result.step_index}. "
+                            f"The previous steps were executed successfully from cache. "
+                            f"The next step requires the '{tool_to_execute.name}' tool, "
+                            f"which cannot be executed from cache. "
+                            f"Please execute this tool with the necessary parameters."
+                        ),
+                    )
+                ],
+            )
+
+            # Add the instruction message to truncation strategy
+            instruction_msg = self._call_on_message(
+                on_message, instruction_message, truncation_strategy.messages
+            )
+            if instruction_msg:
+                truncation_strategy.append_message(instruction_msg)
+
         return False  # Fall through to normal agent API call
 
-    def _handle_cache_completed(
-        self, truncation_strategy: TruncationStrategy
-    ) -> bool:
+    def _handle_cache_completed(self, truncation_strategy: TruncationStrategy) -> bool:
         """Handle cache execution completion."""
         logger.info(
-            "✓ Cache trajectory execution completed - "
-            "requesting agent verification"
+            "✓ Cache trajectory execution completed - requesting agent verification"
         )
         self._executing_from_cache = False
         self._cache_verification_pending = True
@@ -269,9 +313,7 @@ class CacheExecutionManager:
         except Exception:
             logger.exception("Failed to update cache metadata")
 
-    def update_metadata_on_failure(
-        self, step_index: int, error_message: str
-    ) -> None:
+    def update_metadata_on_failure(self, step_index: int, error_message: str) -> None:
         """Update cache metadata after execution failure.
 
         Args:
