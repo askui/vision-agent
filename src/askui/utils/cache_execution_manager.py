@@ -3,12 +3,10 @@
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from askui.models.shared.agent_message_param import MessageParam, TextBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.reporting import Reporter
 from askui.utils.trajectory_executor import ExecutionResult
@@ -16,11 +14,6 @@ from askui.utils.trajectory_executor import ExecutionResult
 if TYPE_CHECKING:
     from askui.models.shared.settings import CacheFile
     from askui.utils.trajectory_executor import TrajectoryExecutor
-
-# Type for the step callback function (matches Agent._step signature)
-StepCallback = Callable[
-    [str, OnMessageCb, ActSettings, ToolCollection, TruncationStrategy], None
-]
 
 logger = logging.getLogger(__name__)
 
@@ -100,25 +93,17 @@ class CacheExecutionManager:
         self,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        model: str,
-        tool_collection: ToolCollection,
-        settings: ActSettings,
         agent_class_name: str,
-        step_callback: StepCallback,
     ) -> bool:
         """Handle cache execution step.
 
         Args:
             on_message: Callback for messages
             truncation_strategy: Message truncation strategy
-            model: Model to use
-            tool_collection: Available tools
-            settings: Agent settings
             agent_class_name: Name of agent class for reporting
-            step_callback: Callback to continue agent step
 
         Returns:
-            True if cache step was handled and recursion occurred,
+            True if cache step was handled and caller should recurse,
             False if should continue with normal flow
         """
         if not (self._executing_from_cache and self._cache_executor):
@@ -132,11 +117,7 @@ class CacheExecutionManager:
                 result,
                 on_message,
                 truncation_strategy,
-                model,
-                tool_collection,
-                settings,
                 agent_class_name,
-                step_callback,
             )
         if result.status == "NEEDS_AGENT":
             return self._handle_cache_needs_agent(result)
@@ -150,13 +131,14 @@ class CacheExecutionManager:
         result: ExecutionResult,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        model: str,
-        tool_collection: ToolCollection,
-        settings: ActSettings,
         agent_class_name: str,
-        step_callback: StepCallback,
     ) -> bool:
-        """Handle successful cache step execution."""
+        """Handle successful cache step execution.
+
+        Returns:
+            True if messages were added and caller should recurse,
+            False otherwise
+        """
         if len(result.message_history) < 2:
             return False
 
@@ -184,14 +166,7 @@ class CacheExecutionManager:
 
         truncation_strategy.append_message(user_msg_processed)
 
-        # Continue with next step recursively
-        step_callback(
-            model,
-            on_message,
-            settings,
-            tool_collection,
-            truncation_strategy,
-        )
+        # Return True to indicate caller should recurse
         return True
 
     def _handle_cache_needs_agent(self, result: ExecutionResult) -> bool:

@@ -107,41 +107,35 @@ class Agent(ActModel):
         tool_collection: ToolCollection,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        model: str,
-        settings: ActSettings,
-    ) -> None:
-        """Process tool execution and continue if needed.
+    ) -> bool:
+        """Process tool execution and return whether to continue.
 
         Args:
             message_by_assistant: Assistant message with potential tool uses
             tool_collection: Available tools
             on_message: Callback for messages
             truncation_strategy: Message truncation strategy
-            model: Model to use
-            settings: Agent settings
+
+        Returns:
+            True if tool results were added and caller should recurse,
+            False otherwise
         """
         tool_result_message = self._use_tools(message_by_assistant, tool_collection)
         if not tool_result_message:
-            return
+            return False
 
         tool_result_message = self._call_on_message(
             on_message, tool_result_message, truncation_strategy.messages
         )
         if not tool_result_message:
-            return
+            return False
 
         tool_result_message_dict = tool_result_message.model_dump(mode="json")
         logger.debug(tool_result_message_dict)
         truncation_strategy.append_message(tool_result_message)
 
-        # Continue with next step recursively
-        self._step(
-            model=model,
-            tool_collection=tool_collection,
-            on_message=on_message,
-            settings=settings,
-            truncation_strategy=truncation_strategy,
-        )
+        # Return True to indicate caller should recurse
+        return True
 
     def _step(
         self,
@@ -175,16 +169,21 @@ class Agent(ActModel):
         # Get or generate assistant message
         if truncation_strategy.messages[-1].role == "user":
             # Try to execute from cache first
-            if self._cache_manager.handle_execution_step(
+            should_recurse = self._cache_manager.handle_execution_step(
                 on_message,
                 truncation_strategy,
-                model,
-                tool_collection,
-                settings,
                 self.__class__.__name__,
-                self._step,
-            ):
-                return  # Cache step handled and recursion occurred
+            )
+            if should_recurse:
+                # Cache step handled, recurse to continue
+                self._step(
+                    model=model,
+                    on_message=on_message,
+                    settings=settings,
+                    tool_collection=tool_collection,
+                    truncation_strategy=truncation_strategy,
+                )
+                return
 
             # Normal flow: get agent response
             message_by_assistant = self._get_agent_response(
@@ -198,14 +197,21 @@ class Agent(ActModel):
 
         # Check stop reason and process tools
         self._handle_stop_reason(message_by_assistant, settings.messages.max_tokens)
-        self._process_tool_execution(
+        should_recurse = self._process_tool_execution(
             message_by_assistant,
             tool_collection,
             on_message,
             truncation_strategy,
-            model,
-            settings,
         )
+        if should_recurse:
+            # Tool results added, recurse to continue
+            self._step(
+                model=model,
+                on_message=on_message,
+                settings=settings,
+                tool_collection=tool_collection,
+                truncation_strategy=truncation_strategy,
+            )
 
     def _call_on_message(
         self,
