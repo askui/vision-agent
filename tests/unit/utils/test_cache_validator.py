@@ -26,10 +26,10 @@ def sample_cache_file():
             is_valid=True,
         ),
         trajectory=[
+            ToolUseBlockParam(id="1", name="click", input={"x": 100}, type="tool_use"),
             ToolUseBlockParam(
-                id="1", name="click", input={"x": 100}, type="tool_use"
+                id="2", name="type", input={"text": "test"}, type="tool_use"
             ),
-            ToolUseBlockParam(id="2", name="type", input={"text": "test"}, type="tool_use"),
         ],
         placeholders={},
     )
@@ -219,7 +219,9 @@ def test_stale_cache_validator_not_stale(sample_cache_file):
     """Test validator does not invalidate recent cache."""
     validator = StaleCacheValidator(max_age_days=30)
 
-    sample_cache_file.metadata.last_executed_at = datetime.now(tz=timezone.utc) - timedelta(days=10)
+    sample_cache_file.metadata.last_executed_at = datetime.now(
+        tz=timezone.utc
+    ) - timedelta(days=10)
     sample_cache_file.metadata.failures = [
         CacheFailure(
             timestamp=datetime.now(tz=timezone.utc),
@@ -237,7 +239,9 @@ def test_stale_cache_validator_is_stale(sample_cache_file):
     """Test validator invalidates old cache with failures."""
     validator = StaleCacheValidator(max_age_days=30)
 
-    sample_cache_file.metadata.last_executed_at = datetime.now(tz=timezone.utc) - timedelta(days=35)
+    sample_cache_file.metadata.last_executed_at = datetime.now(
+        tz=timezone.utc
+    ) - timedelta(days=35)
     sample_cache_file.metadata.failures = [
         CacheFailure(
             timestamp=datetime.now(tz=timezone.utc),
@@ -256,7 +260,9 @@ def test_stale_cache_validator_old_but_no_failures(sample_cache_file):
     """Test validator does not invalidate old cache without failures."""
     validator = StaleCacheValidator(max_age_days=30)
 
-    sample_cache_file.metadata.last_executed_at = datetime.now(tz=timezone.utc) - timedelta(days=100)
+    sample_cache_file.metadata.last_executed_at = datetime.now(
+        tz=timezone.utc
+    ) - timedelta(days=100)
     sample_cache_file.metadata.failures = []
 
     should_inv, reason = validator.should_invalidate(sample_cache_file)

@@ -47,9 +47,7 @@ class PlaceholderHandler:
 
         for step in trajectory:
             # Recursively find placeholders in the input object
-            placeholders.update(
-                PlaceholderHandler._extract_from_value(step.input)
-            )
+            placeholders.update(PlaceholderHandler._extract_from_value(step.input))
 
         return placeholders
 
@@ -178,9 +176,7 @@ class PlaceholderHandler:
         return templated_trajectory
 
     @staticmethod
-    def _replace_values_in_value(
-        value: Any, replacements: dict[str, str]
-    ) -> Any:
+    def _replace_values_in_value(value: Any, replacements: dict[str, str]) -> Any:
         """Recursively replace actual values with placeholder syntax.
 
         Args:
