@@ -16,7 +16,7 @@ from askui.utils.cache_validator import (
 
 
 @pytest.fixture
-def sample_cache_file():
+def sample_cache_file() -> CacheFile:
     """Create a sample cache file for testing."""
     return CacheFile(
         metadata=CacheMetadata(
@@ -38,7 +38,7 @@ def sample_cache_file():
 # Initialization Tests
 
 
-def test_cache_manager_default_initialization():
+def test_cache_manager_default_initialization() -> None:
     """Test cache manager initializes with default validator."""
     manager = CacheManager()
     assert manager.validators is not None
@@ -46,7 +46,7 @@ def test_cache_manager_default_initialization():
     assert len(manager.validators.validators) == 3  # 3 built-in validators
 
 
-def test_cache_manager_custom_validator():
+def test_cache_manager_custom_validator() -> None:
     """Test cache manager with custom validator."""
     custom_validator = StepFailureCountValidator(max_failures_per_step=5)
     manager = CacheManager(validators=[custom_validator])
@@ -56,7 +56,7 @@ def test_cache_manager_custom_validator():
 # Record Execution Attempt Tests
 
 
-def test_record_execution_attempt_success(sample_cache_file):
+def test_record_execution_attempt_success(sample_cache_file: CacheFile) -> None:
     """Test recording successful execution attempt."""
     manager = CacheManager()
     initial_attempts = sample_cache_file.metadata.execution_attempts
@@ -69,7 +69,9 @@ def test_record_execution_attempt_success(sample_cache_file):
     assert sample_cache_file.metadata.last_executed_at != initial_last_executed
 
 
-def test_record_execution_attempt_failure_with_info(sample_cache_file):
+def test_record_execution_attempt_failure_with_info(
+    sample_cache_file: CacheFile,
+) -> None:
     """Test recording failed execution attempt with failure info."""
     manager = CacheManager()
     initial_attempts = sample_cache_file.metadata.execution_attempts
@@ -91,7 +93,9 @@ def test_record_execution_attempt_failure_with_info(sample_cache_file):
     assert sample_cache_file.metadata.failures[-1] == failure_info
 
 
-def test_record_execution_attempt_failure_without_info(sample_cache_file):
+def test_record_execution_attempt_failure_without_info(
+    sample_cache_file: CacheFile,
+) -> None:
     """Test recording failed execution attempt without failure info."""
     manager = CacheManager()
     initial_attempts = sample_cache_file.metadata.execution_attempts
@@ -110,7 +114,7 @@ def test_record_execution_attempt_failure_without_info(sample_cache_file):
 # Record Step Failure Tests
 
 
-def test_record_step_failure_first_failure(sample_cache_file):
+def test_record_step_failure_first_failure(sample_cache_file: CacheFile) -> None:
     """Test recording the first failure at a step."""
     manager = CacheManager()
 
@@ -125,7 +129,9 @@ def test_record_step_failure_first_failure(sample_cache_file):
     assert failure.failure_count_at_step == 1
 
 
-def test_record_step_failure_multiple_at_same_step(sample_cache_file):
+def test_record_step_failure_multiple_at_same_step(
+    sample_cache_file: CacheFile,
+) -> None:
     """Test recording multiple failures at the same step."""
     manager = CacheManager()
 
@@ -145,7 +151,7 @@ def test_record_step_failure_multiple_at_same_step(sample_cache_file):
     assert sample_cache_file.metadata.failures[2].failure_count_at_step == 3
 
 
-def test_record_step_failure_different_steps(sample_cache_file):
+def test_record_step_failure_different_steps(sample_cache_file: CacheFile) -> None:
     """Test recording failures at different steps."""
     manager = CacheManager()
 
@@ -176,7 +182,7 @@ def test_record_step_failure_different_steps(sample_cache_file):
 # Should Invalidate Tests
 
 
-def test_should_invalidate_delegates_to_validator(sample_cache_file):
+def test_should_invalidate_delegates_to_validator(sample_cache_file: CacheFile) -> None:
     """Test that should_invalidate delegates to the validator."""
     mock_validator = MagicMock(spec=CacheValidator)
     mock_validator.get_name.return_value = "Mock Validator"
@@ -190,7 +196,7 @@ def test_should_invalidate_delegates_to_validator(sample_cache_file):
     mock_validator.should_invalidate.assert_called_once_with(sample_cache_file, 1)
 
 
-def test_should_invalidate_with_default_validator(sample_cache_file):
+def test_should_invalidate_with_default_validator(sample_cache_file: CacheFile) -> None:
     """Test should_invalidate with default built-in validators."""
     manager = CacheManager()
 
@@ -208,13 +214,13 @@ def test_should_invalidate_with_default_validator(sample_cache_file):
 
     should_inv, reason = manager.should_invalidate(sample_cache_file)
     assert should_inv is True
-    assert "Failure rate" in reason
+    assert "Failure rate" in reason  # type: ignore[operator]
 
 
 # Invalidate Cache Tests
 
 
-def test_invalidate_cache(sample_cache_file):
+def test_invalidate_cache(sample_cache_file: CacheFile) -> None:
     """Test marking cache as invalid."""
     manager = CacheManager()
     assert sample_cache_file.metadata.is_valid is True
@@ -223,10 +229,10 @@ def test_invalidate_cache(sample_cache_file):
     manager.invalidate_cache(sample_cache_file, reason="Test invalidation")
 
     assert sample_cache_file.metadata.is_valid is False
-    assert sample_cache_file.metadata.invalidation_reason == "Test invalidation"
+    assert sample_cache_file.metadata.invalidation_reason == "Test invalidation"  # type: ignore[unreachable]
 
 
-def test_invalidate_cache_multiple_times(sample_cache_file):
+def test_invalidate_cache_multiple_times(sample_cache_file: CacheFile) -> None:
     """Test invalidating cache multiple times updates reason."""
     manager = CacheManager()
 
@@ -240,7 +246,7 @@ def test_invalidate_cache_multiple_times(sample_cache_file):
 # Mark Cache Valid Tests
 
 
-def test_mark_cache_valid(sample_cache_file):
+def test_mark_cache_valid(sample_cache_file: CacheFile) -> None:
     """Test marking cache as valid."""
     manager = CacheManager()
 
@@ -255,7 +261,7 @@ def test_mark_cache_valid(sample_cache_file):
     assert sample_cache_file.metadata.invalidation_reason is None
 
 
-def test_mark_cache_valid_already_valid(sample_cache_file):
+def test_mark_cache_valid_already_valid(sample_cache_file: CacheFile) -> None:
     """Test marking already valid cache as valid."""
     manager = CacheManager()
     assert sample_cache_file.metadata.is_valid is True
@@ -269,7 +275,7 @@ def test_mark_cache_valid_already_valid(sample_cache_file):
 # Get Failure Count for Step Tests
 
 
-def test_get_failure_count_for_step_no_failures(sample_cache_file):
+def test_get_failure_count_for_step_no_failures(sample_cache_file: CacheFile) -> None:
     """Test getting failure count when no failures exist."""
     manager = CacheManager()
 
@@ -277,7 +283,7 @@ def test_get_failure_count_for_step_no_failures(sample_cache_file):
     assert count == 0
 
 
-def test_get_failure_count_for_step_with_failures(sample_cache_file):
+def test_get_failure_count_for_step_with_failures(sample_cache_file: CacheFile) -> None:
     """Test getting failure count for specific step."""
     manager = CacheManager()
 
@@ -309,7 +315,9 @@ def test_get_failure_count_for_step_with_failures(sample_cache_file):
     assert count_step_2 == 1
 
 
-def test_get_failure_count_for_step_nonexistent_step(sample_cache_file):
+def test_get_failure_count_for_step_nonexistent_step(
+    sample_cache_file: CacheFile,
+) -> None:
     """Test getting failure count for step that hasn't failed."""
     manager = CacheManager()
 
@@ -329,7 +337,7 @@ def test_get_failure_count_for_step_nonexistent_step(sample_cache_file):
 # Integration Tests
 
 
-def test_full_workflow_with_failure_detection(sample_cache_file):
+def test_full_workflow_with_failure_detection(sample_cache_file: CacheFile) -> None:
     """Test complete workflow: record failures, detect threshold, invalidate."""
     manager = CacheManager()
 
@@ -342,14 +350,14 @@ def test_full_workflow_with_failure_detection(sample_cache_file):
     # Check if should invalidate
     should_inv, reason = manager.should_invalidate(sample_cache_file, step_index=1)
     assert should_inv is True
-    assert "Step 1 failed 3 times" in reason
+    assert "Step 1 failed 3 times" in reason  # type: ignore[operator]
 
     # Invalidate
-    manager.invalidate_cache(sample_cache_file, reason=reason)
+    manager.invalidate_cache(sample_cache_file, reason=reason)  # type: ignore[arg-type]
     assert sample_cache_file.metadata.is_valid is False
 
 
-def test_full_workflow_below_threshold(sample_cache_file):
+def test_full_workflow_below_threshold(sample_cache_file: CacheFile) -> None:
     """Test workflow where failures don't reach threshold."""
     manager = CacheManager()
 
@@ -367,11 +375,11 @@ def test_full_workflow_below_threshold(sample_cache_file):
     assert sample_cache_file.metadata.is_valid is True
 
 
-def test_workflow_with_custom_validator(sample_cache_file):
+def test_workflow_with_custom_validator(sample_cache_file: CacheFile) -> None:
     """Test workflow with custom validator with lower threshold."""
     # Custom validator with lower threshold
     custom_validator = [StepFailureCountValidator(max_failures_per_step=2)]
-    manager = CacheManager(validators=custom_validator)
+    manager = CacheManager(validators=custom_validator)  # type: ignore[arg-type]
 
     # Record 2 failures (enough to trigger custom validator)
     for i in range(2):
@@ -381,10 +389,12 @@ def test_workflow_with_custom_validator(sample_cache_file):
 
     should_inv, reason = manager.should_invalidate(sample_cache_file, step_index=1)
     assert should_inv is True
-    assert "Step 1 failed 2 times" in reason
+    assert "Step 1 failed 2 times" in reason  # type: ignore[operator]
 
 
-def test_workflow_successful_execution_updates_timestamp(sample_cache_file):
+def test_workflow_successful_execution_updates_timestamp(
+    sample_cache_file: CacheFile,
+) -> None:
     """Test that successful execution updates last_executed_at."""
     manager = CacheManager()
 
@@ -396,4 +406,4 @@ def test_workflow_successful_execution_updates_timestamp(sample_cache_file):
     manager.record_execution_attempt(sample_cache_file, success=True)
 
     assert sample_cache_file.metadata.last_executed_at is not None
-    assert sample_cache_file.metadata.execution_attempts == 1
+    assert sample_cache_file.metadata.execution_attempts == 1  # type: ignore[unreachable]

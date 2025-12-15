@@ -113,7 +113,7 @@ def test_retrieve_cached_test_executions_respects_custom_format() -> None:
         assert "cache2.traj" in result_traj[0]
 
 
-def test_retrieve_caches_filters_invalid_by_default(tmp_path):
+def test_retrieve_caches_filters_invalid_by_default(tmp_path: Path) -> None:
     """Test that RetrieveCachedTestExecutions filters out invalid caches by default."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
@@ -161,7 +161,7 @@ def test_retrieve_caches_filters_invalid_by_default(tmp_path):
     assert str(invalid_cache) not in results
 
 
-def test_retrieve_caches_includes_invalid_when_requested(tmp_path):
+def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None:
     """Test that RetrieveCachedTestExecutions includes invalid caches when requested."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir()
@@ -721,7 +721,9 @@ def test_continue_cached_trajectory_with_placeholders() -> None:
         assert "resuming from step 1" in result
 
 
-def test_execute_cached_trajectory_warns_if_invalid(tmp_path, caplog):
+def test_execute_cached_trajectory_warns_if_invalid(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """Test that ExecuteCachedTrajectory warns when activating with invalid cache."""
     import logging
 
@@ -770,7 +772,7 @@ def test_execute_cached_trajectory_warns_if_invalid(tmp_path, caplog):
 # ============================================================================
 
 
-def test_inspect_cache_metadata_shows_basic_info(tmp_path):
+def test_inspect_cache_metadata_shows_basic_info(tmp_path: Path) -> None:
     """Test that InspectCacheMetadata displays basic cache information."""
     from askui.tools.caching_tools import InspectCacheMetadata
 
@@ -807,7 +809,7 @@ def test_inspect_cache_metadata_shows_basic_info(tmp_path):
     assert "current_date" in result
 
 
-def test_inspect_cache_metadata_shows_failures(tmp_path):
+def test_inspect_cache_metadata_shows_failures(tmp_path: Path) -> None:
     """Test that InspectCacheMetadata displays failure history."""
     from askui.tools.caching_tools import InspectCacheMetadata
 
@@ -856,7 +858,7 @@ def test_inspect_cache_metadata_shows_failures(tmp_path):
     assert "Invalidation Reason: Too many failures at step 1" in result
 
 
-def test_inspect_cache_metadata_file_not_found():
+def test_inspect_cache_metadata_file_not_found() -> None:
     """Test that InspectCacheMetadata handles missing files."""
     from askui.tools.caching_tools import InspectCacheMetadata
 
@@ -871,7 +873,7 @@ def test_inspect_cache_metadata_file_not_found():
 # ============================================================================
 
 
-def test_revalidate_cache_marks_invalid_as_valid(tmp_path):
+def test_revalidate_cache_marks_invalid_as_valid(tmp_path: Path) -> None:
     """Test that RevalidateCache marks invalid cache as valid."""
     from askui.tools.caching_tools import RevalidateCache
 
@@ -919,7 +921,7 @@ def test_revalidate_cache_marks_invalid_as_valid(tmp_path):
     assert len(updated_data["metadata"]["failures"]) == 1
 
 
-def test_revalidate_cache_already_valid(tmp_path):
+def test_revalidate_cache_already_valid(tmp_path: Path) -> None:
     """Test that RevalidateCache handles already valid cache."""
     from askui.tools.caching_tools import RevalidateCache
 
@@ -950,7 +952,7 @@ def test_revalidate_cache_already_valid(tmp_path):
     assert "No changes made" in result
 
 
-def test_revalidate_cache_file_not_found():
+def test_revalidate_cache_file_not_found() -> None:
     """Test that RevalidateCache handles missing files."""
     from askui.tools.caching_tools import RevalidateCache
 
@@ -965,7 +967,7 @@ def test_revalidate_cache_file_not_found():
 # ============================================================================
 
 
-def test_invalidate_cache_marks_valid_as_invalid(tmp_path):
+def test_invalidate_cache_marks_valid_as_invalid(tmp_path: Path) -> None:
     """Test that InvalidateCache marks valid cache as invalid."""
     from askui.tools.caching_tools import InvalidateCache
 
@@ -1008,7 +1010,7 @@ def test_invalidate_cache_marks_valid_as_invalid(tmp_path):
     assert updated_data["metadata"]["execution_attempts"] == 2
 
 
-def test_invalidate_cache_updates_reason_if_already_invalid(tmp_path):
+def test_invalidate_cache_updates_reason_if_already_invalid(tmp_path: Path) -> None:
     """Test that InvalidateCache updates reason if already invalid."""
     from askui.tools.caching_tools import InvalidateCache
 
@@ -1046,7 +1048,7 @@ def test_invalidate_cache_updates_reason_if_already_invalid(tmp_path):
     assert updated_data["metadata"]["invalidation_reason"] == "New reason"
 
 
-def test_invalidate_cache_file_not_found():
+def test_invalidate_cache_file_not_found() -> None:
     """Test that InvalidateCache handles missing files."""
     from askui.tools.caching_tools import InvalidateCache
 
