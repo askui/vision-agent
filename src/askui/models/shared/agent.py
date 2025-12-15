@@ -172,7 +172,6 @@ class Agent(ActModel):
             should_recurse = self._cache_execution_manager.handle_execution_step(
                 on_message,
                 truncation_strategy,
-                self.__class__.__name__,
             )
             if should_recurse:
                 # Cache step handled, recurse to continue

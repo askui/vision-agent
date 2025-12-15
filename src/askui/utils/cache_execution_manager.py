@@ -94,7 +94,6 @@ class CacheExecutionManager:
         self,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        agent_class_name: str,
     ) -> bool:
         """Handle cache execution step.
 
@@ -118,14 +117,12 @@ class CacheExecutionManager:
                 result,
                 on_message,
                 truncation_strategy,
-                agent_class_name,
             )
         if result.status == "NEEDS_AGENT":
             return self._handle_cache_needs_agent(
                 result,
                 on_message,
                 truncation_strategy,
-                agent_class_name,
             )
         if result.status == "COMPLETED":
             return self._handle_cache_completed(truncation_strategy)
@@ -137,7 +134,6 @@ class CacheExecutionManager:
         result: ExecutionResult,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        agent_class_name: str,
     ) -> bool:
         """Handle successful cache step execution.
 
@@ -160,7 +156,7 @@ class CacheExecutionManager:
 
         truncation_strategy.append_message(message_by_assistant)
         self._reporter.add_message(
-            agent_class_name, message_by_assistant.model_dump(mode="json")
+            self.__class__.__name__, message_by_assistant.model_dump(mode="json")
         )
 
         # Add user message (tool result)
@@ -180,7 +176,6 @@ class CacheExecutionManager:
         result: ExecutionResult,
         on_message: OnMessageCb,
         truncation_strategy: TruncationStrategy,
-        agent_class_name: str,
     ) -> bool:
         """Handle cache execution pausing for non-cacheable tool.
 
