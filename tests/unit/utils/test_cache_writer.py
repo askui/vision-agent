@@ -146,7 +146,7 @@ def test_cache_writer_generate_writes_file() -> None:
             cache_dir=str(cache_dir),
             file_name="output.json",
             cache_writer_settings=CacheWriterSettings(
-                placeholder_identification_strategy="preset"
+                parameter_identification_strategy="preset"
             ),
         )
 
@@ -178,7 +178,7 @@ def test_cache_writer_generate_writes_file() -> None:
         # Check v0.1 structure
         assert "metadata" in data
         assert "trajectory" in data
-        assert "placeholders" in data
+        assert "cache_parameters" in data
 
         # Check metadata
         assert data["metadata"]["version"] == "0.1"
@@ -202,7 +202,7 @@ def test_cache_writer_generate_auto_names_file() -> None:
             cache_dir=str(cache_dir),
             file_name="",
             cache_writer_settings=CacheWriterSettings(
-                placeholder_identification_strategy="preset"
+                parameter_identification_strategy="preset"
             ),
         )
 
@@ -337,7 +337,7 @@ def test_cache_writer_read_cache_file_v2() -> None:
                     "type": "tool_use",
                 },
             ],
-            "placeholders": {"current_date": "Current date in YYYY-MM-DD format"},
+            "cache_parameters": {"current_date": "Current date in YYYY-MM-DD format"},
         }
 
         with cache_file_path.open("w", encoding="utf-8") as f:
@@ -353,7 +353,7 @@ def test_cache_writer_read_cache_file_v2() -> None:
         assert len(result.trajectory) == 2
         assert result.trajectory[0].id == "id1"
         assert result.trajectory[1].id == "id2"
-        assert "current_date" in result.placeholders
+        assert "current_date" in result.cache_parameters
 
 
 def test_cache_writer_set_file_name() -> None:
@@ -376,7 +376,7 @@ def test_cache_writer_generate_resets_after_writing() -> None:
             cache_dir=str(cache_dir),
             file_name="test.json",
             cache_writer_settings=CacheWriterSettings(
-                placeholder_identification_strategy="preset"
+                parameter_identification_strategy="preset"
             ),
         )
 
@@ -395,19 +395,19 @@ def test_cache_writer_generate_resets_after_writing() -> None:
         assert cache_writer.messages == []
 
 
-def test_cache_writer_detects_and_stores_placeholders() -> None:
-    """Test that CacheWriter detects placeholders and stores them in metadata."""
+def test_cache_writer_detects_and_stores_parameters() -> None:
+    """Test that CacheWriter detects parameters and stores them in metadata."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             file_name="test.json",
             cache_writer_settings=CacheWriterSettings(
-                placeholder_identification_strategy="preset"
+                parameter_identification_strategy="preset"
             ),
         )
 
-        # Add tool use blocks with placeholders
+        # Add tool use blocks with parameters
         cache_writer.messages = [
             ToolUseBlockParam(
                 id="id1",
@@ -430,26 +430,26 @@ def test_cache_writer_detects_and_stores_placeholders() -> None:
         with cache_file.open("r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Verify placeholders were detected and stored
-        assert "placeholders" in data
-        assert "current_date" in data["placeholders"]
-        assert "user_name" in data["placeholders"]
-        assert len(data["placeholders"]) == 2
+        # Verify parameters were detected and stored
+        assert "cache_parameters" in data
+        assert "current_date" in data["cache_parameters"]
+        assert "user_name" in data["cache_parameters"]
+        assert len(data["cache_parameters"]) == 2
 
 
-def test_cache_writer_empty_placeholders_when_none_found() -> None:
-    """Test that placeholders dict is empty when no placeholders exist."""
+def test_cache_writer_empty_parameters_when_none_found() -> None:
+    """Test that parameters dict is empty when no parameters exist."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             file_name="test.json",
             cache_writer_settings=CacheWriterSettings(
-                placeholder_identification_strategy="preset"
+                parameter_identification_strategy="preset"
             ),
         )
 
-        # Add tool use blocks without placeholders
+        # Add tool use blocks without parameters
         cache_writer.messages = [
             ToolUseBlockParam(
                 id="id1",
@@ -466,6 +466,6 @@ def test_cache_writer_empty_placeholders_when_none_found() -> None:
         with cache_file.open("r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Verify placeholders dict is empty
-        assert "placeholders" in data
-        assert data["placeholders"] == {}
+        # Verify parameters dict is empty
+        assert "cache_parameters" in data
+        assert data["cache_parameters"] == {}

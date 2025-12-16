@@ -8,10 +8,10 @@ from typing_extensions import override
 
 from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
+from ..utils.cache_parameter_handler import CacheParameterHandler
 from ..utils.caching.cache_execution_manager import CacheExecutionManager
 from ..utils.caching.cache_manager import CacheManager
 from ..utils.caching.cache_writer import CacheWriter
-from ..utils.placeholder_handler import PlaceholderHandler
 
 if TYPE_CHECKING:
     from ..models.shared.agent_message_param import ToolUseBlockParam
@@ -149,14 +149,14 @@ class ExecuteCachedTrajectory(Tool):
                 "trajectory files are available\n"
                 "2. Select the appropriate trajectory file path from the "
                 "returned list\n"
-                "3. If the trajectory contains placeholders (e.g., "
+                "3. If the trajectory contains parameters (e.g., "
                 "{{current_date}}), provide values for them in the "
-                "placeholder_values parameter\n"
+                "parameter_values parameter\n"
                 "4. Pass the full file path to this tool\n\n"
-                "Placeholders allow dynamic values to be injected during "
+                "Cache parameters allow dynamic values to be injected during "
                 "execution. For example, if a trajectory types "
                 "'{{current_date}}', you must provide "
-                "placeholder_values={'current_date': '2025-12-11'}.\n\n"
+                "parameter_values={'current_date': '2025-12-11'}.\n\n"
                 "To continue from a specific step (e.g., after manually "
                 "handling a non-cacheable step), use the start_from_step_index "
                 "parameter. By default, execution starts from the beginning "
@@ -188,12 +188,12 @@ class ExecuteCachedTrajectory(Tool):
                         ),
                         "default": 0,
                     },
-                    "placeholder_values": {
+                    "parameter_values": {
                         "type": "object",
                         "description": (
-                            "Optional dictionary mapping placeholder names to "
+                            "Optional dictionary mapping parameter names to "
                             "their values. Required if the trajectory contains "
-                            "placeholders like {{variable}}. Example: "
+                            "parameters like {{variable}}. Example: "
                             "{'current_date': '2025-12-11', 'user_name': 'Alice'}"
                         ),
                         "additionalProperties": {"type": "string"},
@@ -265,33 +265,33 @@ class ExecuteCachedTrajectory(Tool):
             return error_msg
         return None
 
-    def _validate_placeholders(
+    def _validate_parameters(
         self,
         trajectory: list["ToolUseBlockParam"],
-        placeholder_values: dict[str, str],
-        cache_placeholders: dict[str, str],
+        parameter_values: dict[str, str],
+        cache_parameters: dict[str, str],
     ) -> str | None:
-        """Validate placeholder values.
+        """Validate parameter values.
 
         Args:
             trajectory: The cached trajectory
-            placeholder_values: User-provided placeholder values
-            cache_placeholders: Placeholders defined in cache file
+            parameter_values: User-provided parameter values
+            cache_parameters: Parameters defined in cache file
 
         Returns:
             Error message if validation fails, None otherwise
         """
-        logger.debug("Validating placeholder values")
-        is_valid, missing = PlaceholderHandler.validate_placeholders(
-            trajectory, placeholder_values
+        logger.debug("Validating parameter values")
+        is_valid, missing = CacheParameterHandler.validate_parameters(
+            trajectory, parameter_values
         )
         if not is_valid:
             error_msg = (
-                f"Missing required placeholder values: {', '.join(missing)}\n"
-                f"The trajectory contains the following placeholders: "
-                f"{', '.join(cache_placeholders.keys())}\n"
-                f"Please provide values for all placeholders in the "
-                f"placeholder_values parameter."
+                f"Missing required parameter values: {', '.join(missing)}\n"
+                f"The trajectory contains the following parameters: "
+                f"{', '.join(cache_parameters.keys())}\n"
+                f"Please provide values for all parameters in the "
+                f"parameter_values parameter."
             )
             logger.error(error_msg)
             return error_msg
@@ -300,14 +300,14 @@ class ExecuteCachedTrajectory(Tool):
     def _create_executor(
         self,
         cache_file: "CacheFile",
-        placeholder_values: dict[str, str],
+        parameter_values: dict[str, str],
         start_from_step_index: int,
     ) -> "TrajectoryExecutor":
         """Create and configure trajectory executor.
 
         Args:
             cache_file: The cache file to execute
-            placeholder_values: Placeholder values to use
+            parameter_values: Parameter values to use
             start_from_step_index: Index to start execution from
 
         Returns:
@@ -324,7 +324,7 @@ class ExecuteCachedTrajectory(Tool):
         executor = TrajectoryExecutor(
             trajectory=cache_file.trajectory,
             toolbox=self._toolbox,
-            placeholder_values=placeholder_values,
+            parameter_values=parameter_values,
             delay_time=self._settings.delay_time_between_action,
         )
 
@@ -342,7 +342,7 @@ class ExecuteCachedTrajectory(Tool):
         trajectory_file: str,
         trajectory_length: int,
         start_from_step_index: int,
-        placeholder_count: int,
+        parameter_count: int,
     ) -> str:
         """Format success message.
 
@@ -350,7 +350,7 @@ class ExecuteCachedTrajectory(Tool):
             trajectory_file: Path to trajectory file
             trajectory_length: Total steps in trajectory
             start_from_step_index: Starting step index
-            placeholder_count: Number of placeholders used
+            parameter_count: Number of parameters used
 
         Returns:
             Formatted success message
@@ -369,8 +369,8 @@ class ExecuteCachedTrajectory(Tool):
                 f"Will execute {remaining_steps} remaining cached steps."
             )
 
-        if placeholder_count > 0:
-            success_msg += f" Using {placeholder_count} placeholder value(s)."
+        if parameter_count > 0:
+            success_msg += f" Using {parameter_count} parameter value(s)."
 
         return success_msg
 
@@ -380,7 +380,7 @@ class ExecuteCachedTrajectory(Tool):
         self,
         trajectory_file: str,
         start_from_step_index: int = 0,
-        placeholder_values: dict[str, str] | None = None,
+        parameter_values: dict[str, str] | None = None,
     ) -> str:
         """Activate cache execution mode for the agent.
 
@@ -390,8 +390,8 @@ class ExecuteCachedTrajectory(Tool):
         Returns:
             Success message indicating cache mode has been activated
         """
-        if placeholder_values is None:
-            placeholder_values = {}
+        if parameter_values is None:
+            parameter_values = {}
 
         logger.info(
             "Activating cache execution mode: %s (start_from_step=%d)",
@@ -417,9 +417,9 @@ class ExecuteCachedTrajectory(Tool):
         cache_file = CacheWriter.read_cache_file(Path(trajectory_file))
 
         logger.debug(
-            "Cache loaded: %d steps, %d placeholders, valid=%s",
+            "Cache loaded: %d steps, %d parameters, valid=%s",
             len(cache_file.trajectory),
-            len(cache_file.placeholders),
+            len(cache_file.cache_parameters),
             cache_file.metadata.is_valid,
         )
 
@@ -439,15 +439,15 @@ class ExecuteCachedTrajectory(Tool):
         ):
             return error
 
-        # Validate placeholders
-        if error := self._validate_placeholders(
-            cache_file.trajectory, placeholder_values, cache_file.placeholders
+        # Validate parameters
+        if error := self._validate_parameters(
+            cache_file.trajectory, parameter_values, cache_file.cache_parameters
         ):
             return error
 
         # Create and configure executor
         executor = self._create_executor(
-            cache_file, placeholder_values, start_from_step_index
+            cache_file, parameter_values, start_from_step_index
         )
 
         # Store executor and cache info in agent state
@@ -462,7 +462,7 @@ class ExecuteCachedTrajectory(Tool):
             trajectory_file,
             len(cache_file.trajectory),
             start_from_step_index,
-            len(placeholder_values),
+            len(parameter_values),
         )
         logger.info(success_msg)
         return success_msg
@@ -483,7 +483,7 @@ class InspectCacheMetadata(Tool):
                 "- Execution statistics (attempts, last execution time)\n"
                 "- Validity status and invalidation reason (if invalid)\n"
                 "- Failure history with timestamps and error messages\n"
-                "- Placeholders and trajectory step count\n\n"
+                "- Parameters and trajectory step count\n\n"
                 "Use this tool to debug cache issues or understand why a cache "
                 "might be failing or invalidated."
             ),
@@ -556,10 +556,10 @@ class InspectCacheMetadata(Tool):
         lines.append("")
         lines.append("--- Trajectory Info ---")
         lines.append(f"Total Steps: {len(cache_file.trajectory)}")
-        lines.append(f"Placeholders: {len(cache_file.placeholders)}")
-        if cache_file.placeholders:
+        lines.append(f"Parameters: {len(cache_file.cache_parameters)}")
+        if cache_file.cache_parameters:
             lines.append(
-                f"Placeholder Names: {', '.join(cache_file.placeholders.keys())}"
+                f"Parameter Names: {', '.join(cache_file.cache_parameters.keys())}"
             )
 
         if metadata.failures:

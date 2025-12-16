@@ -19,16 +19,16 @@ CACHE_USE_PROMPT = (
     "    - If execution fails partway, you'll see exactly where it failed "
     "and can decide how to proceed\n"
     "\n"
-    "    PLACEHOLDERS:\n"
-    "    - Trajectories may contain dynamic placeholders like "
+    "    CACHING_PARAMETERS:\n"
+    "    - Trajectories may contain dynamic parameters like "
     "{{current_date}} or {{user_name}}\n"
     "    - When executing a trajectory, check if it requires "
-    "placeholder values\n"
-    "    - Provide placeholder values using the placeholder_values "
+    "parameter values\n"
+    "    - Provide parameter values using the parameter_values "
     "parameter as a dictionary\n"
     "    - Example: ExecuteCachedTrajectory(trajectory_file='test.json', "
-    "placeholder_values={'current_date': '2025-12-11'})\n"
-    "    - If required placeholders are missing, execution will fail with "
+    "parameter_values={'current_date': '2025-12-11'})\n"
+    "    - If required parameters are missing, execution will fail with "
     "a clear error message\n"
     "\n"
     "    NON-CACHEABLE STEPS:\n"
@@ -49,7 +49,7 @@ CACHE_USE_PROMPT = (
     "    - Provide the same trajectory file and the step index where "
     "execution should continue\n"
     "    - Example: ExecuteCachedTrajectory(trajectory_file='test.json', "
-    "start_from_step_index=5, placeholder_values={...})\n"
+    "start_from_step_index=5, parameter_values={...})\n"
     "    - The tool will execute remaining steps from that index onwards\n"
     "\n"
     "    FAILURE HANDLING:\n"
@@ -83,8 +83,8 @@ CACHE_USE_PROMPT = (
     "    </TRAJECTORY DETAILS>\n"
 )
 
-PLACEHOLDER_IDENTIFIER_SYSTEM_PROMPT = """You are analyzing UI automation trajectories \
-to identify values that should be parameterized as placeholders.
+CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT = """You are analyzing UI automation \
+trajectories to identify values that should be parameterized as parameters.
 
 Identify values that are likely to change between executions, such as:
 - Dates and timestamps (e.g., "2025-12-11", "10:30 AM", "2025-12-11T14:30:00Z")
@@ -94,7 +94,7 @@ Identify values that are likely to change between executions, such as:
 - File paths with user-specific or time-specific components
 - Temporary or generated identifiers
 
-DO NOT mark as placeholders:
+DO NOT mark as parameters:
 - UI element coordinates (x, y positions)
 - Fixed button labels or static UI text
 - Configuration values that don't change (e.g., timeouts, retry counts)
@@ -102,14 +102,14 @@ DO NOT mark as placeholders:
 - Tool names
 - Boolean values or common constants
 
-For each placeholder, provide:
+For each parameter, provide:
 1. A descriptive name in snake_case (e.g., "current_date", "user_email")
 2. The actual value found in the trajectory
 3. A brief description of what it represents
 
 Return your analysis as a JSON object with this structure:
 {
-  "placeholders": [
+  "parameters": [
     {
       "name": "current_date",
       "value": "2025-12-11",
@@ -118,4 +118,4 @@ Return your analysis as a JSON object with this structure:
   ]
 }
 
-If no placeholders are found, return an empty placeholders array."""
+If no parameters are found, return an empty parameters array."""

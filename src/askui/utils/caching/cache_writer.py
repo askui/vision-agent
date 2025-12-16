@@ -3,9 +3,6 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.model_router import create_api_client
 from askui.models.shared.agent_message_param import (
     MessageParam,
     ToolUseBlockParam,
@@ -18,8 +15,7 @@ from askui.models.shared.settings import (
     CacheWriterSettings,
 )
 from askui.models.shared.tools import ToolCollection
-from askui.utils.placeholder_handler import PlaceholderHandler
-from askui.utils.placeholder_identifier import identify_placeholders
+from askui.utils.cache_parameter_handler import CacheParameterHandler
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +89,8 @@ class CacheWriter:
 
         cache_file_path = self.cache_dir / self.file_name
 
-        goal_to_save, trajectory_to_save, placeholders_dict = (
-            self._replace_placeholders()
+        goal_to_save, trajectory_to_save, parameters_dict = (
+            self._parameterize_trajectory()
         )
 
         if self._toolbox is not None:
@@ -105,69 +101,20 @@ class CacheWriter:
             logger.info("No toolbox set, skipping non-cacheable tool input blanking")
 
         self._generate_cache_file(
-            goal_to_save, trajectory_to_save, placeholders_dict, cache_file_path
+            goal_to_save, trajectory_to_save, parameters_dict, cache_file_path
         )
         self.reset()
 
-    def _replace_placeholders(
+    def _parameterize_trajectory(
         self,
     ) -> tuple[str | None, list[ToolUseBlockParam], dict[str, str]]:
-        # Determine which trajectory and placeholders to use
-        trajectory_to_save = self.messages
-        goal_to_save = self._goal
-        placeholders_dict: dict[str, str] = {}
-
-        if (
-            self._cache_writer_settings.placeholder_identification_strategy == "llm"
-            and self.messages
-        ):
-            # Get messages_api for placeholder identification
-            messages_api = AnthropicMessagesApi(
-                client=create_api_client(
-                    self._cache_writer_settings.llm_placeholder_id_api_provider
-                ),
-                locator_serializer=VlmLocatorSerializer(),
-            )
-            placeholders_dict, placeholder_definitions = identify_placeholders(
-                trajectory=self.messages,
-                messages_api=messages_api,
-            )
-            n_placeholders = len(placeholder_definitions)
-            # Replace actual values with {{placeholder_name}} syntax in trajectory
-            if placeholder_definitions:
-                trajectory_to_save = (
-                    PlaceholderHandler.replace_values_with_placeholders(
-                        trajectory=self.messages,
-                        placeholder_definitions=placeholder_definitions,
-                    )
-                )
-
-                # Also apply placeholder replacement to the goal
-                if self._goal:
-                    goal_to_save = self._goal
-                    # Build replacement map: value -> placeholder syntax
-                    replacements = {
-                        str(p.value): f"{{{{{p.name}}}}}"
-                        for p in placeholder_definitions
-                    }
-                    # Sort by length descending to replace longer matches first
-                    for actual_value in sorted(
-                        replacements.keys(), key=len, reverse=True
-                    ):
-                        if actual_value in goal_to_save:
-                            goal_to_save = goal_to_save.replace(
-                                actual_value, replacements[actual_value]
-                            )
-        else:
-            # Manual placeholder extraction
-            placeholder_names = PlaceholderHandler.extract_placeholders(self.messages)
-            placeholders_dict = {
-                name: f"Placeholder for {name}"  # Generic description
-                for name in placeholder_names
-            }
-            n_placeholders = len(placeholder_names)
-        logger.info("Replaced %s placeholder values in trajectory", n_placeholders)
-        return goal_to_save, trajectory_to_save, placeholders_dict
+        """Identify parameters and return parameterized trajectory + goal."""
+        return CacheParameterHandler.identify_and_parameterize(
+            trajectory=self.messages,
+            goal=self._goal,
+            identification_strategy=self._cache_writer_settings.parameter_identification_strategy,
+            api_provider=self._cache_writer_settings.llm_parameter_id_api_provider,
+        )
 
     def _blank_non_cacheable_tool_inputs(
         self, trajectory: list[ToolUseBlockParam]
@@ -223,7 +170,7 @@ class CacheWriter:
         self,
         goal_to_save: str | None,
         trajectory_to_save: list[ToolUseBlockParam],
-        placeholders_dict: dict[str, str],
+        parameters_dict: dict[str, str],
         cache_file_path: Path,
     ) -> None:
         cache_file = CacheFile(
@@ -234,7 +181,7 @@ class CacheWriter:
                 token_usage=self._accumulated_usage,
             ),
             trajectory=trajectory_to_save,
-            placeholders=placeholders_dict,
+            cache_parameters=parameters_dict,
         )
 
         with cache_file_path.open("w", encoding="utf-8") as f:
@@ -288,10 +235,10 @@ class CacheWriter:
                     ),
                 ),
                 trajectory=trajectory,
-                placeholders={},
+                cache_parameters={},
             )
             logger.info(
-                "Successfully loaded and migrated v0.0 cache: %s steps, 0 placeholders",
+                "Successfully loaded and migrated v0.0 cache: %s steps, 0 parameters",
                 len(trajectory),
             )
             return cache_file
@@ -299,9 +246,9 @@ class CacheWriter:
             # v0.1 format: structured with metadata
             cache_file = CacheFile(**raw_data)
             logger.info(
-                "Successfully loaded v0.1 cache: %s steps, %s placeholders",
+                "Successfully loaded v0.1 cache: %s steps, %s parameters",
                 len(cache_file.trajectory),
-                len(cache_file.placeholders),
+                len(cache_file.cache_parameters),
             )
             if cache_file.metadata.goal:
                 logger.debug("Cache goal: %s", cache_file.metadata.goal)

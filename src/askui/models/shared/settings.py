@@ -18,7 +18,7 @@ COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
 CACHING_STRATEGY = Literal["read", "write", "both", "no"]
-PLACEHOLDER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
+CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
 
 
 class MessageSettings(BaseModel):
@@ -43,8 +43,8 @@ class CachedExecutionToolSettings(BaseModel):
 
 
 class CacheWriterSettings(BaseModel):
-    placeholder_identification_strategy: PLACEHOLDER_IDENTIFICATION_STRATEGY = "llm"
-    llm_placeholder_id_api_provider: AnthropicApiProvider = "askui"
+    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
+    llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
 
 
 class CachingSettings(BaseModel):
@@ -81,4 +81,4 @@ class CacheFile(BaseModel):
 
     metadata: CacheMetadata
     trajectory: list[ToolUseBlockParam]
-    placeholders: dict[str, str] = Field(default_factory=dict)
+    cache_parameters: dict[str, str] = Field(default_factory=dict)

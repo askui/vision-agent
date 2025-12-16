@@ -1,16 +1,19 @@
-"""Unit tests for PlaceholderHandler."""
+"""Unit tests for CacheParameterHandler."""
 
 import pytest
 
 from askui.models.shared.agent_message_param import ToolUseBlockParam
-from askui.utils.placeholder_handler import PLACEHOLDER_PATTERN, PlaceholderHandler
+from askui.utils.cache_parameter_handler import (
+    CACHE_PARAMETER_PATTERN,
+    CacheParameterHandler,
+)
 
 
-def test_placeholder_pattern_matches_valid_placeholders() -> None:
-    """Test that the regex pattern matches valid placeholder syntax."""
+def test_parameter_pattern_matches_valid_parameters() -> None:
+    """Test that the regex pattern matches valid parameter syntax."""
     import re
 
-    valid_placeholders = [
+    valid_parameters = [
         "{{variable}}",
         "{{current_date}}",
         "{{user_name}}",
@@ -18,16 +21,16 @@ def test_placeholder_pattern_matches_valid_placeholders() -> None:
         "{{VAR123}}",
     ]
 
-    for placeholder in valid_placeholders:
-        match = re.search(PLACEHOLDER_PATTERN, placeholder)
-        assert match is not None, f"Should match valid placeholder: {placeholder}"
+    for parameter in valid_parameters:
+        match = re.search(CACHE_PARAMETER_PATTERN, parameter)
+        assert match is not None, f"Should match valid parameter: {parameter}"
 
 
-def test_placeholder_pattern_does_not_match_invalid() -> None:
-    """Test that the regex pattern rejects invalid placeholder syntax."""
+def test_parameter_pattern_does_not_match_invalid() -> None:
+    """Test that the regex pattern rejects invalid parameter syntax."""
     import re
 
-    invalid_placeholders = [
+    invalid_parameters = [
         "{{123invalid}}",  # Starts with number
         "{{var-name}}",  # Contains hyphen
         "{{var name}}",  # Contains space
@@ -35,14 +38,14 @@ def test_placeholder_pattern_does_not_match_invalid() -> None:
         "{{}}",  # Empty
     ]
 
-    for placeholder in invalid_placeholders:
-        match = re.search(PLACEHOLDER_PATTERN, placeholder)
-        if match and match.group(0) == placeholder:
-            pytest.fail(f"Should not match invalid placeholder: {placeholder}")
+    for parameter in invalid_parameters:
+        match = re.search(CACHE_PARAMETER_PATTERN, parameter)
+        if match and match.group(0) == parameter:
+            pytest.fail(f"Should not match invalid parameter: {parameter}")
 
 
-def test_extract_placeholders_from_simple_string() -> None:
-    """Test extracting placeholders from a simple string input."""
+def test_extract_parameters_from_simple_string() -> None:
+    """Test extracting parameters from a simple string input."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -52,12 +55,12 @@ def test_extract_placeholders_from_simple_string() -> None:
         )
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == {"current_date"}
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == {"current_date"}
 
 
-def test_extract_placeholders_multiple_in_one_string() -> None:
-    """Test extracting multiple placeholders from one string."""
+def test_extract_parameters_multiple_in_one_string() -> None:
+    """Test extracting multiple parameters from one string."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -70,12 +73,12 @@ def test_extract_placeholders_multiple_in_one_string() -> None:
         )
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == {"user_name", "current_date"}
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == {"user_name", "current_date"}
 
 
-def test_extract_placeholders_from_nested_dict() -> None:
-    """Test extracting placeholders from nested dictionary structures."""
+def test_extract_parameters_from_nested_dict() -> None:
+    """Test extracting parameters from nested dictionary structures."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -88,12 +91,12 @@ def test_extract_placeholders_from_nested_dict() -> None:
         )
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == {"nested_var", "another_var"}
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == {"nested_var", "another_var"}
 
 
-def test_extract_placeholders_from_list() -> None:
-    """Test extracting placeholders from lists in input."""
+def test_extract_parameters_from_list() -> None:
+    """Test extracting parameters from lists in input."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -109,12 +112,12 @@ def test_extract_placeholders_from_list() -> None:
         )
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == {"item1", "item2", "item3"}
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == {"item1", "item2", "item3"}
 
 
-def test_extract_placeholders_no_placeholders() -> None:
-    """Test that extracting from trajectory without placeholders returns empty set."""
+def test_extract_parameters_no_parameters() -> None:
+    """Test that extracting from trajectory without parameters returns empty set."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -124,12 +127,12 @@ def test_extract_placeholders_no_placeholders() -> None:
         )
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == set()
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == set()
 
 
-def test_extract_placeholders_from_multiple_steps() -> None:
-    """Test extracting placeholders from multiple trajectory steps."""
+def test_extract_parameters_from_multiple_steps() -> None:
+    """Test extracting parameters from multiple trajectory steps."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -151,12 +154,12 @@ def test_extract_placeholders_from_multiple_steps() -> None:
         ),
     ]
 
-    placeholders = PlaceholderHandler.extract_placeholders(trajectory)
-    assert placeholders == {"var1", "var2"}  # No duplicates
+    parameters = CacheParameterHandler.extract_parameters(trajectory)
+    assert parameters == {"var1", "var2"}  # No duplicates
 
 
-def test_validate_placeholders_all_provided() -> None:
-    """Test validation passes when all placeholders have values."""
+def test_validate_parameters_all_provided() -> None:
+    """Test validation passes when all parameters have values."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -166,7 +169,7 @@ def test_validate_placeholders_all_provided() -> None:
         )
     ]
 
-    is_valid, missing = PlaceholderHandler.validate_placeholders(
+    is_valid, missing = CacheParameterHandler.validate_parameters(
         trajectory, {"var1": "value1", "var2": "value2"}
     )
 
@@ -174,8 +177,8 @@ def test_validate_placeholders_all_provided() -> None:
     assert missing == []
 
 
-def test_validate_placeholders_missing_some() -> None:
-    """Test validation fails when some placeholders are missing."""
+def test_validate_parameters_missing_some() -> None:
+    """Test validation fails when some parameters are missing."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
@@ -185,7 +188,7 @@ def test_validate_placeholders_missing_some() -> None:
         )
     ]
 
-    is_valid, missing = PlaceholderHandler.validate_placeholders(
+    is_valid, missing = CacheParameterHandler.validate_parameters(
         trajectory, {"var1": "value1"}
     )
 
@@ -193,7 +196,7 @@ def test_validate_placeholders_missing_some() -> None:
     assert set(missing) == {"var2", "var3"}
 
 
-def test_validate_placeholders_extra_values_ok() -> None:
+def test_validate_parameters_extra_values_ok() -> None:
     """Test validation passes when extra values are provided (they're ignored)."""
     trajectory = [
         ToolUseBlockParam(
@@ -204,7 +207,7 @@ def test_validate_placeholders_extra_values_ok() -> None:
         )
     ]
 
-    is_valid, missing = PlaceholderHandler.validate_placeholders(
+    is_valid, missing = CacheParameterHandler.validate_parameters(
         trajectory, {"var1": "value1", "extra_var": "extra_value"}
     )
 
@@ -212,25 +215,25 @@ def test_validate_placeholders_extra_values_ok() -> None:
     assert missing == []
 
 
-def test_validate_placeholders_no_placeholders() -> None:
-    """Test validation passes when trajectory has no placeholders."""
+def test_validate_parameters_no_parameters() -> None:
+    """Test validation passes when trajectory has no parameters."""
     trajectory = [
         ToolUseBlockParam(
             id="1",
             name="tool",
-            input={"text": "No placeholders here"},
+            input={"text": "No parameters here"},
             type="tool_use",
         )
     ]
 
-    is_valid, missing = PlaceholderHandler.validate_placeholders(trajectory, {})
+    is_valid, missing = CacheParameterHandler.validate_parameters(trajectory, {})
 
     assert is_valid is True
     assert missing == []
 
 
-def test_substitute_placeholders_simple_string() -> None:
-    """Test substituting placeholders in a simple string."""
+def test_substitute_parameters_simple_string() -> None:
+    """Test substituting parameters in a simple string."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="computer",
@@ -238,7 +241,7 @@ def test_substitute_placeholders_simple_string() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(
+    result = CacheParameterHandler.substitute_parameters(
         tool_block, {"current_date": "2025-12-11"}
     )
 
@@ -247,8 +250,8 @@ def test_substitute_placeholders_simple_string() -> None:
     assert result.name == tool_block.name
 
 
-def test_substitute_placeholders_multiple() -> None:
-    """Test substituting multiple placeholders in one string."""
+def test_substitute_parameters_multiple() -> None:
+    """Test substituting multiple parameters in one string."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="computer",
@@ -259,15 +262,15 @@ def test_substitute_placeholders_multiple() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(
+    result = CacheParameterHandler.substitute_parameters(
         tool_block, {"user_name": "Alice", "current_date": "2025-12-11"}
     )
 
     assert result.input["text"] == "Hello Alice, date is 2025-12-11"  # type: ignore[index]
 
 
-def test_substitute_placeholders_nested_dict() -> None:
-    """Test substituting placeholders in nested dictionaries."""
+def test_substitute_parameters_nested_dict() -> None:
+    """Test substituting parameters in nested dictionaries."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="tool",
@@ -278,7 +281,7 @@ def test_substitute_placeholders_nested_dict() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(
+    result = CacheParameterHandler.substitute_parameters(
         tool_block, {"var1": "value1", "var2": "value2"}
     )
 
@@ -286,8 +289,8 @@ def test_substitute_placeholders_nested_dict() -> None:
     assert result.input["another"] == "value2"  # type: ignore[index]
 
 
-def test_substitute_placeholders_in_list() -> None:
-    """Test substituting placeholders in lists."""
+def test_substitute_parameters_in_list() -> None:
+    """Test substituting parameters in lists."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="tool",
@@ -295,7 +298,7 @@ def test_substitute_placeholders_in_list() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(
+    result = CacheParameterHandler.substitute_parameters(
         tool_block, {"item1": "value1", "item2": "value2"}
     )
 
@@ -304,8 +307,8 @@ def test_substitute_placeholders_in_list() -> None:
     assert result.input["items"][2]["nested"] == "value2"  # type: ignore[index]
 
 
-def test_substitute_placeholders_no_change_if_no_placeholders() -> None:
-    """Test that substitution doesn't change input without placeholders."""
+def test_substitute_parameters_no_change_if_no_parameters() -> None:
+    """Test that substitution doesn't change input without parameters."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="computer",
@@ -313,13 +316,13 @@ def test_substitute_placeholders_no_change_if_no_placeholders() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(tool_block, {})
+    result = CacheParameterHandler.substitute_parameters(tool_block, {})
 
     assert result.input == tool_block.input
 
 
-def test_substitute_placeholders_partial_substitution() -> None:
-    """Test that only provided placeholders are substituted."""
+def test_substitute_parameters_partial_substitution() -> None:
+    """Test that only provided parameters are substituted."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="tool",
@@ -327,12 +330,12 @@ def test_substitute_placeholders_partial_substitution() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(tool_block, {"var1": "value1"})
+    result = CacheParameterHandler.substitute_parameters(tool_block, {"var1": "value1"})
 
     assert result.input["text"] == "value1 and {{var2}}"  # type: ignore[index]
 
 
-def test_substitute_placeholders_preserves_original() -> None:
+def test_substitute_parameters_preserves_original() -> None:
     """Test that substitution creates a new object, doesn't modify original."""
     tool_block = ToolUseBlockParam(
         id="1",
@@ -342,13 +345,13 @@ def test_substitute_placeholders_preserves_original() -> None:
     )
 
     original_input = tool_block.input.copy()  # type: ignore[attr-defined]
-    PlaceholderHandler.substitute_placeholders(tool_block, {"var1": "value1"})
+    CacheParameterHandler.substitute_parameters(tool_block, {"var1": "value1"})
 
     # Original should be unchanged
     assert tool_block.input == original_input
 
 
-def test_substitute_placeholders_with_special_characters() -> None:
+def test_substitute_parameters_with_special_characters() -> None:
     """Test substitution with values containing special regex characters."""
     tool_block = ToolUseBlockParam(
         id="1",
@@ -358,15 +361,15 @@ def test_substitute_placeholders_with_special_characters() -> None:
     )
 
     # Value contains regex special characters
-    result = PlaceholderHandler.substitute_placeholders(
+    result = CacheParameterHandler.substitute_parameters(
         tool_block, {"pattern": r".*[test]$"}
     )
 
     assert result.input["text"] == r"Pattern: .*[test]$"  # type: ignore[index]
 
 
-def test_substitute_placeholders_same_placeholder_multiple_times() -> None:
-    """Test substituting the same placeholder appearing multiple times."""
+def test_substitute_parameters_same_parameter_multiple_times() -> None:
+    """Test substituting the same parameter appearing multiple times."""
     tool_block = ToolUseBlockParam(
         id="1",
         name="tool",
@@ -374,6 +377,6 @@ def test_substitute_placeholders_same_placeholder_multiple_times() -> None:
         type="tool_use",
     )
 
-    result = PlaceholderHandler.substitute_placeholders(tool_block, {"var": "value"})
+    result = CacheParameterHandler.substitute_parameters(tool_block, {"var": "value"})
 
     assert result.input["text"] == "value is value is value"  # type: ignore[index]

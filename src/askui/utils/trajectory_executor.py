@@ -17,7 +17,7 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.tools import ToolCollection
-from askui.utils.placeholder_handler import PlaceholderHandler
+from askui.utils.cache_parameter_handler import CacheParameterHandler
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class ExecutionResult(BaseModel):
 class TrajectoryExecutor:
     """Executes cached trajectories step-by-step with control flow.
 
-    Supports pausing at non-cacheable steps, placeholder substitution,
+    Supports pausing at non-cacheable steps, cache_parameter substitution,
     and collecting execution results for the agent to review.
     """
 
@@ -55,7 +55,7 @@ class TrajectoryExecutor:
         self,
         trajectory: list[ToolUseBlockParam],
         toolbox: ToolCollection,
-        placeholder_values: dict[str, str] | None = None,
+        parameter_values: dict[str, str] | None = None,
         delay_time: float = 0.5,
         visual_validation_enabled: bool = False,
     ):
@@ -64,13 +64,13 @@ class TrajectoryExecutor:
         Args:
             trajectory: List of tool use blocks to execute
             toolbox: ToolCollection for executing tools
-            placeholder_values: Dict of placeholder names to values
+            parameter_values: Dict of parameter names to values
             delay_time: Seconds to wait between step executions
             visual_validation_enabled: Enable visual validation (future feature)
         """
         self.trajectory = trajectory
         self.toolbox = toolbox
-        self.placeholder_values = placeholder_values or {}
+        self.parameter_values = parameter_values or {}
         self.delay_time = delay_time
         self.visual_validation_enabled = visual_validation_enabled
         self.current_step_index = 0
@@ -86,7 +86,7 @@ class TrajectoryExecutor:
         1. Check if there are more steps to execute
         2. Check if the step should be skipped (screenshots, retrieval tools)
         3. Check if the step is non-cacheable (needs agent)
-        4. Substitute placeholders
+        4. Substitute parameters
         5. Execute the tool and build messages with proper data types
         6. Return result with updated message history
 
@@ -146,9 +146,9 @@ class TrajectoryExecutor:
                     message_history=self.message_history.copy(),
                 )
 
-        # Substitute placeholders
-        substituted_step = PlaceholderHandler.substitute_placeholders(
-            step, self.placeholder_values
+        # Substitute parameters
+        substituted_step = CacheParameterHandler.substitute_parameters(
+            step, self.parameter_values
         )
 
         # Execute the tool

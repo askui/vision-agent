@@ -31,7 +31,7 @@ def sample_cache_file() -> CacheFile:
                 id="2", name="type", input={"text": "test"}, type="tool_use"
             ),
         ],
-        placeholders={},
+        cache_parameters={},
     )
 
 
@@ -325,7 +325,7 @@ def test_composite_validator_empty() -> None:
             is_valid=True,
         ),
         trajectory=[],
-        placeholders={},
+        cache_parameters={},
     )
 
     should_inv, reason = validator.should_invalidate(cache_file)

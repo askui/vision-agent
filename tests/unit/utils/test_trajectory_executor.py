@@ -22,13 +22,13 @@ def test_trajectory_executor_initialization() -> None:
     executor = TrajectoryExecutor(
         trajectory=trajectory,
         toolbox=toolbox,
-        placeholder_values={"var": "value"},
+        parameter_values={"var": "value"},
         delay_time=0.1,
     )
 
     assert executor.trajectory == trajectory
     assert executor.toolbox == toolbox
-    assert executor.placeholder_values == {"var": "value"}
+    assert executor.parameter_values == {"var": "value"}
     assert executor.delay_time == 0.1
     assert executor.current_step_index == 0
 
@@ -228,8 +228,8 @@ def test_trajectory_executor_handles_tool_error() -> None:
     assert "Tool execution failed" in (result.error_message or "")
 
 
-def test_trajectory_executor_substitutes_placeholders() -> None:
-    """Test that executor substitutes placeholders before execution."""
+def test_trajectory_executor_substitutes_cache_parameters() -> None:
+    """Test that executor substitutes cache_parameters before execution."""
     captured_steps = []
 
     def capture_run(steps):  # type: ignore
@@ -257,7 +257,7 @@ def test_trajectory_executor_substitutes_placeholders() -> None:
     executor = TrajectoryExecutor(
         trajectory=trajectory,
         toolbox=mock_toolbox,
-        placeholder_values={"name": "Alice"},
+        parameter_values={"name": "Alice"},
         delay_time=0,
     )
 
