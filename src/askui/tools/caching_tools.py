@@ -47,8 +47,9 @@ class RetrieveCachedTestExecutions(Tool):
                     "include_invalid": {
                         "type": "boolean",
                         "description": (
-                            "Whether to include invalid/invalidated caches in the results. "
-                            "Default is False (only show valid caches)."
+                            "Whether to include invalid/invalidated caches in "
+                            "the results. Default is False (only show valid "
+                            "caches)."
                         ),
                         "default": False,
                     },
@@ -97,7 +98,7 @@ class RetrieveCachedTestExecutions(Tool):
                             f.name,
                             cache_file.metadata.invalidation_reason,
                         )
-                except Exception:
+                except Exception:  # noqa: PERF203
                     unreadable_count += 1
                     logger.exception("Failed to read cache file %s", f.name)
                     # If we can't read it, exclude it
@@ -140,25 +141,30 @@ class ExecuteCachedTrajectory(Tool):
         super().__init__(
             name="execute_cached_executions_tool",
             description=(
-                "Activate cache execution mode to replay a pre-recorded trajectory. "
-                "This tool sets up the agent to execute cached UI interactions step-by-step.\n\n"
+                "Activate cache execution mode to replay a pre-recorded "
+                "trajectory. This tool sets up the agent to execute cached UI "
+                "interactions step-by-step.\n\n"
                 "Before using this tool:\n"
                 "1. Use retrieve_available_trajectories_tool to see which "
                 "trajectory files are available\n"
                 "2. Select the appropriate trajectory file path from the "
                 "returned list\n"
-                "3. If the trajectory contains placeholders (e.g., {{current_date}}), "
-                "provide values for them in the placeholder_values parameter\n"
+                "3. If the trajectory contains placeholders (e.g., "
+                "{{current_date}}), provide values for them in the "
+                "placeholder_values parameter\n"
                 "4. Pass the full file path to this tool\n\n"
-                "Placeholders allow dynamic values to be injected during execution. "
-                "For example, if a trajectory types '{{current_date}}', you must "
-                "provide placeholder_values={'current_date': '2025-12-11'}.\n\n"
-                "To continue from a specific step (e.g., after manually handling a "
-                "non-cacheable step), use the start_from_step_index parameter. "
-                "By default, execution starts from the beginning (step 0).\n\n"
-                "Once activated, the agent will execute cached steps automatically. "
-                "If a non-cacheable step is encountered, the agent will be asked to "
-                "handle it manually before resuming cache execution."
+                "Placeholders allow dynamic values to be injected during "
+                "execution. For example, if a trajectory types "
+                "'{{current_date}}', you must provide "
+                "placeholder_values={'current_date': '2025-12-11'}.\n\n"
+                "To continue from a specific step (e.g., after manually "
+                "handling a non-cacheable step), use the start_from_step_index "
+                "parameter. By default, execution starts from the beginning "
+                "(step 0).\n\n"
+                "Once activated, the agent will execute cached steps "
+                "automatically. If a non-cacheable step is encountered, the "
+                "agent will be asked to handle it manually before resuming "
+                "cache execution."
             ),
             input_schema={
                 "type": "object",
@@ -174,9 +180,10 @@ class ExecuteCachedTrajectory(Tool):
                     "start_from_step_index": {
                         "type": "integer",
                         "description": (
-                            "Optional: The step index to start or resume execution from (0-based). "
-                            "Use 0 (default) to start from the beginning. Use a higher index "
-                            "to continue from a specific step, e.g., after manually handling "
+                            "Optional: The step index to start or resume "
+                            "execution from (0-based). Use 0 (default) to start "
+                            "from the beginning. Use a higher index to continue "
+                            "from a specific step, e.g., after manually handling "
                             "a non-cacheable step."
                         ),
                         "default": 0,
@@ -184,9 +191,10 @@ class ExecuteCachedTrajectory(Tool):
                     "placeholder_values": {
                         "type": "object",
                         "description": (
-                            "Optional dictionary mapping placeholder names to their values. "
-                            "Required if the trajectory contains placeholders like {{variable}}. "
-                            "Example: {'current_date': '2025-12-11', 'user_name': 'Alice'}"
+                            "Optional dictionary mapping placeholder names to "
+                            "their values. Required if the trajectory contains "
+                            "placeholders like {{variable}}. Example: "
+                            "{'current_date': '2025-12-11', 'user_name': 'Alice'}"
                         ),
                         "additionalProperties": {"type": "string"},
                         "default": {},
@@ -393,7 +401,10 @@ class ExecuteCachedTrajectory(Tool):
 
         # Validate agent is set
         if not self._cache_execution_manager:
-            error_msg = "Cache Execution Manager not set. Call set_cache_execution_manager() first."
+            error_msg = (
+                "Cache Execution Manager not set. Call "
+                "set_cache_execution_manager() first."
+            )
             logger.error(error_msg)
             raise RuntimeError(error_msg)
 
@@ -415,7 +426,8 @@ class ExecuteCachedTrajectory(Tool):
         # Warn if cache is invalid
         if not cache_file.metadata.is_valid:
             warning_msg = (
-                f"WARNING: Using invalid cache from {Path(trajectory_file).name}. "
+                f"WARNING: Using invalid cache from "
+                f"{Path(trajectory_file).name}. "
                 f"Reason: {cache_file.metadata.invalidation_reason}. "
                 "This cache may not work correctly."
             )
@@ -764,9 +776,11 @@ class VerifyCacheExecution(Tool):
         super().__init__(
             name="verify_cache_execution",
             description=(
-                "IMPORTANT: Call this tool immediately after reviewing a cached trajectory execution.\n\n"
-                "Report whether the cached execution successfully achieved the target system state.\n"
-                "You MUST call this tool to complete the cache verification process.\n\n"
+                "IMPORTANT: Call this tool immediately after reviewing a "
+                "cached trajectory execution.\n\n"
+                "Report whether the cached execution successfully achieved "
+                "the target system state. You MUST call this tool to complete "
+                "the cache verification process.\n\n"
                 "Set success=True if:\n"
                 "- The cached execution correctly achieved the intended goal\n"
                 "- The final state matches what was expected\n"
@@ -872,13 +886,11 @@ class VerifyCacheExecution(Tool):
             )
             result_msg = (
                 f"✗ Cache verification failed: {verification_notes}\n\n"
-                "The cached trajectory did not achieve the target "
-                "system state correctly. "
-                "You should now continue to complete the task manually "
-                "from the current state. "
-                "Use your tools to finish achieving the goal, taking into "
-                "account what the cache attempted to do and what "
-                "corrections are needed."
+                "The cached trajectory did not achieve the target system "
+                "state correctly. You should now continue to complete the "
+                "task manually from the current state. Use your tools to "
+                "finish achieving the goal, taking into account what the "
+                "cache attempted to do and what corrections are needed."
             )
             logger.warning(result_msg)
 

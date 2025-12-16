@@ -203,11 +203,15 @@ class CacheExecutionManager:
                     TextBlockParam(
                         type="text",
                         text=(
-                            f"Cache execution paused at step {result.step_index}. "
-                            f"The previous steps were executed successfully from cache. "
-                            f"The next step requires the '{tool_to_execute.name}' tool, "
+                            f"Cache execution paused at step "
+                            f"{result.step_index}. "
+                            f"The previous steps were executed successfully "
+                            f"from cache. "
+                            f"The next step requires the "
+                            f"'{tool_to_execute.name}' tool, "
                             f"which cannot be executed from cache. "
-                            f"Please execute this tool with the necessary parameters."
+                            f"Please execute this tool with the necessary "
+                            f"parameters."
                         ),
                     )
                 ],

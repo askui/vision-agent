@@ -476,7 +476,7 @@ class CustomTestValidator(CacheValidator):
         self.should_trigger = should_trigger
 
     def should_invalidate(
-        self, cache_file: CacheFile, step_index: int | None = None
+        self, _cache_file: CacheFile, _step_index: int | None = None
     ) -> tuple[bool, str | None]:
         if self.should_trigger:
             return True, "Custom validation failed"

@@ -369,10 +369,11 @@ def test_trajectory_executor_execute_all_stops_on_failure() -> None:
     # Mock to fail on second call
     call_count = [0]
 
-    def mock_run(steps):  # type: ignore
+    def mock_run(_steps):  # type: ignore
         call_count[0] += 1
         if call_count[0] == 2:
-            raise Exception("Second call fails")
+            msg = "Second call fails"
+            raise Exception(msg)  # noqa: TRY002
         return [
             ToolResultBlockParam(
                 tool_use_id="1",

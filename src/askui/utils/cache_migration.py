@@ -71,7 +71,7 @@ class CacheMigration:
 
         try:
             # Read the file
-            with open(file_path, "r") as f:
+            with file_path.open("r") as f:
                 data = json.load(f)
 
             # Check if already v0.1
@@ -83,7 +83,7 @@ class CacheMigration:
             # Use CacheWriter to read (automatically migrates)
             try:
                 cache_file = CacheWriter.read_cache_file(file_path)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 return False, f"Failed to read cache: {str(e)}"
 
             # Verify it's now v0.1
@@ -102,17 +102,17 @@ class CacheMigration:
                     file_path.suffix + self.backup_suffix
                 )
                 shutil.copy2(file_path, backup_path)
-                logger.debug(f"Created backup: {backup_path}")
+                logger.debug("Created backup: %s", backup_path)
 
             # Write migrated version back
-            with open(file_path, "w") as f:
+            with file_path.open("w") as f:
                 json.dump(cache_file.model_dump(mode="json"), f, indent=2, default=str)
 
-            return True, f"Migrated: {file_path.name}"
-
-        except Exception as e:
-            logger.error(f"Error migrating {file_path}: {e}", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Error migrating %s", file_path)
             return False, f"Error: {str(e)}"
+        else:
+            return True, f"Migrated: {file_path.name}"
 
     def migrate_directory(
         self,
@@ -131,13 +131,14 @@ class CacheMigration:
             Dictionary with migration statistics
         """
         if not cache_dir.is_dir():
-            raise CacheMigrationError(f"Directory not found: {cache_dir}")
+            msg = f"Directory not found: {cache_dir}"
+            raise CacheMigrationError(msg)
 
         # Find all cache files
         cache_files = list(cache_dir.glob(file_pattern))
 
         if not cache_files:
-            logger.warning(f"No cache files found in {cache_dir}")
+            logger.warning("No cache files found in %s", cache_dir)
             return {
                 "migrated": 0,
                 "skipped": 0,
@@ -145,7 +146,7 @@ class CacheMigration:
                 "total": 0,
             }
 
-        logger.info(f"Found {len(cache_files)} cache files in {cache_dir}")
+        logger.info("Found %s cache files in %s", len(cache_files), cache_dir)
 
         # Reset counters
         self.migrated_count = 0
@@ -159,26 +160,26 @@ class CacheMigration:
 
             if success:
                 self.migrated_count += 1
-                logger.info(f"✓ {message}")
+                logger.info("✓ %s", message)
             elif "Already v0.1" in message:
                 self.skipped_count += 1
-                logger.debug(f"⊘ {message}")
+                logger.debug("⊘ %s", message)
             else:
                 self.error_count += 1
-                logger.error(f"✗ {message}")
+                logger.error("✗ %s", message)
 
             results.append(
                 {"file": file_path.name, "success": success, "message": message}
             )
 
         # Log summary
-        logger.info(f"\n{'=' * 60}")
+        logger.info("\n%s", "=" * 60)
         logger.info("Migration Summary:")
-        logger.info(f"  Total files:    {len(cache_files)}")
-        logger.info(f"  Migrated:       {self.migrated_count}")
-        logger.info(f"  Already v0.1:   {self.skipped_count}")
-        logger.info(f"  Errors:         {self.error_count}")
-        logger.info(f"{'=' * 60}\n")
+        logger.info("  Total files:    %s", len(cache_files))
+        logger.info("  Migrated:       %s", self.migrated_count)
+        logger.info("  Already v0.1:   %s", self.skipped_count)
+        logger.info("  Errors:         %s", self.error_count)
+        logger.info("%s\n", "=" * 60)
 
         return {
             "migrated": self.migrated_count,
@@ -284,19 +285,21 @@ Examples:
         # Return success if no errors
         if stats["errors"] == 0:
             logger.info("✓ Migration completed successfully!")
-            return 0
-        logger.error(f"✗ Migration completed with {stats['errors']} errors")
-        return 1
+        else:
+            logger.error("✗ Migration completed with %s errors", stats["errors"])
+            return 1
 
-    except CacheMigrationError as e:
-        logger.error(f"Migration failed: {e}")
+    except CacheMigrationError:
+        logger.exception("Migration failed")
         return 1
     except KeyboardInterrupt:
         logger.info("\nMigration cancelled by user")
         return 1
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Unexpected error")
         return 1
+    else:
+        return 0
 
 
 if __name__ == "__main__":

@@ -32,12 +32,10 @@ class CacheValidator(ABC):
         Returns:
             Tuple of (should_invalidate: bool, reason: Optional[str])
         """
-        pass
 
     @abstractmethod
     def get_name(self) -> str:
         """Return validator name for logging/debugging."""
-        pass
 
 
 class CompositeCacheValidator(CacheValidator):
@@ -132,7 +130,8 @@ class StepFailureCountValidator(CacheValidator):
         if failures_at_step >= self.max_failures_per_step:
             return (
                 True,
-                f"Step {step_index} failed {failures_at_step} times (max: {self.max_failures_per_step})",
+                f"Step {step_index} failed {failures_at_step} times "
+                f"(max: {self.max_failures_per_step})",
             )
         return False, None
 
@@ -160,13 +159,13 @@ class TotalFailureRateValidator(CacheValidator):
         self.max_failure_rate = max_failure_rate
 
     def should_invalidate(
-        self, cache_file: CacheFile, step_index: Optional[int] = None
+        self, cache_file: CacheFile, _step_index: Optional[int] = None
     ) -> tuple[bool, Optional[str]]:
         """Check if overall failure rate is too high.
 
         Args:
             cache_file: The cache file with metadata and trajectory
-            step_index: Unused for this validator
+            _step_index: Unused for this validator
 
         Returns:
             Tuple of (should_invalidate: bool, reason: Optional[str])
@@ -181,7 +180,8 @@ class TotalFailureRateValidator(CacheValidator):
         if failure_rate > self.max_failure_rate:
             return (
                 True,
-                f"Failure rate {failure_rate:.1%} exceeds {self.max_failure_rate:.1%} after {attempts} attempts",
+                f"Failure rate {failure_rate:.1%} exceeds "
+                f"{self.max_failure_rate:.1%} after {attempts} attempts",
             )
         return False, None
 
@@ -207,13 +207,13 @@ class StaleCacheValidator(CacheValidator):
         self.max_age_days = max_age_days
 
     def should_invalidate(
-        self, cache_file: CacheFile, step_index: Optional[int] = None
+        self, cache_file: CacheFile, _step_index: Optional[int] = None
     ) -> tuple[bool, Optional[str]]:
         """Check if cache is stale (old + has failures).
 
         Args:
             cache_file: The cache file with metadata and trajectory
-            step_index: Unused for this validator
+            _step_index: Unused for this validator
 
         Returns:
             Tuple of (should_invalidate: bool, reason: Optional[str])
