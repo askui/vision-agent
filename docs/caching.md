@@ -845,57 +845,9 @@ When a v0.0 cache file (simple JSON array) is read:
 - Original files are not modified on disk (unless re-written)
 - v0.1 system can read both formats seamlessly
 
-### Batch Migration with CLI Tool
+### Programmatic Migration (Optional)
 
-For batch migration of existing v0.0 caches to v0.1 format, use the migration CLI utility:
-
-```bash
-# Migrate all caches in a directory
-python -m askui.utils.cache_migration --cache-dir .cache
-
-# Dry run (preview what would be migrated)
-python -m askui.utils.cache_migration --cache-dir .cache --dry-run
-
-# Create backups before migration
-python -m askui.utils.cache_migration --cache-dir .cache --backup
-
-# Migrate specific file pattern
-python -m askui.utils.cache_migration --cache-dir .cache --pattern "test_*.json"
-
-# Verbose output
-python -m askui.utils.cache_migration --cache-dir .cache --verbose
-```
-
-The migration tool will:
-- Find all cache files matching the pattern
-- Check if each file is v0.0 or already v0.1
-- Migrate v0.0 files to v0.1 format
-- Optionally create backups with `.v1.backup` suffix
-- Report detailed statistics about the migration
-
-Example output:
-```
-INFO: Found 5 cache files in .cache
-INFO: ✓ Migrated: login_test.json
-INFO: ✓ Migrated: checkout_flow.json
-INFO: ⊘ Already v0.1: user_registration.json
-INFO: ✓ Migrated: search_test.json
-INFO: ✗ Error: invalid.json (invalid JSON)
-
-============================================================
-Migration Summary:
-  Total files:    5
-  Migrated:       3
-  Already v0.1:   1
-  Errors:         1
-============================================================
-
-INFO: ✓ Migration completed successfully!
-```
-
-### Manual Migration (Programmatic)
-
-To upgrade individual v0.0 caches to v0.1 format programmatically:
+If you prefer to upgrade v0.0 cache files to v0.1 format on disk (rather than letting the system migrate them on-the-fly during read), you can do so programmatically:
 
 ```python
 from pathlib import Path
@@ -903,18 +855,15 @@ from askui.utils.cache_writer import CacheWriter
 import json
 
 # Read v0.0 file (auto-migrates to v0.1 in memory)
-cache_file = CacheWriter.read_cache_file(Path(".cache/old_cache.json"))
+cache_path = Path(".cache/old_cache.json")
+cached_trajectory = CacheWriter.read_cache_file(cache_path)
 
 # Write back to disk in v0.1 format
-with open(".cache/old_cache.json", "w") as f:
-    json.dump(cache_file.model_dump(mode="json"), f, indent=2, default=str)
+with cache_path.open("w", encoding="utf-8") as f:
+    json.dump(cached_trajectory.model_dump(mode="json"), f, indent=2, default=str)
 ```
 
-**Note:** Batch migration is optional - all v0.0 caches are automatically migrated during read operations. Use the migration tool if you prefer to:
-- Pre-migrate all caches at once
-- Create backups before migration
-- Verify migration success across all files
-- Audit which caches need migration
+**Note:** Programmatic migration is optional - all v0.0 caches are automatically migrated during read operations. You only need to manually upgrade cache files if you want them in v0.1 format on disk immediately.
 
 ## Example: Complete Test Workflow with v0.1 Features
 
