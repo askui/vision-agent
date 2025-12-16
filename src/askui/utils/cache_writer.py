@@ -166,7 +166,7 @@ class CacheWriter:
                 for name in placeholder_names
             }
             n_placeholders = len(placeholder_names)
-        logger.info(f"Replaced {n_placeholders} placeholder values in trajectory")
+        logger.info("Replaced %s placeholder values in trajectory", n_placeholders)
         return goal_to_save, trajectory_to_save, placeholders_dict
 
     def _blank_non_cacheable_tool_inputs(
@@ -195,7 +195,7 @@ class CacheWriter:
             # If tool is not cacheable, blank out its input
             if tool is not None and not tool.is_cacheable:
                 logger.debug(
-                    f"Blanking input for non-cacheable tool: {tool_block.name}"
+                    "Blanking input for non-cacheable tool: %s", tool_block.name
                 )
                 blanked_count += 1
                 result.append(
@@ -213,7 +213,8 @@ class CacheWriter:
 
         if blanked_count > 0:
             logger.info(
-                f"Blanked inputs for {blanked_count} non-cacheable tool(s) to save space"
+                "Blanked inputs for %s non-cacheable tool(s) to save space",
+                blanked_count,
             )
 
         return result
@@ -238,7 +239,7 @@ class CacheWriter:
 
         with cache_file_path.open("w", encoding="utf-8") as f:
             json.dump(cache_file.model_dump(mode="json"), f, indent=4)
-        logger.info(f"Cache file successfully written: {cache_file_path} ")
+        logger.info("Cache file successfully written: %s ", cache_file_path)
 
     def _accumulate_usage(self, step_usage: UsageParam) -> None:
         """Accumulate usage statistics from a single API call.
@@ -266,7 +267,7 @@ class CacheWriter:
         Returns:
             CacheFile object with metadata and trajectory
         """
-        logger.debug(f"Reading cache file: {cache_file_path}")
+        logger.debug("Reading cache file: %s", cache_file_path)
         with cache_file_path.open("r", encoding="utf-8") as f:
             raw_data = json.load(f)
 
@@ -274,7 +275,8 @@ class CacheWriter:
         if isinstance(raw_data, list):
             # v0.0 format: just a list of tool use blocks
             logger.info(
-                f"Detected v0.0 cache format in {cache_file_path.name}, migrating to v0.1"
+                "Detected v0.0 cache format in %s, migrating to v0.1",
+                cache_file_path.name,
             )
             trajectory = [ToolUseBlockParam(**step) for step in raw_data]
             # Create default metadata for v0.0 files (migrated to v0.1 format)
@@ -289,24 +291,28 @@ class CacheWriter:
                 placeholders={},
             )
             logger.info(
-                f"Successfully loaded and migrated v0.0 cache: {len(trajectory)} steps, 0 placeholders"
+                "Successfully loaded and migrated v0.0 cache: %s steps, 0 placeholders",
+                len(trajectory),
             )
             return cache_file
         if isinstance(raw_data, dict) and "metadata" in raw_data:
             # v0.1 format: structured with metadata
             cache_file = CacheFile(**raw_data)
             logger.info(
-                f"Successfully loaded v0.1 cache: {len(cache_file.trajectory)} steps, "
-                f"{len(cache_file.placeholders)} placeholders"
+                "Successfully loaded v0.1 cache: %s steps, %s placeholders",
+                len(cache_file.trajectory),
+                len(cache_file.placeholders),
             )
             if cache_file.metadata.goal:
-                logger.debug(f"Cache goal: {cache_file.metadata.goal}")
+                logger.debug("Cache goal: %s", cache_file.metadata.goal)
             return cache_file
         logger.error(
-            f"Unknown cache file format in {cache_file_path.name}. "
-            "Expected either a list (v0.0) or dict with 'metadata' key (v0.1)."
+            "Unknown cache file format in %s. "
+            "Expected either a list (v0.0) or dict with 'metadata' key (v0.1).",
+            cache_file_path.name,
         )
-        raise ValueError(
+        msg = (
             f"Unknown cache file format in {cache_file_path}. "
             "Expected either a list (v0.0) or dict with 'metadata' key (v0.1)."
         )
+        raise ValueError(msg)

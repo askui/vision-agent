@@ -313,7 +313,8 @@ class AgentBase(ABC):  # noqa: B024
                 _caching_settings, _settings, _tools, on_message, goal_str
             )
             logger.info(
-                f"Starting agent act with caching enabled (strategy={_caching_settings.strategy})"
+                "Starting agent act with caching enabled (strategy=%s)",
+                _caching_settings.strategy,
             )
 
         self._model_router.act(

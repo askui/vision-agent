@@ -13,10 +13,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
 from askui.models.shared.agent_message_param import (
-    ImageBlockParam,
     MessageParam,
-    TextBlockParam,
-    ToolResultBlockParam,
     ToolUseBlockParam,
 )
 from askui.models.shared.tools import ToolCollection
@@ -110,7 +107,7 @@ class TrajectoryExecutor:
 
         # Check if step should be skipped
         if self._should_skip_step(step):
-            logger.debug(f"Skipping step {step_index}: {step.name}")
+            logger.debug("Skipping step %d: %s", step_index, step.name)
             self.current_step_index += 1
             # Recursively execute next step
             return self.execute_next_step()
@@ -118,7 +115,9 @@ class TrajectoryExecutor:
         # Check if step needs agent intervention (non-cacheable)
         if self.should_pause_for_agent(step):
             logger.info(
-                f"Pausing at step {step_index}: {step.name} (non-cacheable tool)"
+                "Pausing at step %d: %s (non-cacheable tool)",
+                step_index,
+                step.name,
             )
             # Return result with current tool step info for the agent to handle
             # Note: We don't add any messages here - the cache manager will
@@ -136,7 +135,9 @@ class TrajectoryExecutor:
             is_valid, error_msg = self.validate_step_visually(step)
             if not is_valid:
                 logger.warning(
-                    f"Visual validation failed at step {step_index}: {error_msg}"
+                    "Visual validation failed at step %d: %s",
+                    step_index,
+                    error_msg,
                 )
                 return ExecutionResult(
                     status="FAILED",
@@ -152,7 +153,7 @@ class TrajectoryExecutor:
 
         # Execute the tool
         try:
-            logger.debug(f"Executing step {step_index}: {step.name}")
+            logger.debug("Executing step %d: %s", step_index, step.name)
 
             # Add assistant message (tool use) to history
             assistant_message = MessageParam(
@@ -164,9 +165,10 @@ class TrajectoryExecutor:
             # Execute the tool
             tool_results = self.toolbox.run([substituted_step])
 
-            # toolbox.run() returns a list of content blocks (ToolResultBlockParam, etc.)
-            # We use these directly without converting to strings - this preserves
-            # proper data types like ImageBlockParam
+            # toolbox.run() returns a list of content blocks
+            # (ToolResultBlockParam, etc.) We use these directly without
+            # converting to strings - this preserves proper data types like
+            # ImageBlockParam
 
             # Add user message (tool result) to history
             user_message = MessageParam(
@@ -190,10 +192,7 @@ class TrajectoryExecutor:
             )
 
         except Exception as e:
-            logger.error(
-                f"Error executing step {step_index}: {step.name}",
-                exc_info=True,
-            )
+            logger.exception("Error executing step %d: %s", step_index, step.name)
             return ExecutionResult(
                 status="FAILED",
                 step_index=step_index,
@@ -236,7 +235,7 @@ class TrajectoryExecutor:
         Currently checks if the tool is marked as non-cacheable.
         """
         # Get the tool from toolbox
-        tool = self.toolbox._tool_map.get(step.name)
+        tool = self.toolbox._tool_map.get(step.name)  # noqa: SLF001
 
         if tool is None:
             # Tool not found in regular tools, might be MCP tool
@@ -270,7 +269,7 @@ class TrajectoryExecutor:
         if self.current_step_index < len(self.trajectory):
             self.current_step_index += 1
 
-    def _should_skip_step(self, step: ToolUseBlockParam) -> bool:
+    def _should_skip_step(self, _step: ToolUseBlockParam) -> bool:
         """Check if a step should be skipped during execution.
 
         Args:
@@ -285,7 +284,7 @@ class TrajectoryExecutor:
         return False
 
     def validate_step_visually(
-        self, step: ToolUseBlockParam, current_screenshot: Any = None
+        self, _step: ToolUseBlockParam, _current_screenshot: Any = None
     ) -> tuple[bool, str | None]:
         """Hook for visual validation of cached steps using aHash comparison.
 

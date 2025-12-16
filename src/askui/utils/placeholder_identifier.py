@@ -45,25 +45,27 @@ def identify_placeholders(
         return {}, []
 
     logger.info(
-        f"Starting placeholder identification for trajectory with {len(trajectory)} steps"
+        "Starting placeholder identification for trajectory with %s steps",
+        len(trajectory),
     )
 
     # Convert trajectory to serializable format for analysis
     trajectory_data = [tool.model_dump(mode="json") for tool in trajectory]
-    logger.debug(f"Converted {len(trajectory_data)} tool blocks to JSON format")
+    logger.debug("Converted %s tool blocks to JSON format", len(trajectory_data))
 
-    user_message = f"""Analyze this UI automation trajectory and identify all values that should be placeholders:
-
-```json
-{json.dumps(trajectory_data, indent=2)}
-```
-
-Return only the JSON object with identified placeholders. Be thorough but conservative - only mark values that are clearly dynamic or time-sensitive."""
+    user_message = (
+        "Analyze this UI automation trajectory and identify all values that "
+        "should be placeholders:\n\n"
+        f"```json\n{json.dumps(trajectory_data, indent=2)}\n```\n\n"
+        "Return only the JSON object with identified placeholders. "
+        "Be thorough but conservative - only mark values that are clearly "
+        "dynamic or time-sensitive."
+    )
 
     response_text = ""  # Initialize for error logging
     try:
         # Make single API call
-        logger.debug(f"Calling LLM ({model}) to analyze trajectory for placeholders")
+        logger.debug("Calling LLM (%s) to analyze trajectory for placeholders", model)
         response = messages_api.create_message(
             messages=[MessageParam(role="user", content=user_message)],
             model=model,
@@ -94,7 +96,8 @@ Return only the JSON object with identified placeholders. Be thorough but conser
 
         placeholder_data = json.loads(response_text)
         logger.debug(
-            f"Successfully parsed JSON response with {len(placeholder_data.get('placeholders', []))} placeholders"
+            "Successfully parsed JSON response with %s placeholders",
+            len(placeholder_data.get("placeholders", [])),
         )
 
         # Convert to our data structures
@@ -109,26 +112,32 @@ Return only the JSON object with identified placeholders. Be thorough but conser
 
         if placeholder_definitions:
             logger.info(
-                f"Successfully identified {len(placeholder_definitions)} placeholders in trajectory"
+                "Successfully identified %s placeholders in trajectory",
+                len(placeholder_definitions),
             )
             for p in placeholder_definitions:
-                logger.debug(f"  - {p.name}: {p.value} ({p.description})")
+                logger.debug("  - %s: %s (%s)", p.name, p.value, p.description)
         else:
             logger.info(
-                "No placeholders identified in trajectory (this is normal for trajectories with only static values)"
+                "No placeholders identified in trajectory "
+                "(this is normal for trajectories with only static values)"
             )
-
-        return placeholder_dict, placeholder_definitions
 
     except json.JSONDecodeError as e:
         logger.warning(
-            f"Failed to parse LLM response as JSON: {e}. Falling back to empty placeholder list.",
+            "Failed to parse LLM response as JSON: %s. "
+            "Falling back to empty placeholder list.",
+            e,
             extra={"response_text": response_text[:500]},  # Log first 500 chars
         )
         return {}, []
     except Exception as e:  # noqa: BLE001
         logger.warning(
-            f"Failed to identify placeholders with LLM: {e}. Falling back to empty placeholder list.",
+            "Failed to identify placeholders with LLM: %s. "
+            "Falling back to empty placeholder list.",
+            e,
             exc_info=True,
         )
         return {}, []
+    else:
+        return placeholder_dict, placeholder_definitions

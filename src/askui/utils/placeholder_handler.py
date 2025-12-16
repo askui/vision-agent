@@ -195,25 +195,24 @@ class PlaceholderHandler:
                 if actual_value in result:
                     result = result.replace(actual_value, replacements[actual_value])
             return result
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # Recursively replace in dict values
             return {
                 k: PlaceholderHandler._replace_values_in_value(v, replacements)
                 for k, v in value.items()
             }
-        elif isinstance(value, list):
+        if isinstance(value, list):
             # Recursively replace in list items
             return [
                 PlaceholderHandler._replace_values_in_value(item, replacements)
                 for item in value
             ]
-        else:
-            # For non-string types, check if the value matches exactly
-            str_value = str(value)
-            if str_value in replacements:
-                # Return the placeholder as a string
-                return replacements[str_value]
-            return value
+        # For non-string types, check if the value matches exactly
+        str_value = str(value)
+        if str_value in replacements:
+            # Return the placeholder as a string
+            return replacements[str_value]
+        return value
 
     @staticmethod
     def substitute_placeholders(
@@ -277,18 +276,17 @@ class PlaceholderHandler:
                 pattern = r"\{\{" + re.escape(name) + r"\}\}"
                 result = re.sub(pattern, replacement, result)
             return result
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # Recursively substitute in dict values
             return {
                 k: PlaceholderHandler._substitute_in_value(v, placeholder_values)
                 for k, v in value.items()
             }
-        elif isinstance(value, list):
+        if isinstance(value, list):
             # Recursively substitute in list items
             return [
                 PlaceholderHandler._substitute_in_value(item, placeholder_values)
                 for item in value
             ]
-        else:
-            # Return other types as-is
-            return value
+        # Return other types as-is
+        return value
