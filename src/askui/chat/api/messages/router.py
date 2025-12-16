@@ -64,7 +64,10 @@ async def create_message(
     message_service: MessageService = MessageServiceDep,
 ) -> Message:
     return message_service.create(
-        workspace_id=askui_workspace, thread_id=thread_id, params=params
+        workspace_id=askui_workspace,
+        thread_id=thread_id,
+        params=params,
+        inject_cancelled_tool_results=True,
     )
 
 
