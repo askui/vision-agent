@@ -7,8 +7,8 @@ import pytest
 
 from askui.models.shared.agent_message_param import ToolUseBlockParam
 from askui.models.shared.settings import CacheFailure, CacheFile, CacheMetadata
-from askui.utils.cache_manager import CacheManager
-from askui.utils.cache_validator import (
+from askui.utils.caching.cache_manager import CacheManager
+from askui.utils.caching.cache_validator import (
     CacheValidator,
     CompositeCacheValidator,
     StepFailureCountValidator,

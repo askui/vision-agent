@@ -8,7 +8,7 @@ from typing import Any
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import CacheFile, CacheWriterSettings
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_writer import CacheWriter
 
 
 def test_cache_writer_initialization() -> None:

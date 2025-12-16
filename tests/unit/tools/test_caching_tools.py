@@ -15,7 +15,7 @@ from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
-from askui.utils.cache_execution_manager import CacheExecutionManager
+from askui.utils.caching.cache_execution_manager import CacheExecutionManager
 
 # ============================================================================
 # RetrieveCachedTestExecutions Tests (unchanged from before)

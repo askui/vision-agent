@@ -19,7 +19,7 @@ from askui.models.shared.truncation_strategies import (
     TruncationStrategyFactory,
 )
 from askui.reporting import NULL_REPORTER, Reporter
-from askui.utils.cache_execution_manager import CacheExecutionManager
+from askui.utils.caching.cache_execution_manager import CacheExecutionManager
 
 logger = logging.getLogger(__name__)
 

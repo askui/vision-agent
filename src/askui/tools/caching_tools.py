@@ -8,9 +8,9 @@ from typing_extensions import override
 
 from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
-from ..utils.cache_execution_manager import CacheExecutionManager
-from ..utils.cache_manager import CacheManager
-from ..utils.cache_writer import CacheWriter
+from ..utils.caching.cache_execution_manager import CacheExecutionManager
+from ..utils.caching.cache_manager import CacheManager
+from ..utils.caching.cache_writer import CacheWriter
 from ..utils.placeholder_handler import PlaceholderHandler
 
 if TYPE_CHECKING:

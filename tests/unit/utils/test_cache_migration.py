@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from askui.utils.cache_migration import CacheMigration, CacheMigrationError
+from askui.utils.caching.cache_migration import CacheMigration, CacheMigrationError
 
 
 @pytest.fixture

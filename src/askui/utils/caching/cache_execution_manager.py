@@ -9,7 +9,7 @@ from askui.models.shared.agent_message_param import MessageParam, TextBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb, OnMessageCbParam
 from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.reporting import Reporter
-from askui.utils.cache_manager import CacheManager
+from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.trajectory_executor import ExecutionResult
 
 if TYPE_CHECKING:
