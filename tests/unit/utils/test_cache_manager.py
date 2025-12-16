@@ -31,7 +31,7 @@ def sample_cache_file() -> CacheFile:
                 id="2", name="type", input={"text": "test"}, type="tool_use"
             ),
         ],
-        placeholders={},
+        cache_parameters={},
     )
 
 

@@ -39,7 +39,7 @@ def test_retrieve_cached_test_executions_lists_json_files() -> None:
                 "invalidation_reason": None,
             },
             "trajectory": [],
-            "placeholders": {},
+            "cache_parameters": {},
         }
         (cache_dir / "cache1.json").write_text(json.dumps(cache_data), encoding="utf-8")
         (cache_dir / "cache2.json").write_text(json.dumps(cache_data), encoding="utf-8")
@@ -90,7 +90,7 @@ def test_retrieve_cached_test_executions_respects_custom_format() -> None:
                 "invalidation_reason": None,
             },
             "trajectory": [],
-            "placeholders": {},
+            "cache_parameters": {},
         }
         (cache_dir / "cache1.json").write_text(json.dumps(cache_data), encoding="utf-8")
         (cache_dir / "cache2.traj").write_text(json.dumps(cache_data), encoding="utf-8")
@@ -129,7 +129,7 @@ def test_retrieve_caches_filters_invalid_by_default(tmp_path: Path) -> None:
             "invalidation_reason": None,
         },
         "trajectory": [],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with valid_cache.open("w") as f:
         json.dump(valid_data, f)
@@ -146,7 +146,7 @@ def test_retrieve_caches_filters_invalid_by_default(tmp_path: Path) -> None:
             "invalidation_reason": "Too many failures",
         },
         "trajectory": [],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with invalid_cache.open("w") as f:
         json.dump(invalid_data, f)
@@ -177,7 +177,7 @@ def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None
             "invalidation_reason": None,
         },
         "trajectory": [],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with valid_cache.open("w") as f:
         json.dump(valid_data, f)
@@ -194,7 +194,7 @@ def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None
             "invalidation_reason": "Too many failures",
         },
         "trajectory": [],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with invalid_cache.open("w") as f:
         json.dump(invalid_data, f)
@@ -235,7 +235,7 @@ def test_execute_cached_execution_raises_error_without_cache_manager() -> None:
                 "invalidation_reason": None,
             },
             "trajectory": [],
-            "placeholders": {},
+            "cache_parameters": {},
         }
         cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
 
@@ -290,7 +290,7 @@ def test_execute_cached_execution_activates_cache_mode() -> None:
                     "type": "tool_use",
                 },
             ],
-            "placeholders": {},
+            "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
@@ -343,7 +343,7 @@ def test_execute_cached_execution_works_with_toolbox() -> None:
                     "type": "tool_use",
                 }
             ],
-            "placeholders": {},
+            "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
@@ -398,12 +398,12 @@ def test_execute_cached_execution_initializes_with_custom_settings() -> None:
     assert tool._settings.delay_time_between_action == 1.0  # noqa: SLF001
 
 
-def test_execute_cached_execution_with_placeholders() -> None:
-    """Test that ExecuteCachedTrajectory validates placeholders."""
+def test_execute_cached_execution_with_parameters() -> None:
+    """Test that ExecuteCachedTrajectory validates parameters."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.1 cache file with placeholders
+        # Create a v0.1 cache file with parameters
         cache_data = {
             "metadata": {
                 "version": "0.1",
@@ -422,7 +422,7 @@ def test_execute_cached_execution_with_placeholders() -> None:
                     "type": "tool_use",
                 },
             ],
-            "placeholders": {
+            "cache_parameters": {
                 "current_date": "Current date",
             },
         }
@@ -440,21 +440,21 @@ def test_execute_cached_execution_with_placeholders() -> None:
 
         result = tool(
             trajectory_file=str(cache_file),
-            placeholder_values={"current_date": "2025-12-11"},
+            parameter_values={"current_date": "2025-12-11"},
         )
 
         # Verify success
         assert isinstance(result, str)
         assert "✓ Cache execution mode activated" in result
-        assert "1 placeholder value" in result
+        assert "1 parameter value" in result
 
 
-def test_execute_cached_execution_missing_placeholders() -> None:
-    """Test that ExecuteCachedTrajectory returns error for missing placeholders."""
+def test_execute_cached_execution_missing_parameters() -> None:
+    """Test that ExecuteCachedTrajectory returns error for missing parameters."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.1 cache file with placeholders
+        # Create a v0.1 cache file with parameters
         cache_data = {
             "metadata": {
                 "version": "0.1",
@@ -473,7 +473,7 @@ def test_execute_cached_execution_missing_placeholders() -> None:
                     "type": "tool_use",
                 }
             ],
-            "placeholders": {
+            "cache_parameters": {
                 "current_date": "Current date",
                 "user_name": "User name",
             },
@@ -493,17 +493,17 @@ def test_execute_cached_execution_missing_placeholders() -> None:
 
         # Verify error message
         assert isinstance(result, str)
-        assert "Missing required placeholder values" in result
+        assert "Missing required parameter values" in result
         assert "current_date" in result
         assert "user_name" in result
 
 
-def test_execute_cached_execution_no_placeholders_backward_compat() -> None:
-    """Test backward compatibility: trajectories without placeholders work fine."""
+def test_execute_cached_execution_no_parameters_backward_compat() -> None:
+    """Test backward compatibility: trajectories without parameters work fine."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.0 cache file (old format, no placeholders)
+        # Create a v0.0 cache file (old format, no parameters)
         trajectory: list[dict[str, Any]] = [
             {
                 "id": "tool1",
@@ -554,7 +554,7 @@ def test_continue_cached_trajectory_from_middle() -> None:
                 {"id": "4", "name": "tool4", "input": {}, "type": "tool_use"},
                 {"id": "5", "name": "tool5", "input": {}, "type": "tool_use"},
             ],
-            "placeholders": {},
+            "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
@@ -595,7 +595,7 @@ def test_continue_cached_trajectory_invalid_step_index_negative() -> None:
             "trajectory": [
                 {"id": "1", "name": "tool1", "input": {}, "type": "tool_use"},
             ],
-            "placeholders": {},
+            "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
@@ -634,7 +634,7 @@ def test_continue_cached_trajectory_invalid_step_index_too_large() -> None:
                 {"id": "1", "name": "tool1", "input": {}, "type": "tool_use"},
                 {"id": "2", "name": "tool2", "input": {}, "type": "tool_use"},
             ],
-            "placeholders": {},
+            "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
@@ -655,12 +655,12 @@ def test_continue_cached_trajectory_invalid_step_index_too_large() -> None:
         assert "valid indices: 0-1" in result
 
 
-def test_continue_cached_trajectory_with_placeholders() -> None:
-    """Test continuing execution with placeholder substitution."""
+def test_continue_cached_trajectory_with_parameters() -> None:
+    """Test continuing execution with parameter substitution."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.1 cache file with placeholders
+        # Create a v0.1 cache file with parameters
         cache_data = {
             "metadata": {
                 "version": "0.1",
@@ -691,7 +691,7 @@ def test_continue_cached_trajectory_with_placeholders() -> None:
                     "type": "tool_use",
                 },
             ],
-            "placeholders": {
+            "cache_parameters": {
                 "current_date": "Current date",
                 "user_name": "User name",
             },
@@ -711,7 +711,7 @@ def test_continue_cached_trajectory_with_placeholders() -> None:
         result = tool(
             trajectory_file=str(cache_file),
             start_from_step_index=1,
-            placeholder_values={"current_date": "2025-12-11", "user_name": "Alice"},
+            parameter_values={"current_date": "2025-12-11", "user_name": "Alice"},
         )
 
         # Verify success
@@ -742,7 +742,7 @@ def test_execute_cached_trajectory_warns_if_invalid(
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -790,7 +790,7 @@ def test_inspect_cache_metadata_shows_basic_info(tmp_path: Path) -> None:
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
             {"id": "2", "name": "type", "input": {"text": "test"}, "type": "tool_use"},
         ],
-        "placeholders": {"current_date": "{{current_date}}"},
+        "cache_parameters": {"current_date": "{{current_date}}"},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -804,7 +804,7 @@ def test_inspect_cache_metadata_shows_basic_info(tmp_path: Path) -> None:
     assert "Total Execution Attempts: 5" in result
     assert "Is Valid: True" in result
     assert "Total Steps: 2" in result
-    assert "Placeholders: 1" in result
+    assert "Parameters: 1" in result
     assert "current_date" in result
 
 
@@ -839,7 +839,7 @@ def test_inspect_cache_metadata_shows_failures(tmp_path: Path) -> None:
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -897,7 +897,7 @@ def test_revalidate_cache_marks_invalid_as_valid(tmp_path: Path) -> None:
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -938,7 +938,7 @@ def test_revalidate_cache_already_valid(tmp_path: Path) -> None:
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -984,7 +984,7 @@ def test_invalidate_cache_marks_valid_as_invalid(tmp_path: Path) -> None:
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)
@@ -1027,7 +1027,7 @@ def test_invalidate_cache_updates_reason_if_already_invalid(tmp_path: Path) -> N
         "trajectory": [
             {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
         ],
-        "placeholders": {},
+        "cache_parameters": {},
     }
     with cache_file.open("w") as f:
         json.dump(cache_data, f)

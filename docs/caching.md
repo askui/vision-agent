@@ -8,7 +8,7 @@ The caching mechanism allows you to record and replay agent action sequences (tr
 
 The caching system works by recording all tool use actions (mouse movements, clicks, typing, etc.) performed by the agent during an `act()` execution. These recorded sequences can then be replayed in subsequent executions, allowing the agent to skip the decision-making process and execute the actions directly.
 
-**New in v0.1:** The caching system now includes advanced features like placeholder support for dynamic values, smart handling of non-cacheable tools that require agent intervention, comprehensive message history tracking, and automatic failure detection with recovery capabilities.
+**New in v0.1:** The caching system now includes advanced features like parameter support for dynamic values, smart handling of non-cacheable tools that require agent intervention, comprehensive message history tracking, and automatic failure detection with recovery capabilities.
 
 ## Caching Strategies
 
@@ -31,7 +31,7 @@ caching_settings = CachingSettings(
     cache_dir=".cache",      # Directory to store cache files
     filename="my_test.json", # Filename for the cache file (optional for write mode)
     cache_writer_settings=CacheWriterSettings(
-        placeholder_identification_strategy="llm",
+        parameter_identification_strategy="llm",
       )  # Auto-detect dynamic values (default: "llm")
     execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
         delay_time_between_action=0.5  # Delay in seconds between each cached action
@@ -49,8 +49,8 @@ caching_settings = CachingSettings(
 
 ### CacheWriter Settings
 
-- `placeholder_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified placeholders (using `{{...}}` syntax) are detected. See [Automatic Placeholder Identification](#automatic-placeholder-identification).
-- `llm_placeholder_id_api_provider`: The provider of that will be used for for the llm in the placeholder identification (will only be used if `placeholder_identification_strategy`is set to `llm`). Defaults to `askui`.
+- `parameter_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
+- `llm_parameter_id_api_provider`: The provider of that will be used for for the llm in the parameter identification (will only be used if `parameter_identification_strategy`is set to `llm`). Defaults to `askui`.
 
 ### Execution Settings
 
@@ -120,9 +120,9 @@ When using `strategy="read"`, the agent receives two tools:
 
 The agent will automatically check if a relevant cached trajectory exists and use it if appropriate. During execution, the agent can see all screenshots and results in the message history. After executing a cached trajectory, the agent will verify the results and make corrections if needed.
 
-### Using Placeholders for Dynamic Values
+### Using Cache Parameters for Dynamic Values
 
-**New in v0.1:** Trajectories can contain placeholders for dynamic values that change between executions:
+**New in v0.1:** Trajectories can contain cache_parameters for dynamic values that change between executions:
 
 ```python
 from askui import VisionAgent
@@ -140,7 +140,7 @@ with VisionAgent() as agent:
         )
     )
 
-# Later, when replaying, the agent can provide placeholder values
+# Later, when replaying, the agent can provide parameter values
 # If the cache file contains {{current_date}} or {{task_title}}, provide them:
 with VisionAgent() as agent:
     agent.act(
@@ -150,11 +150,11 @@ with VisionAgent() as agent:
             cache_dir=".cache"
         )
     )
-    # The agent will automatically detect required placeholders and can provide them
-    # via the placeholder_values parameter when calling ExecuteCachedTrajectory
+    # The agent will automatically detect required cache_parameters and can provide them
+    # via the parameter_values parameter when calling ExecuteCachedTrajectory
 ```
 
-Placeholders use the syntax `{{variable_name}}` and are automatically detected during cache file creation. When executing a trajectory with placeholders, the agent must provide values for all required placeholders.
+Cache Parameters use the syntax `{{variable_name}}` and are automatically detected during cache file creation. When executing a trajectory with cache_parameters, the agent must provide values for all required cache_parameters.
 
 ### Handling Non-Cacheable Steps
 
@@ -190,7 +190,7 @@ Tools can be marked as non-cacheable by setting `is_cacheable=False` in their de
 result = execute_cached_trajectory_tool(
     trajectory_file=".cache/my_test.json",
     start_from_step_index=5,  # Continue from step 5
-    placeholder_values={"date": "2025-12-11"}  # Provide any required placeholders
+    parameter_values={"date": "2025-12-11"}  # Provide any required cache_parameters
 )
 ```
 
@@ -351,7 +351,7 @@ In this mode:
 
 ## Cache File Format
 
-**New in v0.1:** Cache files now use an enhanced format with metadata tracking, placeholder support, and execution history.
+**New in v0.1:** Cache files now use an enhanced format with metadata tracking, parameter support, and execution history.
 
 ### v0.1 Format (Current)
 
@@ -393,7 +393,7 @@ Cache files are JSON objects with the following structure:
       "input": {}
     }
   ],
-  "placeholders": {
+  "cache_parameters": {
     "user_name": "Name of the user to greet"
   }
 }
@@ -405,16 +405,16 @@ Cache files are JSON objects with the following structure:
 
 - **`version`**: Cache file format version (currently "0.1")
 - **`created_at`**: ISO 8601 timestamp when the cache was created
-- **`goal`**: **New!** The original goal/instruction given to the agent when recording this trajectory. Placeholders are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
+- **`goal`**: **New!** The original goal/instruction given to the agent when recording this trajectory. Cache Parameters are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
 - **`last_executed_at`**: ISO 8601 timestamp of the last execution (null if never executed)
 - **`execution_attempts`**: Number of times this trajectory has been executed
 - **`failures`**: List of failures encountered during execution (see [Failure Tracking](#failure-tracking))
 - **`is_valid`**: Boolean indicating if the cache is still considered valid
 - **`invalidation_reason`**: Optional string explaining why the cache was invalidated
 
-#### Placeholders
+#### Cache Parameters
 
-The `placeholders` object maps placeholder names to their descriptions. Placeholders in the trajectory use the syntax `{{placeholder_name}}` and must be substituted with actual values during execution.
+The `cache_parameters` object maps parameter names to their descriptions. Cache Parameters in the trajectory use the syntax `{{parameter_name}}` and must be substituted with actual values during execution.
 
 #### Failure Tracking
 
@@ -473,16 +473,16 @@ In write mode, the `CacheWriter` class:
 2. Extracts tool use blocks from the messages
 3. Stores tool blocks in memory during execution
 4. When agent finishes (on `stop_reason="end_turn"`):
-   - **Automatically identifies placeholders** using AI (if `placeholder_identification_strategy=llm`)
+   - **Automatically identifies cache_parameters** using AI (if `parameter_identification_strategy=llm`)
      - Analyzes trajectory to find dynamic values (dates, usernames, IDs, etc.)
-     - Generates descriptive placeholder definitions
-     - Replaces identified values with `{{placeholder_name}}` syntax in trajectory
+     - Generates descriptive parameter definitions
+     - Replaces identified values with `{{parameter_name}}` syntax in trajectory
      - Applies same replacements to the goal text
    - **Blanks non-cacheable tool inputs** by setting `input: {}` for tools with `is_cacheable=False` (saves space and privacy)
    - **Writes to JSON file** with:
-     - v0.1 metadata (version, timestamps, goal with placeholders)
-     - Trajectory of tool use blocks (with placeholders and blanked inputs)
-     - Placeholder definitions with descriptions
+     - v0.1 metadata (version, timestamps, goal with cache_parameters)
+     - Trajectory of tool use blocks (with cache_parameters and blanked inputs)
+     - Parameter definitions with descriptions
 5. Automatically skips writing if a cached execution was used (to avoid recording replays)
 
 ### Read Mode
@@ -494,7 +494,7 @@ In read mode:
    - `ExecuteCachedTrajectory`: Executes from the beginning or continues from a specific step using `start_from_step_index`
 2. A special system prompt (`CACHE_USE_PROMPT`) instructs the agent on:
    - How to use trajectories
-   - Placeholder handling
+   - Parameter handling
    - Non-cacheable step management
    - Failure recovery strategies
 3. The agent can list available cache files and choose appropriate ones
@@ -502,7 +502,7 @@ In read mode:
    - Each step is executed sequentially with configurable delays
    - All tools in the trajectory are executed, including screenshots and retrieval tools
    - Non-cacheable tools trigger a pause with `NEEDS_AGENT` status
-   - Placeholders are validated and substituted before execution
+   - Cache Parameters are validated and substituted before execution
    - Message history is built with assistant (tool use) and user (tool result) messages
    - Agent sees all screenshots and results in the message history
 5. Execution can pause for agent intervention:
@@ -624,26 +624,26 @@ Agent calls ExecuteCachedTrajectory(start_from_step_index=6)
 Execution continues successfully
 ```
 
-## Placeholders
+## Cache Parameters
 
-**New in v0.1:** Placeholders enable dynamic value substitution in cached trajectories.
+**New in v0.1:** Cache Parameters enable dynamic value substitution in cached trajectories.
 
-### Placeholder Syntax
+### Parameter Syntax
 
-Placeholders use double curly braces: `{{placeholder_name}}`
+Cache Parameters use double curly braces: `{{parameter_name}}`
 
-Valid placeholder names:
+Valid parameter names:
 - Must start with a letter or underscore
 - Can contain letters, numbers, and underscores
 - Examples: `{{date}}`, `{{user_name}}`, `{{order_id_123}}`
 
-### Automatic Placeholder Identification
+### Automatic Cache Parameter Identification
 
 **New in v0.1!** The caching system uses AI to automatically identify and parameterize dynamic values when recording trajectories.
 
 #### How It Works
 
-When `placeholder_identification_strategy=llm` (the default), the system:
+When `parameter_identification_strategy=llm` (the default), the system:
 
 1. **Records the trajectory** as normal during agent execution
 2. **Analyzes the trajectory** using an LLM to identify dynamic values such as:
@@ -653,7 +653,7 @@ When `placeholder_identification_strategy=llm` (the default), the system:
    - Dynamic text referencing current state or time
    - File paths with user-specific or time-specific components
    - Temporary or generated identifiers
-3. **Generates placeholder definitions** with descriptive names and documentation:
+3. **Generates parameter definitions** with descriptive names and documentation:
    ```json
    {
      "name": "current_date",
@@ -661,7 +661,7 @@ When `placeholder_identification_strategy=llm` (the default), the system:
      "description": "Current date in YYYY-MM-DD format"
    }
    ```
-4. **Replaces values with placeholders** in both the trajectory AND the goal:
+4. **Replaces values with cache_parameters** in both the trajectory AND the goal:
    - Original: `"text": "Login as john.doe"`
    - Result: `"text": "Login as {{username}}"`
 5. **Saves the templated trajectory** to the cache file
@@ -670,14 +670,14 @@ When `placeholder_identification_strategy=llm` (the default), the system:
 
 ✅ **No manual work** - Automatically identifies dynamic values
 ✅ **Smart detection** - LLM understands semantic meaning (dates vs coordinates)
-✅ **Descriptive** - Generates helpful descriptions for each placeholder
-✅ **Applies to goal** - Goal text also gets placeholder replacement
+✅ **Descriptive** - Generates helpful descriptions for each parameter
+✅ **Applies to goal** - Goal text also gets parameter replacement
 
 #### What Gets Detected
 
 The AI identifies values that are likely to change between executions:
 
-**Will be detected as placeholders:**
+**Will be detected as cache_parameters:**
 - Dates: "2025-12-11", "Dec 11, 2025", "12/11/2025"
 - Times: "10:30 AM", "14:45:00", "2025-12-11T10:30:00Z"
 - Usernames: "john.doe", "admin_user", "test_account"
@@ -686,7 +686,7 @@ The AI identifies values that are likely to change between executions:
 - Names: "John Smith", "Jane Doe"
 - Dynamic text: "Today is 2025-12-11", "Logged in as john.doe"
 
-**Will NOT be detected as placeholders:**
+**Will NOT be detected as cache_parameters:**
 - UI coordinates: `{"x": 100, "y": 200}`
 - Fixed button labels: "Submit", "Cancel", "OK"
 - Configuration values: `{"timeout": 30, "retries": 3}`
@@ -695,22 +695,22 @@ The AI identifies values that are likely to change between executions:
 
 #### Disabling Auto-Identification
 
-If you prefer manual placeholder control:
+If you prefer manual parameter control:
 
 ```python
 caching_settings = CachingSettings(
     strategy="write",
     cache_writer_settings = CacheWriterSettings(
-        placeholder_identification_strategy="default"  # Only detect {{...}} syntax
+        parameter_identification_strategy="default"  # Only detect {{...}} syntax
     )
 )
 ```
 
-With `placeholder_identification_strategy=default`, only manually specified placeholders using the `{{...}}` syntax will be detected.
+With `parameter_identification_strategy=default`, only manually specified cache_parameters using the `{{...}}` syntax will be detected.
 
 #### Logging
 
-To see what placeholders are being identified, enable INFO-level logging:
+To see what cache_parameters are being identified, enable INFO-level logging:
 
 ```python
 import logging
@@ -719,28 +719,28 @@ logging.basicConfig(level=logging.INFO)
 
 You'll see output like:
 ```
-INFO: Using LLM to identify placeholders in trajectory
-INFO: Identified 3 placeholders in trajectory
+INFO: Using LLM to identify cache_parameters in trajectory
+INFO: Identified 3 cache_parameters in trajectory
 DEBUG:   - current_date: 2025-12-11 (Current date in YYYY-MM-DD format)
 DEBUG:   - username: john.doe (Username for login)
 DEBUG:   - session_id: abc123 (Session identifier)
-INFO: Replaced 3 placeholder values in trajectory
-INFO: Applied placeholder replacement to goal: Login as john.doe -> Login as {{username}}
+INFO: Replaced 3 parameter values in trajectory
+INFO: Applied parameter replacement to goal: Login as john.doe -> Login as {{username}}
 ```
 
-### Manual Placeholders
+### Manual Cache Parameters
 
-You can also manually create placeholders when recording by using the syntax in your goal description. The system will preserve `{{...}}` patterns in tool inputs.
+You can also manually create cache_parameters when recording by using the syntax in your goal description. The system will preserve `{{...}}` patterns in tool inputs.
 
-### Providing Placeholder Values
+### Providing Parameter Values
 
-When executing a trajectory with placeholders, the agent must provide values:
+When executing a trajectory with cache_parameters, the agent must provide values:
 
 ```python
 # Via ExecuteCachedTrajectory
 result = execute_cached_trajectory_tool(
     trajectory_file=".cache/my_test.json",
-    placeholder_values={
+    parameter_values={
         "current_date": "2025-12-11",
         "user_email": "test@example.com"
     }
@@ -750,24 +750,24 @@ result = execute_cached_trajectory_tool(
 result = execute_cached_trajectory_tool(
     trajectory_file=".cache/my_test.json",
     start_from_step_index=3,  # Continue from step 3
-    placeholder_values={
+    parameter_values={
         "current_date": "2025-12-11",
         "user_email": "test@example.com"
     }
 )
 ```
 
-### Placeholder Validation
+### Parameter Validation
 
 Before execution, the system validates that:
-- All required placeholders have values provided
-- No required placeholders are missing
+- All required cache_parameters have values provided
+- No required cache_parameters are missing
 
-If validation fails, execution is aborted with a clear error message listing missing placeholders.
+If validation fails, execution is aborted with a clear error message listing missing cache_parameters.
 
 ### Use Cases
 
-Placeholders are particularly useful for:
+Cache Parameters are particularly useful for:
 - **Date-dependent workflows**: Testing with current/future dates
 - **User-specific actions**: Different users, emails, names
 - **Order/transaction IDs**: Testing with different identifiers
@@ -797,7 +797,7 @@ Example:
 
 1. **Always Verify Results**: After cached execution, verify the outcome matches expectations
 2. **Handle Failures Gracefully**: Provide clear recovery paths when trajectories fail
-3. **Use Placeholders Wisely**: Identify dynamic values that should be parameterized
+3. **Use Cache Parameters Wisely**: Identify dynamic values that should be parameterized
 4. **Mark Non-Cacheable Tools**: Properly mark tools that require agent intervention
 5. **Monitor Cache Validity**: Track execution attempts and failures to identify stale caches
 6. **Test Cache Replay**: Periodically test that cached trajectories still work
@@ -835,7 +835,7 @@ When a v0.0 cache file (simple JSON array) is read:
      "invalidation_reason": null
    }
    ```
-4. Extracts any placeholders found in trajectory
+4. Extracts any cache_parameters found in trajectory
 5. Returns fully-formed `CacheFile` object
 
 ### Compatibility Guarantees
@@ -902,7 +902,7 @@ class PrintTool(Tool):
         )
         self.is_cacheable = False
 
-    # Agent will detect placeholders and provide new values:
+    # Agent will detect cache_parameters and provide new values:
     def __call__(self, text: str) -> None:
         print(text)
 
@@ -970,9 +970,9 @@ Planned features for future versions:
 - **Cause**: UI has changed since recording
 - **Solution**: Take a screenshot to compare, re-record the trajectory, or manually execute failing steps
 
-**Issue**: "Missing required placeholders" error
-- **Cause**: Trajectory contains placeholders but values weren't provided
-- **Solution**: Check cache metadata for required placeholders and provide values via `placeholder_values` parameter
+**Issue**: "Missing required cache_parameters" error
+- **Cause**: Trajectory contains cache_parameters but values weren't provided
+- **Solution**: Check cache metadata for required cache_parameters and provide values via `parameter_values` parameter
 
 **Issue**: Execution pauses unexpectedly
 - **Cause**: Trajectory contains non-cacheable tool
@@ -991,7 +991,7 @@ Planned features for future versions:
 1. **Check message history**: After execution, review `message_history` in the result to see exactly what happened
 2. **Monitor failure metadata**: Track `execution_attempts` and `failures` in cache metadata
 3. **Test incrementally**: Use `ExecuteCachedTrajectory` with `start_from_step_index` to test specific sections of a trajectory
-4. **Verify placeholders**: Print cache metadata to see what placeholders are expected
+4. **Verify cache_parameters**: Print cache metadata to see what cache_parameters are expected
 5. **Adjust delays**: If timing issues occur, increase `delay_time_between_action` incrementally
 
 For more help, see the [GitHub Issues](https://github.com/askui/vision-agent/issues) or contact support.
