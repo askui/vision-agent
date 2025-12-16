@@ -715,44 +715,6 @@ class SimpleHtmlReporter(Reporter):
                         </table>
                     </div>
 
-<<<<<<< HEAD
-                    <div class="section">
-                        <h2>Conversation Log</h2>
-                        <table>
-                            <tr>
-                                <th>Time</th>
-                                <th>Role</th>
-                                <th>Content</th>
-                            </tr>
-                            {% for msg in messages %}
-                                <tr class="{{ msg.role.lower() }}">
-                                    <td class="timestamp">{{ msg.timestamp.strftime('%H:%M:%S.%f')[:-3] }} UTC</td>
-                                    <td>
-                                        <span class="role-badge role-{{ msg.role.lower() }}">
-                                            {{ msg.role }}
-                                        </span>
-                                    </td>
-                                    <td class="content-cell">
-                                        {% if msg.is_json %}
-                                            <div class="json-content">
-                                                <pre><code class="json">{{ msg.content }}</code></pre>
-                                            </div>
-                                        {% else %}
-                                            {{ msg.content }}
-                                        {% endif %}
-                                        {% for image in msg.images %}
-                                            <br>
-                                            <img src="data:image/png;base64,{{ image }}"
-                                                class="message-image"
-                                                alt="Message image">
-                                        {% endfor %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                </div>
-=======
                 {% if usage_summary %}
                 <h2>Token Usage</h2>
                 <table class="system-info">
@@ -800,7 +762,6 @@ class SimpleHtmlReporter(Reporter):
                         </tr>
                     {% endfor %}
                 </table>
->>>>>>> c3fbf84 (feat(caching): add token usage to cache writer and reporters)
             </body>
         </html>
         """
