@@ -10,11 +10,11 @@ from askui.models.shared.agent_on_message_cb import OnMessageCb, OnMessageCbPara
 from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.reporting import Reporter
 from askui.utils.caching.cache_manager import CacheManager
-from askui.utils.trajectory_executor import ExecutionResult
+from askui.utils.caching.trajectory_executor import ExecutionResult
 
 if TYPE_CHECKING:
     from askui.models.shared.settings import CacheFile
-    from askui.utils.trajectory_executor import TrajectoryExecutor
+    from askui.utils.caching.trajectory_executor import TrajectoryExecutor
 
 logger = logging.getLogger(__name__)
 

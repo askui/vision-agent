@@ -11,7 +11,7 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.tools import ToolCollection
-from askui.utils.trajectory_executor import TrajectoryExecutor
+from askui.utils.caching.trajectory_executor import TrajectoryExecutor
 
 
 def test_trajectory_executor_initialization() -> None:

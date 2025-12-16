@@ -8,15 +8,15 @@ from typing_extensions import override
 
 from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
-from ..utils.cache_parameter_handler import CacheParameterHandler
 from ..utils.caching.cache_execution_manager import CacheExecutionManager
 from ..utils.caching.cache_manager import CacheManager
+from ..utils.caching.cache_parameter_handler import CacheParameterHandler
 from ..utils.caching.cache_writer import CacheWriter
 
 if TYPE_CHECKING:
     from ..models.shared.agent_message_param import ToolUseBlockParam
     from ..models.shared.settings import CacheFile
-    from ..utils.trajectory_executor import TrajectoryExecutor
+    from ..utils.caching.trajectory_executor import TrajectoryExecutor
 
 logger = logging.getLogger()
 
@@ -319,7 +319,7 @@ class ExecuteCachedTrajectory(Tool):
         )
 
         # Import here to avoid circular dependency
-        from askui.utils.trajectory_executor import TrajectoryExecutor
+        from askui.utils.caching.trajectory_executor import TrajectoryExecutor
 
         executor = TrajectoryExecutor(
             trajectory=cache_file.trajectory,

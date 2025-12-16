@@ -3,7 +3,7 @@
 import pytest
 
 from askui.models.shared.agent_message_param import ToolUseBlockParam
-from askui.utils.cache_parameter_handler import (
+from askui.utils.caching.cache_parameter_handler import (
     CACHE_PARAMETER_PATTERN,
     CacheParameterHandler,
 )

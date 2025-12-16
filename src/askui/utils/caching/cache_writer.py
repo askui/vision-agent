@@ -15,7 +15,7 @@ from askui.models.shared.settings import (
     CacheWriterSettings,
 )
 from askui.models.shared.tools import ToolCollection
-from askui.utils.cache_parameter_handler import CacheParameterHandler
+from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
 
 logger = logging.getLogger(__name__)
 

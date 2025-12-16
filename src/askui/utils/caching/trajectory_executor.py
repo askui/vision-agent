@@ -17,7 +17,7 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.tools import ToolCollection
-from askui.utils.cache_parameter_handler import CacheParameterHandler
+from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
 
 logger = logging.getLogger(__name__)
 
