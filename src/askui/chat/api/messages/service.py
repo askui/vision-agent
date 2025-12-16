@@ -5,6 +5,7 @@ from sqlalchemy.orm import Query, Session
 
 from askui.chat.api.messages.models import (
     ROOT_MESSAGE_PARENT_ID,
+    ContentBlockParam,
     Message,
     MessageCreate,
     ToolResultBlockParam,
@@ -63,7 +64,7 @@ class MessageService:
         if not tool_use_blocks:
             return parent_message.id
 
-        tool_result_content: list[ToolResultBlockParam] = [
+        tool_result_content: list[ContentBlockParam] = [
             ToolResultBlockParam(
                 tool_use_id=block.id,
                 content=_CANCELLED_TOOL_RESULT_CONTENT,
@@ -73,7 +74,7 @@ class MessageService:
         ]
         tool_result_params = MessageCreate(
             role="user",
-            content=tool_result_content,  # type: ignore[arg-type]
+            content=tool_result_content,
             parent_id=parent_message.id,
             run_id=run_id,
         )
