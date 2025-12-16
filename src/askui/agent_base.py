@@ -25,7 +25,7 @@ from askui.tools.caching_tools import (
     RetrieveCachedTestExecutions,
 )
 from askui.utils.annotation_writer import AnnotationWriter
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_writer import CacheWriter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 

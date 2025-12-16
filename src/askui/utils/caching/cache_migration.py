@@ -27,7 +27,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_writer import CacheWriter
 
 logger = logging.getLogger(__name__)
 
