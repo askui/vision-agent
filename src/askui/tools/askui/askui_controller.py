@@ -73,6 +73,7 @@ from askui.utils.annotated_image import AnnotatedImage
 
 from ..utils import process_exists, wait_for_port
 from .exceptions import (
+    AskUiControllerError,
     AskUiControllerInvalidCommandError,
     AskUiControllerOperationTimeoutError,
 )
@@ -861,13 +862,19 @@ class AskUiControllerClient(AgentOs):
             "AgentOS", f"set_active_window({process_id}, {window_id})"
         )
 
+        display_length = len(self.list_displays().data)
+
         self._stub.SetActiveWindow(
             controller_v1_pbs.Request_SetActiveWindow(
                 processID=process_id, windowID=window_id
             )
         )
+        new_display_length = len(self.list_displays().data)
+        if new_display_length <= display_length:
+            msg = f"Failed to set active window {window_id} for process {process_id}"
+            raise AskUiControllerError(msg)
 
-        return len(self.list_displays().data)
+        return new_display_length
 
     @telemetry.record_call()
     def set_active_automation_target(self, target_id: int) -> None:
@@ -1287,8 +1294,6 @@ class AskUiControllerClient(AgentOs):
         return res.response
 
     def set_active_process(self, process_id: int) -> None:
-        # Test This on Windows, as On MacOs it's not working
-        # Clarify with the team if this is expected behavior
         """
         Set the active process.
 

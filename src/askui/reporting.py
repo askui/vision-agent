@@ -736,7 +736,7 @@ class SimpleHtmlReporter(Reporter):
             f"{random.randint(0, 1000):03}.html"
         )
         self.report_dir.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(html)
+        report_path.write_text(html, encoding="utf-8")
 
 
 class AllureReporter(Reporter):
