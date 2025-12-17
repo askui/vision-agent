@@ -70,7 +70,9 @@ class WorkflowService:
     ) -> Workflow:
         try:
             workflow_path = self._get_workflow_path(workflow_id)
-            workflow = Workflow.model_validate_json(workflow_path.read_text(encoding="utf-8"))
+            workflow = Workflow.model_validate_json(
+                workflow_path.read_text(encoding="utf-8")
+            )
 
             # Check workspace access
             if workspace_id is not None and workflow.workspace_id != workspace_id:

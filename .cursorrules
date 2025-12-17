@@ -20,6 +20,11 @@
 # Git
 - Never use `git add .` - always explicitly add files that are related to the task using `git add <file1> <file2> ...`
 - Use conventional commits format for commit messages (e.g., `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`)
+- Always run linting/pdm commands before committing to ensure code quality. The following commands must pass:
+  - `pdm run format` - code formatting with ruff (must pass)
+  - `pdm run lint` - linting with ruff (must pass, or use `pdm run lint:fix` to auto-fix issues)
+  - `pdm run typecheck:all` - type checking with mypy (may have pre-existing errors from venv/optional dependencies, but should not introduce new errors)
+  - Alternatively, use `pdm run qa:fix` which runs `typecheck:all`, `format`, and `lint:fix`
 
 # Documentation
 
