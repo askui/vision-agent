@@ -59,7 +59,7 @@ class ExecutionService:
     def retrieve(self, execution_id: ExecutionId) -> Execution:
         try:
             execution_path = self._get_execution_path(execution_id)
-            return Execution.model_validate_json(execution_path.read_text())
+            return Execution.model_validate_json(execution_path.read_text(encoding="utf-8"))
         except FileNotFoundError as e:
             error_msg = f"Execution {execution_id} not found"
             raise NotFoundError(error_msg) from e

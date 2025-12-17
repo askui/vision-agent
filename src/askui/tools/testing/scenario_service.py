@@ -62,7 +62,7 @@ class ScenarioService:
     def retrieve(self, scenario_id: ScenarioId) -> Scenario:
         try:
             scenario_path = self._get_scenario_path(scenario_id)
-            return Scenario.model_validate_json(scenario_path.read_text())
+            return Scenario.model_validate_json(scenario_path.read_text(encoding="utf-8"))
         except FileNotFoundError as e:
             error_msg = f"Scenario {scenario_id} not found"
             raise NotFoundError(error_msg) from e
