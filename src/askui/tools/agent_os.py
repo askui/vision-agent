@@ -172,11 +172,15 @@ class Display(BaseModel):
     )
 
     id: int = Field(validation_alias="displayID")
+    name: str = Field(validation_alias="name")
     size: DisplaySize = Field(validation_alias="sizeInPixels")
 
 
 class DisplaysListResponse(BaseModel):
     data: list[Display] = Field(validation_alias="displays")
+
+    def __str__(self) -> str:
+        return ",".join([str(display) for display in self.data])
 
 
 InputEvent = ClickEvent

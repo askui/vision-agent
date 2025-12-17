@@ -360,7 +360,16 @@ class SetActiveWindowResponse(BaseModel):
     name: Literal['SetActiveWindow']
     actionId: ActionId
 
-
+ResponsesModels = Union[
+    GetSystemInfoResponseModel,
+    GetMousePositionResponseModel,
+    GetRenderObjectInfoResponseModel,
+    GetRenderTextWordBreakIndexResponseModel,
+    WaitForKeyPressResponseModel,
+    AddRenderObjectResponseModel,
+    GetActiveProcessResponseModel,
+    GetActiveWindowResponseModel,
+]
 class Message(BaseModel):
     command: Union[
         GetSystemInfoResponse,

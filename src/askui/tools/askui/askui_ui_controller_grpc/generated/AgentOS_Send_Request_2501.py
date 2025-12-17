@@ -86,7 +86,7 @@ class Parameter3(RootModel[conint(ge=1, le=18446744073709551615)]):
 
 class SetActiveProcessCommand(BaseModel):
     name: Literal['SetActiveProcess'] = 'SetActiveProcess'
-    parameters: Optional[List[Parameter3]] = Field(None, max_length=1, min_length=1)
+    parameters: List[Parameter3] = Field(..., max_length=1, min_length=1)
 
 
 class GetActiveWindowCommand(BaseModel):

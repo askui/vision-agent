@@ -391,3 +391,24 @@ def test_get_active_process(controller_client: AskUiControllerClient) -> None:
         assert active_process.process is not None
         assert active_process.process.name is not None
         assert active_process.process.id is not None
+
+
+def test_set_active_process(controller_client: AskUiControllerClient) -> None:
+    """Test setting the active process"""
+    with controller_client:
+        controller_client.set_active_process(1062)
+        active_process = controller_client.get_active_process()
+        assert active_process is not None
+        assert active_process.process is not None
+
+
+def test_get_active_window(controller_client: AskUiControllerClient) -> None:
+    """Test getting the active window"""
+    with controller_client:
+        active_window = controller_client.get_active_window()
+        assert active_window is not None
+        assert active_window.window is not None
+        assert active_window.window.id is not None
+        assert active_window.window.name is not None
+        assert active_window.window.processId is not None
+        assert active_window.window.processName is not None

@@ -6,6 +6,7 @@ from PIL import Image as PILImage
 from pydantic import BaseModel, Field
 
 from askui.models.shared.settings import COMPUTER_USE_20250124_BETA_FLAG
+from askui.tools.agent_os import DisplaysListResponse
 from askui.tools.askui.askui_controller import AskUiControllerClient
 from askui.tools.computer import (
     RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC,
@@ -65,16 +66,10 @@ class Display(BaseModel):
     id: int
 
 
-class DisplayListResponse(BaseModel):
-    data: list[Display]
-
-
 @mcp.tool(description="List all available displays", tags={"computer"})
-def list_displays() -> DisplayListResponse:
+def list_displays() -> DisplaysListResponse:
     with AskUiControllerClient(display=active_display) as agent_os:
-        return DisplayListResponse(
-            data=[Display(id=display.id) for display in agent_os.list_displays().data],
-        )
+        return agent_os.list_displays()
 
 
 @mcp.tool(

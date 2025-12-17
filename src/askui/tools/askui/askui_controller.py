@@ -26,6 +26,9 @@ from askui.tools.askui.askui_controller_client_settings import (
     AskUiControllerClientSettings,
 )
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
+from askui.tools.askui.askui_ui_controller_grpc.desktop_agent_os_error import (
+    DesktopAgentOsError,
+)
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
@@ -39,6 +42,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     Command,
     DeleteRenderObjectCommand,
     GetActiveProcessCommand,
+    GetActiveWindowCommand,
     GetMousePositionCommand,
     GetSystemInfoCommand,
     Guid,
@@ -46,10 +50,13 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     Length,
     Location,
     Message,
+    Parameter3,
     RenderImage,
     RenderObjectId,
     RenderObjectStyle,
     RenderText,
+    SetActiveProcessCommand,
+    SetActiveWindowCommand,
     SetMousePositionCommand,
     UpdateRenderObjectCommand,
 )
@@ -57,6 +64,8 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
     AskUIAgentOSSendResponseSchema,
     GetActiveProcessResponse,
     GetActiveProcessResponseModel,
+    GetActiveWindowResponse,
+    GetActiveWindowResponseModel,
     GetSystemInfoResponse,
     GetSystemInfoResponseModel,
 )
@@ -630,16 +639,17 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             display (int, optional): The display ID to set as active.
+                This can be either a real display ID or a virtual display ID.
                 Defaults to `1`.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
-        self._reporter.add_message("AgentOS", f"set_display({display})")
         self._stub.SetActiveDisplay(
             controller_v1_pbs.Request_SetActiveDisplay(displayID=display)
         )
         self._display = display
+        self._reporter.add_message("AgentOS", f"set_display({display})")
 
     @telemetry.record_call(exclude={"command"})
     @override
@@ -685,7 +695,9 @@ class AskUiControllerClient(AgentOs):
         self,
     ) -> DisplaysListResponse:
         """
-        List all available displays including virtual screens.
+        List all available from the controller.
+        It includes both real and virtual displays
+            without describing the type of display (virtual or real).
 
         Returns:
             DisplaysListResponse
@@ -705,7 +717,11 @@ class AskUiControllerClient(AgentOs):
             preserving_proto_field_name=True,
         )
 
-        return DisplaysListResponse.model_validate(response_dict)
+        displays = DisplaysListResponse.model_validate(response_dict)
+
+        self._reporter.add_message("AgentOS", f"list_displays() ->{str(displays)}")
+
+        return displays
 
     @telemetry.record_call()
     def get_process_list(
@@ -826,13 +842,16 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
-    def set_active_window(self, process_id: int, window_id: int) -> None:
+    def set_active_window(self, process_id: int, window_id: int) -> int:
         """
         Set the active window for automation.
 
         Args:
             process_id (int): The ID of the process that owns the window.
             window_id (int): The ID of the window to set as active.
+
+        returns:
+            int: The new Display ID.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
@@ -847,6 +866,8 @@ class AskUiControllerClient(AgentOs):
                 processID=process_id, windowID=window_id
             )
         )
+
+        return len(self.list_displays().data)
 
     @telemetry.record_call()
     def set_active_automation_target(self, target_id: int) -> None:
@@ -1241,7 +1262,10 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", "get_system_info()")
         command = GetSystemInfoCommand()
-        res: GetSystemInfoResponse = self._send_command(command).message.command
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetSystemInfoResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
         return res.response
 
     def get_active_process(self) -> GetActiveProcessResponseModel:
@@ -1256,5 +1280,66 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", "get_active_process()")
         command = GetActiveProcessCommand()
-        res: GetActiveProcessResponse = self._send_command(command).message.command
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetActiveProcessResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
         return res.response
+
+    def set_active_process(self, process_id: int) -> None:
+        # Test This on Windows, as On MacOs it's not working
+        # Clarify with the team if this is expected behavior
+        """
+        Set the active process.
+
+        Args:
+            process_id (int): The ID of the process to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"set_active_process({process_id})")
+        _process_id = Parameter3(root=process_id)
+        command = SetActiveProcessCommand(parameters=[_process_id])
+        self._send_command(command)
+
+    def get_active_window(self) -> GetActiveWindowResponseModel:
+        """
+        Gets the window id and name in addition to the process id
+             and name of the currently active window (in focus).
+
+
+        Returns:
+            GetActiveWindowResponseModel: The active window.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "get_active_window()")
+        command = GetActiveWindowCommand()
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetActiveWindowResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        return res.response
+
+    def set_window_in_focus(self, process_id: int, window_id: int) -> None:
+        """
+        Sets the window with the specified windowId of the process
+            with the specified processId active,
+            which brings it to the front and gives it focus.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message(
+            "AgentOS", f"set_window_in_focus({process_id}, {window_id})"
+        )
+        _process_id = Parameter3(root=process_id)
+        _window_id = Parameter3(root=window_id)
+        command = SetActiveWindowCommand(parameters=[_process_id, _window_id])
+        self._send_command(command)
