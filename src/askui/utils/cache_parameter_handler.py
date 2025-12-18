@@ -13,10 +13,6 @@ import logging
 import re
 from typing import Any
 
-from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.anthropic.factory import AnthropicApiProvider
-from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.model_router import create_api_client
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.messages_api import MessagesApi
 from askui.prompts.caching import CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT
@@ -52,8 +48,8 @@ class CacheParameterHandler:
         trajectory: list[ToolUseBlockParam],
         goal: str | None,
         identification_strategy: str,
-        api_provider: AnthropicApiProvider = "askui",
-        model: str = "claude-sonnet-4-5-20250929",
+        messages_api: MessagesApi | None = None,
+        model: str | None = None,
     ) -> tuple[str | None, list[ToolUseBlockParam], dict[str, str]]:
         """Identify parameters and return parameterized trajectory + goal.
 
@@ -73,46 +69,52 @@ class CacheParameterHandler:
             - Parameterized trajectory (with {{param}} syntax)
             - Dict mapping parameter names to descriptions
         """
-        if identification_strategy == "llm" and trajectory:
-            # Create messages_api for LLM-based identification
-            messages_api = AnthropicMessagesApi(
-                client=create_api_client(api_provider),
-                locator_serializer=VlmLocatorSerializer(),
-            )
-
+        if identification_strategy == "llm" and trajectory and messages_api and model:
             # Use LLM to identify parameters
-            parameters_dict, parameter_definitions = (
-                CacheParameterHandler._identify_parameters_with_llm(
-                    trajectory, messages_api, model
-                )
-            )
-
-            if parameter_definitions:
-                # Replace values with {{parameter}} syntax in trajectory
-                parameterized_trajectory = (
-                    CacheParameterHandler._replace_values_with_parameters(
-                        trajectory, parameter_definitions
+            try:
+                logger.info("Trying to extract parameters using the strategy 'llm'")
+                parameters_dict, parameter_definitions = (
+                    CacheParameterHandler._identify_parameters_with_llm(
+                        trajectory, messages_api, model
                     )
                 )
 
-                # Apply same replacement to goal text
-                parameterized_goal = goal
-                if goal:
-                    parameterized_goal = (
-                        CacheParameterHandler._apply_parameters_to_text(
-                            goal, parameter_definitions
+                if parameter_definitions:
+                    # Replace values with {{parameter}} syntax in trajectory
+                    parameterized_trajectory = (
+                        CacheParameterHandler._replace_values_with_parameters(
+                            trajectory, parameter_definitions
                         )
                     )
 
-                n_parameters = len(parameter_definitions)
-                logger.info("Replaced %s parameter values in trajectory", n_parameters)
-                return parameterized_goal, parameterized_trajectory, parameters_dict
+                    # Apply same replacement to goal text
+                    parameterized_goal = goal
+                    if goal:
+                        parameterized_goal = (
+                            CacheParameterHandler._apply_parameters_to_text(
+                                goal, parameter_definitions
+                            )
+                        )
 
-            # No parameters identified
-            logger.info("No parameters identified in trajectory")
-            return goal, trajectory, {}
+                    n_parameters = len(parameter_definitions)
+                    logger.info(
+                        "Replaced %s parameter values in trajectory", n_parameters
+                    )
+                    return parameterized_goal, parameterized_trajectory, parameters_dict
+
+                else:  # noqa: RET505
+                    # No parameters identified
+                    logger.info("No parameters identified in trajectory")
+                    return goal, trajectory, {}
+
+            except Exception:
+                logger.exception(
+                    "An error occurred while extracting parameters using the strategy"
+                    "'llm'. Will use 'preset' strategy instead"
+                )
 
         # Manual extraction (preset strategy)
+        logger.info("Extracting parameters using the strategy 'preset'")
         parameter_names = CacheParameterHandler.extract_parameters(trajectory)
         parameters_dict = {
             name: f"Parameter for {name}"

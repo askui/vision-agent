@@ -11,7 +11,6 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
-from askui.models.anthropic.factory import AnthropicApiProvider
 from askui.models.shared.agent_message_param import ToolUseBlockParam, UsageParam
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
@@ -44,7 +43,6 @@ class CachedExecutionToolSettings(BaseModel):
 
 class CacheWriterSettings(BaseModel):
     parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
-    llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
 
 
 class CachingSettings(BaseModel):

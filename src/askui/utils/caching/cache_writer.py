@@ -2,13 +2,16 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from askui.models.model_router import ModelRouter
 from askui.models.shared.agent_message_param import (
     MessageParam,
     ToolUseBlockParam,
     UsageParam,
 )
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
+from askui.models.shared.facade import ModelFacade
 from askui.models.shared.settings import (
     CacheFile,
     CacheMetadata,
@@ -16,6 +19,9 @@ from askui.models.shared.settings import (
 )
 from askui.models.shared.tools import ToolCollection
 from askui.utils.cache_parameter_handler import CacheParameterHandler
+
+if TYPE_CHECKING:
+    from askui.models.models import ActModel
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +34,8 @@ class CacheWriter:
         cache_writer_settings: CacheWriterSettings | None = None,
         toolbox: ToolCollection | None = None,
         goal: str | None = None,
+        model_router: ModelRouter | None = None,
+        model: str | None = None,
     ) -> None:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
@@ -38,6 +46,8 @@ class CacheWriter:
         self.was_cached_execution = False
         self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
         self._goal = goal
+        self._model_router = model_router
+        self._model = model
         self._toolbox: ToolCollection | None = None
         self._accumulated_usage = UsageParam()
 
@@ -109,11 +119,37 @@ class CacheWriter:
         self,
     ) -> tuple[str | None, list[ToolUseBlockParam], dict[str, str]]:
         """Identify parameters and return parameterized trajectory + goal."""
+        identification_strategy = "preset"
+        messages_api = None
+        model = None
+
+        if self._cache_writer_settings.parameter_identification_strategy == "llm":
+            if self._model_router and self._model:
+                try:
+                    _get_model: tuple[ActModel, str] = self._model_router._get_model(  # noqa: SLF001
+                        self._model, "act"
+                    )
+                    if isinstance(_get_model[0], ModelFacade):
+                        act_model: ActModel = _get_model[0]._act_model  # noqa: SLF001
+                    else:
+                        act_model = _get_model[0]
+                    model_name: str = _get_model[1]
+                    if hasattr(act_model, "_messages_api"):
+                        messages_api = act_model._messages_api  # noqa: SLF001
+                        identification_strategy = "llm"
+                        model = model_name
+                except Exception:
+                    logger.exception(
+                        "Using 'llm' for parameter identification caused an exception."
+                        "Will use 'preset' strategy instead"
+                    )
+
         return CacheParameterHandler.identify_and_parameterize(
             trajectory=self.messages,
             goal=self._goal,
-            identification_strategy=self._cache_writer_settings.parameter_identification_strategy,
-            api_provider=self._cache_writer_settings.llm_parameter_id_api_provider,
+            identification_strategy=identification_strategy,
+            messages_api=messages_api,
+            model=model,
         )
 
     def _blank_non_cacheable_tool_inputs(

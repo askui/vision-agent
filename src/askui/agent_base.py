@@ -310,7 +310,7 @@ class AgentBase(ABC):  # noqa: B024
 
         if _caching_settings.strategy != "no":
             on_message = self._patch_act_with_cache(
-                _caching_settings, _settings, _tools, on_message, goal_str
+                _caching_settings, _settings, _tools, on_message, goal_str, _model
             )
             logger.info(
                 "Starting agent act with caching enabled (strategy=%s)",
@@ -342,6 +342,7 @@ class AgentBase(ABC):  # noqa: B024
         toolbox: ToolCollection,
         on_message: OnMessageCb | None,
         goal: str | None = None,
+        model: str | None = None,
     ) -> OnMessageCb | None:
         """Patch act settings and toolbox with caching functionality.
 
@@ -399,6 +400,8 @@ class AgentBase(ABC):  # noqa: B024
                 cache_writer_settings=caching_settings.cache_writer_settings,
                 toolbox=toolbox,
                 goal=goal,
+                model_router=self._model_router,
+                model=model,
             )
             if on_message is None:
                 on_message = cache_writer.add_message_cb
