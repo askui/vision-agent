@@ -44,7 +44,7 @@ class RunService(RunnerRunService):
         self._chat_history_manager = chat_history_manager
         self._settings = settings
         self._event_service = EventService(settings.data_dir, self)
-        self._io_publisher = IOPublisher()
+        self._io_publisher = IOPublisher(settings.enable_io_events)
 
     def _find_by_id(
         self, workspace_id: WorkspaceId | None, thread_id: ThreadId, run_id: RunId
