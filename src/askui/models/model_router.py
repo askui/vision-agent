@@ -17,7 +17,6 @@ from askui.models.exceptions import ModelNotFoundError, ModelTypeMismatchError
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.models import (
     MODEL_TYPES,
-    ActModel,
     DetectedElement,
     GetModel,
     LocateModel,
@@ -27,12 +26,7 @@ from askui.models.models import (
     ModelRegistry,
     PointList,
 )
-from askui.models.shared.agent import Agent
-from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.facade import ModelFacade
-from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import ToolCollection
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import NULL_REPORTER, CompositeReporter, Reporter
 from askui.utils.image_utils import ImageSource
@@ -63,17 +57,13 @@ def initialize_default_model_registry(  # noqa: C901
     @functools.cache
     def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
         messages_api = anthropic_messages_api(api_provider)
-        act_model = Agent(
-            messages_api=messages_api,
-            reporter=reporter,
-        )
         model = AnthropicModel(
             settings=AnthropicModelSettings(),
             messages_api=messages_api,
             locator_serializer=vlm_locator_serializer(),
         )
         return ModelFacade(
-            act_model=act_model,
+            act_model=None,  # Act now handled by Conversation in AgentBase
             get_model=model,
             locate_model=model,
         )
@@ -107,12 +97,8 @@ def initialize_default_model_registry(  # noqa: C901
 
     @functools.cache
     def askui_facade() -> ModelFacade:
-        act_model = Agent(
-            messages_api=anthropic_messages_api("askui"),
-            reporter=reporter,
-        )
         return ModelFacade(
-            act_model=act_model,
+            act_model=None,  # Act now handled by Conversation in AgentBase
             get_model=askui_get_model(),
             locate_model=askui_locate_model(),
         )
@@ -175,11 +161,6 @@ class ModelRouter:
 
     @overload
     def _get_model(
-        self, model_name: str, model_type: Literal["act"]
-    ) -> tuple[ActModel, str]: ...
-
-    @overload
-    def _get_model(
         self, model_name: str, model_type: Literal["get"]
     ) -> tuple[GetModel, str]: ...
 
@@ -189,7 +170,7 @@ class ModelRouter:
     ) -> tuple[LocateModel, str]: ...
 
     def _get_model(
-        self, model_name: str, model_type: Literal["act", "get", "locate"]
+        self, model_name: str, model_type: Literal["get", "locate"]
     ) -> tuple[Model, str]:
         _model_name = model_name
         model_or_model_factory = self._models.get(model_name)
@@ -202,8 +183,9 @@ class ModelRouter:
         if model_or_model_factory is None:
             raise ModelNotFoundError(model_name)
 
-        if not isinstance(model_or_model_factory, (ActModel, GetModel, LocateModel)):
-            model = model_or_model_factory()
+        if not isinstance(model_or_model_factory, (GetModel, LocateModel)):
+            # model_or_model_factory is a factory function
+            model = model_or_model_factory()  # type: ignore[operator]
         else:
             model = model_or_model_factory
 
@@ -215,27 +197,6 @@ class ModelRouter:
             )
 
         return (model, _model_name)
-
-    def act(
-        self,
-        messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
-        tools: ToolCollection | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        m, _model = self._get_model(model, "act")
-        logger.debug(
-            'Routing "act" to model',
-            extra={"model": model},
-        )
-        return m.act(
-            messages=messages,
-            model=_model,
-            on_message=on_message,
-            settings=settings,
-            tools=tools,
-        )
 
     def get(
         self,

@@ -11,7 +11,6 @@ from pytest_mock import MockerFixture
 from askui.models.huggingface.spaces_api import HFSpacesHandler
 from askui.models.model_router import ModelRouter
 from askui.models.models import ModelName
-from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.facade import ModelFacade
 from askui.models.ui_tars_ep.ui_tars_api import UiTarsApiHandler
 from askui.reporting import CompositeReporter
@@ -268,33 +267,6 @@ class TestModelRouter:
         assert response == "Mock response"
         mock_anthropic_facade.get.assert_called_once()  # type: ignore
 
-    def test_act_with_tars_model(
-        self, model_router: ModelRouter, mock_tars: UiTarsApiHandler
-    ) -> None:
-        """Test acting using TARS model."""
-        messages = [MessageParam(role="user", content="test goal")]
-        model_router.act(messages, model=ModelName.TARS)
-        mock_tars.act.assert_called_once_with(  # type: ignore[attr-defined]
-            messages=messages,
-            model="tars",
-            on_message=None,
-            settings=None,
-            tools=None,
-        )
-
-    def test_act_with_claude_model(
-        self, model_router: ModelRouter, mock_anthropic_facade: ModelFacade
-    ) -> None:
-        """Test acting using Claude model."""
-        messages = [MessageParam(role="user", content="test goal")]
-        model_router.act(
-            messages,
-            f"anthropic/{ModelName.CLAUDE__SONNET__4__20250514}",
-        )
-        mock_anthropic_facade.act.assert_called_once_with(  # type: ignore
-            messages=messages,
-            model=ModelName.CLAUDE__SONNET__4__20250514,
-            on_message=None,
-            settings=None,
-            tools=None,
-        )
+    # Note: ModelRouter.act() has been removed. Act functionality is now handled
+    # by the Conversation architecture in AgentBase. Tests for act() should be
+    # written for AgentBase/Conversation instead of ModelRouter.

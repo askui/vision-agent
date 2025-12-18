@@ -6,8 +6,10 @@ from askui.container import telemetry
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.messages_api_provider import MessagesApiProvider
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.speaker import AskUIAgent, CacheExecutor, Conversation, Speakers
 
 from .models.model_router import ModelRouter, initialize_default_model_registry
 from .reporting import NullReporter
@@ -15,12 +17,34 @@ from .reporting import NullReporter
 
 class CustomAgent:
     def __init__(self) -> None:
-        self._model_router = self._init_model_router()
+        reporter = NullReporter()
+        self._reporter = reporter
+
+        # Create model router for get/locate operations (no act)
+        self._model_router = self._init_model_router(reporter)
+
+        # Create MessagesApiProvider for handling different model providers
+        messages_api_provider = MessagesApiProvider()
+
+        # Create speakers for the conversation
+        askui_agent_speaker = AskUIAgent(messages_api_provider)
+        cache_executor_speaker = CacheExecutor()
+
+        # Create conversation with speakers
+        self._conversation = Conversation(
+            speakers=Speakers(
+                {
+                    "AskUIAgent": askui_agent_speaker,
+                    "CacheExecutor": cache_executor_speaker,
+                }
+            ),
+            reporter=reporter,
+        )
 
     def _init_model_router(
         self,
+        reporter: NullReporter,
     ) -> ModelRouter:
-        reporter = NullReporter()
         models = initialize_default_model_registry(
             reporter=reporter,
         )
@@ -41,7 +65,8 @@ class CustomAgent:
     ) -> None:
         _settings = settings or ActSettings()
         _tools = self._build_tools(tools)
-        self._model_router.act(
+        # Use conversation instead of model_router
+        self._conversation.start(
             messages=messages,
             model=model or ModelName.CLAUDE__SONNET__4__20250514,
             on_message=on_message,

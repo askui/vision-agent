@@ -1,22 +1,12 @@
-import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from pydantic import validate_call
 from typing_extensions import override
 
 from ..models.shared.settings import CachedExecutionToolSettings
 from ..models.shared.tools import Tool, ToolCollection
-from ..utils.caching.cache_execution_manager import CacheExecutionManager
 from ..utils.caching.cache_manager import CacheManager
-from ..utils.caching.cache_parameter_handler import CacheParameterHandler
-from ..utils.caching.cache_writer import CacheWriter
-
-if TYPE_CHECKING:
-    from ..models.shared.agent_message_param import ToolUseBlockParam
-    from ..models.shared.settings import CacheFile
-    from ..utils.caching.trajectory_executor import TrajectoryExecutor
 
 logger = logging.getLogger()
 
@@ -63,6 +53,17 @@ class RetrieveCachedTestExecutions(Tool):
     @override
     @validate_call
     def __call__(self, include_invalid: bool = False) -> list[str]:  # type: ignore
+        """Retrieve available cached trajectories.
+
+        Returns:
+            List of dicts with 'filename' and 'parameters' fields.
+            Example: [
+                {
+                    "filename": "/path/to/cache.json",
+                    "parameters": {"current_date": "Date placeholder", ...}
+                }
+            ]
+        """
         logger.info(
             "Retrieving cached trajectories from %s (include_invalid=%s)",
             self._cache_dir,
@@ -81,38 +82,40 @@ class RetrieveCachedTestExecutions(Tool):
         ]
         logger.debug("Found %d total cache files", len(all_files))
 
-        if not include_invalid:
-            # Filter out invalid caches
-            valid_files = []
-            invalid_count = 0
-            unreadable_count = 0
-            for f in all_files:
-                try:
-                    cache_file = CacheWriter.read_cache_file(f)
-                    if cache_file.metadata.is_valid:
-                        valid_files.append(str(f))
-                    else:
-                        invalid_count += 1
-                        logger.debug(
-                            "Excluding invalid cache: %s (reason: %s)",
-                            f.name,
-                            cache_file.metadata.invalidation_reason,
-                        )
-                except Exception:  # noqa: PERF203
-                    unreadable_count += 1
-                    logger.exception("Failed to read cache file %s", f.name)
-                    # If we can't read it, exclude it
+        available: list[str] = []
+        invalid_count = 0
+        unreadable_count = 0
+
+        for f in all_files:
+            try:
+                cache_file = CacheManager.read_cache_file(f)
+
+                # Check if we should include this cache
+                if not include_invalid and not cache_file.metadata.is_valid:
+                    invalid_count += 1
+                    logger.debug(
+                        "Excluding invalid cache: %s (reason: %s)",
+                        f.name,
+                        cache_file.metadata.invalidation_reason,
+                    )
                     continue
-            available = valid_files
-            logger.info(
-                "Found %d valid cache(s), excluded %d invalid, %d unreadable",
-                len(valid_files),
-                invalid_count,
-                unreadable_count,
-            )
-        else:
-            available = [str(f) for f in all_files]
-            logger.info("Retrieved %d cache file(s) (all included)", len(available))
+
+                # Add cache info with filename and parameters
+                available.append(
+                    f"filename: {str(f)} (parameters: {cache_file.cache_parameters})"
+                )
+
+            except Exception:  # noqa: PERF203
+                unreadable_count += 1
+                logger.exception("Failed to read cache file %s", f.name)
+                continue
+
+        logger.info(
+            "Found %d cache(s), excluded %d invalid, %d unreadable",
+            len(available),
+            invalid_count,
+            unreadable_count,
+        )
 
         if not available:
             if include_invalid:
@@ -206,173 +209,7 @@ class ExecuteCachedTrajectory(Tool):
         if not settings:
             settings = CachedExecutionToolSettings()
         self._settings = settings
-        self._cache_execution_manager: CacheExecutionManager | None = None
         self._toolbox = toolbox
-
-    def set_cache_execution_manager(
-        self, cache_execution_manager: CacheExecutionManager
-    ) -> None:
-        """Set the agent reference for cache execution mode activation.
-
-        Args:
-            agent: The Agent instance that will execute the cached trajectory
-        """
-        self._cache_execution_manager = cache_execution_manager
-
-    def _validate_trajectory_file(self, trajectory_file: str) -> str | None:
-        """Validate that trajectory file exists.
-
-        Args:
-            trajectory_file: Path to the trajectory file
-
-        Returns:
-            Error message if validation fails, None otherwise
-        """
-        if not Path(trajectory_file).is_file():
-            error_msg = (
-                f"Trajectory file not found: {trajectory_file}\n"
-                "Use retrieve_available_trajectories_tool to see "
-                "available files."
-            )
-            logger.error(error_msg)
-            return error_msg
-        return None
-
-    def _validate_step_index(
-        self, start_from_step_index: int, trajectory_length: int
-    ) -> str | None:
-        """Validate step index is within bounds.
-
-        Args:
-            start_from_step_index: Index to start from
-            trajectory_length: Total number of steps in trajectory
-
-        Returns:
-            Error message if validation fails, None otherwise
-        """
-        logger.debug(
-            "Validating start_from_step_index=%d (trajectory has %d steps)",
-            start_from_step_index,
-            trajectory_length,
-        )
-        if start_from_step_index < 0 or start_from_step_index >= trajectory_length:
-            error_msg = (
-                f"Invalid start_from_step_index: {start_from_step_index}. "
-                f"Trajectory has {trajectory_length} steps "
-                f"(valid indices: 0-{trajectory_length - 1})."
-            )
-            logger.error(error_msg)
-            return error_msg
-        return None
-
-    def _validate_parameters(
-        self,
-        trajectory: list["ToolUseBlockParam"],
-        parameter_values: dict[str, str],
-        cache_parameters: dict[str, str],
-    ) -> str | None:
-        """Validate parameter values.
-
-        Args:
-            trajectory: The cached trajectory
-            parameter_values: User-provided parameter values
-            cache_parameters: Parameters defined in cache file
-
-        Returns:
-            Error message if validation fails, None otherwise
-        """
-        logger.debug("Validating parameter values")
-        is_valid, missing = CacheParameterHandler.validate_parameters(
-            trajectory, parameter_values
-        )
-        if not is_valid:
-            error_msg = (
-                f"Missing required parameter values: {', '.join(missing)}\n"
-                f"The trajectory contains the following parameters: "
-                f"{', '.join(cache_parameters.keys())}\n"
-                f"Please provide values for all parameters in the "
-                f"parameter_values parameter."
-            )
-            logger.error(error_msg)
-            return error_msg
-        return None
-
-    def _create_executor(
-        self,
-        cache_file: "CacheFile",
-        parameter_values: dict[str, str],
-        start_from_step_index: int,
-    ) -> "TrajectoryExecutor":
-        """Create and configure trajectory executor.
-
-        Args:
-            cache_file: The cache file to execute
-            parameter_values: Parameter values to use
-            start_from_step_index: Index to start execution from
-
-        Returns:
-            Configured TrajectoryExecutor instance
-        """
-        logger.debug(
-            "Creating TrajectoryExecutor with delay=%ss",
-            self._settings.delay_time_between_action,
-        )
-
-        # Import here to avoid circular dependency
-        from askui.utils.caching.trajectory_executor import TrajectoryExecutor
-
-        executor = TrajectoryExecutor(
-            trajectory=cache_file.trajectory,
-            toolbox=self._toolbox,
-            parameter_values=parameter_values,
-            delay_time=self._settings.delay_time_between_action,
-        )
-
-        # Set the starting position if continuing
-        if start_from_step_index > 0:
-            executor.current_step_index = start_from_step_index
-            logger.debug(
-                "Set executor start position to step %d", start_from_step_index
-            )
-
-        return executor
-
-    def _format_success_message(
-        self,
-        trajectory_file: str,
-        trajectory_length: int,
-        start_from_step_index: int,
-        parameter_count: int,
-    ) -> str:
-        """Format success message.
-
-        Args:
-            trajectory_file: Path to trajectory file
-            trajectory_length: Total steps in trajectory
-            start_from_step_index: Starting step index
-            parameter_count: Number of parameters used
-
-        Returns:
-            Formatted success message
-        """
-        if start_from_step_index == 0:
-            success_msg = (
-                f"✓ Cache execution mode activated for "
-                f"{Path(trajectory_file).name}. "
-                f"Will execute {trajectory_length} cached steps."
-            )
-        else:
-            remaining_steps = trajectory_length - start_from_step_index
-            success_msg = (
-                f"✓ Cache execution mode activated, resuming from step "
-                f"{start_from_step_index}. "
-                f"Will execute {remaining_steps} remaining cached steps."
-            )
-
-        if parameter_count > 0:
-            success_msg += f" Using {parameter_count} parameter value(s)."
-
-        return success_msg
 
     @override
     @validate_call
@@ -382,90 +219,109 @@ class ExecuteCachedTrajectory(Tool):
         start_from_step_index: int = 0,
         parameter_values: dict[str, str] | None = None,
     ) -> str:
-        """Activate cache execution mode for the agent.
+        """Request cache execution.
 
-        This method validates the cache file and sets up the agent to execute
-        cached steps. The actual execution happens in the agent's step loop.
+        This tool performs minimal validation (file exists) and requests
+        cache execution. Full validation and execution happens in CacheExecutor.
+
+        Args:
+            trajectory_file: Path to the trajectory file
+            start_from_step_index: Step index to start from (default: 0)
+            parameter_values: Parameter values for the trajectory
 
         Returns:
-            Success message indicating cache mode has been activated
+            Success message if file exists, error message otherwise
         """
         if parameter_values is None:
             parameter_values = {}
 
         logger.info(
-            "Activating cache execution mode: %s (start_from_step=%d)",
+            "Requesting cache execution: %s (start_from_step=%d)",
             Path(trajectory_file).name,
             start_from_step_index,
         )
 
-        # Validate agent is set
-        if not self._cache_execution_manager:
+        # Minimal validation - just check file exists
+        if not Path(trajectory_file).is_file():
             error_msg = (
-                "Cache Execution Manager not set. Call "
-                "set_cache_execution_manager() first."
+                f"Trajectory file not found: {trajectory_file}\n"
+                "Use retrieve_available_trajectories_tool to see available files."
             )
             logger.error(error_msg)
-            raise RuntimeError(error_msg)
+            return error_msg
 
-        # Validate trajectory file exists
-        if error := self._validate_trajectory_file(trajectory_file):
-            return error
+        # Return success - CacheExecutor will handle full validation
+        return f"✓ Requesting cache execution for {Path(trajectory_file).name}"
 
-        # Load cache file
-        logger.debug("Loading cache file: %s", trajectory_file)
-        cache_file = CacheWriter.read_cache_file(Path(trajectory_file))
 
-        logger.debug(
-            "Cache loaded: %d steps, %d parameters, valid=%s",
-            len(cache_file.trajectory),
-            len(cache_file.cache_parameters),
-            cache_file.metadata.is_valid,
+class VerifyCacheExecution(Tool):
+    """Tool for agent to explicitly report cache execution verification results."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            name="verify_cache_execution",
+            description=(
+                "IMPORTANT: Call this tool immediately after reviewing a "
+                "cached trajectory execution.\n\n"
+                "Report whether the cached execution successfully achieved "
+                "the target system state. You MUST call this tool to complete "
+                "the cache verification process.\n\n"
+                "Set success=True if:\n"
+                "- The cached execution correctly achieved the intended goal\n"
+                "- The final state matches what was expected\n"
+                "- No corrections or additional actions were needed\n\n"
+                "Set success=False if:\n"
+                "- The execution did not achieve the target state\n"
+                "- You had to make corrections or perform additional actions\n"
+                "- The final state is incorrect or incomplete"
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "description": (
+                            "True if cached execution correctly "
+                            "achieved target state, "
+                            "False if execution was incorrect or "
+                            "corrections were needed"
+                        ),
+                    },
+                    "verification_notes": {
+                        "type": "string",
+                        "description": (
+                            "Brief explanation of what you verified. "
+                            "If success=False, describe what was "
+                            "wrong and what corrections you made."
+                        ),
+                    },
+                },
+                "required": ["success", "verification_notes"],
+            },
         )
+        self.is_cacheable = False  # Verification is not cacheable
 
-        # Warn if cache is invalid
-        if not cache_file.metadata.is_valid:
-            warning_msg = (
-                f"WARNING: Using invalid cache from "
-                f"{Path(trajectory_file).name}. "
-                f"Reason: {cache_file.metadata.invalidation_reason}. "
-                "This cache may not work correctly."
-            )
-            logger.warning(warning_msg)
+    @override
+    @validate_call
+    def __call__(self, success: bool, verification_notes: str) -> str:
+        """Record cache verification result.
 
-        # Validate step index
-        if error := self._validate_step_index(
-            start_from_step_index, len(cache_file.trajectory)
-        ):
-            return error
+        Args:
+            success: Whether cache execution achieved target state
+            verification_notes: Explanation of verification result
 
-        # Validate parameters
-        if error := self._validate_parameters(
-            cache_file.trajectory, parameter_values, cache_file.cache_parameters
-        ):
-            return error
-
-        # Create and configure executor
-        executor = self._create_executor(
-            cache_file, parameter_values, start_from_step_index
+        Returns:
+            Confirmation message
+        """
+        message = (
+            f"Cache verification reported:success={success}, notes={verification_notes}"
         )
-
-        # Store executor and cache info in agent state
-        self._cache_execution_manager.activate_execution(
-            executor=executor,
-            cache_file=cache_file,
-            cache_file_path=trajectory_file,
+        logger.info(
+            "Cache verification reported: success=%s, notes=%s",
+            success,
+            verification_notes,
         )
-
-        # Format and return success message
-        success_msg = self._format_success_message(
-            trajectory_file,
-            len(cache_file.trajectory),
-            start_from_step_index,
-            len(parameter_values),
-        )
-        logger.info(success_msg)
-        return success_msg
+        return message
 
 
 class InspectCacheMetadata(Tool):
@@ -517,7 +373,7 @@ class InspectCacheMetadata(Tool):
             return error_msg
 
         try:
-            cache_file = CacheWriter.read_cache_file(Path(trajectory_file))
+            cache_file = CacheManager.read_cache_file(Path(trajectory_file))
         except Exception:
             error_msg = f"Failed to read cache file {Path(trajectory_file).name}"
             logger.exception(error_msg)
@@ -575,326 +431,3 @@ class InspectCacheMetadata(Tool):
                 lines.append(f"  Error: {failure.error_message}")
 
         return "\n".join(lines)
-
-
-class RevalidateCache(Tool):
-    """
-    Manually mark a cache as valid (reset invalidation)
-    """
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="revalidate_cache_tool",
-            description=(
-                "Manually mark a cache as valid, resetting any previous invalidation. "
-                "Use this tool when:\n"
-                "- A cache was invalidated but the underlying issue has been fixed\n"
-                "- You want to give a previously failing cache another chance\n"
-                "- You've manually verified the cache should work now\n\n"
-                "This will:\n"
-                "- Set is_valid=True\n"
-                "- Clear the invalidation_reason\n"
-                "- Keep existing failure history (for debugging)\n"
-                "- Keep execution attempt counters\n\n"
-                "Note: The cache can still be auto-invalidated again if it "
-                "continues to fail."
-            ),
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "trajectory_file": {
-                        "type": "string",
-                        "description": (
-                            "Full path to the trajectory file to revalidate. "
-                            "Use retrieve_available_trajectories_tool with "
-                            "include_invalid=True to find invalidated caches."
-                        ),
-                    },
-                },
-                "required": ["trajectory_file"],
-            },
-        )
-
-    @override
-    @validate_call
-    def __call__(self, trajectory_file: str) -> str:
-        if not Path(trajectory_file).is_file():
-            error_msg = (
-                f"Trajectory file not found: {trajectory_file}\n"
-                "Use retrieve_available_trajectories_tool to see available files."
-            )
-            logger.error(error_msg)
-            return error_msg
-
-        try:
-            cache_file = CacheWriter.read_cache_file(Path(trajectory_file))
-        except Exception:
-            error_msg = f"Failed to read cache file {trajectory_file}"
-            logger.exception(error_msg)
-            return error_msg
-
-        # Mark cache as valid
-        cache_manager = CacheManager()
-        was_invalid = not cache_file.metadata.is_valid
-        previous_reason = cache_file.metadata.invalidation_reason
-
-        cache_manager.mark_cache_valid(cache_file)
-
-        # Write back to disk
-        try:
-            cache_path = Path(trajectory_file)
-            with cache_path.open("w") as f:
-                json.dump(
-                    cache_file.model_dump(mode="json"),
-                    f,
-                    indent=2,
-                    default=str,
-                )
-        except Exception:
-            error_msg = f"Failed to write cache file {trajectory_file}"
-            logger.exception(error_msg)
-            return error_msg
-
-        if was_invalid:
-            logger.info("Cache revalidated: %s", trajectory_file)
-            return (
-                f"Successfully revalidated cache: {trajectory_file}\n"
-                f"Previous invalidation reason was: {previous_reason}\n"
-                "The cache is now marked as valid and can be used again."
-            )
-        logger.info("Cache was already valid: %s", trajectory_file)
-        return f"Cache {trajectory_file} was already valid. No changes made."
-
-
-class InvalidateCache(Tool):
-    """
-    Manually mark a cache as invalid
-    """
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="invalidate_cache_tool",
-            description=(
-                "Manually mark a cache as invalid with a custom reason. "
-                "Use this tool when:\n"
-                "- You've determined a cache is no longer reliable\n"
-                "- The UI has changed and the cached actions won't work\n"
-                "- You want to prevent automatic execution of a problematic cache\n\n"
-                "This will:\n"
-                "- Set is_valid=False\n"
-                "- Record your custom invalidation reason\n"
-                "- Keep all existing metadata (failures, execution attempts)\n"
-                "- Hide the cache from default trajectory listings\n\n"
-                "The cache can later be revalidated using revalidate_cache_tool "
-                "if the issue is resolved."
-            ),
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "trajectory_file": {
-                        "type": "string",
-                        "description": (
-                            "Full path to the trajectory file to "
-                            "invalidate. "
-                            "Use retrieve_available_trajectories_tool to "
-                            "find available files."
-                        ),
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": (
-                            "Reason for invalidating this cache. "
-                            "Be specific about why "
-                            "this cache should not be used "
-                            "(e.g., 'UI changed - button moved', "
-                            "'Workflow outdated', 'Replaced by new cache')."
-                        ),
-                    },
-                },
-                "required": ["trajectory_file", "reason"],
-            },
-        )
-
-    @override
-    @validate_call
-    def __call__(self, trajectory_file: str, reason: str) -> str:
-        if not Path(trajectory_file).is_file():
-            error_msg = (
-                f"Trajectory file not found: {trajectory_file}\n"
-                "Use retrieve_available_trajectories_tool to see available files."
-            )
-            logger.error(error_msg)
-            return error_msg
-
-        try:
-            cache_file = CacheWriter.read_cache_file(Path(trajectory_file))
-        except Exception:
-            error_msg = f"Failed to read cache file {trajectory_file}"
-            logger.exception(error_msg)
-            return error_msg
-
-        # Mark cache as invalid
-        cache_manager = CacheManager()
-        was_valid = cache_file.metadata.is_valid
-
-        cache_manager.invalidate_cache(cache_file, reason=reason)
-
-        # Write back to disk
-        try:
-            cache_path = Path(trajectory_file)
-            with cache_path.open("w") as f:
-                json.dump(
-                    cache_file.model_dump(mode="json"),
-                    f,
-                    indent=2,
-                    default=str,
-                )
-        except Exception:
-            error_msg = f"Failed to write cache file {trajectory_file}"
-            logger.exception(error_msg)
-            return error_msg
-
-        logger.info("Cache manually invalidated: %s", trajectory_file)
-
-        if was_valid:
-            return (
-                f"Successfully invalidated cache: {trajectory_file}\n"
-                f"Reason: {reason}\n"
-                "The cache will not appear in default trajectory listings. "
-                "Use revalidate_cache_tool to restore it if needed."
-            )
-        return (
-            f"Cache {trajectory_file} was already invalid.\n"
-            f"Updated invalidation reason to: {reason}"
-        )
-
-
-class VerifyCacheExecution(Tool):
-    """Tool for agent to explicitly report cache execution verification results."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="verify_cache_execution",
-            description=(
-                "IMPORTANT: Call this tool immediately after reviewing a "
-                "cached trajectory execution.\n\n"
-                "Report whether the cached execution successfully achieved "
-                "the target system state. You MUST call this tool to complete "
-                "the cache verification process.\n\n"
-                "Set success=True if:\n"
-                "- The cached execution correctly achieved the intended goal\n"
-                "- The final state matches what was expected\n"
-                "- No corrections or additional actions were needed\n\n"
-                "Set success=False if:\n"
-                "- The execution did not achieve the target state\n"
-                "- You had to make corrections or perform additional actions\n"
-                "- The final state is incorrect or incomplete"
-            ),
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "success": {
-                        "type": "boolean",
-                        "description": (
-                            "True if cached execution correctly "
-                            "achieved target state, "
-                            "False if execution was incorrect or "
-                            "corrections were needed"
-                        ),
-                    },
-                    "verification_notes": {
-                        "type": "string",
-                        "description": (
-                            "Brief explanation of what you verified. "
-                            "If success=False, describe what was "
-                            "wrong and what corrections you made."
-                        ),
-                    },
-                },
-                "required": ["success", "verification_notes"],
-            },
-        )
-        self.is_cacheable = False  # Verification is not cacheable
-        self._cache_execution_manager: CacheExecutionManager | None = None
-
-    def set_cache_execution_manager(
-        self, cache_execution_manager: CacheExecutionManager
-    ) -> None:
-        """Set the agent reference for cache execution mode activation.
-
-        Args:
-            agent: The Agent instance that will execute the cached trajectory
-        """
-        self._cache_execution_manager = cache_execution_manager
-
-    @override
-    @validate_call
-    def __call__(self, success: bool, verification_notes: str) -> str:
-        """Record cache verification result.
-
-        Args:
-            success: Whether cache execution achieved target state
-            verification_notes: Explanation of verification result
-
-        Returns:
-            Confirmation message
-        """
-        logger.info(
-            "Cache verification reported: success=%s, notes=%s",
-            success,
-            verification_notes,
-        )
-        if not self._cache_execution_manager:
-            error_msg = (
-                "Cache Execution Manager not set. Cannot record verification result."
-            )
-            logger.error(error_msg)
-            return error_msg
-
-        # Check if there's a cache file to update (more reliable than checking flag)
-        cache_file, cache_file_path = self._cache_execution_manager.get_cache_info()
-        if not (cache_file and cache_file_path):
-            warning_msg = (
-                "No cache file to update. "
-                "Verification tool called without recent cache execution."
-            )
-            logger.warning(warning_msg)
-            return warning_msg
-
-        # Debug log if verification flag wasn't explicitly set
-        # (This can happen if verification is called directly without the flag,
-        # but we still proceed since we have the cache file)
-        if not self._cache_execution_manager.is_cache_verification_pending():
-            logger.debug(
-                "Verification flag not set, but cache file exists. "
-                "This is normal for direct verification calls."
-            )
-
-        # Update cache metadata based on verification result
-        if success:
-            self._cache_execution_manager.update_metadata_on_completion(success=True)
-            result_msg = f"✓ Cache verification successful: {verification_notes}"
-            logger.info(result_msg)
-        else:
-            error_msg = (
-                f"Cache execution did not lead to target system state: "
-                f"{verification_notes}"
-            )
-            self._cache_execution_manager.update_metadata_on_failure(
-                step_index=-1,  # -1 indicates verification failure
-                error_message=error_msg,
-            )
-            result_msg = (
-                f"✗ Cache verification failed: {verification_notes}\n\n"
-                "The cached trajectory did not achieve the target system "
-                "state correctly. You should now continue to complete the "
-                "task manually from the current state. Use your tools to "
-                "finish achieving the goal, taking into account what the "
-                "cache attempted to do and what corrections are needed."
-            )
-            logger.warning(result_msg)
-
-        # Clear verification flag and cache references after verification
-        self._cache_execution_manager.clear_cache_state()
-
-        return result_msg

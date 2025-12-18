@@ -1,5 +1,7 @@
 # Caching (Experimental)
 
+**Version: v0.1.1** - Improved architecture with simplified components and better separation of concerns.
+
 **CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the caching_strategy to `no`.**
 
 The caching mechanism allows you to record and replay agent action sequences (trajectories) for faster and more robust test execution. This feature is particularly useful for regression testing, where you want to replay known-good interaction sequences to verify that your application still behaves correctly.
@@ -9,6 +11,12 @@ The caching mechanism allows you to record and replay agent action sequences (tr
 The caching system works by recording all tool use actions (mouse movements, clicks, typing, etc.) performed by the agent during an `act()` execution. These recorded sequences can then be replayed in subsequent executions, allowing the agent to skip the decision-making process and execute the actions directly.
 
 **New in v0.1:** The caching system now includes advanced features like parameter support for dynamic values, smart handling of non-cacheable tools that require agent intervention, comprehensive message history tracking, and automatic failure detection with recovery capabilities.
+
+**New in v0.1.1:**
+- Simplified architecture: TrajectoryExecutor merged into CacheExecutor speaker for better encapsulation
+- CacheWriter merged into CacheManager - single class now handles all cache file operations (read, write, update)
+- Cache recording simplified: finish_recording() extracts tool blocks from message history instead of using callbacks
+- Cleaner separation of concerns with fewer abstraction layers
 
 ## Caching Strategies
 
@@ -44,10 +52,10 @@ caching_settings = CachingSettings(
 - **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
 - **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
 - **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
-- **`CacheWriterSettings`**: **New in v0.1!** Configuration for the Cache Writer See [CacheWriter Settings](#cachewriter-settings) below.
+- **`CacheWriterSettings`**: **New in v0.1!** Configuration for cache recording (formerly CacheWriter, now part of CacheManager). See [Cache Recording Settings](#cache-recording-settings) below.
 - **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
 
-### CacheWriter Settings
+### Cache Recording Settings
 
 - `parameter_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
 - `llm_parameter_id_api_provider`: The provider of that will be used for for the llm in the parameter identification (will only be used if `parameter_identification_strategy`is set to `llm`). Defaults to `askui`.
@@ -448,26 +456,40 @@ The old format was a simple JSON array:
 
 ## How It Works
 
-### Internal Architecture
+### Internal Architecture (v0.1.1)
 
-The caching system consists of several key components:
+The caching system consists of two key components:
 
-- **`CacheWriter`**: Handles recording trajectories in write mode
-- **`CacheExecutionManager`**: Manages cache execution state, flow control, and metadata updates during trajectory replay
-- **`TrajectoryExecutor`**: Executes individual steps from cached trajectories
-- **Agent**: Orchestrates the conversation flow and delegates cache execution to `CacheExecutionManager`
+1. **`CacheManager`** (Utility)
+   - **v0.1.1**: Now handles both reading and writing cache files (CacheWriter merged in)
+   - Recording methods: start_recording(), add_message_cb(), finish_recording()
+   - Records agent actions via on_message callback
+   - Handles trajectory recording and parameterization
+   - Manages cache metadata operations
+   - Validates caches using pluggable validation strategies
+   - Handles invalidation logic and failure tracking
 
-When executing a cached trajectory, the `Agent` class delegates all cache-related logic to `CacheExecutionManager`, which handles:
-- State management (execution mode, verification pending, etc.)
-- Execution flow control (success, failure, needs agent, completed)
-- Message history building and injection
-- Metadata updates (execution attempts, failures, invalidation)
+2. **`CacheExecutor`** (Speaker)
+   - Manages cache execution state and orchestrates trajectory replay
+   - **v0.1.1**: Now includes execution logic (merged from TrajectoryExecutor)
+   - Executes cached steps directly with parameter substitution
+   - Handles delays, non-cacheable tools, and agent switching
+   - Owns all execution state (trajectory, toolbox, step index, etc.)
 
-This separation of concerns keeps the Agent focused on conversation orchestration while CacheExecutionManager handles all caching complexity.
+**Key Changes in v0.1.1:**
+- TrajectoryExecutor eliminated - logic merged into CacheExecutor speaker
+- CacheWriter eliminated - recording logic merged into CacheManager
+- CacheManager is now the single source of truth for all cache file operations
+- Cleaner, more cohesive architecture with fewer abstraction layers
+
+This separation of concerns ensures:
+- CacheExecutor is a self-contained execution speaker (no delegation needed)
+- CacheManager centralizes all file I/O, metadata, and recording logic
+- Single instance manages entire cache lifecycle
 
 ### Write Mode
 
-In write mode, the `CacheWriter` class:
+In write mode, the `CacheManager` recording functionality:
 
 1. Intercepts all assistant messages via a callback function
 2. Extracts tool use blocks from the messages
@@ -498,8 +520,8 @@ In read mode:
    - Non-cacheable step management
    - Failure recovery strategies
 3. The agent can list available cache files and choose appropriate ones
-4. During execution via `TrajectoryExecutor`:
-   - Each step is executed sequentially with configurable delays
+4. During execution via `CacheExecutor` (v0.1.1):
+   - CacheExecutor executes each step sequentially with configurable delays
    - All tools in the trajectory are executed, including screenshots and retrieval tools
    - Non-cacheable tools trigger a pause with `NEEDS_AGENT` status
    - Cache Parameters are validated and substituted before execution
@@ -548,7 +570,7 @@ class DebugPrintTool(Tool):
 
 During trajectory execution, when a non-cacheable tool is encountered:
 
-1. `TrajectoryExecutor` pauses execution
+1. `CacheExecutor` pauses execution (v0.1.1)
 2. Returns `ExecutionResult` with status `NEEDS_AGENT`
 3. Includes current step index and message history
 4. Agent receives control to execute the step manually
@@ -851,12 +873,13 @@ If you prefer to upgrade v0.0 cache files to v0.1 format on disk (rather than le
 
 ```python
 from pathlib import Path
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_manager import CacheManager
 import json
 
 # Read v0.0 file (auto-migrates to v0.1 in memory)
 cache_path = Path(".cache/old_cache.json")
-cached_trajectory = CacheWriter.read_cache_file(cache_path)
+cache_manager = CacheManager()
+cached_trajectory = cache_manager.read_cache_file(cache_path)
 
 # Write back to disk in v0.1 format
 with cache_path.open("w", encoding="utf-8") as f:

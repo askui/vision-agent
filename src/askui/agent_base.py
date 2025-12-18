@@ -18,6 +18,9 @@ from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.caching import CACHE_USE_PROMPT
+from askui.speaker.cache_executor import CacheExecutor
+from askui.speaker.conversation import Conversation
+from askui.speaker.speaker import Speakers
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
@@ -25,7 +28,7 @@ from askui.tools.caching_tools import (
     RetrieveCachedTestExecutions,
 )
 from askui.utils.annotation_writer import AnnotationWriter
-from askui.utils.caching.cache_writer import CacheWriter
+from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
@@ -81,7 +84,7 @@ class AgentBase(ABC):  # noqa: B024
     ) -> None:
         load_dotenv()
         self._reporter = reporter
-        self._agent_os = agent_os
+        self._agent_os: AgentOs | AndroidAgentOs = agent_os
 
         self._tools = tools or []
         settings = AgentBaseSettings()
@@ -91,6 +94,7 @@ class AgentBase(ABC):  # noqa: B024
         if model and isinstance(model, str):
             self.model_name_selected_by_user = f"{_model_provider}{model}"
 
+        # Keep model_router for get and locate operations
         self._model_router = self._init_model_router(
             reporter=self._reporter,
             models=models or {},
@@ -186,6 +190,7 @@ class AgentBase(ABC):  # noqa: B024
         model: str | None = None,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
+        speakers: Speakers | None = None,
         settings: ActSettings | None = None,
         caching_settings: CachingSettings | None = None,
     ) -> None:
@@ -202,10 +207,12 @@ class AgentBase(ABC):  # noqa: B024
             model (str | None, optional): The composition or name of the model(s) to
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
-                it returns `None`, stops and does not add the message. Cannot be used
-                with caching_settings strategy "write" or "both".
+                it returns `None`, stops and does not add the message.
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
+            speakers (Speakers | None, optional): The speakers to use in the
+                conversation. Defaults to the VisionAgent and the CacheExecutor,
+                depending on the caching settings.
             settings (AgentSettings | None, optional): The settings for the agent.
                 Defaults to a default settings depending on the selected model.
             caching_settings (CachingSettings | None, optional): The caching settings
@@ -221,8 +228,6 @@ class AgentBase(ABC):  # noqa: B024
             MaxTokensExceededError: If the model reaches the maximum token limit
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
-            ValueError: If on_message callback is provided with caching strategy
-                "write" or "both".
 
         Example:
             Basic usage without caching:
@@ -308,21 +313,29 @@ class AgentBase(ABC):  # noqa: B024
 
         _tools = self._build_tools(tools, _model)
 
-        if _caching_settings.strategy != "no":
-            on_message = self._patch_act_with_cache(
-                _caching_settings, _settings, _tools, on_message, goal_str
-            )
-            logger.info(
-                "Starting agent act with caching enabled (strategy=%s)",
-                _caching_settings.strategy,
-            )
+        _speakers = self._get_default_speakers(speakers)
 
-        self._model_router.act(
+        if _caching_settings.strategy != "no":
+            _speakers.add_speaker(CacheExecutor())
+            _cache_manager = self._patch_act_with_cache(
+                _caching_settings, _settings, _tools, goal_str
+            )
+        else:
+            _cache_manager = None
+
+        _conversation = Conversation(
+            speakers=_speakers,
+            reporter=self._reporter,
+            cache_manager=_cache_manager,
+        )
+
+        _conversation.start(
             messages=messages,
             model=_model,
             on_message=on_message,
             settings=_settings,
             tools=_tools,
+            reporters=[self._reporter],
         )
 
     def _build_tools(
@@ -340,20 +353,18 @@ class AgentBase(ABC):  # noqa: B024
         caching_settings: CachingSettings,
         settings: ActSettings,
         toolbox: ToolCollection,
-        on_message: OnMessageCb | None,
         goal: str | None = None,
-    ) -> OnMessageCb | None:
+    ) -> CacheManager | None:
         """Patch act settings and toolbox with caching functionality.
 
         Args:
             caching_settings: The caching settings to apply
             settings: The act settings to modify
             toolbox: The toolbox to extend with caching tools
-            on_message: The message callback (may be replaced for write mode)
             goal: The goal string (used for cache metadata)
 
         Returns:
-            modified_on_message
+            CacheManager instance if recording is active, None otherwise
         """
         logger.debug("Setting up caching")
         caching_tools: list[Tool] = []
@@ -390,24 +401,19 @@ class AgentBase(ABC):  # noqa: B024
         if caching_tools:
             toolbox.append_tool(*caching_tools)
 
-        # Setup write mode: create cache writer and set message callback
-        cache_writer = None
+        # Setup write mode: start cache recording
         if caching_settings.strategy in ["write", "both"]:
-            cache_writer = CacheWriter(
+            cache_manager = CacheManager()
+            cache_manager.start_recording(
                 cache_dir=caching_settings.cache_dir,
                 file_name=caching_settings.filename,
-                cache_writer_settings=caching_settings.cache_writer_settings,
-                toolbox=toolbox,
                 goal=goal,
+                toolbox=toolbox,
+                cache_writer_settings=caching_settings.cache_writer_settings,
             )
-            if on_message is None:
-                on_message = cache_writer.add_message_cb
-            else:
-                error_message = "Cannot use on_message callback when writing Cache"
-                logger.error(error_message)
-                raise ValueError(error_message)
+            return cache_manager
 
-        return on_message
+        return None
 
     def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
         return ActSettings()
@@ -417,6 +423,11 @@ class AgentBase(ABC):  # noqa: B024
 
     def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
         return self._tools
+
+    def _get_default_speakers(self, speakers: Speakers | None) -> Speakers:
+        if speakers:
+            return Speakers() + speakers
+        return Speakers()
 
     @overload
     def get(

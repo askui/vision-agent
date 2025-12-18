@@ -4,8 +4,6 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from askui.agent import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
@@ -118,50 +116,63 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
         assert cache_file.exists()
 
 
-def test_act_with_on_message_and_write_caching_raises_error(
+def test_act_with_on_message_and_write_caching(
     vision_agent: VisionAgent,
 ) -> None:
-    """Test that providing on_message callback with write caching raises ValueError."""
+    """Test that on_message callback works with write caching."""
     with tempfile.TemporaryDirectory() as temp_dir:
+        messages_received = []
 
-        def dummy_callback(param: OnMessageCbParam) -> MessageParam:
+        def callback(param: OnMessageCbParam) -> MessageParam:
+            messages_received.append(param.message)
             return param.message
 
-        # Should raise ValueError when on_message is provided with write strategy
-        with pytest.raises(ValueError, match="Cannot use on_message callback"):
-            vision_agent.act(
-                goal="Tell me a joke",
-                caching_settings=CachingSettings(
-                    strategy="write",
-                    cache_dir=str(temp_dir),
-                ),
-                on_message=dummy_callback,
-            )
+        # Should work fine with on_message callback
+        vision_agent.act(
+            goal="Tell me a joke",
+            caching_settings=CachingSettings(
+                strategy="write",
+                cache_dir=str(temp_dir),
+            ),
+            on_message=callback,
+        )
+
+        # Verify callback was called
+        assert len(messages_received) > 0
 
 
-def test_act_with_on_message_and_both_caching_raises_error(
+def test_act_with_on_message_and_both_caching(
     vision_agent: VisionAgent,
 ) -> None:
-    """Test that providing on_message callback with both caching raises ValueError."""
+    """Test that on_message callback works with both caching strategies."""
     with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a dummy cache file for reading
+        cache_file = Path(temp_dir) / "existing_cache.json"
+        cache_file.write_text("[]", encoding="utf-8")
 
-        def dummy_callback(param: OnMessageCbParam) -> MessageParam:
+        messages_received = []
+
+        def callback(param: OnMessageCbParam) -> MessageParam:
+            messages_received.append(param.message)
             return param.message
 
-        # Should raise ValueError when on_message is provided with both strategy
-        with pytest.raises(ValueError, match="Cannot use on_message callback"):
-            vision_agent.act(
-                goal="Tell me a joke",
-                caching_settings=CachingSettings(
-                    strategy="both",
-                    cache_dir=str(temp_dir),
-                ),
-                on_message=dummy_callback,
-            )
+        # Should work fine with on_message callback
+        vision_agent.act(
+            goal="Tell me a joke",
+            caching_settings=CachingSettings(
+                strategy="both",
+                cache_dir=str(temp_dir),
+                filename="new_cache.json",
+            ),
+            on_message=callback,
+        )
+
+        # Verify callback was called
+        assert len(messages_received) > 0
 
 
 def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
-    """Test that cache file contains ToolUseBlockParam entries."""
+    """Test that cache file contains ToolUseBlockParam entries in v0.1 format."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_filename = "tool_blocks.json"
@@ -176,17 +187,32 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
             ),
         )
 
-        # Read and verify cache file structure
+        # Read and verify cache file structure (v0.1 format)
         cache_file = cache_dir / cache_filename
         assert cache_file.exists()
 
         with cache_file.open("r", encoding="utf-8") as f:
-            cache_data: list[dict[str, str]] = json.load(f)
+            cache_data = json.load(f)
 
-        # Cache should be a list
-        assert isinstance(cache_data, list)
-        # Each entry should have tool use structure (name, id, input, type)
-        for entry in cache_data:
+        # v0.1 format should be a dict with metadata, trajectory, and cache_parameters
+        assert isinstance(cache_data, dict)
+        assert "metadata" in cache_data
+        assert "trajectory" in cache_data
+        assert "cache_parameters" in cache_data
+
+        # Verify metadata structure
+        metadata = cache_data["metadata"]
+        assert "version" in metadata
+        assert "created_at" in metadata
+        assert metadata["version"] == "0.1.1"
+
+        # Verify trajectory is a list
+        trajectory = cache_data["trajectory"]
+        assert isinstance(trajectory, list)
+
+        # Each entry in trajectory should have tool use structure
+        # (name, id, input, type)
+        for entry in trajectory:
             assert "name" in entry
             assert "id" in entry
             assert "input" in entry

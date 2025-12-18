@@ -21,9 +21,8 @@ from askui.models.askui.inference_api import (
 )
 from askui.models.askui.models import AskUiGetModel, AskUiLocateModel
 from askui.models.models import ModelName
-from askui.models.shared.agent import Agent
 from askui.models.shared.facade import ModelFacade
-from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
+from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.annotated_image import AnnotatedImage
 
@@ -62,15 +61,9 @@ def askui_facade(
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    act_model = Agent(
-        messages_api=AnthropicMessagesApi(
-            client=create_api_client(api_provider="askui"),
-            locator_serializer=VlmLocatorSerializer(),
-        ),
-        reporter=reporter,
-    )
+    # Act model now handled by Conversation in AgentBase
     return ModelFacade(
-        act_model=act_model,
+        act_model=None,
         get_model=AskUiGetModel(
             google_genai_api=AskUiGoogleGenAiApi(),
             inference_api=askui_inference_api,
@@ -100,17 +93,14 @@ def anthropic_messages_api(
 @functools.cache
 def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
     messages_api = anthropic_messages_api(api_provider)
-    act_model = Agent(
-        messages_api=messages_api,
-        reporter=NULL_REPORTER,
-    )
     model = AnthropicModel(
         settings=AnthropicModelSettings(),
         messages_api=messages_api,
         locator_serializer=vlm_locator_serializer(),
     )
+    # Act model now handled by Conversation in AgentBase
     return ModelFacade(
-        act_model=act_model,
+        act_model=None,
         get_model=model,
         locate_model=model,
     )

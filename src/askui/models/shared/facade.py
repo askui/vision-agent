@@ -23,7 +23,7 @@ from askui.utils.source_utils import Source
 class ModelFacade(ActModel, GetModel, LocateModel):
     def __init__(
         self,
-        act_model: ActModel,
+        act_model: ActModel | None,
         get_model: GetModel,
         locate_model: LocateModel,
     ) -> None:
@@ -40,6 +40,9 @@ class ModelFacade(ActModel, GetModel, LocateModel):
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
     ) -> None:
+        if self._act_model is None:
+            error_msg = "act_model is not configured for this ModelFacade"
+            raise RuntimeError(error_msg)
         self._act_model.act(
             messages=messages,
             model=model,

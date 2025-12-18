@@ -4,7 +4,6 @@ import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +14,6 @@ from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
-from askui.utils.caching.cache_execution_manager import CacheExecutionManager
 
 # ============================================================================
 # RetrieveCachedTestExecutions Tests (unchanged from before)
@@ -156,8 +154,8 @@ def test_retrieve_caches_filters_invalid_by_default(tmp_path: Path) -> None:
     # Should only return valid cache
     results = tool()
     assert len(results) == 1
-    assert str(valid_cache) in results
-    assert str(invalid_cache) not in results
+    assert str(valid_cache) in results[0]
+    assert str(invalid_cache) not in "".join(results)
 
 
 def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None:
@@ -207,8 +205,10 @@ def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None
 
 
 # ============================================================================
-# ExecuteCachedTrajectory Tests (refactored for new behavior)
+# ExecuteCachedTrajectory Tests (simplified for new architecture)
 # ============================================================================
+# The tool now only checks if file exists and returns success/error message.
+# All validation is done by CacheExecutor speaker, not the tool.
 
 
 def test_execute_cached_execution_initializes_with_toolbox() -> None:
@@ -217,164 +217,50 @@ def test_execute_cached_execution_initializes_with_toolbox() -> None:
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
     assert tool.name == "execute_cached_executions_tool"
     assert tool._toolbox is mock_toolbox  # noqa: SLF001
-    assert tool._cache_execution_manager is None  # noqa: SLF001
-
-
-def test_execute_cached_execution_raises_error_without_cache_manager() -> None:
-    """Test that ExecuteCachedTrajectory raises error when cache manager not set."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test.json"
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": datetime.now(tz=timezone.utc).isoformat(),
-                "execution_attempts": 0,
-                "last_executed_at": None,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [],
-            "cache_parameters": {},
-        }
-        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
-
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-
-        with pytest.raises(RuntimeError, match="Cache Execution Manager not set"):
-            tool(trajectory_file=str(cache_file))
 
 
 def test_execute_cached_execution_returns_error_when_file_not_found() -> None:
     """Test that ExecuteCachedTrajectory returns error message if file doesn't exist."""
     mock_toolbox = MagicMock(spec=ToolCollection)
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-    tool.set_cache_execution_manager(mock_cache_manager)
 
     result = tool(trajectory_file="/non/existent/file.json")
 
-    # New behavior: returns error message string instead of raising
+    # Should return error message string
     assert isinstance(result, str)
     assert "Trajectory file not found" in result
 
 
-def test_execute_cached_execution_activates_cache_mode() -> None:
-    """Test that ExecuteCachedTrajectory activates cache mode in the agent."""
+def test_execute_cached_execution_returns_success_when_file_exists() -> None:
+    """Test that ExecuteCachedTrajectory returns success message when file exists."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a trajectory file with v0.1 format
+        # Create a simple cache file (content doesn't matter for this test)
         cache_data = {
             "metadata": {
                 "version": "0.1",
                 "created_at": datetime.now(tz=timezone.utc).isoformat(),
                 "execution_attempts": 0,
-                "last_executed_at": None,
                 "failures": [],
                 "is_valid": True,
-                "invalidation_reason": None,
             },
-            "trajectory": [
-                {
-                    "id": "tool1",
-                    "name": "click_tool",
-                    "input": {"x": 100, "y": 200},
-                    "type": "tool_use",
-                },
-                {
-                    "id": "tool2",
-                    "name": "type_tool",
-                    "input": {"text": "hello"},
-                    "type": "tool_use",
-                },
-            ],
+            "trajectory": [],
             "cache_parameters": {},
         }
 
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        # Create mock agent with toolbox
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
-        # Create and configure tool
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        # Call the tool
-        result = tool(trajectory_file=str(cache_file))
-
-        # Verify return type is string
-        assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-        assert "2 cached steps" in result
-
-        # Verify activate_execution was called on the cache manager
-        mock_cache_manager.activate_execution.assert_called_once()
-        # Verify the cache file path was passed correctly
-        call_args = mock_cache_manager.activate_execution.call_args
-        assert call_args.kwargs["cache_file_path"] == str(cache_file)
-
-
-def test_execute_cached_execution_works_with_toolbox() -> None:
-    """Test that ExecuteCachedTrajectory works with toolbox provided."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": datetime.now(tz=timezone.utc).isoformat(),
-                "execution_attempts": 0,
-                "last_executed_at": None,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [
-                {
-                    "id": "tool1",
-                    "name": "test_tool",
-                    "input": {},
-                    "type": "tool_use",
-                }
-            ],
-            "cache_parameters": {},
-        }
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(cache_data, f)
-
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-
-        # Create tool with toolbox
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
 
         result = tool(trajectory_file=str(cache_file))
 
-        # Should succeed using the toolbox
+        # Should return success message
         assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-
-
-def test_execute_cached_execution_set_cache_manager() -> None:
-    """Test that set_cache_execution_manager properly sets reference."""
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-
-    tool.set_cache_execution_manager(mock_cache_manager)
-
-    assert tool._cache_execution_manager == mock_cache_manager  # noqa: SLF001
-    assert tool._toolbox == mock_toolbox  # noqa: SLF001
+        assert "✓ Requesting cache execution" in result
+        assert "test_trajectory.json" in result
 
 
 def test_execute_cached_execution_initializes_with_default_settings() -> None:
@@ -398,21 +284,19 @@ def test_execute_cached_execution_initializes_with_custom_settings() -> None:
     assert tool._settings.delay_time_between_action == 1.0  # noqa: SLF001
 
 
-def test_execute_cached_execution_with_parameters() -> None:
-    """Test that ExecuteCachedTrajectory validates parameters."""
+def test_execute_cached_execution_accepts_parameters() -> None:
+    """Test that ExecuteCachedTrajectory accepts parameter values."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.1 cache file with parameters
+        # Create a cache file with parameters
         cache_data = {
             "metadata": {
                 "version": "0.1",
                 "created_at": "2025-12-11T10:00:00Z",
-                "last_executed_at": None,
                 "execution_attempts": 0,
                 "failures": [],
                 "is_valid": True,
-                "invalidation_reason": None,
             },
             "trajectory": [
                 {
@@ -430,129 +314,38 @@ def test_execute_cached_execution_with_parameters() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
 
+        # Tool should accept parameter_values (validation happens in CacheExecutor)
         result = tool(
             trajectory_file=str(cache_file),
             parameter_values={"current_date": "2025-12-11"},
         )
 
-        # Verify success
+        # Should return success
         assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-        assert "1 parameter value" in result
+        assert "✓ Requesting cache execution" in result
 
 
-def test_execute_cached_execution_missing_parameters() -> None:
-    """Test that ExecuteCachedTrajectory returns error for missing parameters."""
+def test_execute_cached_execution_accepts_start_from_step_index() -> None:
+    """Test that ExecuteCachedTrajectory accepts start_from_step_index parameter."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
 
-        # Create a v0.1 cache file with parameters
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": "2025-12-11T10:00:00Z",
-                "last_executed_at": None,
-                "execution_attempts": 0,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [
-                {
-                    "id": "tool1",
-                    "name": "type_tool",
-                    "input": {"text": "Date: {{current_date}}, User: {{user_name}}"},
-                    "type": "tool_use",
-                }
-            ],
-            "cache_parameters": {
-                "current_date": "Current date",
-                "user_name": "User name",
-            },
-        }
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(cache_data, f)
-
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-        mock_toolbox = MagicMock(spec=ToolCollection)
-
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        result = tool(trajectory_file=str(cache_file))
-
-        # Verify error message
-        assert isinstance(result, str)
-        assert "Missing required parameter values" in result
-        assert "current_date" in result
-        assert "user_name" in result
-
-
-def test_execute_cached_execution_no_parameters_backward_compat() -> None:
-    """Test backward compatibility: trajectories without parameters work fine."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        # Create a v0.0 cache file (old format, no parameters)
-        trajectory: list[dict[str, Any]] = [
-            {
-                "id": "tool1",
-                "name": "click_tool",
-                "input": {"x": 100, "y": 200},
-                "type": "tool_use",
-            }
-        ]
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(trajectory, f)
-
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        result = tool(trajectory_file=str(cache_file))
-
-        # Verify success
-        assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-
-
-def test_continue_cached_trajectory_from_middle() -> None:
-    """Test continuing execution from middle of trajectory."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        # Create a trajectory with 5 steps
+        # Create a trajectory with multiple steps
         cache_data = {
             "metadata": {
                 "version": "0.1",
                 "created_at": datetime.now(tz=timezone.utc).isoformat(),
                 "execution_attempts": 0,
-                "last_executed_at": None,
                 "failures": [],
                 "is_valid": True,
-                "invalidation_reason": None,
             },
             "trajectory": [
                 {"id": "1", "name": "tool1", "input": {}, "type": "tool_use"},
                 {"id": "2", "name": "tool2", "input": {}, "type": "tool_use"},
                 {"id": "3", "name": "tool3", "input": {}, "type": "tool_use"},
-                {"id": "4", "name": "tool4", "input": {}, "type": "tool_use"},
-                {"id": "5", "name": "tool5", "input": {}, "type": "tool_use"},
             ],
             "cache_parameters": {},
         }
@@ -560,210 +353,15 @@ def test_continue_cached_trajectory_from_middle() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
         mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
         tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
 
+        # Tool should accept start_from_step_index (validation happens in CacheExecutor)
         result = tool(trajectory_file=str(cache_file), start_from_step_index=2)
 
-        # Verify success message
+        # Should return success
         assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-        assert "resuming from step 2" in result
-        assert "3 remaining cached steps" in result
-
-
-def test_continue_cached_trajectory_invalid_step_index_negative() -> None:
-    """Test that negative step index returns error."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": datetime.now(tz=timezone.utc).isoformat(),
-                "execution_attempts": 0,
-                "last_executed_at": None,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [
-                {"id": "1", "name": "tool1", "input": {}, "type": "tool_use"},
-            ],
-            "cache_parameters": {},
-        }
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(cache_data, f)
-
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        result = tool(trajectory_file=str(cache_file), start_from_step_index=-1)
-
-        # Verify error message
-        assert isinstance(result, str)
-        assert "Invalid start_from_step_index" in result
-
-
-def test_continue_cached_trajectory_invalid_step_index_too_large() -> None:
-    """Test that step index beyond trajectory length returns error."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": datetime.now(tz=timezone.utc).isoformat(),
-                "execution_attempts": 0,
-                "last_executed_at": None,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [
-                {"id": "1", "name": "tool1", "input": {}, "type": "tool_use"},
-                {"id": "2", "name": "tool2", "input": {}, "type": "tool_use"},
-            ],
-            "cache_parameters": {},
-        }
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(cache_data, f)
-
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        result = tool(trajectory_file=str(cache_file), start_from_step_index=5)
-
-        # Verify error message
-        assert isinstance(result, str)
-        assert "Invalid start_from_step_index" in result
-        assert "valid indices: 0-1" in result
-
-
-def test_continue_cached_trajectory_with_parameters() -> None:
-    """Test continuing execution with parameter substitution."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-
-        # Create a v0.1 cache file with parameters
-        cache_data = {
-            "metadata": {
-                "version": "0.1",
-                "created_at": "2025-12-11T10:00:00Z",
-                "last_executed_at": None,
-                "execution_attempts": 0,
-                "failures": [],
-                "is_valid": True,
-                "invalidation_reason": None,
-            },
-            "trajectory": [
-                {
-                    "id": "1",
-                    "name": "tool1",
-                    "input": {"text": "Step 1"},
-                    "type": "tool_use",
-                },
-                {
-                    "id": "2",
-                    "name": "tool2",
-                    "input": {"text": "Date: {{current_date}}"},
-                    "type": "tool_use",
-                },
-                {
-                    "id": "3",
-                    "name": "tool3",
-                    "input": {"text": "User: {{user_name}}"},
-                    "type": "tool_use",
-                },
-            ],
-            "cache_parameters": {
-                "current_date": "Current date",
-                "user_name": "User name",
-            },
-        }
-
-        with cache_file.open("w", encoding="utf-8") as f:
-            json.dump(cache_data, f)
-
-        # Create mock agent
-        mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        mock_toolbox._tool_map = {}
-
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-        tool.set_cache_execution_manager(mock_cache_manager)
-
-        result = tool(
-            trajectory_file=str(cache_file),
-            start_from_step_index=1,
-            parameter_values={"current_date": "2025-12-11", "user_name": "Alice"},
-        )
-
-        # Verify success
-        assert isinstance(result, str)
-        assert "✓ Cache execution mode activated" in result
-        assert "resuming from step 1" in result
-
-
-def test_execute_cached_trajectory_warns_if_invalid(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Test that ExecuteCachedTrajectory warns when activating with invalid cache."""
-    import logging
-
-    caplog.set_level(logging.WARNING)
-
-    cache_file = tmp_path / "test.json"
-    cache_data = {
-        "metadata": {
-            "version": "0.1",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
-            "execution_attempts": 10,
-            "last_executed_at": None,
-            "failures": [],
-            "is_valid": False,
-            "invalidation_reason": "Cache marked invalid for testing",
-        },
-        "trajectory": [
-            {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
-        ],
-        "cache_parameters": {},
-    }
-    with cache_file.open("w") as f:
-        json.dump(cache_data, f)
-
-    # Create mock agent
-    mock_cache_manager = MagicMock(spec=CacheExecutionManager)
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    mock_toolbox._tool_map = {}
-
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    tool.set_cache_execution_manager(mock_cache_manager)
-
-    result = tool(trajectory_file=str(cache_file))
-
-    # Should still activate but log warning
-    assert isinstance(result, str)
-    assert "✓ Cache execution mode activated" in result
-
-    # Verify warning was logged
-    assert any("WARNING" in record.levelname for record in caplog.records)
-    assert any("invalid cache" in record.message.lower() for record in caplog.records)
+        assert "✓ Requesting cache execution" in result
 
 
 # ============================================================================
@@ -863,195 +461,5 @@ def test_inspect_cache_metadata_file_not_found() -> None:
 
     tool = InspectCacheMetadata()
     result = tool(trajectory_file="/nonexistent/file.json")
-
-    assert "Trajectory file not found" in result
-
-
-# ============================================================================
-# RevalidateCache Tests (unchanged from before)
-# ============================================================================
-
-
-def test_revalidate_cache_marks_invalid_as_valid(tmp_path: Path) -> None:
-    """Test that RevalidateCache marks invalid cache as valid."""
-    from askui.tools.caching_tools import RevalidateCache
-
-    cache_file = tmp_path / "test.json"
-    cache_data = {
-        "metadata": {
-            "version": "0.1",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
-            "execution_attempts": 3,
-            "last_executed_at": None,
-            "failures": [
-                {
-                    "timestamp": datetime.now(tz=timezone.utc).isoformat(),
-                    "step_index": 1,
-                    "error_message": "Error",
-                    "failure_count_at_step": 1,
-                }
-            ],
-            "is_valid": False,
-            "invalidation_reason": "Manual invalidation",
-        },
-        "trajectory": [
-            {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
-        ],
-        "cache_parameters": {},
-    }
-    with cache_file.open("w") as f:
-        json.dump(cache_data, f)
-
-    tool = RevalidateCache()
-    result = tool(trajectory_file=str(cache_file))
-
-    # Verify success message
-    assert "Successfully revalidated" in result
-    assert "Manual invalidation" in result
-
-    # Read updated cache file
-    with cache_file.open("r") as f:
-        updated_data = json.load(f)
-
-    # Verify cache is now valid
-    assert updated_data["metadata"]["is_valid"] is True
-    assert updated_data["metadata"]["invalidation_reason"] is None
-    # Failure history should still be there
-    assert len(updated_data["metadata"]["failures"]) == 1
-
-
-def test_revalidate_cache_already_valid(tmp_path: Path) -> None:
-    """Test that RevalidateCache handles already valid cache."""
-    from askui.tools.caching_tools import RevalidateCache
-
-    cache_file = tmp_path / "test.json"
-    cache_data = {
-        "metadata": {
-            "version": "0.1",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
-            "execution_attempts": 0,
-            "last_executed_at": None,
-            "failures": [],
-            "is_valid": True,
-            "invalidation_reason": None,
-        },
-        "trajectory": [
-            {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
-        ],
-        "cache_parameters": {},
-    }
-    with cache_file.open("w") as f:
-        json.dump(cache_data, f)
-
-    tool = RevalidateCache()
-    result = tool(trajectory_file=str(cache_file))
-
-    # Verify message indicates already valid
-    assert "already valid" in result
-    assert "No changes made" in result
-
-
-def test_revalidate_cache_file_not_found() -> None:
-    """Test that RevalidateCache handles missing files."""
-    from askui.tools.caching_tools import RevalidateCache
-
-    tool = RevalidateCache()
-    result = tool(trajectory_file="/nonexistent/file.json")
-
-    assert "Trajectory file not found" in result
-
-
-# ============================================================================
-# InvalidateCache Tests (unchanged from before)
-# ============================================================================
-
-
-def test_invalidate_cache_marks_valid_as_invalid(tmp_path: Path) -> None:
-    """Test that InvalidateCache marks valid cache as invalid."""
-    from askui.tools.caching_tools import InvalidateCache
-
-    cache_file = tmp_path / "test.json"
-    cache_data = {
-        "metadata": {
-            "version": "0.1",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
-            "execution_attempts": 2,
-            "last_executed_at": datetime.now(tz=timezone.utc).isoformat(),
-            "failures": [],
-            "is_valid": True,
-            "invalidation_reason": None,
-        },
-        "trajectory": [
-            {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
-        ],
-        "cache_parameters": {},
-    }
-    with cache_file.open("w") as f:
-        json.dump(cache_data, f)
-
-    tool = InvalidateCache()
-    result = tool(trajectory_file=str(cache_file), reason="UI changed - button moved")
-
-    # Verify success message
-    assert "Successfully invalidated" in result
-    assert "UI changed - button moved" in result
-
-    # Read updated cache file
-    with cache_file.open("r") as f:
-        updated_data = json.load(f)
-
-    # Verify cache is now invalid
-    assert updated_data["metadata"]["is_valid"] is False
-    assert (
-        updated_data["metadata"]["invalidation_reason"] == "UI changed - button moved"
-    )
-    # Other metadata should be preserved
-    assert updated_data["metadata"]["execution_attempts"] == 2
-
-
-def test_invalidate_cache_updates_reason_if_already_invalid(tmp_path: Path) -> None:
-    """Test that InvalidateCache updates reason if already invalid."""
-    from askui.tools.caching_tools import InvalidateCache
-
-    cache_file = tmp_path / "test.json"
-    cache_data = {
-        "metadata": {
-            "version": "0.1",
-            "created_at": datetime.now(tz=timezone.utc).isoformat(),
-            "execution_attempts": 0,
-            "last_executed_at": None,
-            "failures": [],
-            "is_valid": False,
-            "invalidation_reason": "Old reason",
-        },
-        "trajectory": [
-            {"id": "1", "name": "click", "input": {"x": 100}, "type": "tool_use"},
-        ],
-        "cache_parameters": {},
-    }
-    with cache_file.open("w") as f:
-        json.dump(cache_data, f)
-
-    tool = InvalidateCache()
-    result = tool(trajectory_file=str(cache_file), reason="New reason")
-
-    # Verify message indicates update
-    assert "already invalid" in result
-    assert "Updated invalidation reason to: New reason" in result
-
-    # Read updated cache file
-    with cache_file.open("r") as f:
-        updated_data = json.load(f)
-
-    # Verify reason was updated
-    assert updated_data["metadata"]["invalidation_reason"] == "New reason"
-
-
-def test_invalidate_cache_file_not_found() -> None:
-    """Test that InvalidateCache handles missing files."""
-    from askui.tools.caching_tools import InvalidateCache
-
-    tool = InvalidateCache()
-    result = tool(trajectory_file="/nonexistent/file.json", reason="Test")
 
     assert "Trajectory file not found" in result

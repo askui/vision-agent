@@ -499,8 +499,7 @@ Example:
 """
 
 
-MODEL_TYPES: dict[Literal["act", "get", "locate"], Type[Model]] = {
-    "act": ActModel,
+MODEL_TYPES: dict[Literal["get", "locate"], Type[Model]] = {
     "get": GetModel,
     "locate": LocateModel,
 }
