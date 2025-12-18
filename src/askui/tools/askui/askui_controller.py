@@ -686,6 +686,9 @@ class AskUiControllerClient(AgentOs):
         displays_list_response = self.list_displays()
         for display in displays_list_response.data:
             if display.id == self._display:
+                self._reporter.add_message(
+                    "AgentOS", f"retrieve_active_display() -> {display}"
+                )
                 return display
         error_msg = f"Display {self._display} not found"
         raise ValueError(error_msg)
@@ -749,6 +752,9 @@ class AskUiControllerClient(AgentOs):
         response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
             controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
         )
+        self._reporter.add_message(
+            "AgentOS", f"get_process_list({get_extended_info}) -> {response}"
+        )
 
         return response
 
@@ -776,6 +782,10 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_GetWindowList(processID=process_id)
         )
 
+        self._reporter.add_message(
+            "AgentOS", f"get_window_list({process_id}) -> {response}"
+        )
+
         return response
 
     @telemetry.record_call()
@@ -798,6 +808,9 @@ class AskUiControllerClient(AgentOs):
 
         response: controller_v1_pbs.Response_GetAutomationTargetList = (
             self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+        )
+        self._reporter.add_message(
+            "AgentOS", f"get_automation_target_list() -> {response}"
         )
 
         return response
@@ -873,7 +886,10 @@ class AskUiControllerClient(AgentOs):
         if new_display_length <= display_length:
             msg = f"Failed to set active window {window_id} for process {process_id}"
             raise AskUiControllerError(msg)
-
+        self._reporter.add_message(
+            "AgentOS",
+            f"set_active_window({process_id}, {window_id}) -> {new_display_length}",
+        )
         return new_display_length
 
     @telemetry.record_call()
@@ -1076,8 +1092,6 @@ class AskUiControllerClient(AgentOs):
 
         request_str = request.model_dump_json(exclude_none=True, by_alias=True)
 
-        self._reporter.add_message("AgentOS", f'send_message("{request_str}")')
-
         try:
             response: controller_v1_pbs.Response_Send = self._stub.Send(
                 controller_v1_pbs.Request_Send(message=request_str)
@@ -1103,10 +1117,12 @@ class AskUiControllerClient(AgentOs):
         )
         self._reporter.add_message("AgentOS", "get_mouse_position()")
         res = self._send_command(GetMousePositionCommand())
-        return Coordinate(
+        coordinate = Coordinate(
             x=res.message.command.response.position.x.root,  # type: ignore[union-attr]
             y=res.message.command.response.position.y.root,  # type: ignore[union-attr]
         )
+        self._reporter.add_message("AgentOS", f"get_mouse_position() -> {coordinate}")
+        return coordinate
 
     @telemetry.record_call()
     def set_mouse_position(self, x: int, y: int) -> None:
@@ -1273,6 +1289,7 @@ class AskUiControllerClient(AgentOs):
         if not isinstance(res, GetSystemInfoResponse):
             message = f"unexpected response type: {res}"
             raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_system_info() -> {res.response}")
         return res.response
 
     def get_active_process(self) -> GetActiveProcessResponseModel:
@@ -1291,6 +1308,7 @@ class AskUiControllerClient(AgentOs):
         if not isinstance(res, GetActiveProcessResponse):
             message = f"unexpected response type: {res}"
             raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_active_process() -> {res.response}")
         return res.response
 
     def set_active_process(self, process_id: int) -> None:
@@ -1326,6 +1344,7 @@ class AskUiControllerClient(AgentOs):
         if not isinstance(res, GetActiveWindowResponse):
             message = f"unexpected response type: {res}"
             raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_active_window() -> {res.response}")
         return res.response
 
     def set_window_in_focus(self, process_id: int, window_id: int) -> None:
