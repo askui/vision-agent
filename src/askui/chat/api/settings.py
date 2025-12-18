@@ -118,3 +118,7 @@ class Settings(BaseSettings):
         default_factory=OtelSettings,
         description="OpenTelemetry configuration settings",
     )
+    enable_io_events: bool = Field(
+        default=False,
+        description="Whether to enable the publishing events to stdout",
+    )
