@@ -1,4 +1,5 @@
 from .askui_controller import AskUiControllerClient, AskUiControllerServer
+from .get_system_info_tool import GetSystemInfoTool
 from .window_managment import (
     AddWindowAsVirtualDisplayTool,
     ListProcessTool,
@@ -11,6 +12,7 @@ __all__ = [
     "AskUiControllerClient",
     "AskUiControllerServer",
     "AddWindowAsVirtualDisplayTool",
+    "GetSystemInfoTool",
     "ListProcessTool",
     "ListProcessWindowsTool",
     "SetWindowInFocusTool",
