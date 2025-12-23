@@ -13,9 +13,9 @@ from askui.models.exceptions import ElementNotFoundError
 
 
 @pytest.mark.parametrize(
-    "model",
+    "model_name",
     [
-        ModelName.ASKUI,
+        None,  # Use default
         ModelName.CLAUDE__SONNET__4__20250514,
     ],
 )
@@ -26,11 +26,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a simple string locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = "Forgot password?"
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -38,12 +47,21 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         path_fixtures: pathlib.Path,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a class locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Element("switch")
         x, y = vision_agent.locate(
-            locator, path_fixtures / "images" / "switch.png", model=model
+            locator, path_fixtures / "images" / "switch.png", locate_model=locate_model
         )
         assert 340 <= x <= 400
         assert 270 <= y <= 460
@@ -52,11 +70,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a class locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Element("textfield")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 50 <= x <= 860 or 350 <= x <= 570
         assert 0 <= y <= 80 or 160 <= y <= 280
 
@@ -64,11 +91,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a class locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Element()
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 0 <= x <= github_login_screenshot.width
         assert 0 <= y <= github_login_screenshot.height
 
@@ -76,11 +112,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a description locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Prompt("Username textfield")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
@@ -88,11 +133,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a text locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot password?")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -100,11 +154,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a text locator with a typo."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot pasword", similarity_threshold=90)
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -112,11 +175,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a text locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot password?", match_type="exact")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -124,11 +196,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a text locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Text(r"F.*?", match_type="regex")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -136,11 +217,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using a text locator."""
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot", match_type="contains")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -148,18 +238,27 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator."""
-        if model in [
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
+        if model_name in [
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(image=image)
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
@@ -167,11 +266,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
+        if model_name in [
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -185,7 +293,7 @@ class TestVisionAgentLocate:
             image_compare_format="RGB",
             name="Sign in button",
         )
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
@@ -193,11 +301,20 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
+        if model_name in [
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
@@ -205,21 +322,30 @@ class TestVisionAgentLocate:
         image = PILImage.open(image_path)
         locator = Image(image=image, threshold=1.0, stop_threshold=1.0)
         with pytest.raises(ElementNotFoundError):
-            vision_agent.locate(locator, github_login_screenshot, model=model)
+            vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
 
     def test_locate_with_ai_element_locator(
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using an AI element locator."""
-        if model in [
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
+        if model_name in [
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon")
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
         assert 350 <= x <= 570
         assert 50 <= y <= 130
 
@@ -227,13 +353,22 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
+        model_name: str | None,
+        askui_locate_model_factory,
+        anthropic_model,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
+        # Create model instance based on model_name
+        if model_name is None:
+            locate_model = None
+        elif model_name == ModelName.CLAUDE__SONNET__4__20250514:
+            locate_model = anthropic_model
+        else:
+            locate_model = askui_locate_model_factory(model_name)
+        if model_name in [
             ModelName.CLAUDE__SONNET__4__20250514,
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon", threshold=1.0)
         with pytest.raises(ElementNotFoundError):
-            vision_agent.locate(locator, github_login_screenshot, model=model)
+            vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)

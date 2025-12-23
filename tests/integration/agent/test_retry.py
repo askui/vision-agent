@@ -5,7 +5,6 @@ from httpx import HTTPStatusError
 
 from askui import ConfigurableRetry, LocateModel, VisionAgent
 from askui.locators.locators import Locator
-from askui.models import ModelComposition
 from askui.models.exceptions import ElementNotFoundError, ModelNotFoundError
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
@@ -26,7 +25,7 @@ class FailingLocateModel(LocateModel):
         self,
         locator: Union[str, Locator],
         image: ImageSource,  # noqa: ARG002
-        model: Union[ModelComposition, str],  # noqa: ARG002
+        model: str,  # noqa: ARG002
     ) -> list[Tuple[int, int]]:
         self.calls += 1
         if self.calls <= self.fail_times:

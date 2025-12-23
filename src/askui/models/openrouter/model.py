@@ -49,21 +49,21 @@ class OpenRouterModel(GetModel):
         from askui.models import (
             OpenRouterModel,
             OpenRouterSettings,
-            ModelRegistry,
         )
 
 
-        # Register OpenRouter model in the registry
-        custom_models: ModelRegistry = {
-            "my-custom-model": OpenRouterGetModel(
-                OpenRouterSettings(
-                    model="anthropic/claude-opus-4",
-                )
-            ),
-        }
+        # Create an OpenRouter model instance
+        openrouter_model = OpenRouterModel(
+            OpenRouterSettings(
+                model="anthropic/claude-opus-4",
+            )
+        )
 
-        with VisionAgent(models=custom_models, model={"get":"my-custom-model"}) as agent:
-            result = agent.get("What is the main heading on the screen?")
+        with VisionAgent() as agent:
+            result = agent.get(
+                "What is the main heading on the screen?",
+                get_model=openrouter_model
+            )
             print(result)
         ```
     """  # noqa: E501
@@ -83,6 +83,11 @@ class OpenRouterModel(GetModel):
                 base_url=str(self._settings.base_url),
             )
         )
+
+    @property
+    def model_name(self) -> str:
+        """The model name configured in settings."""
+        return self._settings.model
 
     def _predict(
         self,
@@ -178,12 +183,11 @@ class OpenRouterModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
             err_msg = (
                 f"PDF or Office Document processing is not supported for the model: "
-                f"{model}"
+                f"{self.model_name}"
             )
             raise NotImplementedError(err_msg)
         response = self._predict(
@@ -193,6 +197,6 @@ class OpenRouterModel(GetModel):
             response_schema=response_schema,
         )
         if response is None:
-            error_msg = f'No response from model "{model}" to query: "{query}"'
+            error_msg = f'No response from model "{self.model_name}" to query: "{query}"'
             raise QueryNoResponseError(error_msg, query)
         return response

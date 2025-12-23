@@ -5,12 +5,15 @@ from typing import Annotated, Type, overload
 from PIL import Image as PILImage
 from pydantic import Field
 
-from askui.models.models import ModelRegistry
+from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
+from askui.models.askui.inference_api import AskUiInferenceApi
+from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
+from askui.models.askui.models import AskUiGetModel
+from askui.models.models import GetModel
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, Source, load_source
 
-from .models.model_router import ModelRouter, initialize_default_model_registry
 from .models.types.response_schemas import ResponseSchema
 
 logger = logging.getLogger(__name__)
@@ -20,26 +23,20 @@ class DataExtractor:
     def __init__(
         self,
         reporter: Reporter = NULL_REPORTER,
-        models: ModelRegistry | None = None,
     ) -> None:
         self._reporter = reporter
-        self._model_router = self._init_model_router(
-            reporter=reporter,
-            models=models or {},
-        )
+        self._get_model = self._init_default_get_model()
 
-    def _init_model_router(
-        self,
-        reporter: Reporter,
-        models: ModelRegistry,
-    ) -> ModelRouter:
-        _models = initialize_default_model_registry(
-            reporter=reporter,
-        )
-        _models.update(models)
-        return ModelRouter(
-            reporter=reporter,
-            models=_models,
+    def _init_default_get_model(self) -> GetModel:
+        """Initialize default get model."""
+        # Initialize AskUI inference API
+        inference_api = AskUiInferenceApi(settings=AskUiInferenceApiSettings())
+
+        # Initialize get model
+        google_genai_api = AskUiGoogleGenAiApi()
+        return AskUiGetModel(
+            google_genai_api=google_genai_api,
+            inference_api=inference_api,
         )
 
     @overload
@@ -47,7 +44,6 @@ class DataExtractor:
         self,
         query: Annotated[str, Field(min_length=1)],
         source: InputSource | Source,
-        model: str,
         response_schema: None = None,
     ) -> str: ...
     @overload
@@ -55,14 +51,12 @@ class DataExtractor:
         self,
         query: Annotated[str, Field(min_length=1)],
         source: InputSource | Source,
-        model: str,
         response_schema: Type[ResponseSchema],
     ) -> ResponseSchema: ...
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
         source: InputSource | Source,
-        model: str,
         response_schema: Type[ResponseSchema] | None = None,
     ) -> ResponseSchema | str:
         logger.debug("Received instruction to get '%s'", query)
@@ -82,11 +76,10 @@ class DataExtractor:
             user_message_content,
             image=_source.root if isinstance(_source, ImageSource) else None,
         )
-        response = self._model_router.get(
-            source=_source,
+        response = self._get_model.get(
             query=query,
+            source=_source,
             response_schema=response_schema,
-            model=model,
         )
         message_content = (
             str(response)

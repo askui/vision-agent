@@ -32,7 +32,6 @@ from askui.tools.testing.scenario_tools import (
 )
 from askui.web_agent import WebVisionAgent
 
-from .models.models import ModelChoice, ModelComposition, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
 
@@ -42,18 +41,15 @@ class WebTestingAgent(WebVisionAgent):
     def __init__(
         self,
         reporters: list[Reporter] | None = None,
-        model: ModelChoice | ModelComposition | str | None = None,
+        model_name: str | None = None,
         retry: Retry | None = None,
-        models: ModelRegistry | None = None,
-        model_provider: str | None = None,
     ) -> None:
         base_dir = Path.cwd() / "chat" / "testing"
         base_dir.mkdir(parents=True, exist_ok=True)
         super().__init__(
             reporters=reporters,
-            model=model,
+            model_name=model_name,
             retry=retry,
-            models=models,
             act_tools=[
                 CreateFeatureTool(base_dir),
                 RetrieveFeatureTool(base_dir),
@@ -71,11 +67,10 @@ class WebTestingAgent(WebVisionAgent):
                 ModifyExecutionTool(base_dir),
                 DeleteExecutionTool(base_dir),
             ],
-            model_provider=model_provider,
         )
 
     @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+    def _get_default_settings_for_act(self) -> ActSettings:
         return ActSettings(
             messages=MessageSettings(
                 system=TESTING_AGENT_SYSTEM_PROMPT,

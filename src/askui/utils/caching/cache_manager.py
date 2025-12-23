@@ -11,6 +11,7 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
     UsageParam,
 )
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import (
     CacheFailure,
     CacheFile,
@@ -73,6 +74,7 @@ class CacheManager:
         self._accumulated_usage = UsageParam()
         self._was_cached_execution = False
         self._cache_writer_settings = CacheWriterSettings()
+        self._messages_api: MessagesApi | None = None
 
     def record_execution_attempt(
         self,
@@ -322,6 +324,7 @@ class CacheManager:
         goal: str | None = None,
         toolbox: ToolCollection | None = None,
         cache_writer_settings: CacheWriterSettings | None = None,
+        messages_api: MessagesApi | None = None,
     ) -> None:
         """Start recording a new trajectory.
 
@@ -331,6 +334,7 @@ class CacheManager:
             goal: Goal string for this execution
             toolbox: ToolCollection to check which tools are cacheable
             cache_writer_settings: Settings for cache recording
+            messages_api: MessagesApi instance to use for parameter identification
         """
         self._recording = True
         self._tool_blocks = []
@@ -346,6 +350,8 @@ class CacheManager:
         self._accumulated_usage = UsageParam()
         self._was_cached_execution = False
         self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
+        self._messages_api = messages_api or self._messages_api
+
         logger.info(
             "Started recording trajectory to %s",
             self._cache_dir / (self._file_name or "[auto-generated]"),
@@ -442,6 +448,7 @@ class CacheManager:
             trajectory=self._tool_blocks,
             goal=self._goal,
             identification_strategy=self._cache_writer_settings.parameter_identification_strategy,
+            messages_api=self._messages_api,
             api_provider=self._cache_writer_settings.llm_parameter_id_api_provider,
         )
 

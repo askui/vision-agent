@@ -116,31 +116,7 @@ export OPEN_ROUTER_MODEL=<your-model-name>  # Optional, defaults to "openrouter/
 export OPEN_ROUTER_BASE_URL=<your-base-url>  # Optional, defaults to "https://openrouter.ai/api/v1"
 ```
 
-OpenRouter is not available by default. You need to configure it:
-
-```python
-from askui import VisionAgent
-from askui.models import (
-    OpenRouterModel,
-    OpenRouterSettings,
-    ModelRegistry,
-)
-
-MODEL_KEY = "my-custom-model"
-
-# Register OpenRouter model with custom settings
-custom_models: ModelRegistry = {
-    MODEL_KEY: OpenRouterModel(
-        OpenRouterSettings(
-            model="anthropic/claude-opus-4",
-        )
-    ),
-}
-
-with VisionAgent(models=custom_models, model={"get": MODEL_KEY}) as agent:
-    result = agent.get("What is the main heading on the screen?")
-    print(result)
-```
+**Note:** OpenRouter integration requires passing a custom GetModel instance to the `get()` method. See the [custom models](#your-own-custom-models) section for examples.
 
 ### Huggingface AI Models (Spaces API)
 
@@ -203,55 +179,24 @@ with VisionAgent(model="tars") as agent:
 
 ## Your own custom models
 
-You can create and use your own models by subclassing the `ActModel` (used for `act()`), `GetModel` (used for `get()`), or `LocateModel` (used for `click()`, `locate()`, `mouse_move()` etc.) classes and registering them with the `VisionAgent`.
+For `get()` and `locate()` operations, you can provide custom model implementations by passing them directly to the methods. This is useful when you need to:
 
-### Basic Custom Model Structure
+- Integrate external vision APIs
+- Implement custom OCR or element detection logic
+- Add custom business logic or validation
+- Use models not natively supported by AskUI
+
+### Custom GetModel
+
+You can create a custom model for extracting information from images:
 
 ```python
-import functools
-from askui import (
-    ActModel,
-    ActSettings,
-    GetModel,
-    LocateModel,
-    Locator,
-    ImageSource,
-    MessageParam,
-    ModelComposition,
-    ModelRegistry,
-    OnMessageCb,
-    Point,
-    ResponseSchema,
-    VisionAgent,
-)
+from askui import GetModel, VisionAgent, ResponseSchema
+from askui.utils.source_utils import Source
 from typing import Type
 from typing_extensions import override
 
-# Define custom models
-class MyActModel(ActModel):
-    @override
-    def act(
-        self,
-        messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        # Implement custom act logic, e.g.:
-        # - Use a different AI model
-        # - Implement custom business logic
-        # - Call external services
-        if len(messages) > 0:
-            goal = messages[0].content
-            print(f"Custom act model executing goal: {goal}")
-        else:
-            error_msg = "No messages provided"
-            raise ValueError(error_msg)
-
-# Because Python supports multiple inheritance, we can subclass both `GetModel` and `LocateModel` (and even `ActModel`)
-# to create a model that can both get and locate elements.
-class MyGetAndLocateModel(GetModel, LocateModel):
+class MyGetModel(GetModel):
     @override
     def get(
         self,
@@ -260,12 +205,28 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         response_schema: Type[ResponseSchema] | None,
         model: str,
     ) -> ResponseSchema | str:
-        # Implement custom get logic, e.g.:
-        # - Use a different OCR service
-        # Implement custom text extraction
-        # - Call external vision APIs
-        return f"Custom response to query: {query}"
+        # Implement your custom logic here
+        # For example: call external API, apply custom processing, etc.
+        return f"Custom response to: {query}"
 
+# Use the custom model
+with VisionAgent() as agent:
+    custom_model = MyGetModel()
+    result = agent.get("What's on screen?", get_model=custom_model)
+```
+
+### Custom LocateModel
+
+You can create a custom model for locating UI elements:
+
+```python
+from askui import LocateModel, VisionAgent, PointList
+from askui.locators.locators import Locator
+from askui.utils.image_utils import ImageSource
+from askui.models import ModelComposition
+from typing_extensions import override
+
+class MyLocateModel(LocateModel):
     @override
     def locate(
         self,
@@ -273,233 +234,21 @@ class MyGetAndLocateModel(GetModel, LocateModel):
         image: ImageSource,
         model: ModelComposition | str,
     ) -> PointList:
-        # Implement custom locate logic, e.g.:
-        # - Use a different object detection model
-        # - Implement custom element finding
-        # - Call external vision services
-        return [(100, 100)]  # Example coordinates
+        # Implement your custom element detection logic
+        # For example: use custom vision API, apply custom algorithms, etc.
+        return [(100, 100)]  # Return coordinates
+
+# Use the custom model
+with VisionAgent() as agent:
+    custom_model = MyLocateModel()
+    point = agent.locate("Submit button", locate_model=custom_model)
 ```
 
-### Using Custom Models
+### For act() operations
 
-#### Registering and Using Custom Models
+For `act()` operations, use the available model providers (Anthropic, AskUI, Bedrock, Vertex) via the `model` parameter. Custom act implementations are not currently supported.
 
-```python
-# Create model registry
-custom_models: ModelRegistry = {
-    "my-act-model": MyActModel(),
-    "my-get-model": MyGetAndLocateModel(),
-    "my-locate-model": MyGetAndLocateModel(),
-}
-
-# Initialize agent with custom models
-with VisionAgent(models=custom_models) as agent:
-    # Use custom models for specific tasks
-    agent.act("search for flights", model="my-act-model")
-
-    # Get information using custom model
-    result = agent.get(
-        "what's the current page title?",
-        model="my-get-model"
-    )
-
-    # Click using custom locate model
-    agent.click("submit button", model="my-locate-model")
-
-    # Mix and match with default models
-    agent.click("next", model="askui")  # Uses default AskUI model
-```
-
-#### Model Factories
-
-You can use model factories if you need to create models dynamically:
-
-```python
-class DynamicActModel(ActModel):
-    @override
-    def act(
-        self,
-        messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        pass
-
-# going to be called each time model is chosen using `model` parameter
-def create_custom_model(api_key: str) -> ActModel:
-    return DynamicActModel()
-
-# if you don't want to recreate a new model on each call but rather just initialize
-# it lazily
-@functools.cache
-def create_custom_model_cached(api_key: str) -> ActModel:
-    return DynamicActModel()
-
-# Register model factory
-custom_models: ModelRegistry = {
-    "dynamic-model": lambda: create_custom_model("your-api-key"),
-    "dynamic-model-cached": lambda: create_custom_model_cached("your-api-key"),
-    "askui": lambda: create_custom_model_cached("your-api-key"), # overrides default model
-    "claude-sonnet-4-20250514": lambda: create_custom_model_cached("your-api-key"), # overrides model
-}
-
-with VisionAgent(models=custom_models, model="dynamic-model") as agent:
-    agent.act("do something") # creates and uses instance of DynamicActModel
-    agent.act("do something") # creates and uses instance of DynamicActModel
-    agent.act("do something", model="dynamic-model-cached") # uses new instance of DynamicActModel as it is the first call
-    agent.act("do something", model="dynamic-model-cached") # reuses cached instance
-```
-
-### Use Cases for Custom Models
-
-#### 1. External AI Service Integration
-
-```python
-class ExternalAIModel(ActModel):
-    def __init__(self, api_endpoint: str, api_key: str):
-        self.api_endpoint = api_endpoint
-        self.api_key = api_key
-
-    @override
-    def act(
-        self,
-        messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        # Call external AI service
-        goal = messages[0].content if messages else ""
-        # Implement your external API call here
-        print(f"Calling external AI service: {goal}")
-```
-
-#### 2. Custom Business Logic
-
-```python
-class BusinessLogicModel(GetModel):
-    def __init__(self, business_rules: dict):
-        self.business_rules = business_rules
-
-    @override
-    def get(
-        self,
-        query: str,
-        source: Source,
-        response_schema: Type[ResponseSchema] | None,
-        model: str,
-    ) -> ResponseSchema | str:
-        # Apply business rules to the query
-        if "price" in query.lower() and "discount" in self.business_rules:
-            return f"Price with {self.business_rules['discount']}% discount applied"
-        return f"Standard response to: {query}"
-```
-
-#### 3. Hybrid Model Composition
-
-```python
-class HybridModel(GetModel, LocateModel):
-    def __init__(self, primary_model: str, fallback_model: str):
-        self.primary_model = primary_model
-        self.fallback_model = fallback_model
-
-    @override
-    def get(
-        self,
-        query: str,
-        source: Source,
-        response_schema: Type[ResponseSchema] | None,
-        model: str,
-    ) -> ResponseSchema | str:
-        try:
-            # Try primary model first
-            return self._call_primary_model(query, source, response_schema)
-        except Exception:
-            # Fallback to secondary model
-            return self._call_fallback_model(query, source, response_schema)
-
-    def _call_primary_model(self, query: str, source: Source, response_schema: Type[ResponseSchema] | None):
-        # Implementation for primary model
-        pass
-
-    def _call_fallback_model(self, query: str, source: Source, response_schema: Type[ResponseSchema] | None):
-        # Implementation for fallback model
-        pass
-```
-
-### Best Practices for Custom Models
-
-#### 1. Error Handling
-
-Always implement proper error handling in your custom models:
-
-```python
-class RobustModel(GetModel):
-    @override
-    def get(
-        self,
-        query: str,
-        source: Source,
-        response_schema: Type[ResponseSchema] | None,
-        model: str,
-    ) -> ResponseSchema | str:
-        try:
-            # Your model logic here
-            return self._process_query(query, source)
-        except Exception as e:
-            error_msg = f"Model processing failed: {str(e)}"
-            raise RuntimeError(error_msg)
-```
-
-#### 2. Logging and Monitoring
-
-Implement logging for debugging and monitoring:
-
-```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-class LoggedModel(ActModel):
-    @override
-    def act(
-        self,
-        messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
-        tools: list[Tool] | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        logger.info(f"Processing act request: {messages}")
-        # Your implementation here
-        logger.info("Act request completed successfully")
-```
-
-#### 3. Configuration Management
-
-Make your models configurable:
-
-```python
-class ConfigurableModel(GetModel):
-    def __init__(self, config: dict):
-        self.config = config
-        self.timeout = config.get('timeout', 30)
-        self.max_retries = config.get('max_retries', 3)
-
-    @override
-    def get(
-        self,
-        query: str,
-        source: Source,
-        response_schema: Type[ResponseSchema] | None,
-        model: str,
-    ) -> ResponseSchema | str:
-        # Use configuration in your implementation
-        return self._process_with_config(query, source)
-```
+If you need enterprise-level custom model integration, please contact AskUI support.
 
 ## Model providers
 
@@ -582,10 +331,3 @@ os.environ["ASKUI__VA__MODEL"] = '{"act":"vertex/claude-sonnet-4@20250514"}'
 with VisionAgent() as agent:
     agent.act("do something")
 ```
-
-### Configure your own model provider
-
-If you would like to configure you own model provider, e.g., let's say `"openai"`, just use provider string as key in the model registry as described in [Your own custom models](#your-own-custom-models) section but suffix it with a `"/"`, e.g., `"openai/"`, in order to differentiate it from regular model names. If you then, later call a model of that provider, e.g.,
-`agent.act("do something", model="openai/gpt-4o")`, the request will be routed to the model (api client) implementation that is the value of `"openai"` key in the model registry and the model passed to the underlying model (api client) implementation will be `"gpt-4o"`.
-
-**IMPORTANT:** If you configure both a provider as well as a model prefixed with the provider prefix in the model registry, e.g., both `"openai/"` and `"openai/gpt-4o"`, the model has is going to be used and not the provider, e.g., `agent.act("do something", model="openai/gpt-4o")` is going to use `"openai/gpt-4o"` and not `"openai/"`, and `"openai/gpt-4o"` is going to be passed to the model (api client) implementation as `model` parameter instead of `"gpt-4o"`.

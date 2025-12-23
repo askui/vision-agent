@@ -12,7 +12,12 @@ from askui.models.exceptions import (
     QueryNoResponseError,
     QueryUnexpectedResponseError,
 )
-from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
+from askui.models.models import (
+    GetModel,
+    LocateModel,
+    ModelName,
+    PointList,
+)
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -71,6 +76,9 @@ class AnthropicModelSettings(BaseSettings):
 
 
 class AnthropicModel(GetModel, LocateModel):
+    # Default model name - uses the latest Claude Sonnet
+    model_name: str = ModelName.CLAUDE__SONNET__4_5__20250514
+
     def __init__(
         self,
         settings: AnthropicModelSettings,
@@ -86,7 +94,6 @@ class AnthropicModel(GetModel, LocateModel):
         image: ImageSource,
         prompt: str,
         system: str,
-        model: str,
     ) -> str:
         scaled_image = scale_image_to_fit(
             image.root,
@@ -112,7 +119,7 @@ class AnthropicModel(GetModel, LocateModel):
                     ),
                 )
             ],
-            model=model,
+            model=self.model_name,
             system=system,
         )
         content: list[ContentBlockParam] = (
@@ -130,11 +137,7 @@ class AnthropicModel(GetModel, LocateModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
     ) -> PointList:
-        if not isinstance(model, str):
-            error_msg = "Model composition is not supported for Claude"
-            raise NotImplementedError(error_msg)
         locator_serialized = (
             self._locator_serializer.serialize(locator)
             if isinstance(locator, Locator)
@@ -150,7 +153,6 @@ class AnthropicModel(GetModel, LocateModel):
                 system=build_system_prompt_locate(
                     str(screen_width), str(screen_height)
                 ),
-                model=model,
             )
             return [
                 scale_coordinates(
@@ -173,12 +175,11 @@ class AnthropicModel(GetModel, LocateModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
             err_msg = (
                 f"PDF or Office Document processing is not supported for the model: "
-                f"{model}"
+                f"{self.model_name}"
             )
             raise NotImplementedError(err_msg)
         try:
@@ -189,7 +190,6 @@ class AnthropicModel(GetModel, LocateModel):
                 image=source,
                 prompt=query,
                 system=SYSTEM_PROMPT_GET,
-                model=model,
             )
         except _UnexpectedResponseError as e:
             if len(e.content) == 0:

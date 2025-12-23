@@ -5,7 +5,6 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from askui.models.model_router import ModelRouter
 from askui.tools.agent_os import AgentOs, Display, DisplaySize
 from askui.tools.toolbox import AgentToolbox
 
@@ -100,17 +99,6 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
 def agent_toolbox_mock(agent_os_mock: AgentOs) -> AgentToolbox:
     """Fixture providing a mock agent toolbox."""
     return AgentToolbox(agent_os=agent_os_mock)
-
-
-@pytest.fixture
-def model_router_mock(mocker: MockerFixture) -> ModelRouter:
-    """Fixture providing a mock model router."""
-    mock = mocker.MagicMock(spec=ModelRouter)
-    mock.locate.return_value = (100, 100)  # Return fixed point for all locate calls
-    mock.get_inference.return_value = (
-        "Mock response"  # Return fixed response for all get_inference calls
-    )
-    return cast("ModelRouter", mock)
 
 
 @pytest.fixture(autouse=True)

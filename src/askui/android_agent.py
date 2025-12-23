@@ -7,6 +7,7 @@ from typing_extensions import override
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
@@ -30,8 +31,7 @@ from askui.tools.android.tools import (
 )
 from askui.tools.exception_tool import ExceptionTool
 
-from .models import ModelComposition
-from .models.models import ModelChoice, ModelRegistry, Point
+from .models.models import GetModel, LocateModel, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 
@@ -48,10 +48,9 @@ class AndroidVisionAgent(AgentBase):
     Args:
         device (str | int, optional): The Android device to connect to. Can be either a serial number (as a `str`) or an index (as an `int`) representing the position in the `adb devices` list. Index `0` refers to the first device. Defaults to `0`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `tap()`, `get()`, `act()` etc. methods.
+        model_name (str | None, optional): The default name of the model to be used for act() operations. Can be overridden by the `model_name` parameter in the `act()` method.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
-        models (ModelRegistry | None, optional): A registry of models to make available to the `AndroidVisionAgent` so that they can be selected using the `model` parameter of `AndroidVisionAgent` or the `model` parameter of its `tap()`, `get()`, `act()` etc. methods. Entries in the registry override entries in the default model registry.
-        model_provider (str | None, optional): The model provider to use for vision tasks.
+        act_api (MessagesApi | None, optional): The MessagesApi instance to use as default for `act()` commands. If not provided, will use the default AskUI MessagesApi.
 
     Example:
         ```python
@@ -64,26 +63,25 @@ class AndroidVisionAgent(AgentBase):
         ```
     """
 
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
+    @telemetry.record_call(exclude={"reporters", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         device: str | int = 0,
         reporters: list[Reporter] | None = None,
-        model: ModelChoice | ModelComposition | str | None = None,
         retry: Retry | None = None,
-        models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
-        model_provider: str | None = None,
+        messages_api: MessagesApi | None = None,
+        act_model_name: str | None = None,
+        get_model: GetModel | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.os = PpadbAgentOs(device_identifier=device, reporter=reporter)
         self.act_agent_os_facade = AndroidAgentOsFacade(self.os)
         super().__init__(
             reporter=reporter,
-            model=model,
             retry=retry,
-            models=models,
             tools=[
                 AndroidScreenshotTool(self.act_agent_os_facade),
                 AndroidTapTool(self.act_agent_os_facade),
@@ -102,21 +100,24 @@ class AndroidVisionAgent(AgentBase):
             ]
             + (act_tools or []),
             agent_os=self.os,
-            model_provider=model_provider,
+            act_model_name=act_model_name,
+            get_model=get_model,
+            locate_model=locate_model,
+            messages_api=messages_api,
         )
 
     @overload
     def tap(
         self,
         target: str | Locator,
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None: ...
 
     @overload
     def tap(
         self,
         target: Point,
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None: ...
 
     @telemetry.record_call(exclude={"locator"})
@@ -124,14 +125,14 @@ class AndroidVisionAgent(AgentBase):
     def tap(
         self,
         target: str | Locator | Point,
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Taps on the specified target.
 
         Args:
             target (str | Locator | Point): The target to tap on. Can be a locator, a point, or a string.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for tapping on the target.
+            locate_model (LocateModel | None, optional): The model instance to be used for locating the target.
 
         Example:
             ```python
@@ -153,7 +154,10 @@ class AndroidVisionAgent(AgentBase):
                 "VisionAgent received instruction to click",
                 extra={"target": target},
             )
-            point = self._locate(locator=target, model=model)[0]
+            point = self._locate(
+                locator=target,
+                locate_model=locate_model or self._default_locate_model,
+            )[0]
             self.os.tap(point[0], point[1])
 
     @telemetry.record_call(exclude={"text"})
@@ -355,7 +359,7 @@ class AndroidVisionAgent(AgentBase):
         self.os.set_device_by_serial_number(device_sn)
 
     @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+    def _get_default_settings_for_act(self) -> ActSettings:
         return ActSettings(
             messages=MessageSettings(
                 system=ANDROID_AGENT_SYSTEM_PROMPT,

@@ -14,6 +14,7 @@ from askui.models.shared.agent_on_message_cb import (
     OnMessageCb,
     OnMessageCbParam,
 )
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -72,7 +73,8 @@ class Conversation:
         self._truncation_strategy: TruncationStrategy | None = None
 
         # State for current execution
-        self.model: str = ""
+        self.model_name: str = ""
+        self.messages_api: MessagesApi | None = None
         self.settings: ActSettings = ActSettings()
         self.tools: ToolCollection = ToolCollection()
         self._on_message: OnMessageCb = NULL_ON_MESSAGE_CB
@@ -84,7 +86,8 @@ class Conversation:
     def start(
         self,
         messages: list[MessageParam],
-        model: str,
+        model_name: str,
+        messages_api: MessagesApi | None = None,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
@@ -94,7 +97,9 @@ class Conversation:
 
         Args:
             messages: Initial message history
-            model: Model to use for agent calls
+            model_name: Model name string to use for API calls
+            messages_api: MessagesApi instance to use for agent calls. If provided,
+                takes precedence over model_name resolution.
             on_message: Optional callback for each message
             tools: Available tools
             settings: Agent settings
@@ -104,7 +109,8 @@ class Conversation:
         self.accumulated_usage = UsageParam()
 
         # Store execution parameters
-        self.model = model
+        self.model_name = model_name
+        self.messages_api = messages_api
         self.settings = settings or ActSettings()
         self.tools = tools or ToolCollection()
         self._reporters = reporters or []
@@ -116,7 +122,7 @@ class Conversation:
                 tools=self.tools.to_params(),
                 system=self.settings.messages.system or None,
                 messages=messages,
-                model=model,
+                model=model_name,
             )
         )
 
@@ -317,7 +323,7 @@ class Conversation:
         )
         return self._on_message(OnMessageCbParam(message=message, messages=messages))
 
-    def _handle_result_status(self, result: SpeakerResult) -> bool:  # noqa: RET503
+    def _handle_result_status(self, result: SpeakerResult) -> bool:
         if result.status == "done":
             logger.info("Conversation completed successfully")
             return False
@@ -330,6 +336,9 @@ class Conversation:
             return True
         if result.status == "continue":
             return True
+        # Default case - should not happen, but return False to stop execution
+        logger.warning("Unknown result status: %s", result.status)
+        return False
 
     def switch_speaker(self, speaker_name: str) -> None:
         """Switch to a different speaker.

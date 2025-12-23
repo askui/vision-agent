@@ -20,8 +20,6 @@ from askui.tools.playwright.tools import (
 )
 from askui.tools.toolbox import AgentToolbox
 
-from .models import ModelComposition
-from .models.models import ModelChoice, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
 
@@ -31,11 +29,9 @@ class WebVisionAgent(VisionAgent):
     def __init__(
         self,
         reporters: list[Reporter] | None = None,
-        model: ModelChoice | ModelComposition | str | None = None,
+        model_name: str | None = None,
         retry: Retry | None = None,
-        models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
-        model_provider: str | None = None,
     ) -> None:
         agent_os = PlaywrightAgentOs()
         tools = AgentToolbox(
@@ -43,9 +39,8 @@ class WebVisionAgent(VisionAgent):
         )
         super().__init__(
             reporters=reporters,
-            model=model,
+            model_name=model_name,
             retry=retry,
-            models=models,
             tools=tools,
             act_tools=[
                 PlaywrightGotoTool(agent_os=agent_os),
@@ -56,11 +51,10 @@ class WebVisionAgent(VisionAgent):
                 ExceptionTool(),
             ]
             + (act_tools or []),
-            model_provider=model_provider,
         )
 
     @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
+    def _get_default_settings_for_act(self) -> ActSettings:
         return ActSettings(
             messages=MessageSettings(
                 system=WEB_AGENT_SYSTEM_PROMPT,

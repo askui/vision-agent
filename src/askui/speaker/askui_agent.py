@@ -1,14 +1,17 @@
 """AskUI Agent speaker for normal agent API interactions."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from askui.models.exceptions import MaxTokensExceededError, ModelRefusalError
 from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.messages_api_provider import MessagesApiProvider
 from askui.utils.caching.cache_manager import CacheManager
 
 from .conversation import Conversation
 from .speaker import Speaker, SpeakerResult
+
+if TYPE_CHECKING:
+    from askui.models.shared.messages_api import MessagesApi
 
 logger = logging.getLogger(__name__)
 
@@ -23,20 +26,26 @@ class AskUIAgent(Speaker):
 
     Tool execution is handled by the Conversation class, not by this speaker.
 
-    This speaker also handles model routing - it parses model names
-    to determine the appropriate API provider (anthropic, askui, bedrock, vertex)
-    and uses the corresponding MessagesApi.
-
-    Args:
-        messages_api_provider: Provider for creating MessagesApi instances
+    The MessagesApi and model_name can be provided during initialization or via
+    the Conversation. If provided during init, they take priority over the ones
+    from the Conversation.
     """
 
     def __init__(
         self,
-        messages_api_provider: MessagesApiProvider | None = None,
+        messages_api: "MessagesApi | None" = None,
+        model_name: str | None = None,
     ) -> None:
-        """Initialize AskUI Agent speaker."""
-        self._messages_api_provider = messages_api_provider or MessagesApiProvider()
+        """Initialize AskUI Agent speaker.
+
+        Args:
+            messages_api: Optional MessagesApi instance to use for this speaker.
+                If provided, takes priority over the MessagesApi from Conversation.
+            model_name: Optional model name to use for this speaker.
+                If provided, takes priority over the model_name from Conversation.
+        """
+        self._messages_api = messages_api
+        self._model_name = model_name
 
     def can_handle(self, conversation: Conversation) -> bool:  # noqa: ARG002
         """AskUI Agent can always handle normal conversation flow.
@@ -77,16 +86,21 @@ class AskUIAgent(Speaker):
             logger.debug("Last message not from user, nothing to do")
             return SpeakerResult(status="done")
 
-        # Get the appropriate MessagesApi for the model
-        messages_api, actual_model_name = (
-            self._messages_api_provider.get_messages_api_for_model(conversation.model)
-        )
+        # Resolve MessagesApi: instance (from init) > conversation
+        messages_api = self._messages_api or conversation.messages_api
+        if messages_api is None:
+            error_msg = "MessagesApi must be provided to Speaker or Conversation"
+            logger.error(error_msg)
+            return SpeakerResult(status="failed")
+
+        # Resolve model_name: instance (from init) > conversation
+        model_name = self._model_name or conversation.model_name
 
         # Make API call to get agent response
         try:
             response = messages_api.create_message(
                 messages=truncation_strategy.messages,
-                model=actual_model_name,
+                model=model_name,
                 tools=conversation.tools,
                 max_tokens=conversation.settings.messages.max_tokens,
                 betas=conversation.settings.messages.betas,

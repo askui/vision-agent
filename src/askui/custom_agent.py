@@ -6,12 +6,10 @@ from askui.container import telemetry
 from askui.models.models import ModelName
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.messages_api_provider import MessagesApiProvider
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.speaker import AskUIAgent, CacheExecutor, Conversation, Speakers
 
-from .models.model_router import ModelRouter, initialize_default_model_registry
 from .reporting import NullReporter
 
 
@@ -20,14 +18,9 @@ class CustomAgent:
         reporter = NullReporter()
         self._reporter = reporter
 
-        # Create model router for get/locate operations (no act)
-        self._model_router = self._init_model_router(reporter)
-
-        # Create MessagesApiProvider for handling different model providers
-        messages_api_provider = MessagesApiProvider()
-
         # Create speakers for the conversation
-        askui_agent_speaker = AskUIAgent(messages_api_provider)
+        # AskUIAgent will use default AskUI MessagesApi if none provided
+        askui_agent_speaker = AskUIAgent()
         cache_executor_speaker = CacheExecutor()
 
         # Create conversation with speakers
@@ -39,18 +32,6 @@ class CustomAgent:
                 }
             ),
             reporter=reporter,
-        )
-
-    def _init_model_router(
-        self,
-        reporter: NullReporter,
-    ) -> ModelRouter:
-        models = initialize_default_model_registry(
-            reporter=reporter,
-        )
-        return ModelRouter(
-            reporter=reporter,
-            models=models,
         )
 
     @telemetry.record_call(exclude={"messages", "on_message", "settings", "tools"})

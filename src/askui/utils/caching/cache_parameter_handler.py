@@ -14,9 +14,8 @@ import re
 from typing import Any
 
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.anthropic.factory import AnthropicApiProvider
+from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.model_router import create_api_client
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.messages_api import MessagesApi
 from askui.prompts.caching import CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT
@@ -52,6 +51,7 @@ class CacheParameterHandler:
         trajectory: list[ToolUseBlockParam],
         goal: str | None,
         identification_strategy: str,
+        messages_api: MessagesApi | None = None,
         api_provider: AnthropicApiProvider = "askui",
         model: str = "claude-sonnet-4-5-20250929",
     ) -> tuple[str | None, list[ToolUseBlockParam], dict[str, str]]:
@@ -64,7 +64,10 @@ class CacheParameterHandler:
             trajectory: The trajectory to analyze and parameterize
             goal: The goal text to parameterize (optional)
             identification_strategy: "llm" for AI-based or "preset" for manual
-            api_provider: API provider for LLM calls (only used for "llm" strategy)
+            messages_api: MessagesApi instance to use for LLM-based identification.
+                If not provided and strategy is "llm", will create one from api_provider.
+            api_provider: API provider for LLM calls (only used for "llm" strategy
+                when messages_api is not provided)
             model: Model to use for LLM-based identification
 
         Returns:
@@ -74,11 +77,12 @@ class CacheParameterHandler:
             - Dict mapping parameter names to descriptions
         """
         if identification_strategy == "llm" and trajectory:
-            # Create messages_api for LLM-based identification
-            messages_api = AnthropicMessagesApi(
-                client=create_api_client(api_provider),
-                locator_serializer=VlmLocatorSerializer(),
-            )
+            # Use provided messages_api or create one if not provided
+            if messages_api is None:
+                messages_api = AnthropicMessagesApi(
+                    client=create_api_client(api_provider),
+                    locator_serializer=VlmLocatorSerializer(),
+                )
 
             # Use LLM to identify parameters
             parameters_dict, parameter_definitions = (

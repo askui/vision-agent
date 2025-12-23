@@ -15,7 +15,6 @@ from askui.models.models import (
     ActModel,
     GetModel,
     LocateModel,
-    ModelComposition,
     PointList,
 )
 from askui.models.shared.agent_message_param import MessageParam
@@ -111,6 +110,8 @@ class UiTarsApiHandlerSettings(BaseSettings):
 
 
 class UiTarsApiHandler(ActModel, LocateModel, GetModel):
+    model_name: str = "tars"  # Fixed model name for UI-TARS
+
     def __init__(
         self,
         reporter: Reporter,
@@ -158,11 +159,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
     ) -> PointList:
-        if not isinstance(model, str):
-            error_msg = "Model composition is not supported for UI-TARS"
-            raise NotImplementedError(error_msg)
         locator_serialized = (
             self._locator_serializer.serialize(locator)
             if isinstance(locator, Locator)

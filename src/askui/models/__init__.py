@@ -1,13 +1,8 @@
+from .custom_models import CustomGetModel, CustomLocateModel
 from .models import (
-    ActModel,
     GetModel,
     LocateModel,
-    Model,
-    ModelChoice,
-    ModelComposition,
-    ModelDefinition,
     ModelName,
-    ModelRegistry,
     Point,
     PointList,
 )
@@ -31,7 +26,6 @@ from .shared.agent_message_param import (
 from .shared.agent_on_message_cb import OnMessageCb, OnMessageCbParam
 
 __all__ = [
-    "ActModel",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
     "ChatCompletionsCreateSettings",
@@ -39,16 +33,13 @@ __all__ = [
     "CitationContentBlockLocationParam",
     "CitationPageLocationParam",
     "ContentBlockParam",
+    "CustomGetModel",
+    "CustomLocateModel",
     "GetModel",
     "ImageBlockParam",
     "LocateModel",
     "MessageParam",
-    "Model",
-    "ModelChoice",
-    "ModelComposition",
-    "ModelDefinition",
     "ModelName",
-    "ModelRegistry",
     "OnMessageCb",
     "OnMessageCbParam",
     "OpenRouterModel",

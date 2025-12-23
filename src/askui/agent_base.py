@@ -6,15 +6,19 @@ from typing import Annotated, Literal, Optional, Type, overload
 
 from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, field_validator, validate_call
+from pydantic import ConfigDict, Field, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
 from askui.container import telemetry
 from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
+from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
+from askui.models.anthropic.factory import create_api_client
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.caching import CACHE_USE_PROMPT
@@ -32,17 +36,19 @@ from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source
 
-from .models import ModelComposition
+from .models.askui.ai_element_utils import AiElementCollection
+from .models.askui.google_genai_api import AskUiGoogleGenAiApi
+from .models.askui.inference_api import AskUiInferenceApi
+from .models.askui.inference_api_settings import AskUiInferenceApiSettings
+from .models.askui.models import AskUiGetModel, AskUiLocateModel
 from .models.exceptions import ElementNotFoundError, WaitUntilError
-from .models.model_router import ModelRouter, initialize_default_model_registry
 from .models.models import (
     DetectedElement,
-    ModelChoice,
+    GetModel,
+    LocateModel,
     ModelName,
-    ModelRegistry,
     Point,
     PointList,
-    TotalModelChoice,
 )
 from .models.types.response_schemas import ResponseSchema
 from .reporting import Reporter
@@ -60,44 +66,38 @@ class AgentBaseSettings(BaseSettings):
         env_nested_delimiter="__",
         extra="ignore",
     )
-    model: ModelChoice | ModelComposition | str | None = Field(default=None)
-    model_provider: str | None = Field(default=None)
-
-    @field_validator("model_provider")
-    @classmethod
-    def validate_model_provider(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return v if v.endswith("/") else f"{v}/"
+    model: str | None = Field(default=None)
 
 
 class AgentBase(ABC):  # noqa: B024
     def __init__(
         self,
         reporter: Reporter,
-        model: ModelChoice | ModelComposition | str | None,
         retry: Retry | None,
-        models: ModelRegistry | None,
         tools: list[Tool] | None,
         agent_os: AgentOs | AndroidAgentOs,
-        model_provider: str | None,
+        act_model_name: str | None = None,
+        get_model: GetModel | None = None,
+        locate_model: LocateModel | None = None,
+        messages_api: MessagesApi | None = None,
     ) -> None:
         load_dotenv()
         self._reporter = reporter
         self._agent_os: AgentOs | AndroidAgentOs = agent_os
 
         self._tools = tools or []
-        settings = AgentBaseSettings()
-        _model_provider = model_provider or settings.model_provider or ""
-        self.model_name_selected_by_user: str | None = None
-        model = model or settings.model
-        if model and isinstance(model, str):
-            self.model_name_selected_by_user = f"{_model_provider}{model}"
 
-        # Keep model_router for get and locate operations
-        self._model_router = self._init_model_router(
-            reporter=self._reporter,
-            models=models or {},
+        # Store default model name (can be overridden in act() method)
+        settings = AgentBaseSettings()
+        self._act_default_model_name = (
+            act_model_name or settings.model or ModelName.CLAUDE__SONNET__4_5__20250514
+        )
+        self._messages_api: MessagesApi | None = messages_api
+        self._default_get_model: GetModel = get_model or self._get_default_get_model(
+            reporter=self._reporter
+        )
+        self._default_locate_model: LocateModel = (
+            locate_model or self._get_default_locate_model(reporter=self._reporter)
         )
         self._retry = retry or ConfigurableRetry(
             strategy="Exponential",
@@ -105,89 +105,51 @@ class AgentBase(ABC):  # noqa: B024
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
-        self._model = self._init_model(model)
-        self._data_extractor = DataExtractor(
-            reporter=self._reporter, models=models or {}
+        self._data_extractor = DataExtractor(reporter=self._reporter)
+        self._locator_serializer = VlmLocatorSerializer()
+
+    def _get_default_get_model(self, reporter: Reporter) -> GetModel:
+        """Initialize default get model."""
+        inference_api = AskUiInferenceApi(settings=AskUiInferenceApiSettings())
+        google_genai_api = AskUiGoogleGenAiApi()
+        get_model = AskUiGetModel(
+            google_genai_api=google_genai_api,
+            inference_api=inference_api,
         )
 
-    def _init_model_router(
-        self,
-        reporter: Reporter,
-        models: ModelRegistry,
-    ) -> ModelRouter:
-        _models = initialize_default_model_registry(
-            reporter=reporter,
-        )
-        _models.update(models)
-        return ModelRouter(
-            reporter=reporter,
-            models=_models,
+        return get_model
+
+    def _get_default_locate_model(self, reporter: Reporter) -> LocateModel:
+        """Initialize default locate model."""
+        inference_api = AskUiInferenceApi(settings=AskUiInferenceApiSettings())
+        locate_model = AskUiLocateModel(
+            locator_serializer=AskUiLocatorSerializer(
+                ai_element_collection=AiElementCollection(),
+                reporter=reporter,
+            ),
+            inference_api=inference_api,
         )
 
-    def _init_model(
-        self,
-        model: ModelComposition | ModelChoice | str | None,
-    ) -> TotalModelChoice:
-        """Initialize the model choice based on the provided model parameter.
+        return locate_model
 
-        Args:
-            model: ModelComposition | ModelChoice | str | None: The model to
-                initialize from. Can be a `ModelComposition`, `ModelChoice` dict, `str`,
-                or `None`.
+    def _get_default_messages_api(self) -> MessagesApi:
+        """Get the default MessagesApi instance (AskUI provider).
 
         Returns:
-            TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to
-                model names (or a ModelComposition for "locate").
+            MessagesApi: Default AskUI MessagesApi instance
         """
-        default_act_model = f"askui/{ModelName.CLAUDE__SONNET__4__20250514}"
-        default_get_model = ModelName.ASKUI
-        default_locate_model = ModelName.ASKUI
-        if isinstance(model, ModelComposition):
-            return {
-                "act": default_act_model,
-                "get": default_get_model,
-                "locate": model,
-            }
-        if isinstance(model, str) or model is None:
-            return {
-                "act": model or default_act_model,
-                "get": model or default_get_model,
-                "locate": model or default_locate_model,
-            }
-        return {
-            "act": model.get(
-                "act",
-                default_act_model,
-            ),
-            "get": model.get("get", default_get_model),
-            "locate": model.get("locate", default_locate_model),
-        }
-
-    @overload
-    def _get_model(self, model: str | None, type_: Literal["act", "get"]) -> str: ...
-    @overload
-    def _get_model(
-        self, model: ModelComposition | str | None, type_: Literal["locate"]
-    ) -> str | ModelComposition: ...
-    def _get_model(
-        self,
-        model: ModelComposition | str | None,
-        type_: Literal["act", "get", "locate"],
-    ) -> str | ModelComposition:
-        if model is None and self.model_name_selected_by_user:
-            return self.model_name_selected_by_user
-
-        if isinstance(model, ModelComposition):
-            return model
-
-        return self._model[type_]
+        return AnthropicMessagesApi(
+            client=create_api_client(api_provider="askui"),
+            locator_serializer=self._locator_serializer,
+        )
 
     @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
-        model: str | None = None,
+        model_name: str | None = None,
+        messages_api: MessagesApi | None = None,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
         speakers: Speakers | None = None,
@@ -204,17 +166,20 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             goal (str | list[MessageParam]): A description of what the agent should
                 achieve.
-            model (str | None, optional): The composition or name of the model(s) to
-                be used for achieving the `goal`.
+            model_name (str | None, optional): The name of the model to use for
+                achieving the goal. If not provided, uses the default model name from
+                agent initialization or the default Claude model.
+            messages_api (MessagesApi | None, optional): The MessagesApi instance to use
+                for agent calls. If not provided, will use the default AskUI MessagesApi.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message.
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
-                agent. Defaults to default tools depending on the selected model.
+                agent. Defaults to default tools.
             speakers (Speakers | None, optional): The speakers to use in the
-                conversation. Defaults to the VisionAgent and the CacheExecutor,
+                conversation. Defaults to the AskUIAgent and the CacheExecutor,
                 depending on the caching settings.
-            settings (AgentSettings | None, optional): The settings for the agent.
-                Defaults to a default settings depending on the selected model.
+            settings (ActSettings | None, optional): The settings for the agent.
+                Defaults to default settings.
             caching_settings (CachingSettings | None, optional): The caching settings
                 for the act execution. Controls recording and replaying of action
                 sequences (trajectories). Available strategies: "no" (default, no
@@ -304,21 +269,29 @@ class AgentBase(ABC):  # noqa: B024
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
-        _model = self._get_model(model, "act")
-        _settings = settings or self._get_default_settings_for_act(_model)
 
-        _caching_settings: CachingSettings = (
-            caching_settings or self._get_default_caching_settings_for_act(_model)
+        # Resolve model_name: parameter > instance default
+        _model_name = model_name or self._act_default_model_name
+
+        # Resolve MessagesApi: parameter > instance default > default AskUI
+        _messages_api = (
+            messages_api or self._messages_api or self._get_default_messages_api()
         )
 
-        _tools = self._build_tools(tools, _model)
+        _settings = settings or self._get_default_settings_for_act()
+
+        _caching_settings: CachingSettings = (
+            caching_settings or self._get_default_caching_settings_for_act()
+        )
+
+        _tools = self._build_tools(tools)
 
         _speakers = self._get_default_speakers(speakers)
 
         if _caching_settings.strategy != "no":
             _speakers.add_speaker(CacheExecutor())
             _cache_manager = self._patch_act_with_cache(
-                _caching_settings, _settings, _tools, goal_str
+                _caching_settings, _settings, _tools, goal_str, _messages_api
             )
         else:
             _cache_manager = None
@@ -331,17 +304,16 @@ class AgentBase(ABC):  # noqa: B024
 
         _conversation.start(
             messages=messages,
-            model=_model,
+            model_name=_model_name,
+            messages_api=_messages_api,
             on_message=on_message,
             settings=_settings,
             tools=_tools,
             reporters=[self._reporter],
         )
 
-    def _build_tools(
-        self, tools: list[Tool] | ToolCollection | None, model: str
-    ) -> ToolCollection:
-        default_tools = self._get_default_tools_for_act(model)
+    def _build_tools(self, tools: list[Tool] | ToolCollection | None) -> ToolCollection:
+        default_tools = self._get_default_tools_for_act()
         if isinstance(tools, list):
             return ToolCollection(tools=default_tools + tools)
         if isinstance(tools, ToolCollection):
@@ -354,6 +326,7 @@ class AgentBase(ABC):  # noqa: B024
         settings: ActSettings,
         toolbox: ToolCollection,
         goal: str | None = None,
+        messages_api: MessagesApi | None = None,
     ) -> CacheManager | None:
         """Patch act settings and toolbox with caching functionality.
 
@@ -402,7 +375,7 @@ class AgentBase(ABC):  # noqa: B024
             toolbox.append_tool(*caching_tools)
 
         # Setup write mode: start cache recording
-        if caching_settings.strategy in ["write", "both"]:
+        if caching_settings.strategy in ["read", "write", "both"]:
             cache_manager = CacheManager()
             cache_manager.start_recording(
                 cache_dir=caching_settings.cache_dir,
@@ -410,18 +383,19 @@ class AgentBase(ABC):  # noqa: B024
                 goal=goal,
                 toolbox=toolbox,
                 cache_writer_settings=caching_settings.cache_writer_settings,
+                messages_api=messages_api,
             )
             return cache_manager
 
         return None
 
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
+    def _get_default_settings_for_act(self) -> ActSettings:
         return ActSettings()
 
-    def _get_default_caching_settings_for_act(self, model: str) -> CachingSettings:  # noqa: ARG002
+    def _get_default_caching_settings_for_act(self) -> CachingSettings:
         return CachingSettings()
 
-    def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
+    def _get_default_tools_for_act(self) -> list[Tool]:
         return self._tools
 
     def _get_default_speakers(self, speakers: Speakers | None) -> Speakers:
@@ -434,7 +408,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
-        model: str | None = None,
+        get_model: GetModel | None = None,
         source: Optional[InputSource] = None,
     ) -> str: ...
     @overload
@@ -442,7 +416,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
-        model: str | None = None,
+        get_model: GetModel | None = None,
         source: Optional[InputSource] = None,
     ) -> ResponseSchema: ...
 
@@ -452,7 +426,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema] | None = None,
-        model: str | None = None,
+        get_model: GetModel | None = None,
         source: Optional[InputSource] = None,
     ) -> ResponseSchema | str:
         """
@@ -469,10 +443,8 @@ class AgentBase(ABC):  # noqa: B024
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.
-            model (str | None, optional): The composition or name of the model(s) to
-                be used for retrieving information from the screen or image using the
-                `query`. Note: `response_schema` is not supported by all models.
-                PDF processing is only supported for Gemini models hosted on AskUI.
+            get_model (GetModel | None, optional): The GetModel instance to use directly.
+                If provided, takes precedence over `model` string.
 
         Returns:
             ResponseSchema | str: The extracted information, `str` if no
@@ -566,11 +538,24 @@ class AgentBase(ABC):  # noqa: B024
             ```
         """
         _source = source or ImageSource(self._agent_os.screenshot())
-        _model = self._get_model(model, "get")
+        if get_model is not None:
+            # Use provided GetModel directly
+            from askui.utils.source_utils import load_source
+
+            # Extract PIL Image from ImageSource if needed
+            _input_source = (
+                _source.root if isinstance(_source, ImageSource) else _source
+            )
+            _loaded_source = load_source(_input_source)
+            return get_model.get(
+                query=query,
+                source=_loaded_source,
+                response_schema=response_schema,
+            )
+        # Use default get model
         return self._data_extractor.get(
             query=query,
             source=_source,
-            model=_model,
             response_schema=response_schema,
         )
 
@@ -578,24 +563,24 @@ class AgentBase(ABC):  # noqa: B024
     def _locate(
         self,
         locator: str | Locator,
+        locate_model: LocateModel,
         screenshot: Optional[InputSource] = None,
         retry: Optional[Retry] = None,
-        model: ModelComposition | str | None = None,
     ) -> PointList:
         def locate_with_screenshot() -> PointList:
             _screenshot = load_image_source(
                 self._agent_os.screenshot() if screenshot is None else screenshot
             )
-            return self._model_router.locate(
-                screenshot=_screenshot,
+
+            return locate_model.locate(
                 locator=locator,
-                model=self._get_model(model, "locate"),
+                image=_screenshot,
             )
 
         retry = retry or self._retry
         points = retry.attempt(locate_with_screenshot)
-        self._reporter.add_message("ModelRouter", f"locate {len(points)} elements")
-        logger.debug("ModelRouter locate: %d elements", len(points))
+        self._reporter.add_message("Agent", f"locate {len(points)} elements")
+        logger.debug("Agent locate: %d elements", len(points))
         return points
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
@@ -604,7 +589,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> Point:
         """
         Locates the first matching UI element identified by the provided locator.
@@ -616,8 +601,8 @@ class AgentBase(ABC):  # noqa: B024
                 locating the element. Can be a path to an image file, a PIL Image object
                 or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the `locator`.
+            locate_model (LocateModel | None, optional): The model instance to be used
+                for locating the element using the `locator`.
 
         Returns:
             Point: The coordinates of the element as a tuple (x, y).
@@ -636,7 +621,12 @@ class AgentBase(ABC):  # noqa: B024
             "VisionAgent received instruction to locate first matching element %s",
             locator,
         )
-        return self._locate(locator=locator, screenshot=screenshot, model=model)[0]
+        _locate_model = locate_model or self._default_locate_model
+        return self._locate(
+            locator=locator,
+            screenshot=screenshot,
+            locate_model=_locate_model,
+        )[0]
 
     @telemetry.record_call(exclude={"locator", "screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -644,7 +634,7 @@ class AgentBase(ABC):  # noqa: B024
         self,
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> PointList:
         """
         Locates all matching UI elements identified by the provided locator.
@@ -659,8 +649,8 @@ class AgentBase(ABC):  # noqa: B024
                 locating the element. Can be a path to an image file, a PIL Image object
                 or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the `locator`.
+            locate_model (LocateModel | None, optional): The model instance to be used
+                for locating the element using the `locator`.
 
         Returns:
             PointList: The coordinates of the elements as a list of tuples (x, y).
@@ -679,14 +669,18 @@ class AgentBase(ABC):  # noqa: B024
             "VisionAgent received instruction to locate all matching UI elements %s",
             locator,
         )
-        return self._locate(locator=locator, screenshot=screenshot, model=model)
+        _locate_model = locate_model or self._default_locate_model
+        return self._locate(
+            locator=locator,
+            screenshot=screenshot,
+            locate_model=_locate_model,
+        )
 
     @telemetry.record_call(exclude={"screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate_all_elements(
         self,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | None = None,
     ) -> list[DetectedElement]:
         """Locate all elements in the current screen using AskUI Models.
 
@@ -695,8 +689,6 @@ class AgentBase(ABC):  # noqa: B024
                 locating the elements. Can be a path to an image file, a PIL Image
                 object or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | None, optional): The model composition
-                 to be used for locating the elements.
 
         Returns:
             list[DetectedElement]: A list of detected elements
@@ -713,8 +705,8 @@ class AgentBase(ABC):  # noqa: B024
         _screenshot = load_image_source(
             self._agent_os.screenshot() if screenshot is None else screenshot
         )
-        return self._model_router.locate_all_elements(
-            image=_screenshot, model=model or ModelName.ASKUI
+        return self._default_locate_model.locate_all_elements(
+            image=_screenshot
         )
 
     @telemetry.record_call(exclude={"screenshot", "annotation_dir"})
@@ -723,7 +715,6 @@ class AgentBase(ABC):  # noqa: B024
         self,
         screenshot: InputSource | None = None,
         annotation_dir: str = "annotations",
-        model: ModelComposition | None = None,
     ) -> None:
         """Annotate the screenshot with the detected elements.
         Creates an interactive HTML file with the detected elements
@@ -737,9 +728,6 @@ class AgentBase(ABC):  # noqa: B024
                 If `None`, takes a screenshot of the currently selected display.
             annotation_dir (str): The directory to save the annotated
                 image. Defaults to "annotations".
-            model (ModelComposition | None, optional): The composition
-                of the model(s) to be used for annotating the image.
-                If `None`, uses the default model.
 
         Example Using VisionAgent:
             ```python
@@ -771,7 +759,6 @@ class AgentBase(ABC):  # noqa: B024
         self._reporter.add_message("User", "annotate screenshot with detected elements")
         detected_elements = self.locate_all_elements(
             screenshot=screenshot,
-            model=model,
         )
         annotated_html = AnnotationWriter(
             image=screenshot,
@@ -789,7 +776,7 @@ class AgentBase(ABC):  # noqa: B024
         retry_count: Optional[Annotated[int, Field(gt=0)]] = None,
         delay: Optional[Annotated[float, Field(gt=0.0)]] = None,
         until_condition: Literal["appear", "disappear"] = "appear",
-        model: ModelComposition | str | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Pauses execution or waits until a UI element appears or disappears.
@@ -805,9 +792,8 @@ class AgentBase(ABC):  # noqa: B024
                 waiting for a UI element. Defaults to 1 second if None.
             until_condition (Literal["appear", "disappear"]): The condition to wait
                 until the element satisfies. Defaults to "appear".
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the
-                `until` locator.
+            locate_model (LocateModel | None, optional): The locate model to use
+                for locating the element. If None, uses the default locate model.
 
         Raises:
             WaitUntilError: If the UI element is not found after all retries.
@@ -830,8 +816,9 @@ class AgentBase(ABC):  # noqa: B024
                 # Wait for a UI element to disappear
                 agent.wait("Loading spinner", until_condition="disappear")
 
-                # Wait using a specific model
-                agent.wait("Submit button", model="custom_model")
+                # Wait using a specific locate model
+                custom_model = CustomLocateModel(...)
+                agent.wait("Submit button", locate_model=custom_model)
             ```
         """
         if isinstance(until, float) or isinstance(until, int):
@@ -846,22 +833,23 @@ class AgentBase(ABC):  # noqa: B024
         delay = delay if delay is not None else 1
 
         if until_condition == "appear":
-            self._wait_for_appear(until, model, retry_count, delay)
+            self._wait_for_appear(until, locate_model, retry_count, delay)
         else:
-            self._wait_for_disappear(until, model, retry_count, delay)
+            self._wait_for_disappear(until, locate_model, retry_count, delay)
 
     def _wait_for_appear(
         self,
         locator: str | Locator,
-        model: ModelComposition | str | None,
+        locate_model: LocateModel | None,
         retry_count: int,
         delay: float,
     ) -> None:
         """Wait for an element to appear on screen."""
         try:
+            _locate_model = locate_model or self._default_locate_model
             self._locate(
                 locator,
-                model=model,
+                locate_model=_locate_model,
                 retry=ConfigurableRetry(
                     strategy="Fixed",
                     base_delay=int(delay * 1000),
@@ -884,16 +872,17 @@ class AgentBase(ABC):  # noqa: B024
     def _wait_for_disappear(
         self,
         locator: str | Locator,
-        model: ModelComposition | str | None,
+        locate_model: LocateModel | None,
         retry_count: int,
         delay: float,
     ) -> None:
         """Wait for an element to disappear from screen."""
         for i in range(retry_count):
             try:
+                _locate_model = locate_model or self._default_locate_model
                 self._locate(
                     locator,
-                    model=model,
+                    locate_model=_locate_model,
                     retry=ConfigurableRetry(
                         strategy="Fixed",
                         base_delay=int(delay * 1000),

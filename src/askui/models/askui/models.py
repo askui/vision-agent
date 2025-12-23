@@ -20,7 +20,6 @@ from askui.models.models import (
     DetectedElement,
     GetModel,
     LocateModel,
-    ModelComposition,
     ModelName,
     PointList,
 )
@@ -36,26 +35,32 @@ logger = logging.getLogger(__name__)
 
 
 class AskUiLocateModel(LocateModel):
+    # Default model - uses standard AskUI model
+    # This is a router model that can dispatch to different models based on model_name
+    model_name: str = ModelName.ASKUI
+
     def __init__(
         self,
         locator_serializer: AskUiLocatorSerializer,
         inference_api: AskUiInferenceApi,
+        model_name: str | None = None,
     ) -> None:
         self._locator_serializer = locator_serializer
         self._inference_api = inference_api
+        if model_name is not None:
+            self.model_name = model_name
 
     @override
     def locate(
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
     ) -> PointList:
-        if isinstance(model, ModelComposition) or model == ModelName.ASKUI:
+        model = self.model_name
+        if model == ModelName.ASKUI:
             logger.debug("Routing locate prediction to askui")
             locator = Text(locator) if isinstance(locator, str) else locator
-            _model = model if not isinstance(model, str) else None
-            return self._locate(locator, image, _model or ModelName.ASKUI)
+            return self._locate(locator, image)
         if not isinstance(locator, str):
             error_msg = (
                 f"Locators of type `{type(locator)}` are not supported for models "
@@ -65,7 +70,7 @@ class AskUiLocateModel(LocateModel):
             raise AutomationError(error_msg)
         if model == ModelName.ASKUI__PTA:
             logger.debug("Routing locate prediction to askui-pta")
-            return self._locate(Prompt(locator), image, model)
+            return self._locate(Prompt(locator), image)
         if model == ModelName.ASKUI__OCR:
             logger.debug("Routing locate prediction to askui-ocr")
             return self._locate_with_ocr(image, locator)
@@ -73,26 +78,25 @@ class AskUiLocateModel(LocateModel):
             logger.debug("Routing locate prediction to askui-combo")
             prompt_locator = Prompt(locator)
             try:
-                return self._locate(prompt_locator, image, model)
+                return self._locate(prompt_locator, image)
             except ElementNotFoundError:
                 return self._locate_with_ocr(image, locator)
         if model == ModelName.ASKUI__AI_ELEMENT:
             logger.debug("Routing click prediction to askui-ai-element")
             _locator = AiElement(locator)
-            return self._locate(_locator, image, model)
+            return self._locate(_locator, image)
         raise ModelNotFoundError(model, "locate")
 
     def _locate_with_ocr(
         self, screenshot: ImageSource, locator: str | Text
     ) -> PointList:
         locator = Text(locator) if isinstance(locator, str) else locator
-        return self._locate(locator, screenshot, model=ModelName.ASKUI__OCR)
+        return self._locate(locator, screenshot)
 
     def _locate(
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
     ) -> PointList:
         serialized_locator = (
             self._locator_serializer.serialize(locator=locator)
@@ -109,12 +113,6 @@ class AskUiLocateModel(LocateModel):
         }
         if "customElements" in serialized_locator:
             json["customElements"] = serialized_locator["customElements"]
-        if isinstance(model, ModelComposition):
-            json["modelComposition"] = model.model_dump(by_alias=True)
-            logger.debug(
-                "Model composition",
-                extra={"modelComposition": json_lib.dumps(json["modelComposition"])},
-            )
         response = self._inference_api.post(path="/inference", json=json)
         content = response.json()
         assert content["type"] == "DETECTED_ELEMENTS", (
@@ -136,21 +134,11 @@ class AskUiLocateModel(LocateModel):
     def locate_all_elements(
         self,
         image: ImageSource,
-        model: ModelComposition | str,
     ) -> list[DetectedElement]:
         request_body: dict[str, Any] = {
             "image": image.to_data_url(),
             "instruction": "get all elements",
         }
-
-        if isinstance(model, ModelComposition):
-            request_body["modelComposition"] = model.model_dump(by_alias=True)
-            logger.debug(
-                "Model composition",
-                extra={
-                    "modelComposition": json_lib.dumps(request_body["modelComposition"])
-                },
-            )
 
         response = self._inference_api.post(path="/inference", json=request_body)
         content = response.json()
@@ -170,25 +158,29 @@ class AskUiGetModel(GetModel):
     errors), it falls back to using the AskUI Inference API.
     """
 
+    model_name: str = ModelName.ASKUI  # Fixed model name for this implementation
+
     def __init__(
         self,
         google_genai_api: AskUiGoogleGenAiApi,
         inference_api: AskUiInferenceApi,
+        model_name: str | None = None,
     ) -> None:
         self._google_genai_api = google_genai_api
         self._inference_api = inference_api
+        if model_name is not None:
+            self.model_name = model_name
 
     def _get_vqa(
         self,
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
             err_msg = (
                 f"PDF or Office Document processing is not supported for the model: "
-                f"{model}"
+                f"{self.model_name}"
             )
             raise NotImplementedError(err_msg)
         json: dict[str, Any] = {
@@ -214,7 +206,6 @@ class AskUiGetModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
     ) -> ResponseSchema | str:
         try:
             logger.debug("Attempting to use Google GenAI API")
@@ -222,7 +213,7 @@ class AskUiGetModel(GetModel):
                 query=query,
                 source=source,
                 response_schema=response_schema,
-                model=model,
+                model=self.model_name,
             )
         except (
             ClientError,
@@ -243,5 +234,4 @@ class AskUiGetModel(GetModel):
                 query=query,
                 source=source,
                 response_schema=response_schema,
-                model=model,
             )
