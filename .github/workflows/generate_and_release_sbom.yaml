@@ -1,0 +1,42 @@
+name: Generate and Release SBOM
+
+on:
+  workflow_call:
+
+jobs:
+  generate-and-release-sbom:
+    name: Generate and Release SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Extract version from __init__.py
+        id: version
+        run: |
+          VERSION=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/askui/__init__.py)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Load secret
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SOLUTIONS_ENGINEER_SERVICE_ACCOUNT_TOKEN }}
+          DT_API_KEY: "op://github-ci-solutions-engineer-team/DependencyTrack-API-KEY/API-KEY"
+
+      - uses: pdm-project/setup-pdm@v4
+        with:
+            cache: true
+      - run: pdm install
+      - run: pdm run generate:SBOM
+
+      - name: Upload SBOM to Dependency Track
+        uses: askui/action-sbom-deploy@main
+        with:
+          apiKey: ${{ env.DT_API_KEY }}
+          projectName: "AskUI-Python-SDK"
+          projectVersion: '${{ steps.version.outputs.version }}'
+          baseTags: 'AskUI-Python-SDK,Solutions-Engineer-Team,public_api'
+          bomFilename: 'bom.json'

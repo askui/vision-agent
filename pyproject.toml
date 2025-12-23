@@ -66,6 +66,7 @@ lint = "ruff check src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy ."
 "chat:api" = "python -m askui.chat"
+"generate:SBOM" = "cyclonedx-py environment --pyproject ./pyproject.toml  --output-format JSON --output-file bom.json --spec-version 1.7 --gather-license-texts "
 "qa:fix" = { composite = [
     "typecheck:all",
     "format",
@@ -95,6 +96,7 @@ dev = [
     "datamodel-code-generator>=0.31.2",
     "grpcio-tools>=1.73.1",
     "types-aiofiles>=24.1.0.20250822",
+    "cyclonedx-bom>=7.2.1",
 ]
 
 

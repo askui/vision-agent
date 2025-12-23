@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "bedrock", "chat", "dev", "pynput", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:bceafb533a2ba147d58188facea3b328fbe5bf1adf15fa8af86950f7a65a1cf0"
+content_hash = "sha256:e550e42ac1cd3060d41e6bc427581badcc9cc332f2b367ceda143dcc2c21b956"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.14"
@@ -135,6 +135,22 @@ files = [
 ]
 
 [[package]]
+name = "arrow"
+version = "1.4.0"
+requires_python = ">=3.8"
+summary = "Better dates & times for Python"
+groups = ["dev"]
+dependencies = [
+    "backports-zoneinfo==0.2.1; python_version < \"3.9\"",
+    "python-dateutil>=2.7.0",
+    "tzdata; python_version >= \"3.9\"",
+]
+files = [
+    {file = "arrow-1.4.0-py3-none-any.whl", hash = "sha256:749f0769958ebdc79c173ff0b0670d59051a535fa26e8eba02953dc19eb43205"},
+    {file = "arrow-1.4.0.tar.gz", hash = "sha256:ed0cc050e98001b8779e84d461b0098c4ac597e88704a655582b21d116e526d7"},
+]
+
+[[package]]
 name = "asgi-correlation-id"
 version = "4.3.4"
 requires_python = "<4.0,>=3.8"
@@ -183,7 +199,7 @@ name = "attrs"
 version = "25.3.0"
 requires_python = ">=3.8"
 summary = "Classes Without Boilerplate"
-groups = ["default"]
+groups = ["default", "dev"]
 files = [
     {file = "attrs-25.3.0-py3-none-any.whl", hash = "sha256:427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3"},
     {file = "attrs-25.3.0.tar.gz", hash = "sha256:75d7cefc7fb576747b2c81b4442d4d4a1ce0900973527c011d1030fd3bf4af1b"},
@@ -276,6 +292,16 @@ files = [
     {file = "black-25.9.0-cp313-cp313-win_amd64.whl", hash = "sha256:846d58e3ce7879ec1ffe816bb9df6d006cd9590515ed5d17db14e17666b2b357"},
     {file = "black-25.9.0-py3-none-any.whl", hash = "sha256:474b34c1342cdc157d307b56c4c65bce916480c4a8f6551fdc6bf9b486a7c4ae"},
     {file = "black-25.9.0.tar.gz", hash = "sha256:0474bca9a0dd1b51791fcc507a4e02078a1c63f6d4e4ae5544b9848c7adfb619"},
+]
+
+[[package]]
+name = "boolean-py"
+version = "5.0"
+summary = "Define boolean algebras, create and parse boolean expressions and create custom boolean DSL."
+groups = ["dev"]
+files = [
+    {file = "boolean_py-5.0-py3-none-any.whl", hash = "sha256:ef28a70bd43115208441b53a045d1549e2f0ec6e3d08a9d142cbc41c1938e8d9"},
+    {file = "boolean_py-5.0.tar.gz", hash = "sha256:60cbc4bad079753721d32649545505362c754e121570ada4658b852a3a318d95"},
 ]
 
 [[package]]
@@ -429,6 +455,17 @@ files = [
     {file = "cffi-2.0.0-cp314-cp314t-win_amd64.whl", hash = "sha256:d68b6cef7827e8641e8ef16f4494edda8b36104d79773a334beaa1e3521430f6"},
     {file = "cffi-2.0.0-cp314-cp314t-win_arm64.whl", hash = "sha256:0a1527a803f0a659de1af2e1fd700213caba79377e27e4693648c2923da066f9"},
     {file = "cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529"},
+]
+
+[[package]]
+name = "chardet"
+version = "5.2.0"
+requires_python = ">=3.7"
+summary = "Universal encoding detector for Python 3"
+groups = ["dev"]
+files = [
+    {file = "chardet-5.2.0-py3-none-any.whl", hash = "sha256:e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970"},
+    {file = "chardet-5.2.0.tar.gz", hash = "sha256:1b3b6ff479a8c414bc3fa2c0852995695c4a026dcd6d0633b2dd092ca39c1cf7"},
 ]
 
 [[package]]
@@ -825,6 +862,61 @@ files = [
 ]
 
 [[package]]
+name = "cyclonedx-bom"
+version = "7.2.1"
+requires_python = "<4.0,>=3.9"
+summary = "CycloneDX Software Bill of Materials (SBOM) generator for Python projects and environments"
+groups = ["dev"]
+dependencies = [
+    "chardet<6.0,>=5.1",
+    "cyclonedx-python-lib[validation]<12,>=8.0",
+    "packageurl-python<2,>=0.11",
+    "packaging<26,>=22",
+    "pip-requirements-parser<33.0,>=32.0",
+    "tomli<3.0.0,>=2.0.1; python_version < \"3.11\"",
+]
+files = [
+    {file = "cyclonedx_bom-7.2.1-py3-none-any.whl", hash = "sha256:fdeabfec4f3274085320a40d916fc4dc2850abef7da5953d544eb5c98aa4afdd"},
+    {file = "cyclonedx_bom-7.2.1.tar.gz", hash = "sha256:ead9923a23c71426bcc83ea371c87945b85f76c31728625dde35ecfe0fa2e712"},
+]
+
+[[package]]
+name = "cyclonedx-python-lib"
+version = "11.6.0"
+requires_python = "<4.0,>=3.9"
+summary = "Python library for CycloneDX"
+groups = ["dev"]
+dependencies = [
+    "license-expression<31,>=30",
+    "packageurl-python<2,>=0.11",
+    "py-serializable<3.0.0,>=2.1.0",
+    "sortedcontainers<3.0.0,>=2.4.0",
+    "typing-extensions<5.0,>=4.6; python_version < \"3.13\"",
+]
+files = [
+    {file = "cyclonedx_python_lib-11.6.0-py3-none-any.whl", hash = "sha256:94f4aae97db42a452134dafdddcfab9745324198201c4777ed131e64c8380759"},
+    {file = "cyclonedx_python_lib-11.6.0.tar.gz", hash = "sha256:7fb85a4371fa3a203e5be577ac22b7e9a7157f8b0058b7448731474d6dea7bf0"},
+]
+
+[[package]]
+name = "cyclonedx-python-lib"
+version = "11.6.0"
+extras = ["validation"]
+requires_python = "<4.0,>=3.9"
+summary = "Python library for CycloneDX"
+groups = ["dev"]
+dependencies = [
+    "cyclonedx-python-lib==11.6.0",
+    "jsonschema[format-nongpl]<5.0,>=4.25",
+    "lxml<7,>=4",
+    "referencing>=0.28.4",
+]
+files = [
+    {file = "cyclonedx_python_lib-11.6.0-py3-none-any.whl", hash = "sha256:94f4aae97db42a452134dafdddcfab9745324198201c4777ed131e64c8380759"},
+    {file = "cyclonedx_python_lib-11.6.0.tar.gz", hash = "sha256:7fb85a4371fa3a203e5be577ac22b7e9a7157f8b0058b7448731474d6dea7bf0"},
+]
+
+[[package]]
 name = "cyclopts"
 version = "3.24.0"
 requires_python = ">=3.9"
@@ -870,7 +962,7 @@ name = "defusedxml"
 version = "0.7.1"
 requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 summary = "XML bomb protection for Python stdlib modules"
-groups = ["default"]
+groups = ["default", "dev"]
 files = [
     {file = "defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61"},
     {file = "defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69"},
@@ -1052,6 +1144,20 @@ marker = "sys_platform == \"win32\" or python_version > \"3.9\""
 files = [
     {file = "flatbuffers-25.9.23-py2.py3-none-any.whl", hash = "sha256:255538574d6cb6d0a79a17ec8bc0d30985913b87513a01cce8bcdb6b4c44d0e2"},
     {file = "flatbuffers-25.9.23.tar.gz", hash = "sha256:676f9fa62750bb50cf531b42a0a2a118ad8f7f797a511eda12881c016f093b12"},
+]
+
+[[package]]
+name = "fqdn"
+version = "1.5.1"
+requires_python = ">=2.7, !=3.0, !=3.1, !=3.2, !=3.3, !=3.4, <4"
+summary = "Validates fully-qualified domain names against RFC 1123, so that they are acceptable to modern bowsers"
+groups = ["dev"]
+dependencies = [
+    "cached-property>=1.3.0; python_version < \"3.8\"",
+]
+files = [
+    {file = "fqdn-1.5.1-py3-none-any.whl", hash = "sha256:3a179af3761e4df6eb2e026ff9e1a3033d3587bf980a0b1b2e1e5d08d7358014"},
+    {file = "fqdn-1.5.1.tar.gz", hash = "sha256:105ed3677e767fb5ca086a0c1f4bb66ebc3c100be518f0e0d755d9eae164d89f"},
 ]
 
 [[package]]
@@ -1707,7 +1813,7 @@ name = "idna"
 version = "3.10"
 requires_python = ">=3.6"
 summary = "Internationalized Domain Names in Applications (IDNA)"
-groups = ["default", "all", "bedrock", "chat", "vertex"]
+groups = ["default", "all", "bedrock", "chat", "dev", "vertex"]
 files = [
     {file = "idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3"},
     {file = "idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9"},
@@ -1764,6 +1870,20 @@ groups = ["default"]
 files = [
     {file = "isodate-0.7.2-py3-none-any.whl", hash = "sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15"},
     {file = "isodate-0.7.2.tar.gz", hash = "sha256:4cd1aa0f43ca76f4a6c6c0292a85f40b35ec2e43e315b59f06e6d32171a953e6"},
+]
+
+[[package]]
+name = "isoduration"
+version = "20.11.0"
+requires_python = ">=3.7"
+summary = "Operations with ISO 8601 durations"
+groups = ["dev"]
+dependencies = [
+    "arrow>=0.15.0",
+]
+files = [
+    {file = "isoduration-20.11.0-py3-none-any.whl", hash = "sha256:b2904c2a4228c3d44f409c8ae8e2370eb21a26f7ac2ec5446df141dde3452042"},
+    {file = "isoduration-20.11.0.tar.gz", hash = "sha256:ac2f9015137935279eac671f94f89eb00584f940f5dc49462a0c4ee692ba1bd9"},
 ]
 
 [[package]]
@@ -1877,6 +1997,17 @@ files = [
 ]
 
 [[package]]
+name = "jsonpointer"
+version = "3.0.0"
+requires_python = ">=3.7"
+summary = "Identify specific nodes in a JSON document (RFC 6901) "
+groups = ["dev"]
+files = [
+    {file = "jsonpointer-3.0.0-py2.py3-none-any.whl", hash = "sha256:13e088adc14fca8b6aa8177c044e12701e6ad4b28ff10e65f2267a90109c9942"},
+    {file = "jsonpointer-3.0.0.tar.gz", hash = "sha256:2b2d729f2091522d61c3b31f82e11870f60b68f43fbc705cb76bf4b832af59ef"},
+]
+
+[[package]]
 name = "jsonref"
 version = "1.1.0"
 requires_python = ">=3.7"
@@ -1892,7 +2023,7 @@ name = "jsonschema"
 version = "4.25.1"
 requires_python = ">=3.9"
 summary = "An implementation of JSON Schema validation for Python"
-groups = ["default"]
+groups = ["default", "dev"]
 dependencies = [
     "attrs>=22.2.0",
     "jsonschema-specifications>=2023.03.6",
@@ -1926,13 +2057,48 @@ name = "jsonschema-specifications"
 version = "2025.9.1"
 requires_python = ">=3.9"
 summary = "The JSON Schema meta-schemas and vocabularies, exposed as a Registry"
-groups = ["default"]
+groups = ["default", "dev"]
 dependencies = [
     "referencing>=0.31.0",
 ]
 files = [
     {file = "jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe"},
     {file = "jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d"},
+]
+
+[[package]]
+name = "jsonschema"
+version = "4.25.1"
+extras = ["format-nongpl"]
+requires_python = ">=3.9"
+summary = "An implementation of JSON Schema validation for Python"
+groups = ["dev"]
+dependencies = [
+    "fqdn",
+    "idna",
+    "isoduration",
+    "jsonpointer>1.13",
+    "jsonschema==4.25.1",
+    "rfc3339-validator",
+    "rfc3986-validator>0.1.0",
+    "rfc3987-syntax>=1.1.0",
+    "uri-template",
+    "webcolors>=24.6.0",
+]
+files = [
+    {file = "jsonschema-4.25.1-py3-none-any.whl", hash = "sha256:3fba0169e345c7175110351d456342c364814cfcf3b964ba4587f22915230a63"},
+    {file = "jsonschema-4.25.1.tar.gz", hash = "sha256:e4a9655ce0da0c0b67a085847e00a3a51449e1157f4f75e9fb5aa545e122eb85"},
+]
+
+[[package]]
+name = "lark"
+version = "1.3.1"
+requires_python = ">=3.8"
+summary = "a modern parsing library"
+groups = ["dev"]
+files = [
+    {file = "lark-1.3.1-py3-none-any.whl", hash = "sha256:c629b661023a014c37da873b4ff58a817398d12635d3bbb2c5a03be7fe5d1e12"},
+    {file = "lark-1.3.1.tar.gz", hash = "sha256:b426a7a6d6d53189d318f2b6236ab5d6429eaf09259f1ca33eb716eed10d2905"},
 ]
 
 [[package]]
@@ -1983,11 +2149,25 @@ files = [
 ]
 
 [[package]]
+name = "license-expression"
+version = "30.4.4"
+requires_python = ">=3.9"
+summary = "license-expression is a comprehensive utility library to parse, compare, simplify and normalize license expressions (such as SPDX license expressions) using boolean logic."
+groups = ["dev"]
+dependencies = [
+    "boolean-py>=4.0",
+]
+files = [
+    {file = "license_expression-30.4.4-py3-none-any.whl", hash = "sha256:421788fdcadb41f049d2dc934ce666626265aeccefddd25e162a26f23bcbf8a4"},
+    {file = "license_expression-30.4.4.tar.gz", hash = "sha256:73448f0aacd8d0808895bdc4b2c8e01a8d67646e4188f887375398c761f340fd"},
+]
+
+[[package]]
 name = "lxml"
 version = "6.0.2"
 requires_python = ">=3.8"
 summary = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
-groups = ["default"]
+groups = ["default", "dev"]
 files = [
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e77dd455b9a16bbd2a5036a63ddbd479c19572af81b624e79ef422f929eef388"},
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5d444858b9f07cefff6455b983aea9a67f7462ba1f6cbe4a21e8bf6791bf2153"},
@@ -2816,6 +2996,17 @@ files = [
 ]
 
 [[package]]
+name = "packageurl-python"
+version = "0.17.6"
+requires_python = ">=3.8"
+summary = "A purl aka. Package URL parser and builder"
+groups = ["dev"]
+files = [
+    {file = "packageurl_python-0.17.6-py3-none-any.whl", hash = "sha256:31a85c2717bc41dd818f3c62908685ff9eebcb68588213745b14a6ee9e7df7c9"},
+    {file = "packageurl_python-0.17.6.tar.gz", hash = "sha256:1252ce3a102372ca6f86eb968e16f9014c4ba511c5c37d95a7f023e2ca6e5c25"},
+]
+
+[[package]]
 name = "packaging"
 version = "25.0"
 requires_python = ">=3.8"
@@ -3015,6 +3206,21 @@ files = [
 ]
 
 [[package]]
+name = "pip-requirements-parser"
+version = "32.0.1"
+requires_python = ">=3.6.0"
+summary = "pip requirements parser - a mostly correct pip requirements parsing library because it uses pip's own code."
+groups = ["dev"]
+dependencies = [
+    "packaging",
+    "pyparsing",
+]
+files = [
+    {file = "pip-requirements-parser-32.0.1.tar.gz", hash = "sha256:b4fa3a7a0be38243123cf9d1f3518da10c51bdb165a2b2985566247f9155a7d3"},
+    {file = "pip_requirements_parser-32.0.1-py3-none-any.whl", hash = "sha256:4659bc2a667783e7a15d190f6fccf8b2486685b6dba4c19c3876314769c57526"},
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.4.0"
 requires_python = ">=3.9"
@@ -3133,6 +3339,20 @@ dependencies = [
 files = [
     {file = "py-machineid-0.8.0.tar.gz", hash = "sha256:5515d5f9779073d0caa2e8aaf15a0fdd0ad4247fd0b86d9c447431c96d3e3467"},
     {file = "py_machineid-0.8.0-py3-none-any.whl", hash = "sha256:fddf06c5f4e87759a74128117c50e5604cddcef6bcc1728b697924c49b5f6e79"},
+]
+
+[[package]]
+name = "py-serializable"
+version = "2.1.0"
+requires_python = "<4.0,>=3.8"
+summary = "Library for serializing and deserializing Python Objects to and from JSON and XML."
+groups = ["dev"]
+dependencies = [
+    "defusedxml<0.8.0,>=0.7.1",
+]
+files = [
+    {file = "py_serializable-2.1.0-py3-none-any.whl", hash = "sha256:b56d5d686b5a03ba4f4db5e769dc32336e142fc3bd4d68a8c25579ebb0a67304"},
+    {file = "py_serializable-2.1.0.tar.gz", hash = "sha256:9d5db56154a867a9b897c0163b33a793c804c80cee984116d02d49e4578fc103"},
 ]
 
 [[package]]
@@ -3473,6 +3693,17 @@ files = [
 ]
 
 [[package]]
+name = "pyparsing"
+version = "3.3.1"
+requires_python = ">=3.9"
+summary = "pyparsing - Classes and methods to define and execute parsing grammars"
+groups = ["dev"]
+files = [
+    {file = "pyparsing-3.3.1-py3-none-any.whl", hash = "sha256:023b5e7e5520ad96642e2c6db4cb683d3970bd640cdf7115049a6e9c3682df82"},
+    {file = "pyparsing-3.3.1.tar.gz", hash = "sha256:47fad0f17ac1e2cad3de3b458570fbc9b03560aa029ed5e16ee5554da9a2251c"},
+]
+
+[[package]]
 name = "pyperclip"
 version = "1.10.0"
 summary = "A cross-platform clipboard module for Python. (Only handles plain text for now.)"
@@ -3594,7 +3825,7 @@ name = "python-dateutil"
 version = "2.9.0.post0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Extensions to the standard Python datetime module"
-groups = ["default", "all", "bedrock", "vertex"]
+groups = ["default", "all", "bedrock", "dev", "vertex"]
 dependencies = [
     "six>=1.5",
 ]
@@ -3735,7 +3966,7 @@ name = "referencing"
 version = "0.36.2"
 requires_python = ">=3.9"
 summary = "JSON Referencing + Python"
-groups = ["default"]
+groups = ["default", "dev"]
 dependencies = [
     "attrs>=22.2.0",
     "rpds-py>=0.7.0",
@@ -3768,13 +3999,38 @@ name = "rfc3339-validator"
 version = "0.1.4"
 requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 summary = "A pure python RFC3339 validator"
-groups = ["default"]
+groups = ["default", "dev"]
 dependencies = [
     "six",
 ]
 files = [
     {file = "rfc3339_validator-0.1.4-py2.py3-none-any.whl", hash = "sha256:24f6ec1eda14ef823da9e36ec7113124b39c04d50a4d3d3a3c2859577e7791fa"},
     {file = "rfc3339_validator-0.1.4.tar.gz", hash = "sha256:138a2abdf93304ad60530167e51d2dfb9549521a836871b88d7f4695d0022f6b"},
+]
+
+[[package]]
+name = "rfc3986-validator"
+version = "0.1.1"
+requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+summary = "Pure python rfc3986 validator"
+groups = ["dev"]
+files = [
+    {file = "rfc3986_validator-0.1.1-py2.py3-none-any.whl", hash = "sha256:2f235c432ef459970b4306369336b9d5dbdda31b510ca1e327636e01f528bfa9"},
+    {file = "rfc3986_validator-0.1.1.tar.gz", hash = "sha256:3d44bde7921b3b9ec3ae4e3adca370438eccebc676456449b145d533b240d055"},
+]
+
+[[package]]
+name = "rfc3987-syntax"
+version = "1.1.0"
+requires_python = ">=3.9"
+summary = "Helper functions to syntactically validate strings according to RFC 3987."
+groups = ["dev"]
+dependencies = [
+    "lark>=1.2.2",
+]
+files = [
+    {file = "rfc3987_syntax-1.1.0-py3-none-any.whl", hash = "sha256:6c3d97604e4c5ce9f714898e05401a0445a641cfa276432b0a648c80856f6a3f"},
+    {file = "rfc3987_syntax-1.1.0.tar.gz", hash = "sha256:717a62cbf33cffdd16dfa3a497d81ce48a660ea691b1ddd7be710c22f00b4a0d"},
 ]
 
 [[package]]
@@ -3812,7 +4068,7 @@ name = "rpds-py"
 version = "0.27.1"
 requires_python = ">=3.9"
 summary = "Python bindings to Rust's persistent data structures (rpds)"
-groups = ["default"]
+groups = ["default", "dev"]
 files = [
     {file = "rpds_py-0.27.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:68afeec26d42ab3b47e541b272166a0b4400313946871cba3ed3a4fc0cab1cef"},
     {file = "rpds_py-0.27.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:74e5b2f7bb6fa38b1b10546d27acbacf2a022a8b5543efb06cfebc72a59c85be"},
@@ -4102,7 +4358,7 @@ name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 summary = "Python 2 and 3 compatibility utilities"
-groups = ["default", "all", "bedrock", "pynput", "vertex"]
+groups = ["default", "all", "bedrock", "dev", "pynput", "vertex"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
@@ -4117,6 +4373,16 @@ groups = ["default", "all", "bedrock", "chat", "vertex"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+summary = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+groups = ["dev"]
+files = [
+    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 
 [[package]]
@@ -4490,10 +4756,21 @@ name = "tzdata"
 version = "2025.2"
 requires_python = ">=2"
 summary = "Provider of IANA time zone data"
-groups = ["default"]
+groups = ["default", "dev"]
 files = [
     {file = "tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8"},
     {file = "tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9"},
+]
+
+[[package]]
+name = "uri-template"
+version = "1.3.0"
+requires_python = ">=3.7"
+summary = "RFC 6570 URI Template Processor"
+groups = ["dev"]
+files = [
+    {file = "uri-template-1.3.0.tar.gz", hash = "sha256:0e00f8eb65e18c7de20d595a14336e9f337ead580c70934141624b6d1ffdacc7"},
+    {file = "uri_template-1.3.0-py3-none-any.whl", hash = "sha256:a44a133ea12d44a0c0f06d7d42a52d71282e77e2f937d8abd5655b8d56fc1363"},
 ]
 
 [[package]]
@@ -4521,6 +4798,17 @@ dependencies = [
 files = [
     {file = "uvicorn-0.37.0-py3-none-any.whl", hash = "sha256:913b2b88672343739927ce381ff9e2ad62541f9f8289664fa1d1d3803fa2ce6c"},
     {file = "uvicorn-0.37.0.tar.gz", hash = "sha256:4115c8add6d3fd536c8ee77f0e14a7fd2ebba939fed9b02583a97f80648f9e13"},
+]
+
+[[package]]
+name = "webcolors"
+version = "25.10.0"
+requires_python = ">=3.10"
+summary = "A library for working with the color formats defined by HTML and CSS."
+groups = ["dev"]
+files = [
+    {file = "webcolors-25.10.0-py3-none-any.whl", hash = "sha256:032c727334856fc0b968f63daa252a1ac93d33db2f5267756623c210e57a4f1d"},
+    {file = "webcolors-25.10.0.tar.gz", hash = "sha256:62abae86504f66d0f6364c2a8520de4a0c47b80c03fc3a5f1815fedbef7c19bf"},
 ]
 
 [[package]]

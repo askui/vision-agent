@@ -168,3 +168,4 @@ reports/
 /askui_chat.db
 .cache/
 
+bom.json
