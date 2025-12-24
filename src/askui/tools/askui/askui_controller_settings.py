@@ -164,7 +164,7 @@ class AskUiControllerSettings(BaseSettings):
             return None
 
         component_registry = AskUiComponentRegistry.model_validate_json(
-            self.component_registry_file.read_text()
+            self.component_registry_file.read_text(encoding="utf-8")
         )
         return (
             component_registry.installed_packages.remote_device_controller_uuid.executables.askui_remote_device_controller  # noqa: E501

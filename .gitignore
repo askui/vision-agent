@@ -129,6 +129,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.tmp
 
 # Spyder project settings
 .spyderproject
@@ -167,3 +168,4 @@ reports/
 /askui_chat.db
 .cache/
 
+bom.json
