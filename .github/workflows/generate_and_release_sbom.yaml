@@ -41,6 +41,7 @@ jobs:
           apiKey: ${{ env.DT_API_KEY }}
           projectName: "askui-python-sdk"
           projectVersion: '${{ steps.version.outputs.version }}'
-          baseTags: 'askui-python-sdk,solutions-engineer-team,public_api'
+          projectTags: 'askui-python-sdk,solutions-engineer-team,public_api'
           bomFilename: 'bom.json'
+          autocreate: 'true'
           isLatestProjectVersion: 'true'
