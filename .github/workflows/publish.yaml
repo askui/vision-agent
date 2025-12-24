@@ -24,3 +24,4 @@ jobs:
     needs: pypi-publish
     name: Generate and Release SBOM
     uses: ./.github/workflows/generate_and_release_sbom.yaml
+    secrets: inherit
