@@ -1,6 +1,7 @@
 name: Generate and Release SBOM
 
 on:
+  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -25,6 +26,7 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SOLUTIONS_ENGINEER_SERVICE_ACCOUNT_TOKEN }}
           DT_API_KEY: "op://github-ci-solutions-engineer-team/DependencyTrack-API-KEY/API-KEY"
+          DT_SERVER_URL: "op://github-ci-solutions-engineer-team/DependencyTrack-API-KEY/SERVER-URL"
 
       - uses: pdm-project/setup-pdm@v4
         with:
@@ -33,10 +35,12 @@ jobs:
       - run: pdm run generate:SBOM
 
       - name: Upload SBOM to Dependency Track
-        uses: askui/action-sbom-deploy@main
+        uses: mlikasam-askui/dt-gh-upload-sbom@master
         with:
+          serverUrl: ${{ env.DT_SERVER_URL }}
           apiKey: ${{ env.DT_API_KEY }}
-          projectName: "AskUI-Python-SDK"
+          projectName: "askui-python-sdk"
           projectVersion: '${{ steps.version.outputs.version }}'
-          baseTags: 'AskUI-Python-SDK,Solutions-Engineer-Team,public_api'
+          baseTags: 'askui-python-sdk,solutions-engineer-team,public_api'
           bomFilename: 'bom.json'
+          isLatestProjectVersion: 'true'
