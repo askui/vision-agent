@@ -44,13 +44,11 @@ async def create_scheduled_job(
 @router.get("")
 async def list_scheduled_jobs(
     askui_workspace: Annotated[WorkspaceId, Header()],
-    query: ListQuery = ListQueryDep,
     scheduled_job_service: ScheduledJobService = ScheduledJobServiceDep,
 ) -> ListResponse[ScheduledJob]:
     """List scheduled jobs with optional status filter."""
     return await scheduled_job_service.list_(
         workspace_id=askui_workspace,
-        query=query,
     )
 
 

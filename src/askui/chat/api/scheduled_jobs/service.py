@@ -77,7 +77,6 @@ class ScheduledJobService:
     async def list_(
         self,
         workspace_id: WorkspaceId,
-        query: ListQuery,  # noqa: ARG002
     ) -> ListResponse[ScheduledJob]:
         """
         List pending scheduled jobs.
@@ -90,9 +89,6 @@ class ScheduledJobService:
             ListResponse[ScheduledJob]: Paginated list of pending scheduled jobs.
         """
         jobs = await self._get_pending_jobs(workspace_id)
-
-        # TODO(scheduled-jobs): Implement pagination
-        # TODO(scheduled-jobs): Implement sorting
 
         return ListResponse(
             data=jobs,

@@ -8,10 +8,8 @@ the APScheduler instance as a singleton to ensure jobs persist across requests.
 import logging
 from typing import Any
 
-from apscheduler import AsyncScheduler  # type: ignore[import-untyped]
-from apscheduler.datastores.sqlalchemy import (
-    SQLAlchemyDataStore,  # type: ignore[import-untyped]
-)
+from apscheduler import AsyncScheduler
+from apscheduler.datastores.sqlalchemy import SQLAlchemyDataStore
 
 from askui.chat.api.db.engine import engine
 
