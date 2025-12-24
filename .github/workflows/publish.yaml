@@ -21,4 +21,6 @@ jobs:
       - name: Publish package distributions to PyPI
         run: pdm publish
   generate-and-release-sbom:
+    needs: pypi-publish
+    name: Generate and Release SBOM
     uses: ./.github/workflows/generate_and_release_sbom.yaml
