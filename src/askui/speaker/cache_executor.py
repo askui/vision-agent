@@ -291,11 +291,14 @@ class CacheExecutor(Speaker):
                 TextBlockParam(
                     type="text",
                     text=(
-                        "The cached trajectory execution has completed. "
-                        "Please verify if the execution correctly achieved "
-                        "the target system state. "
-                        "Use the verify_cache_execution tool to report "
-                        "your verification result."
+                        "[CACHE EXECUTION COMPLETED]\n\n"
+                        "The CacheExecutor has automatically executed"
+                        f" {len(self._trajectory)} steps from the cached trajectory"
+                        f" '{self._cache_file_path}'. All previous tool calls in this"
+                        f" conversation were replayed from cache, not performed by the"
+                        f" agent.\n\n Please verify if the cached execution correctly"
+                        " achieved the target system state using the"
+                        " verify_cache_execution tool."
                     ),
                 )
             ],

@@ -12,7 +12,6 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.exceptions import ElementNotFoundError, QueryNoResponseError
 from askui.models.models import (
-    ActModel,
     GetModel,
     LocateModel,
     PointList,
@@ -109,7 +108,7 @@ class UiTarsApiHandlerSettings(BaseSettings):
     )
 
 
-class UiTarsApiHandler(ActModel, LocateModel, GetModel):
+class UiTarsApiHandler(LocateModel, GetModel):
     model_name: str = "tars"  # Fixed model name for UI-TARS
 
     def __init__(
