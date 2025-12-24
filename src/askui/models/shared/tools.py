@@ -165,6 +165,15 @@ class Tool(BaseModel, ABC):
         default_factory=_default_input_schema,
         description="JSON schema for tool parameters",
     )
+    is_cacheable: bool = Field(
+        default=True,
+        description=(
+            "Whether this tool's execution can be cached. "
+            "Set to False for tools with side effects that shouldn't be repeated "
+            "(e.g., print/output/notification/external API tools with state changes). "
+            "Default: True."
+        ),
+    )
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
@@ -340,6 +349,14 @@ class ToolCollection:
         for tool in tools:
             self._tool_map[tool.to_params()["name"]] = tool
         return self
+
+    def get_tools(self) -> dict[str, Tool]:
+        """Get all tools in the collection.
+
+        Returns:
+            Dictionary mapping tool names to Tool instances
+        """
+        return dict(self._tool_map)
 
     def reset_tools(self, tools: list[Tool] | None = None) -> "Self":
         """Reset the tools in the collection with new tools."""

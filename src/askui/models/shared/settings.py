@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
@@ -8,10 +11,13 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
+from askui.models.shared.agent_message_param import ToolUseBlockParam, UsageParam
+
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
 CACHING_STRATEGY = Literal["read", "write", "both", "no"]
+CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
 
 
 class MessageSettings(BaseModel):
@@ -35,6 +41,10 @@ class CachedExecutionToolSettings(BaseModel):
     delay_time_between_action: float = 0.5
 
 
+class CacheWriterSettings(BaseModel):
+    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
+
+
 class CachingSettings(BaseModel):
     strategy: CACHING_STRATEGY = "no"
     cache_dir: str = ".cache"
@@ -42,3 +52,31 @@ class CachingSettings(BaseModel):
     execute_cached_trajectory_tool_settings: CachedExecutionToolSettings = (
         CachedExecutionToolSettings()
     )
+    cache_writer_settings: CacheWriterSettings = CacheWriterSettings()
+
+
+class CacheFailure(BaseModel):
+    timestamp: datetime
+    step_index: int
+    error_message: str
+    failure_count_at_step: int
+
+
+class CacheMetadata(BaseModel):
+    version: str = "0.1"
+    created_at: datetime
+    goal: Optional[str] = None
+    last_executed_at: Optional[datetime] = None
+    token_usage: UsageParam | None = None
+    execution_attempts: int = 0
+    failures: list[CacheFailure] = Field(default_factory=list)
+    is_valid: bool = True
+    invalidation_reason: Optional[str] = None
+
+
+class CacheFile(BaseModel):
+    """Cache file structure (v0.1) wrapping trajectory with metadata."""
+
+    metadata: CacheMetadata
+    trajectory: list[ToolUseBlockParam]
+    cache_parameters: dict[str, str] = Field(default_factory=dict)

@@ -7,7 +7,8 @@ from typing import Any
 
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.utils.cache_writer import CacheWriter
+from askui.models.shared.settings import CacheFile, CacheWriterSettings
+from askui.utils.caching.cache_writer import CacheWriter
 
 
 def test_cache_writer_initialization() -> None:
@@ -138,10 +139,16 @@ def test_cache_writer_detects_cached_execution() -> None:
 
 
 def test_cache_writer_generate_writes_file() -> None:
-    """Test that generate() writes messages to a JSON file."""
+    """Test that generate() writes messages to a JSON file in v0.1 format."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="output.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="output.json",
+            cache_writer_settings=CacheWriterSettings(
+                parameter_identification_strategy="preset"
+            ),
+        )
 
         # Add some tool use blocks
         tool_use1 = ToolUseBlockParam(
@@ -164,22 +171,40 @@ def test_cache_writer_generate_writes_file() -> None:
         cache_file = cache_dir / "output.json"
         assert cache_file.exists()
 
-        # Verify file content
+        # Verify file content (v0.1 format)
         with cache_file.open("r", encoding="utf-8") as f:
             data = json.load(f)
 
-        assert len(data) == 2
-        assert data[0]["id"] == "id1"
-        assert data[0]["name"] == "tool1"
-        assert data[1]["id"] == "id2"
-        assert data[1]["name"] == "tool2"
+        # Check v0.1 structure
+        assert "metadata" in data
+        assert "trajectory" in data
+        assert "cache_parameters" in data
+
+        # Check metadata
+        assert data["metadata"]["version"] == "0.1"
+        assert "created_at" in data["metadata"]
+        assert data["metadata"]["execution_attempts"] == 0
+        assert data["metadata"]["is_valid"] is True
+
+        # Check trajectory
+        assert len(data["trajectory"]) == 2
+        assert data["trajectory"][0]["id"] == "id1"
+        assert data["trajectory"][0]["name"] == "tool1"
+        assert data["trajectory"][1]["id"] == "id2"
+        assert data["trajectory"][1]["name"] == "tool2"
 
 
 def test_cache_writer_generate_auto_names_file() -> None:
     """Test that generate() auto-generates filename if not provided."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="",
+            cache_writer_settings=CacheWriterSettings(
+                parameter_identification_strategy="preset"
+            ),
+        )
 
         tool_use = ToolUseBlockParam(
             id="id1",
@@ -243,12 +268,12 @@ def test_cache_writer_reset() -> None:
         assert cache_writer.was_cached_execution is False
 
 
-def test_cache_writer_read_cache_file() -> None:
-    """Test that read_cache_file() loads ToolUseBlockParam from JSON."""
+def test_cache_writer_read_cache_file_v1() -> None:
+    """Test backward compatibility: read_cache_file() loads v0.0 format."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_cache.json"
+        cache_file_path = Path(temp_dir) / "test_cache.json"
 
-        # Create a cache file
+        # Create a v0.0 cache file (just a list)
         trajectory: list[dict[str, Any]] = [
             {
                 "id": "id1",
@@ -264,19 +289,71 @@ def test_cache_writer_read_cache_file() -> None:
             },
         ]
 
-        with cache_file.open("w", encoding="utf-8") as f:
+        with cache_file_path.open("w", encoding="utf-8") as f:
             json.dump(trajectory, f)
 
         # Read cache file
-        result = CacheWriter.read_cache_file(cache_file)
+        result = CacheWriter.read_cache_file(cache_file_path)
 
-        assert len(result) == 2
-        assert isinstance(result[0], ToolUseBlockParam)
-        assert result[0].id == "id1"
-        assert result[0].name == "tool1"
-        assert isinstance(result[1], ToolUseBlockParam)
-        assert result[1].id == "id2"
-        assert result[1].name == "tool2"
+        # Should return CacheFile with migrated v0.0 data (now v0.1)
+        assert isinstance(result, CacheFile)
+        assert result.metadata.version == "0.1"  # Migrated from v0.0 to v0.1
+        assert len(result.trajectory) == 2
+        assert isinstance(result.trajectory[0], ToolUseBlockParam)
+        assert result.trajectory[0].id == "id1"
+        assert result.trajectory[0].name == "tool1"
+        assert isinstance(result.trajectory[1], ToolUseBlockParam)
+        assert result.trajectory[1].id == "id2"
+        assert result.trajectory[1].name == "tool2"
+
+
+def test_cache_writer_read_cache_file_v2() -> None:
+    """Test that read_cache_file() loads v0.1 format correctly."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_file_path = Path(temp_dir) / "test_cache_v2.json"
+
+        # Create a v0.1 cache file
+        cache_data = {
+            "metadata": {
+                "version": "0.1",
+                "created_at": "2025-12-11T10:00:00Z",
+                "last_executed_at": None,
+                "execution_attempts": 0,
+                "failures": [],
+                "is_valid": True,
+                "invalidation_reason": None,
+            },
+            "trajectory": [
+                {
+                    "id": "id1",
+                    "name": "tool1",
+                    "input": {"param": "value1"},
+                    "type": "tool_use",
+                },
+                {
+                    "id": "id2",
+                    "name": "tool2",
+                    "input": {"param": "value2"},
+                    "type": "tool_use",
+                },
+            ],
+            "cache_parameters": {"current_date": "Current date in YYYY-MM-DD format"},
+        }
+
+        with cache_file_path.open("w", encoding="utf-8") as f:
+            json.dump(cache_data, f)
+
+        # Read cache file
+        result = CacheWriter.read_cache_file(cache_file_path)
+
+        # Should return CacheFile
+        assert isinstance(result, CacheFile)
+        assert result.metadata.version == "0.1"
+        assert result.metadata.is_valid is True
+        assert len(result.trajectory) == 2
+        assert result.trajectory[0].id == "id1"
+        assert result.trajectory[1].id == "id2"
+        assert "current_date" in result.cache_parameters
 
 
 def test_cache_writer_set_file_name() -> None:
@@ -295,7 +372,13 @@ def test_cache_writer_generate_resets_after_writing() -> None:
     """Test that generate() calls reset() after writing the file."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                parameter_identification_strategy="preset"
+            ),
+        )
 
         cache_writer.messages = [
             ToolUseBlockParam(
@@ -310,3 +393,79 @@ def test_cache_writer_generate_resets_after_writing() -> None:
 
         # After generate, messages should be empty
         assert cache_writer.messages == []
+
+
+def test_cache_writer_detects_and_stores_parameters() -> None:
+    """Test that CacheWriter detects parameters and stores them in metadata."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_dir = Path(temp_dir)
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                parameter_identification_strategy="preset"
+            ),
+        )
+
+        # Add tool use blocks with parameters
+        cache_writer.messages = [
+            ToolUseBlockParam(
+                id="id1",
+                name="computer",
+                input={"action": "type", "text": "Today is {{current_date}}"},
+                type="tool_use",
+            ),
+            ToolUseBlockParam(
+                id="id2",
+                name="computer",
+                input={"action": "type", "text": "User: {{user_name}}"},
+                type="tool_use",
+            ),
+        ]
+
+        cache_writer.generate()
+
+        # Read back the cache file
+        cache_file = cache_dir / "test.json"
+        with cache_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Verify parameters were detected and stored
+        assert "cache_parameters" in data
+        assert "current_date" in data["cache_parameters"]
+        assert "user_name" in data["cache_parameters"]
+        assert len(data["cache_parameters"]) == 2
+
+
+def test_cache_writer_empty_parameters_when_none_found() -> None:
+    """Test that parameters dict is empty when no parameters exist."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_dir = Path(temp_dir)
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            file_name="test.json",
+            cache_writer_settings=CacheWriterSettings(
+                parameter_identification_strategy="preset"
+            ),
+        )
+
+        # Add tool use blocks without parameters
+        cache_writer.messages = [
+            ToolUseBlockParam(
+                id="id1",
+                name="computer",
+                input={"action": "click", "coordinate": [100, 200]},
+                type="tool_use",
+            )
+        ]
+
+        cache_writer.generate()
+
+        # Read back the cache file
+        cache_file = cache_dir / "test.json"
+        with cache_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Verify parameters dict is empty
+        assert "cache_parameters" in data
+        assert data["cache_parameters"] == {}
