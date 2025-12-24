@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "bedrock", "chat", "dev", "pynput", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:bceafb533a2ba147d58188facea3b328fbe5bf1adf15fa8af86950f7a65a1cf0"
+content_hash = "sha256:9f1fc6702e8b01ea917c353abc069e6a310e13bec4b186c9ec86303b0067aef7"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.14"
@@ -121,6 +121,24 @@ dependencies = [
 files = [
     {file = "anyio-4.10.0-py3-none-any.whl", hash = "sha256:60e474ac86736bbfd6f210f7a61218939c318f43f9972497381f1c5e930ed3d1"},
     {file = "anyio-4.10.0.tar.gz", hash = "sha256:3f3fae35c96039744587aa5b8371e7e8e603c0702999535961dd336026973ba6"},
+]
+
+[[package]]
+name = "apscheduler"
+version = "4.0.0a6"
+requires_python = ">=3.9"
+summary = "In-process task scheduler with Cron-like capabilities"
+groups = ["default"]
+dependencies = [
+    "anyio~=4.0",
+    "attrs>=22.1",
+    "tenacity<10.0,>=8.0",
+    "typing-extensions>=4.0; python_version < \"3.11\"",
+    "tzlocal>=3.0",
+]
+files = [
+    {file = "apscheduler-4.0.0a6-py3-none-any.whl", hash = "sha256:87031f7537aaa6ea2d3e69fdd9454b641f18938fc8cd0c589972006eceba8ee9"},
+    {file = "apscheduler-4.0.0a6.tar.gz", hash = "sha256:5134617c028f097de4a09abbeefc42625cb0ce3adcb4ce49d74cc26054084761"},
 ]
 
 [[package]]
@@ -4494,6 +4512,20 @@ groups = ["default"]
 files = [
     {file = "tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8"},
     {file = "tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9"},
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.3.1"
+requires_python = ">=3.9"
+summary = "tzinfo object for the local timezone"
+groups = ["default"]
+dependencies = [
+    "tzdata; platform_system == \"Windows\"",
+]
+files = [
+    {file = "tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d"},
+    {file = "tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd"},
 ]
 
 [[package]]
