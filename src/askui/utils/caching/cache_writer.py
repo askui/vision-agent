@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PIL import Image
+
 from askui.models.model_router import ModelRouter
 from askui.models.shared.agent_message_param import (
     MessageParam,
@@ -15,10 +17,17 @@ from askui.models.shared.facade import ModelFacade
 from askui.models.shared.settings import (
     CacheFile,
     CacheMetadata,
-    CacheWriterSettings,
+    CacheWritingSettings,
 )
 from askui.models.shared.tools import ToolCollection
 from askui.utils.cache_parameter_handler import CacheParameterHandler
+from askui.utils.visual_validation import (
+    compute_ahash,
+    compute_phash,
+    extract_region,
+    get_validation_coordinate,
+    should_validate_step,
+)
 
 if TYPE_CHECKING:
     from askui.models.models import ActModel
@@ -30,8 +39,7 @@ class CacheWriter:
     def __init__(
         self,
         cache_dir: str = ".cache",
-        file_name: str = "",
-        cache_writer_settings: CacheWriterSettings | None = None,
+        cache_writing_settings: CacheWritingSettings | None = None,
         toolbox: ToolCollection | None = None,
         goal: str | None = None,
         model_router: ModelRouter | None = None,
@@ -40,16 +48,27 @@ class CacheWriter:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.messages: list[ToolUseBlockParam] = []
+
+        # Use default settings if not provided
+        self._cache_writing_settings = cache_writing_settings or CacheWritingSettings()
+
+        # Extract file_name from settings
+        file_name = self._cache_writing_settings.filename
         if file_name and not file_name.endswith(".json"):
             file_name += ".json"
         self.file_name = file_name
+
         self.was_cached_execution = False
-        self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
         self._goal = goal
         self._model_router = model_router
         self._model = model
         self._toolbox: ToolCollection | None = None
         self._accumulated_usage = UsageParam()
+
+        # Extract visual verification settings from cache_writing_settings
+        self._visual_verification_method = self._cache_writing_settings.visual_verification_method
+        self._visual_validation_region_size = self._cache_writing_settings.visual_validation_region_size
+        self._visual_validation_threshold = self._cache_writing_settings.visual_validation_threshold
 
         # Set toolbox for cache writer so it can check which tools are cacheable
         self._toolbox = toolbox
@@ -61,9 +80,13 @@ class CacheWriter:
             if isinstance(contents, list):
                 for content in contents:
                     if isinstance(content, ToolUseBlockParam):
-                        self.messages.append(content)
+                        # Detect if we're starting a cached execution
                         if content.name == "execute_cached_executions_tool":
                             self.was_cached_execution = True
+
+                        # Enhance with visual validation if applicable (skip during cached execution)
+                        enhanced_content = self._enhance_with_visual_validation(content)
+                        self.messages.append(enhanced_content)
 
             # Accumulate usage from assistant messages
             if param.message.usage:
@@ -123,7 +146,7 @@ class CacheWriter:
         messages_api = None
         model = None
 
-        if self._cache_writer_settings.parameter_identification_strategy == "llm":
+        if self._cache_writing_settings.parameter_identification_strategy == "llm":
             if self._model_router and self._model:
                 try:
                     _get_model: tuple[ActModel, str] = self._model_router._get_model(  # noqa: SLF001
@@ -215,6 +238,9 @@ class CacheWriter:
                 created_at=datetime.now(tz=timezone.utc),
                 goal=goal_to_save,
                 token_usage=self._accumulated_usage,
+                visual_verification_method=self._visual_verification_method,
+                visual_validation_region_size=self._visual_validation_region_size,
+                visual_validation_threshold=self._visual_validation_threshold,
             ),
             trajectory=trajectory_to_save,
             cache_parameters=parameters_dict,
@@ -223,6 +249,171 @@ class CacheWriter:
         with cache_file_path.open("w", encoding="utf-8") as f:
             json.dump(cache_file.model_dump(mode="json"), f, indent=4)
         logger.info("Cache file successfully written: %s ", cache_file_path)
+
+    def _enhance_with_visual_validation(
+        self, tool_block: ToolUseBlockParam
+    ) -> ToolUseBlockParam:
+        """Enhance ToolUseBlockParam with visual validation data if applicable.
+
+        Args:
+            tool_block: The tool use block to potentially enhance
+
+        Returns:
+            Enhanced ToolUseBlockParam with visual validation data, or original if N/A
+        """
+        # Skip if we're in a cached execution (recording disabled during replay)
+        if self.was_cached_execution:
+            return tool_block
+
+        # Skip if visual verification is disabled
+        if self._visual_verification_method == "none":
+            logger.debug(
+                "Visual validation skipped for %s: method='none'", tool_block.name
+            )
+            return tool_block
+
+        # Skip if no toolbox available
+        if self._toolbox is None:
+            logger.warning(
+                "Visual validation skipped for %s: no toolbox available",
+                tool_block.name,
+            )
+            return tool_block
+
+        # Check if this tool input should be validated
+        action = None
+        if isinstance(tool_block.input, dict):
+            action = tool_block.input.get("action")
+
+        if not should_validate_step(tool_block.name, action):
+            logger.debug(
+                "Visual validation skipped for %s action=%s: not a validatable action",
+                tool_block.name,
+                action,
+            )
+            return tool_block
+
+        # Get validation coordinate
+        if not isinstance(tool_block.input, dict):
+            logger.debug("Visual validation skipped: input is not a dict")
+            return tool_block
+
+        coordinate = get_validation_coordinate(tool_block.input)
+        if coordinate is None:
+            logger.debug(
+                "Visual validation skipped for %s action=%s: no coordinate found",
+                tool_block.name,
+                action,
+            )
+            return tool_block
+
+        # Capture current screenshot and compute hash
+        try:
+            screenshot = self._capture_screenshot()
+            if screenshot is None:
+                logger.warning(
+                    "Visual validation skipped for %s action=%s: screenshot capture failed",
+                    tool_block.name,
+                    action,
+                )
+                return tool_block
+
+            # Extract region around coordinate
+            region = extract_region(
+                screenshot, coordinate, size=self._visual_validation_region_size
+            )
+
+            # Compute hash based on method
+            if self._visual_verification_method == "phash":
+                visual_hash = compute_phash(region)
+            elif self._visual_verification_method == "ahash":
+                visual_hash = compute_ahash(region)
+            else:
+                logger.warning(
+                    "Unknown visual verification method: %s",
+                    self._visual_verification_method,
+                )
+                return tool_block
+
+            # Create enhanced ToolUseBlockParam with visual validation data
+            enhanced = ToolUseBlockParam(
+                id=tool_block.id,
+                name=tool_block.name,
+                input=tool_block.input,
+                type=tool_block.type,
+                cache_control=tool_block.cache_control,
+                visual_representation=visual_hash,
+            )
+
+            logger.info(
+                "✓ Visual validation added to %s action=%s at coordinate %s (hash=%s...)",
+                tool_block.name,
+                action,
+                coordinate,
+                visual_hash[:16],
+            )
+
+            return enhanced
+
+        except Exception as e:
+            logger.warning(
+                "Visual validation skipped for %s action=%s: error during enhancement: %s",
+                tool_block.name,
+                action,
+                str(e),
+            )
+            return tool_block
+
+    def _capture_screenshot(self) -> Image.Image | None:
+        """Capture current screenshot using the computer tool.
+
+        Returns:
+            PIL Image or None if screenshot capture fails
+        """
+        if self._toolbox is None:
+            logger.warning("Cannot capture screenshot: toolbox is None")
+            return None
+
+        # Get the computer tool from the toolbox
+        tools = self._toolbox.get_tools()
+        computer_tool = tools.get("computer")
+
+        if computer_tool is None:
+            logger.warning(
+                "Cannot capture screenshot: computer tool not found in toolbox. "
+                "Available tools: %s",
+                list(tools.keys()),
+            )
+            return None
+
+        # Call the screenshot action
+        try:
+            # Try to call _screenshot() method directly if available
+            if hasattr(computer_tool, "_screenshot"):
+                result = computer_tool._screenshot()  # type: ignore[attr-defined]
+                if isinstance(result, Image.Image):
+                    logger.debug("Screenshot captured successfully via _screenshot()")
+                    return result
+
+            # Fallback to calling via __call__ with action parameter
+            result = computer_tool(action="screenshot")  # type: ignore[call-arg]
+            if isinstance(result, Image.Image):
+                logger.debug("Screenshot captured successfully via __call__")
+                return result
+
+            logger.warning(
+                "Screenshot action did not return an Image. Type: %s, Value: %s",
+                type(result).__name__,
+                str(result)[:100],
+            )
+            return None
+        except Exception as e:
+            logger.warning(
+                "Error capturing screenshot for visual validation: %s: %s",
+                type(e).__name__,
+                str(e),
+            )
+            return None
 
     def _accumulate_usage(self, step_usage: UsageParam) -> None:
         """Accumulate usage statistics from a single API call.

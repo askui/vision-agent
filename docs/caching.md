@@ -10,57 +10,91 @@ The caching system works by recording all tool use actions (mouse movements, cli
 
 **New in v0.1:** The caching system now includes advanced features like parameter support for dynamic values, smart handling of non-cacheable tools that require agent intervention, comprehensive message history tracking, and automatic failure detection with recovery capabilities.
 
+**New in v0.2:** Visual validation using perceptual hashing ensures cached trajectories execute only when the UI state matches expectations. The settings structure has been refactored for better clarity, separating writing settings from execution settings.
+
 ## Caching Strategies
+
+**Updated in v0.2:** Strategy names have been renamed for clarity.
 
 The caching mechanism supports four strategies, configured via the `caching_settings` parameter in the `act()` method:
 
-- **`"no"`** (default): No caching is used. The agent executes normally without recording or replaying actions.
-- **`"write"`**: Records all agent actions to a cache file for future replay.
-- **`"read"`**: Provides tools to the agent to list and execute previously cached trajectories.
-- **`"both"`**: Combines read and write modes - the agent can use existing cached trajectories and will also record new ones.
+- **`None`** (default): No caching is used. The agent executes normally without recording or replaying actions.
+- **`"record"`**: Records all agent actions to a cache file for future replay.
+- **`"execute"`**: Provides tools to the agent to list and execute previously cached trajectories.
+- **`"both"`**: Combines execute and record modes - the agent can use existing cached trajectories and will also record new ones.
 
 ## Configuration
+
+**Updated in v0.2:** Caching settings have been refactored for better clarity, separating writing-related settings from execution-related settings.
 
 Caching is configured using the `CachingSettings` class:
 
 ```python
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings, CacheWriterSettings
+from askui.models.shared.settings import (
+    CachingSettings,
+    CacheWritingSettings,
+    CacheExecutionSettings,
+)
 
 caching_settings = CachingSettings(
-    strategy="write",        # One of: "read", "write", "both", "no"
+    strategy="both",         # One of: "execute", "record", "both", or None
     cache_dir=".cache",      # Directory to store cache files
-    filename="my_test.json", # Filename for the cache file (optional for write mode)
-    cache_writer_settings=CacheWriterSettings(
-        parameter_identification_strategy="llm",
-      )  # Auto-detect dynamic values (default: "llm")
-    execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-        delay_time_between_action=0.5  # Delay in seconds between each cached action
-    )
+    writing_settings=CacheWritingSettings(
+        filename="my_test.json",  # Cache file name
+        parameter_identification_strategy="llm",  # Auto-detect dynamic values
+        visual_verification_method="phash",  # Visual validation method
+        visual_validation_region_size=100,   # Size of validation region (pixels)
+        visual_validation_threshold=10,      # Hamming distance threshold
+    ),
+    execution_settings=CacheExecutionSettings(
+        delay_time_between_action=0.5  # Delay in seconds between each action
+    ),
 )
 ```
 
 ### Parameters
 
-- **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
+- **`strategy`**: The caching strategy to use (`"execute"`, `"record"`, `"both"`, or `None`). **Updated in v0.2:** Renamed from "read"/"write"/"no" to "execute"/"record"/None for clarity.
 - **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
-- **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
-- **`CacheWriterSettings`**: **New in v0.1!** Configuration for the Cache Writer See [CacheWriter Settings](#cachewriter-settings) below.
-- **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
+- **`writing_settings`**: **New in v0.2!** Configuration for cache recording. See [Writing Settings](#writing-settings) below. Can be `None` if only executing caches.
+- **`execution_settings`**: **New in v0.2!** Configuration for cache execution. See [Execution Settings](#execution-settings) below. Can be `None` if only recording caches.
 
-### CacheWriter Settings
+### Writing Settings
 
-- `parameter_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
-- `llm_parameter_id_api_provider`: The provider of that will be used for for the llm in the parameter identification (will only be used if `parameter_identification_strategy`is set to `llm`). Defaults to `askui`.
+**New in v0.2!** The `CacheWritingSettings` class configures how cache files are recorded:
+
+```python
+from askui.models.shared.settings import CacheWritingSettings
+
+writing_settings = CacheWritingSettings(
+    filename="my_test.json",  # Name of cache file to create
+    parameter_identification_strategy="llm",  # "llm" or "preset"
+    visual_verification_method="phash",  # "phash", "ahash", or "none"
+    visual_validation_region_size=100,   # Size of region to validate (pixels)
+    visual_validation_threshold=10,      # Hamming distance threshold (0-64)
+)
+```
+
+#### Parameters
+
+- **`filename`**: Name of the cache file to write. Defaults to `""` (auto-generates timestamped filename: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
+- **`parameter_identification_strategy`**: When `"llm"` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs. When `"preset"`, only manually specified parameters using `{{...}}` syntax are detected. See [Automatic Parameter Identification](#automatic-parameter-identification).
+- **`visual_verification_method`**: **New in v0.2!** Visual validation method to use:
+  - `"phash"` (default): Perceptual hash using DCT - robust to minor changes like compression and lighting
+  - `"ahash"`: Average hash - simpler and faster, less robust to transformations
+  - `"none"`: Disable visual validation
+- **`visual_validation_region_size`**: **New in v0.2!** Size of the square region (in pixels) to extract around interaction coordinates for visual validation. Defaults to `100` (100×100 pixel region).
+- **`visual_validation_threshold`**: **New in v0.2!** Maximum Hamming distance (0-64) between stored and current visual hashes to consider a match. Lower values require closer matches. Defaults to `10`.
 
 ### Execution Settings
 
-The `CachedExecutionToolSettings` class allows you to configure how cached trajectories are executed:
+The `CacheExecutionSettings` class configures how cached trajectories are executed:
 
 ```python
-from askui.models.shared.settings import CachedExecutionToolSettings
+from askui.models.shared.settings import CacheExecutionSettings
 
-execution_settings = CachedExecutionToolSettings(
-    delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
+execution_settings = CacheExecutionSettings(
+    delay_time_between_action=0.5  # Delay in seconds between each action
 )
 ```
 
@@ -74,28 +108,35 @@ You can adjust this value based on your application's responsiveness:
 
 ## Usage Examples
 
-### Writing a Cache (Recording)
+### Recording a Cache
 
 Record agent actions to a cache file for later replay:
 
 ```python
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CachingSettings, CacheWritingSettings
 
 with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="record",
             cache_dir=".cache",
-            filename="login_test.json"
+            writing_settings=CacheWritingSettings(
+                filename="login_test.json",
+                visual_verification_method="phash",  # Enable visual validation
+            ),
         )
     )
 ```
 
-After execution, a cache file will be created at `.cache/login_test.json` containing all the tool use actions performed by the agent, along with metadata about the execution.
+After execution, a cache file will be created at `.cache/login_test.json` containing:
+- All tool use actions performed by the agent
+- Metadata about the execution
+- **New in v0.2:** Visual validation hashes for click and type actions
+- Automatically detected cache parameters (if any)
 
-### Reading from Cache (Replaying)
+### Executing from Cache
 
 Provide the agent with access to previously recorded trajectories:
 
@@ -107,13 +148,13 @@ with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
 ```
 
-When using `strategy="read"`, the agent receives two tools:
+When using `strategy="execute"`, the agent receives two tools:
 
 1. **`RetrieveCachedTestExecutions`**: Lists all available cache files in the cache directory
 2. **`ExecuteCachedTrajectory`**: Executes a cached trajectory. Can start from the beginning (default) or continue from a specific step index using the optional `start_from_step_index` parameter (useful after handling non-cacheable steps)
@@ -134,19 +175,21 @@ with VisionAgent() as agent:
     agent.act(
         goal="Create a new task for today with the title 'Review PR'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="record",
             cache_dir=".cache",
-            filename="create_task.json"
+            writing_settings=CacheWritingSettings(
+                filename="create_task.json"
+            )
         )
     )
 
-# Later, when replaying, the agent can provide parameter values
+# Later, when executing, the agent can provide parameter values
 # If the cache file contains {{current_date}} or {{task_title}}, provide them:
 with VisionAgent() as agent:
     agent.act(
         goal="Create a task using the cached flow",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -168,7 +211,7 @@ with VisionAgent() as agent:
     agent.act(
         goal="Debug the login form by checking element states",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -201,7 +244,7 @@ This is particularly useful for:
 
 ### Referencing Cache Files in Goal Prompts
 
-When using `strategy="read"` or `strategy="both"`, you need to inform the agent about which cache files are available and when to use them. This is done by including cache file information directly in your goal prompt.
+When using `strategy="execute"` or `strategy="both"`, you need to inform the agent about which cache files are available and when to use them. This is done by including cache file information directly in your goal prompt.
 
 #### Explicit Cache File References
 
@@ -218,7 +261,7 @@ with VisionAgent() as agent:
         If the cache file "open_website_in_chrome.json" is available, please use it
         for this execution. It will open a new window in Chrome and navigate to the website.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -241,7 +284,7 @@ with VisionAgent() as agent:
         Check if a cache file named "{test_id}.json" exists. If it does, use it to
         replay the test actions, then verify the results.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir="test_cache"
         )
     )
@@ -263,7 +306,7 @@ with VisionAgent() as agent:
         Choose the most recent one if multiple are available, as it likely contains
         the most up-to-date interaction sequence.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -287,7 +330,7 @@ with VisionAgent() as agent:
 
         After each cached execution, verify the step completed successfully before proceeding.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -305,15 +348,15 @@ You can customize the delay between cached actions to match your application's r
 
 ```python
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import CachingSettings, CacheExecutionSettings
 
 with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache",
-            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+            execute_cached_trajectory_tool_settings=CacheExecutionSettings(
                 delay_time_between_action=1.0  # Wait 1 second between each action
             )
         )
@@ -353,28 +396,39 @@ In this mode:
 
 **New in v0.1:** Cache files now use an enhanced format with metadata tracking, parameter support, and execution history.
 
-### v0.1 Format (Current)
+**New in v0.2:** Cache files include visual validation metadata and enhanced trajectory steps with visual hashes.
+
+### v0.2 Format (Current)
 
 Cache files are JSON objects with the following structure:
 
 ```json
 {
   "metadata": {
-    "version": "0.1",
-    "created_at": "2025-12-11T10:30:00Z",
+    "version": "0.2",
+    "created_at": "2025-12-30T10:30:00Z",
     "goal": "Greet user {{user_name}} and log them in",
-    "last_executed_at": "2025-12-11T15:45:00Z",
+    "last_executed_at": "2025-12-30T15:45:00Z",
+    "token_usage": {
+      "input_tokens": 1250,
+      "output_tokens": 380,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0
+    },
     "execution_attempts": 3,
     "failures": [
       {
-        "timestamp": "2025-12-11T14:20:00Z",
+        "timestamp": "2025-12-30T14:20:00Z",
         "step_index": 5,
-        "error_message": "Element not found",
+        "error_message": "Visual validation failed: UI region changed",
         "failure_count_at_step": 1
       }
     ],
     "is_valid": true,
-    "invalidation_reason": null
+    "invalidation_reason": null,
+    "visual_verification_method": "phash",
+    "visual_validation_region_size": 100,
+    "visual_validation_threshold": 10
   },
   "trajectory": [
     {
@@ -382,15 +436,27 @@ Cache files are JSON objects with the following structure:
       "id": "toolu_01AbCdEfGhIjKlMnOpQrStUv",
       "name": "computer",
       "input": {
-        "action": "type",
-        "text": "Hello {{user_name}}!"
-      }
+        "action": "left_click",
+        "coordinate": [450, 320]
+      },
+      "visual_representation": "80c0e3f3e3e7e381c7c78f1f3f3f7f7e"
     },
     {
       "type": "tool_use",
       "id": "toolu_02XyZaBcDeFgHiJkLmNoPqRs",
+      "name": "computer",
+      "input": {
+        "action": "type",
+        "text": "Hello {{user_name}}!"
+      },
+      "visual_representation": "91d1f4e4d4c6c282c6c79e2e4e4e6e6d"
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_03StUvWxYzAbCdEfGhIjKlMn",
       "name": "print_debug_info",
-      "input": {}
+      "input": {},
+      "visual_representation": null
     }
   ],
   "cache_parameters": {
@@ -403,14 +469,18 @@ Cache files are JSON objects with the following structure:
 
 #### Metadata Fields
 
-- **`version`**: Cache file format version (currently "0.1")
+- **`version`**: Cache file format version (currently "0.2")
 - **`created_at`**: ISO 8601 timestamp when the cache was created
-- **`goal`**: **New!** The original goal/instruction given to the agent when recording this trajectory. Cache Parameters are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
+- **`goal`**: The original goal/instruction given to the agent when recording this trajectory. Cache Parameters are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
 - **`last_executed_at`**: ISO 8601 timestamp of the last execution (null if never executed)
+- **`token_usage`**: **New in v0.1!** Token usage statistics from the recording execution
 - **`execution_attempts`**: Number of times this trajectory has been executed
 - **`failures`**: List of failures encountered during execution (see [Failure Tracking](#failure-tracking))
 - **`is_valid`**: Boolean indicating if the cache is still considered valid
 - **`invalidation_reason`**: Optional string explaining why the cache was invalidated
+- **`visual_verification_method`**: **New in v0.2!** Visual validation method used when recording (`"phash"`, `"ahash"`, or `null`)
+- **`visual_validation_region_size`**: **New in v0.2!** Size of the validation region in pixels (e.g., `100` for 100×100 pixels)
+- **`visual_validation_threshold`**: **New in v0.2!** Hamming distance threshold for visual validation (0-64)
 
 #### Cache Parameters
 
@@ -452,7 +522,7 @@ The old format was a simple JSON array:
 
 The caching system consists of several key components:
 
-- **`CacheWriter`**: Handles recording trajectories in write mode
+- **`CacheWriter`**: Handles recording trajectories in record mode
 - **`CacheExecutionManager`**: Manages cache execution state, flow control, and metadata updates during trajectory replay
 - **`TrajectoryExecutor`**: Executes individual steps from cached trajectories
 - **Agent**: Orchestrates the conversation flow and delegates cache execution to `CacheExecutionManager`
@@ -465,14 +535,19 @@ When executing a cached trajectory, the `Agent` class delegates all cache-relate
 
 This separation of concerns keeps the Agent focused on conversation orchestration while CacheExecutionManager handles all caching complexity.
 
-### Write Mode
+### Record Mode
 
-In write mode, the `CacheWriter` class:
+In record mode, the `CacheWriter` class:
 
 1. Intercepts all assistant messages via a callback function
 2. Extracts tool use blocks from the messages
-3. Stores tool blocks in memory during execution
-4. When agent finishes (on `stop_reason="end_turn"`):
+3. **Enhances with visual validation** (New in v0.2):
+   - For click and type actions, captures screenshot before execution
+   - Extracts region around interaction coordinate
+   - Computes perceptual hash using selected method (pHash/aHash)
+   - Attaches hash and validation settings to tool block
+4. Stores enhanced tool blocks in memory during execution
+5. When agent finishes (on `stop_reason="end_turn"`):
    - **Automatically identifies cache_parameters** using AI (if `parameter_identification_strategy=llm`)
      - Analyzes trajectory to find dynamic values (dates, usernames, IDs, etc.)
      - Generates descriptive parameter definitions
@@ -480,14 +555,14 @@ In write mode, the `CacheWriter` class:
      - Applies same replacements to the goal text
    - **Blanks non-cacheable tool inputs** by setting `input: {}` for tools with `is_cacheable=False` (saves space and privacy)
    - **Writes to JSON file** with:
-     - v0.1 metadata (version, timestamps, goal with cache_parameters)
-     - Trajectory of tool use blocks (with cache_parameters and blanked inputs)
+     - v0.2 metadata (version, timestamps, goal, token usage, visual validation settings)
+     - Trajectory of tool use blocks (with cache_parameters, visual hashes, and blanked inputs)
      - Parameter definitions with descriptions
-5. Automatically skips writing if a cached execution was used (to avoid recording replays)
+6. Automatically skips writing if a cached execution was used (to avoid recording replays)
 
-### Read Mode
+### Execute Mode
 
-In read mode:
+In execute mode:
 
 1. Two caching tools are added to the agent's toolbox:
    - `RetrieveCachedTestExecutions`: Lists available trajectories
@@ -499,6 +574,7 @@ In read mode:
    - Failure recovery strategies
 3. The agent can list available cache files and choose appropriate ones
 4. During execution via `TrajectoryExecutor`:
+   - **Visual validation** (New in v0.2): Before each validated step, captures current UI and compares hash to stored hash
    - Each step is executed sequentially with configurable delays
    - All tools in the trajectory are executed, including screenshots and retrieval tools
    - Non-cacheable tools trigger a pause with `NEEDS_AGENT` status
@@ -506,6 +582,7 @@ In read mode:
    - Message history is built with assistant (tool use) and user (tool result) messages
    - Agent sees all screenshots and results in the message history
 5. Execution can pause for agent intervention:
+   - When visual validation fails (New in v0.2)
    - When reaching non-cacheable tools
    - When errors occur (with failure details)
 6. Agent can resume execution:
@@ -699,14 +776,14 @@ If you prefer manual parameter control:
 
 ```python
 caching_settings = CachingSettings(
-    strategy="write",
-    cache_writer_settings = CacheWriterSettings(
-        parameter_identification_strategy="default"  # Only detect {{...}} syntax
+    strategy="record",
+    writing_settings=CacheWritingSettings(
+        parameter_identification_strategy="preset"  # Only detect {{...}} syntax
     )
 )
 ```
 
-With `parameter_identification_strategy=default`, only manually specified cache_parameters using the `{{...}}` syntax will be detected.
+With `parameter_identification_strategy="preset"`, only manually specified cache_parameters using the `{{...}}` syntax will be detected.
 
 #### Logging
 
@@ -785,12 +862,245 @@ Example:
 }
 ```
 
+## Visual Validation
+
+**New in v0.2!** Visual validation ensures cached trajectories execute only when the UI state matches the recorded state, preventing actions from being executed on incorrect UI elements.
+
+### How It Works
+
+During cache recording (record mode), the system:
+1. **Captures screenshots** before each interaction (clicks, typing, key presses)
+2. **Extracts a region** (e.g., 100×100 pixels) around the interaction coordinate
+3. **Computes a perceptual hash** of that region using the selected method
+4. **Stores the hash** in the trajectory step along with validation settings
+
+During cache execution (execute mode), the system:
+1. **Captures the current UI state** before each step
+2. **Extracts the same region** around the interaction coordinate
+3. **Computes the hash** of the current region
+4. **Compares hashes** using Hamming distance
+5. **Validates the match** against the threshold
+6. **Executes the step** only if validation passes, otherwise returns control to the agent
+
+### Visual Validation Methods
+
+#### pHash (Perceptual Hash)
+
+Default method using Discrete Cosine Transform (DCT):
+
+```python
+writing_settings=CacheWritingSettings(
+    visual_verification_method="phash",  # Default
+    visual_validation_region_size=100,
+    visual_validation_threshold=10,
+)
+```
+
+**Characteristics:**
+- ✅ Robust to minor changes (compression, scaling, lighting adjustments)
+- ✅ Sensitive to structural changes (moved buttons, different layouts)
+- ✅ Best for most use cases
+- ⚠️ Slightly slower than aHash
+
+**When to use:**
+- Production environments where UI may have subtle variations
+- Cross-platform testing (different rendering engines)
+- Long-lived caches that may encounter minor UI updates
+
+#### aHash (Average Hash)
+
+Simpler method using mean pixel values:
+
+```python
+writing_settings=CacheWritingSettings(
+    visual_verification_method="ahash",
+    visual_validation_region_size=100,
+    visual_validation_threshold=10,
+)
+```
+
+**Characteristics:**
+- ✅ Fast computation
+- ✅ Simple and predictable
+- ⚠️ Less robust to transformations
+- ⚠️ More sensitive to color/brightness changes
+
+**When to use:**
+- Development/testing environments with controlled conditions
+- Performance-critical scenarios
+- UI that rarely changes
+
+#### Disabled
+
+Disable visual validation entirely:
+
+```python
+writing_settings=CacheWritingSettings(
+    visual_verification_method="none",
+)
+```
+
+**When to use:**
+- UI that never changes
+- Testing the caching system itself
+- Debugging trajectory execution
+
+### Configuration Options
+
+#### Region Size
+
+The `visual_validation_region_size` parameter controls the size of the square region extracted around each interaction coordinate:
+
+```python
+writing_settings=CacheWritingSettings(
+    visual_validation_region_size=50,  # 50×50 pixel region (smaller, faster)
+    # visual_validation_region_size=100,  # 100×100 pixel region (default, balanced)
+    # visual_validation_region_size=200,  # 200×200 pixel region (larger, more context)
+)
+```
+
+**Smaller regions (50-75 pixels):**
+- ✅ Faster processing
+- ✅ More focused validation (just the element)
+- ⚠️ May miss context changes
+
+**Larger regions (150-200 pixels):**
+- ✅ Captures more UI context
+- ✅ Detects broader layout changes
+- ⚠️ Slower processing
+- ⚠️ More sensitive to unrelated UI changes
+
+**Default (100 pixels):**
+- Balanced between speed and context
+- Suitable for most use cases
+
+#### Validation Threshold
+
+The `visual_validation_threshold` parameter controls how similar the UI must be (Hamming distance, 0-64):
+
+```python
+writing_settings=CacheWritingSettings(
+    visual_validation_threshold=5,   # Strict: requires very close match
+    # visual_validation_threshold=10,  # Default: balanced
+    # visual_validation_threshold=20,  # Lenient: allows more variation
+)
+```
+
+**Lower thresholds (0-5):**
+- Very strict matching
+- Fails on minor UI changes
+- Best for pixel-perfect UIs
+
+**Medium thresholds (8-15):**
+- Balanced sensitivity
+- Tolerates minor variations
+- **Default: 10**
+
+**Higher thresholds (20-30):**
+- Lenient matching
+- May allow too much variation
+- Risk of false positives
+
+### Validated Actions
+
+Visual validation is applied to actions that interact with specific UI coordinates:
+
+**Validated automatically:**
+- `left_click`
+- `right_click`
+- `double_click`
+- `middle_click`
+- `type` (validates input field location)
+- `key` (validates focus location)
+
+**NOT validated:**
+- `mouse_move` (movement doesn't require validation)
+- `screenshot` (no UI interaction)
+- Non-computer tools
+- Tools marked as `is_cacheable=False`
+
+### Handling Validation Failures
+
+When visual validation fails during cache execution:
+
+1. **Execution stops** at the failed step
+2. **Agent receives notification** with details:
+   - Which step failed
+   - The validation error message
+   - Current message history and screenshots
+3. **Agent can decide**:
+   - Take a screenshot to assess current UI state
+   - Execute the step manually if safe
+   - Skip the step and continue
+   - Invalidate the cache and request re-recording
+
+Example agent recovery flow:
+```
+Step 5 validation fails: "Visual validation failed: UI region changed (distance: 15 > threshold: 10)"
+↓
+Agent takes screenshot to see current state
+↓
+Agent sees button is present but slightly moved
+↓
+Agent clicks button manually at new location
+↓
+Agent continues execution from step 6
+```
+
+### Best Practices
+
+1. **Choose the right method:**
+   - Use `phash` (default) for most cases
+   - Use `ahash` only for controlled environments
+   - Never use `none` in production
+
+2. **Tune the threshold:**
+   - Start with default (10)
+   - Increase if getting too many false failures
+   - Decrease if allowing incorrect executions
+
+3. **Adjust region size:**
+   - Use default (100) initially
+   - Increase for complex layouts
+   - Decrease for simple, isolated elements
+
+4. **Monitor validation logs:**
+   - Enable INFO logging to see validation results
+   - Track failure patterns
+   - Adjust settings based on failure analysis
+
+5. **Re-record when needed:**
+   - After significant UI changes
+   - When validation consistently fails
+   - After threshold/region adjustments
+
+### Logging
+
+Enable INFO-level logging to see visual validation activity:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+During **recording**, you'll see:
+```
+INFO: ✓ Visual validation added to computer action=left_click at coordinate (450, 320) (hash=80c0e3f3e3e7e381...)
+INFO: ✓ Visual validation added to computer action=type at coordinate (450, 380) (hash=91d1f4e4d4c6c282...)
+```
+
+During **execution**, validation happens silently on success. On **failure**, you'll see:
+```
+WARNING: Visual validation failed at step 5: Visual validation failed: UI region changed significantly (Hamming distance: 15 > threshold: 10)
+WARNING: Handing execution back to agent.
+```
+
 ## Limitations and Considerations
 
 ### Current Limitations
 
 - **UI State Sensitivity**: Cached trajectories assume the UI is in the same state as when they were recorded. If the UI has changed significantly, replay may fail.
-- **No on_message Callback**: When using `strategy="write"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
+- **No on_message Callback**: When using `strategy="record"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
 - **Verification Required**: After executing a cached trajectory, the agent should verify that the results are correct, as UI changes may cause partial failures.
 
 ### Best Practices
@@ -916,9 +1226,9 @@ with VisionAgent() as agent:
         the login sequence. It contains the steps to navigate to the login page and
         authenticate with the test credentials.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir="test_cache",
-            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+            execute_cached_trajectory_tool_settings=CacheExecutionSettings(
                 delay_time_between_action=0.75
             )
         )
@@ -955,7 +1265,7 @@ if __name__ == "__main__":
 
 Planned features for future versions:
 
-- **Visual Validation**: Screenshot comparison using perceptual hashing (aHash) to detect UI changes
+- **✅ Visual Validation** (Implemented in v0.2): Screenshot comparison using perceptual hashing (pHash/aHash) to detect UI changes
 - **Cache Invalidation Strategies**: Configurable validators for automatic cache invalidation
 - **Cache Management Tools**: Tools for listing, validating, and invalidating caches
 - **Smart Retry**: Automatic retry with adjustments when specific failure patterns are detected
@@ -980,7 +1290,7 @@ Planned features for future versions:
 
 **Issue**: Actions execute too quickly, causing failures
 - **Cause**: `delay_time_between_action` is too short for your application
-- **Solution**: Increase delay in `CachedExecutionToolSettings` (e.g., from 0.5 to 1.0 seconds)
+- **Solution**: Increase delay in `CacheExecutionSettings` (e.g., from 0.5 to 1.0 seconds)
 
 **Issue**: "Tool not found in toolbox" error
 - **Cause**: Cached trajectory uses a tool that's no longer available

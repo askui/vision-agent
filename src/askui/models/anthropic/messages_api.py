@@ -66,12 +66,18 @@ class AnthropicMessagesApi(MessagesApi):
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,
     ) -> MessageParam:
+        # Convert messages to dicts with API context to exclude internal fields
         _messages = [
             cast(
-                "BetaMessageParam", message.model_dump(exclude={"stop_reason", "usage"})
+                "BetaMessageParam",
+                message.model_dump(
+                    exclude={"stop_reason", "usage"},
+                    context={"for_api": True}  # Triggers exclusion of internal fields
+                ),
             )
             for message in messages
         ]
+
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
             max_tokens=max_tokens or 4096,

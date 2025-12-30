@@ -9,6 +9,7 @@ import logging
 import time
 from typing import Any, Optional
 
+from PIL import Image
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
@@ -18,6 +19,11 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.tools import ToolCollection
 from askui.utils.cache_parameter_handler import CacheParameterHandler
+from askui.utils.visual_validation import (
+    extract_region,
+    get_validation_coordinate,
+    validate_visual_hash,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +64,9 @@ class TrajectoryExecutor:
         parameter_values: dict[str, str] | None = None,
         delay_time: float = 0.5,
         visual_validation_enabled: bool = False,
+        visual_validation_threshold: int = 10,
+        visual_hash_method: str = "phash",
+        visual_validation_region_size: int = 100,
     ):
         """Initialize the trajectory executor.
 
@@ -66,13 +75,19 @@ class TrajectoryExecutor:
             toolbox: ToolCollection for executing tools
             parameter_values: Dict of parameter names to values
             delay_time: Seconds to wait between step executions
-            visual_validation_enabled: Enable visual validation (future feature)
+            visual_validation_enabled: Enable visual validation
+            visual_validation_threshold: Hamming distance threshold (0-64)
+            visual_hash_method: Hash method to use ('phash' or 'ahash')
+            visual_validation_region_size: Size of square region to extract (in pixels)
         """
         self.trajectory = trajectory
         self.toolbox = toolbox
         self.parameter_values = parameter_values or {}
         self.delay_time = delay_time
         self.visual_validation_enabled = visual_validation_enabled
+        self.visual_validation_threshold = visual_validation_threshold
+        self.visual_hash_method = visual_hash_method
+        self.visual_validation_region_size = visual_validation_region_size
         self.current_step_index = 0
         self.message_history: list[MessageParam] = []
 
@@ -129,13 +144,14 @@ class TrajectoryExecutor:
                 tool_result=step,  # Pass the tool use block for reference
             )
 
-        # Visual validation (future feature - currently always passes)
-        # Extension point for aHash-based UI validation
+        # Visual validation: verify UI state matches cached expectations
+        # Compares stored visual hash with current screen region
         if self.visual_validation_enabled:
             is_valid, error_msg = self.validate_step_visually(step)
             if not is_valid:
                 logger.warning(
-                    "Visual validation failed at step %d: %s",
+                    "Visual validation failed at step %d: %s. "
+                    "Handing execution back to agent.",
                     step_index,
                     error_msg,
                 )
@@ -284,53 +300,113 @@ class TrajectoryExecutor:
         return False
 
     def validate_step_visually(
-        self, _step: ToolUseBlockParam, _current_screenshot: Any = None
+        self, step: ToolUseBlockParam, current_screenshot: Any = None
     ) -> tuple[bool, str | None]:
-        """Hook for visual validation of cached steps using aHash comparison.
+        """Validate cached steps using visual hash comparison.
 
-        This is an extension point for future visual validation implementation.
-        Currently returns (True, None) - no validation performed.
-
-        Future implementation will:
-        1. Check if step has visual_validation_required=True
-        2. Compute aHash of current screen region
-        3. Compare with stored visual_hash
-        4. Return validation result based on Hamming distance threshold
+        Compares the current UI state against the stored visual hash to detect
+        if the UI has changed significantly since the trajectory was recorded.
 
         Args:
             step: The trajectory step to validate
-            current_screenshot: Optional current screen capture (future use)
+            current_screenshot: Optional current screen capture (will capture if None)
 
         Returns:
             Tuple of (is_valid: bool, error_message: str | None)
             - (True, None) if validation passes or is disabled
             - (False, error_msg) if validation fails
-
-        Example future implementation:
-            if not self.visual_validation_enabled:
-                return True, None
-
-            if not step.visual_validation_required:
-                return True, None
-
-            if step.visual_hash is None:
-                return True, None  # No hash stored, skip validation
-
-            # Capture current screen region
-            current_hash = compute_ahash(current_screenshot)
-
-            # Compare hashes
-            distance = hamming_distance(step.visual_hash, current_hash)
-            threshold = 10  # Configurable
-
-            if distance > threshold:
-                return False, (
-                    f"Visual validation failed: UI changed significantly "
-                    f"(distance: {distance} > threshold: {threshold})"
-                )
-
-            return True, None
         """
-        # Future: Implement aHash comparison
-        # For now, always return True (no validation)
-        return True, None
+        # Skip validation if disabled
+        if not self.visual_validation_enabled:
+            return True, None
+
+        # Skip if no visual representation stored (implies no validation needed)
+        if step.visual_representation is None:
+            return True, None
+
+        # Get coordinate for validation
+        if not isinstance(step.input, dict):
+            return True, None
+
+        coordinate = get_validation_coordinate(step.input)
+        if coordinate is None:
+            logger.debug(
+                "Could not extract coordinate from step %d for visual validation",
+                self.current_step_index,
+            )
+            return True, None
+
+        # Capture current screenshot if not provided
+        if current_screenshot is None:
+            current_screenshot = self._capture_screenshot()
+            if current_screenshot is None:
+                logger.warning(
+                    "Could not capture screenshot for visual validation at step %d",
+                    self.current_step_index,
+                )
+                # Unable to validate, but don't fail execution
+                return True, None
+
+        # Extract region around coordinate
+        try:
+            region = extract_region(
+                current_screenshot, coordinate, size=self.visual_validation_region_size
+            )
+        except Exception as e:
+            logger.warning(
+                "Error extracting region for visual validation at step %d: %s",
+                self.current_step_index,
+                e,
+            )
+            return True, None
+
+        # Validate hash
+        is_valid, error_msg, _distance = validate_visual_hash(
+            stored_hash=step.visual_representation,
+            current_image=region,
+            threshold=self.visual_validation_threshold,
+            hash_method=self.visual_hash_method,
+        )
+
+        # Only log if validation fails
+        if not is_valid:
+            logger.warning(
+                "Visual validation failed at step %d: %s",
+                self.current_step_index,
+                error_msg,
+            )
+
+        return is_valid, error_msg
+
+    def _capture_screenshot(self) -> Image.Image | None:
+        """Capture current screenshot using the computer tool.
+
+        Returns:
+            PIL Image or None if screenshot capture fails
+        """
+        # Get the computer tool from toolbox
+        tools = self.toolbox.get_tools()
+        computer_tool = tools.get("computer")
+
+        if computer_tool is None:
+            logger.debug("Computer tool not found in toolbox")
+            return None
+
+        # Call the screenshot action
+        try:
+            # Try to call _screenshot() method directly if available
+            if hasattr(computer_tool, "_screenshot"):
+                result = computer_tool._screenshot()  # type: ignore[attr-defined]
+                if isinstance(result, Image.Image):
+                    return result
+
+            # Fallback to calling via __call__ with action parameter
+            result = computer_tool(action="screenshot")  # type: ignore[call-arg]
+            if isinstance(result, Image.Image):
+                return result
+
+            logger.warning("Screenshot action did not return an Image: %s", type(result))
+            return None
+        except Exception:
+            logger.exception("Error capturing screenshot")
+            return None

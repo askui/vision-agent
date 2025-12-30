@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from pydantic import validate_call
 from typing_extensions import override
 
-from ..models.shared.settings import CachedExecutionToolSettings
+from ..models.shared.settings import CacheExecutionSettings
 from ..models.shared.tools import Tool, ToolCollection
 from ..utils.cache_parameter_handler import CacheParameterHandler
 from ..utils.caching.cache_execution_manager import CacheExecutionManager
@@ -136,7 +136,7 @@ class ExecuteCachedTrajectory(Tool):
     def __init__(
         self,
         toolbox: ToolCollection,
-        settings: CachedExecutionToolSettings | None = None,
+        settings: CacheExecutionSettings | None = None,
     ) -> None:
         super().__init__(
             name="execute_cached_executions_tool",
@@ -204,7 +204,7 @@ class ExecuteCachedTrajectory(Tool):
             },
         )
         if not settings:
-            settings = CachedExecutionToolSettings()
+            settings = CacheExecutionSettings()
         self._settings = settings
         self._cache_execution_manager: CacheExecutionManager | None = None
         self._toolbox = toolbox
@@ -313,9 +313,40 @@ class ExecuteCachedTrajectory(Tool):
         Returns:
             Configured TrajectoryExecutor instance
         """
+        # Read visual validation settings ONLY from cache metadata
+        # Visual validation is only enabled if the cache was recorded with it
+        visual_validation_enabled = False
+        visual_hash_method = "phash"  # Default (unused if validation disabled)
+        visual_validation_threshold = 10  # Default (unused if validation disabled)
+        visual_validation_region_size = 100  # Default (unused if validation disabled)
+
+        if cache_file.metadata.visual_verification_method:
+            # Cache has visual validation metadata - use those exact settings
+            visual_validation_enabled = cache_file.metadata.visual_verification_method != "none"
+            visual_hash_method = cache_file.metadata.visual_verification_method
+
+            if cache_file.metadata.visual_validation_threshold is not None:
+                visual_validation_threshold = cache_file.metadata.visual_validation_threshold
+
+            if cache_file.metadata.visual_validation_region_size is not None:
+                visual_validation_region_size = cache_file.metadata.visual_validation_region_size
+
+            logger.debug(
+                "Visual validation enabled from cache metadata: method=%s, threshold=%d, region_size=%d",
+                visual_hash_method,
+                visual_validation_threshold,
+                visual_validation_region_size,
+            )
+        else:
+            # Cache doesn't have visual validation metadata - don't validate
+            logger.debug(
+                "Visual validation disabled: cache file has no visual validation metadata"
+            )
+
         logger.debug(
-            "Creating TrajectoryExecutor with delay=%ss",
+            "Creating TrajectoryExecutor with delay=%ss, visual_validation=%s",
             self._settings.delay_time_between_action,
+            visual_validation_enabled,
         )
 
         # Import here to avoid circular dependency
@@ -326,6 +357,10 @@ class ExecuteCachedTrajectory(Tool):
             toolbox=self._toolbox,
             parameter_values=parameter_values,
             delay_time=self._settings.delay_time_between_action,
+            visual_validation_enabled=visual_validation_enabled,
+            visual_validation_threshold=visual_validation_threshold,
+            visual_hash_method=visual_hash_method,
+            visual_validation_region_size=visual_validation_region_size,
         )
 
         # Set the starting position if continuing

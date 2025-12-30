@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, model_serializer
 from typing_extensions import Literal
 
 
@@ -78,6 +80,24 @@ class ToolUseBlockParam(BaseModel):
     name: str
     type: Literal["tool_use"] = "tool_use"
     cache_control: CacheControlEphemeralParam | None = None
+    # Visual validation field - internal use only, not sent to Anthropic API
+    visual_representation: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, serializer, info) -> dict[str, Any]:
+        """Custom serializer to exclude internal fields when serializing for API.
+
+        When context={'for_api': True}, visual validation fields are excluded.
+        Otherwise, all fields are included (for cache storage, internal use).
+        """
+        # Use default serialization
+        data = serializer(self)
+
+        # If serializing for API, remove internal fields
+        if info.context and info.context.get("for_api"):
+            data.pop("visual_representation", None)
+
+        return data
 
 
 class BetaThinkingBlock(BaseModel):

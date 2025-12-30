@@ -16,8 +16,9 @@ from askui.models.shared.agent_message_param import ToolUseBlockParam, UsagePara
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
-CACHING_STRATEGY = Literal["read", "write", "both", "no"]
+CACHING_STRATEGY = Literal["execute", "record", "both"]
 CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
+CACHING_VISUAL_VERIFICATION_METHOD = Literal["phash", "ahash", "none"]
 
 
 class MessageSettings(BaseModel):
@@ -37,22 +38,27 @@ class ActSettings(BaseModel):
     messages: MessageSettings = Field(default_factory=MessageSettings)
 
 
-class CachedExecutionToolSettings(BaseModel):
+class CacheWritingSettings(BaseModel):
+    """Settings for writing/recording cache files."""
+
+    filename: str = ""
+    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
+    visual_verification_method: CACHING_VISUAL_VERIFICATION_METHOD = "phash"
+    visual_validation_region_size: int = 100
+    visual_validation_threshold: int = 10
+
+
+class CacheExecutionSettings(BaseModel):
+    """Settings for executing/replaying cache files."""
+
     delay_time_between_action: float = 0.5
 
 
-class CacheWriterSettings(BaseModel):
-    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
-
-
 class CachingSettings(BaseModel):
-    strategy: CACHING_STRATEGY = "no"
-    cache_dir: str = ".cache"
-    filename: str = ""
-    execute_cached_trajectory_tool_settings: CachedExecutionToolSettings = (
-        CachedExecutionToolSettings()
-    )
-    cache_writer_settings: CacheWriterSettings = CacheWriterSettings()
+    strategy: CACHING_STRATEGY | None = None
+    cache_dir: str = ".askui_cache"
+    writing_settings: CacheWritingSettings | None = None
+    execution_settings: CacheExecutionSettings | None = None
 
 
 class CacheFailure(BaseModel):
@@ -72,6 +78,9 @@ class CacheMetadata(BaseModel):
     failures: list[CacheFailure] = Field(default_factory=list)
     is_valid: bool = True
     invalidation_reason: Optional[str] = None
+    visual_verification_method: Optional[CACHING_VISUAL_VERIFICATION_METHOD] = None
+    visual_validation_region_size: Optional[int] = None
+    visual_validation_threshold: Optional[int] = None
 
 
 class CacheFile(BaseModel):

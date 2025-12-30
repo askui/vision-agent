@@ -203,7 +203,7 @@ class AgentBase(ABC):  # noqa: B024
                 be used for achieving the `goal`.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message. Cannot be used
-                with caching_settings strategy "write" or "both".
+                with caching_settings strategy "record" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
             settings (AgentSettings | None, optional): The settings for the agent.
@@ -308,7 +308,7 @@ class AgentBase(ABC):  # noqa: B024
 
         _tools = self._build_tools(tools, _model)
 
-        if _caching_settings.strategy != "no":
+        if _caching_settings.strategy is not None:
             on_message = self._patch_act_with_cache(
                 _caching_settings, _settings, _tools, on_message, goal_str, _model
             )
@@ -359,8 +359,8 @@ class AgentBase(ABC):  # noqa: B024
         logger.debug("Setting up caching")
         caching_tools: list[Tool] = []
 
-        # Setup read mode: add caching tools and modify system prompt
-        if caching_settings.strategy in ["read", "both"]:
+        # Setup execute mode: add caching tools and modify system prompt
+        if caching_settings.strategy in ["execute", "both"]:
             from askui.tools.caching_tools import VerifyCacheExecution
 
             caching_tools.extend(
@@ -368,7 +368,7 @@ class AgentBase(ABC):  # noqa: B024
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
                     ExecuteCachedTrajectory(
                         toolbox=toolbox,
-                        settings=caching_settings.execute_cached_trajectory_tool_settings,
+                        settings=caching_settings.execution_settings,
                     ),
                     VerifyCacheExecution(),
                 ]
@@ -391,13 +391,12 @@ class AgentBase(ABC):  # noqa: B024
         if caching_tools:
             toolbox.append_tool(*caching_tools)
 
-        # Setup write mode: create cache writer and set message callback
+        # Setup record mode: create cache writer and set message callback
         cache_writer = None
-        if caching_settings.strategy in ["write", "both"]:
+        if caching_settings.strategy in ["record", "both"]:
             cache_writer = CacheWriter(
                 cache_dir=caching_settings.cache_dir,
-                file_name=caching_settings.filename,
-                cache_writer_settings=caching_settings.cache_writer_settings,
+                cache_writing_settings=caching_settings.writing_settings,
                 toolbox=toolbox,
                 goal=goal,
                 model_router=self._model_router,

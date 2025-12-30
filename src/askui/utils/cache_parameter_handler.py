@@ -287,6 +287,7 @@ class CacheParameterHandler:
                     input=parameterized_input,
                     type=tool_block.type,
                     cache_control=tool_block.cache_control,
+                    visual_representation=tool_block.visual_representation,
                 )
             )
 

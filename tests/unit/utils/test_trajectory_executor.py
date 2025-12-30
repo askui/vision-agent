@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from askui.models.shared.agent_message_param import (
     MessageParam,
     TextBlockParam,
@@ -672,8 +670,7 @@ def test_visual_validation_disabled_by_default() -> None:
             name="click",
             input={"x": 100},
             type="tool_use",
-            visual_hash="abc123",
-            visual_validation_required=True,
+            visual_representation="abc123",
         ),
     ]
 
@@ -759,8 +756,7 @@ def test_validate_step_visually_always_passes_when_disabled() -> None:
             name="click",
             input={"x": 100},
             type="tool_use",
-            visual_hash="abc123",
-            visual_validation_required=True,
+            visual_representation="abc123",
         ),
     ]
 
@@ -794,8 +790,7 @@ def test_validate_step_visually_hook_called_when_enabled() -> None:
             name="click",
             input={"x": 100},
             type="tool_use",
-            visual_hash="abc123",
-            visual_validation_required=True,
+            visual_representation="abc123",
         ),
     ]
 
@@ -824,34 +819,27 @@ def test_validate_step_visually_hook_called_when_enabled() -> None:
     assert results[0].status == "SUCCESS"
 
 
-@pytest.mark.skip(
-    reason="Visual validation fields not yet implemented - future feature"
-)
 def test_visual_validation_fields_on_tool_use_block() -> None:
     """Test that ToolUseBlockParam supports visual validation fields.
 
-    Note: This test is for future functionality. Visual validation fields
-    (visual_hash, visual_validation_required) are planned but not yet
-    implemented in the ToolUseBlockParam model.
+    The visual_representation field stores perceptual hashes (pHash/aHash) for
+    visual validation during cache execution.
     """
-    # Create step with visual validation fields
+    # Create step with visual representation field
     step = ToolUseBlockParam(
         id="1",
         name="click",
         input={"x": 100, "y": 200},
         type="tool_use",
-        visual_hash="a8f3c9e14b7d2056",
-        visual_validation_required=True,
+        visual_representation="a8f3c9e14b7d2056",
     )
 
-    # Fields should be accessible
-    assert step.visual_hash == "a8f3c9e14b7d2056"  # type: ignore[attr-defined]
-    assert step.visual_validation_required is True  # type: ignore[attr-defined]
+    # Field should be accessible
+    assert step.visual_representation == "a8f3c9e14b7d2056"
 
-    # Default values should work
+    # Default value should be None
     step_default = ToolUseBlockParam(
         id="2", name="type", input={"text": "hello"}, type="tool_use"
     )
 
-    assert step_default.visual_hash is None  # type: ignore[attr-defined]
-    assert step_default.visual_validation_required is False  # type: ignore[attr-defined]
+    assert step_default.visual_representation is None

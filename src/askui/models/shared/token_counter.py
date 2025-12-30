@@ -165,6 +165,8 @@ class SimpleTokenCounter(TokenCounter):
         For image blocks, uses the formula: tokens = (width * height) / 750 (see https://docs.anthropic.com/en/docs/build-with-claude/vision)
         For other content types, uses the standard character-based estimation.
 
+        Uses for_api context to exclude internal fields from token counting.
+
         Args:
             message (MessageParam): The message to count tokens for.
 
@@ -175,9 +177,11 @@ class SimpleTokenCounter(TokenCounter):
             # Simple string content - use standard estimation
             return int(len(message.content) / self._chars_per_token)
 
-        # base tokens for rest of message
-        total_tokens = 10
-        # Content is a list of blocks - process each individually
+        # Process content blocks individually to handle images properly
+        # Base tokens for the message structure (role, etc.)
+        base_tokens = 20
+
+        total_tokens = base_tokens
         for block in message.content:
             total_tokens += self._count_tokens_for_content_block(block)
 
@@ -185,6 +189,8 @@ class SimpleTokenCounter(TokenCounter):
 
     def _count_tokens_for_content_block(self, block: ContentBlockParam) -> int:
         """Count tokens for a single content block.
+
+        Uses for_api context to exclude internal fields like visual validation.
 
         Args:
             block (ContentBlockParam): The content block to count tokens for.
@@ -207,8 +213,25 @@ class SimpleTokenCounter(TokenCounter):
                 total_tokens += self._count_tokens_for_content_block(nested_block)
             return total_tokens
 
-        # For other block types, use string representation
-        return int(len(self._stringify_object(block)) / self._chars_per_token)
+        # For other block types (ToolUseBlockParam, TextBlockParam, etc.),
+        # use string representation with API context to exclude internal fields
+        stringified = self._stringify_object(block)
+        token_count = int(len(stringified) / self._chars_per_token)
+
+        # Debug: Log if this is a ToolUseBlockParam with visual validation fields
+        if hasattr(block, 'visual_representation') and block.visual_representation:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(
+                "Token counting for %s: stringified_length=%d, tokens=%d, "
+                "has_visual_fields=%s",
+                getattr(block, 'name', 'unknown'),
+                len(stringified),
+                token_count,
+                'visual_representation' in stringified
+            )
+
+        return token_count
 
     def _count_tokens_for_image_block(self, block: ImageBlockParam) -> int:
         """Count tokens for an image block using Anthropic's formula.
@@ -248,6 +271,9 @@ class SimpleTokenCounter(TokenCounter):
         Not whitespace in dumped jsons between object keys and values and among array
         elements.
 
+        For Pydantic models, uses API serialization context to exclude internal fields
+        that won't be sent to the API (e.g., visual validation fields).
+
         Args:
             obj (object): The object to stringify.
 
@@ -256,6 +282,16 @@ class SimpleTokenCounter(TokenCounter):
         """
         if isinstance(obj, str):
             return obj
+
+        # Check if object is a Pydantic model with model_dump method
+        if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
+            try:
+                # Use for_api context to exclude internal fields from token counting
+                serialized = obj.model_dump(context={"for_api": True})  # type: ignore[attr-defined]
+                return json.dumps(serialized, separators=(",", ":"))
+            except (TypeError, ValueError, AttributeError):
+                pass  # Fall through to default handling
+
         try:
             return json.dumps(obj, separators=(",", ":"))
         except (TypeError, ValueError):

@@ -96,8 +96,10 @@ class Agent(ActModel):
 
         self._accumulate_usage(message_by_assistant.usage)  # type: ignore
 
-        message_by_assistant_dict = message_by_assistant.model_dump(mode="json")
-        logger.debug(message_by_assistant_dict)
+        message_by_assistant_dict = message_by_assistant.model_dump(
+            mode="json", context={"for_api": True}
+        )
+        # logger.debug(message_by_assistant_dict)
         truncation_strategy.append_message(message_by_assistant)
         self._reporter.add_message(self.__class__.__name__, message_by_assistant_dict)
 
@@ -132,7 +134,9 @@ class Agent(ActModel):
         if not tool_result_message:
             return False
 
-        tool_result_message_dict = tool_result_message.model_dump(mode="json")
+        tool_result_message_dict = tool_result_message.model_dump(
+            mode="json", context={"for_api": True}
+        )
         logger.debug(tool_result_message_dict)
         truncation_strategy.append_message(tool_result_message)
 
