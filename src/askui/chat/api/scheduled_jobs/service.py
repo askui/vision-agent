@@ -40,8 +40,7 @@ class ScheduledJobService:
 
         Args:
             workspace_id (WorkspaceId): The workspace this job belongs to.
-            next_fire_time (UnixDatetime): When the job should execute.
-            data (ScheduledJobData): Type-specific job data.
+            params (ScheduledJobCreate): The job creation parameters.
 
         Returns:
             ScheduledJob: The created scheduled job.

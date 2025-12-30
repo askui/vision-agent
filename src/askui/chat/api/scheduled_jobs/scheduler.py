@@ -20,7 +20,6 @@ _data_store: Any = SQLAlchemyDataStore(engine_or_url=engine)
 
 # Module-level singleton scheduler instance
 # - max_concurrent_jobs=1: only one job runs at a time (sequential execution)
-# - lease_duration=600s: 10 minutes grace period for missed jobs
 # At module level: just create the scheduler (don't start it)
 scheduler: AsyncScheduler = AsyncScheduler(
     data_store=_data_store,

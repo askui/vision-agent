@@ -51,6 +51,9 @@ class _BaseMessageRerunnerDataCreate(BaseModel):
         assistant_id (AssistantId): The assistant to run.
         model (str): The model to use for the run.
         message (ScheduledMessageCreate): The message to create.
+        askui_token (str): The AskUI token to use for authenticated API calls
+            when the job executes. This is a long-lived credential that doesn't
+            expire like Bearer tokens.
     """
 
     type: Literal["message_rerunner"] = "message_rerunner"
@@ -59,6 +62,7 @@ class _BaseMessageRerunnerDataCreate(BaseModel):
     assistant_id: AssistantId
     model: str
     message: ScheduledMessageCreate
+    askui_token: str
 
 
 class ScheduledJobCreate(BaseModel):
@@ -124,9 +128,20 @@ class ScheduledJob(BaseModel):
 
     @classmethod
     def create(
-        cls, workspace_id: WorkspaceId, params: ScheduledJobCreate
+        cls,
+        workspace_id: WorkspaceId,
+        params: ScheduledJobCreate,
     ) -> "ScheduledJob":
-        """Create a new ScheduledJob with a generated ID."""
+        """
+        Create a new ScheduledJob with a generated ID.
+
+        Args:
+            workspace_id (WorkspaceId): The workspace this job belongs to.
+            params (ScheduledJobCreate): The job creation parameters.
+
+        Returns:
+            ScheduledJob: The created scheduled job.
+        """
         return cls(
             id=generate_time_ordered_id("schedjob"),
             next_fire_time=params.next_fire_time,
@@ -137,6 +152,7 @@ class ScheduledJob(BaseModel):
                 assistant_id=params.data.assistant_id,
                 model=params.data.model,
                 message=params.data.message,
+                askui_token=params.data.askui_token,
             ),
         )
 
