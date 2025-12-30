@@ -54,6 +54,7 @@ class _BaseMessageRerunnerDataCreate(BaseModel):
     """
 
     type: Literal["message_rerunner"] = "message_rerunner"
+    name: str
     thread_id: ThreadId
     assistant_id: AssistantId
     model: str
@@ -131,6 +132,7 @@ class ScheduledJob(BaseModel):
             next_fire_time=params.next_fire_time,
             data=MessageRerunnerData(
                 workspace_id=workspace_id,
+                name=params.data.name,
                 thread_id=params.data.thread_id,
                 assistant_id=params.data.assistant_id,
                 model=params.data.model,
