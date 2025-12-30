@@ -30,11 +30,7 @@ async def execute_job(
         model (str): The model to use for the run.
         message (dict[str, Any]): The message data to create.
         **_kwargs (Any): Additional keyword arguments (ignored).
-
-    Returns:
-        dict[str, Any]: Result containing the `run_id`.
     """
-
     # Validates and returns the correct concrete type based on the `type` discriminator
     job_data = scheduled_job_data_adapter.validate_python(_kwargs)
 
