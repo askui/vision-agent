@@ -11,7 +11,7 @@ from askui.chat.api.messages.dependencies import get_message_service
 from askui.chat.api.runs.dependencies import create_run_service
 from askui.chat.api.runs.models import RunCreate
 from askui.chat.api.scheduled_jobs.models import (
-    ScheduledJobData,
+    MessageRerunnerData,
     scheduled_job_data_adapter,
 )
 
@@ -43,47 +43,55 @@ async def execute_job(
     )
 
     # future proofing of new job types
-    if isinstance(job_data, ScheduledJobData):  # pyright: ignore
-        # Set ASKUI_TOKEN env var for API calls
+    if isinstance(job_data, MessageRerunnerData):  # pyright: ignore[reportUnnecessaryIsInstance]
+        # Save previous ASKUI_TOKEN and AUTHORIZATION_HEADER env vars
         _previous_token = os.environ.get(_ASKUI_TOKEN_ENV_VAR)
         _previous_authorization = os.environ.get(_AUTHORIZATION_HEADER_ENV_VAR)
 
-        # remove authorization header since previously caesr authentication was used which could be invalid now due to bearer token authentication being used instead
+        # remove authorization header since it takes precedence over the token and is set when forwarding bearer token
         del os.environ[_AUTHORIZATION_HEADER_ENV_VAR]
         os.environ[_ASKUI_TOKEN_ENV_VAR] = job_data.askui_token
 
-        # Create fresh session for this job execution
-        try:
-            with Session(engine) as session:
-                message_service = get_message_service(session)
-                run_service = create_run_service(session, job_data.workspace_id)
+        await _execute_message_rerunner_job(job_data)
 
-                # Create message
-                message_service.create(
-                    workspace_id=job_data.workspace_id,
-                    thread_id=job_data.thread_id,
-                    params=job_data.message,
-                )
+        # Restore previous ASKUI_TOKEN and AUTHORIZATION_HEADER env vars
+        if _previous_token is not None:
+            os.environ[_ASKUI_TOKEN_ENV_VAR] = _previous_token
+        if _previous_authorization is not None:
+            os.environ[_AUTHORIZATION_HEADER_ENV_VAR] = _previous_authorization
 
-                # Create and execute run
-                _logger.debug("Creating run with assistant %s", job_data.assistant_id)
-                run, generator = await run_service.create(
-                    workspace_id=job_data.workspace_id,
-                    thread_id=job_data.thread_id,
-                    params=RunCreate(
-                        assistant_id=job_data.assistant_id, model=job_data.model
-                    ),
-                )
 
-                # Consume generator to completion
-                _logger.debug("Waiting for run %s to complete", run.id)
-                async for _event in generator:
-                    pass
+async def _execute_message_rerunner_job(
+    job_data: MessageRerunnerData,
+) -> None:
+    """
+    Execute a message rerunner job.
 
-                _logger.info("Scheduled job completed: run_id=%s", run.id)
-        finally:
-            # Restore previous ASKUI_TOKEN env var state
-            if _previous_token is not None:
-                os.environ[_ASKUI_TOKEN_ENV_VAR] = _previous_token
-            if _previous_authorization is not None:
-                os.environ[_AUTHORIZATION_HEADER_ENV_VAR] = _previous_authorization
+    Args:
+        job_data: The job data.
+    """
+    with Session(engine) as session:
+        message_service = get_message_service(session)
+        run_service = create_run_service(session, job_data.workspace_id)
+
+        # Create message
+        message_service.create(
+            workspace_id=job_data.workspace_id,
+            thread_id=job_data.thread_id,
+            params=job_data.message,
+        )
+
+        # Create and execute run
+        _logger.debug("Creating run with assistant %s", job_data.assistant_id)
+        run, generator = await run_service.create(
+            workspace_id=job_data.workspace_id,
+            thread_id=job_data.thread_id,
+            params=RunCreate(assistant_id=job_data.assistant_id, model=job_data.model),
+        )
+
+        # Consume generator to completion
+        _logger.debug("Waiting for run %s to complete", run.id)
+        async for _event in generator:
+            pass
+
+        _logger.info("Scheduled job completed: run_id=%s", run.id)

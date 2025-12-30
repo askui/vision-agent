@@ -113,18 +113,18 @@ class ScheduledJobService:
         """
         logger.info("Canceling scheduled job: %s", job_id)
 
-        schedules: list[Any] = await self._scheduler.data_store.get_schedules({job_id})
+        schedules: list[Schedule] = await self._scheduler.data_store.get_schedules(
+            {job_id}
+        )
 
         if not schedules:
-            error_msg = f"Scheduled job {job_id} not found"
-            raise NotFoundError(error_msg)
+            msg = f"Scheduled job {job_id} not found"
+            raise NotFoundError(msg)
 
-        schedule: Any = schedules[0]
-        kwargs: dict[str, Any] = schedule.kwargs or {}
-        schedule_workspace_id: str | None = kwargs.get("workspace_id")
-        if schedule_workspace_id is None or UUID(schedule_workspace_id) != workspace_id:
-            error_msg = f"Scheduled job {job_id} not found"
-            raise NotFoundError(error_msg)
+        scheduled_job = ScheduledJob.from_schedule(schedules[0])
+        if scheduled_job.data.workspace_id != workspace_id:
+            msg = f"Scheduled job {job_id} not found in workspace {workspace_id}"
+            raise NotFoundError(msg)
 
         await self._scheduler.data_store.remove_schedules([job_id])
         logger.info("Scheduled job canceled: %s", job_id)

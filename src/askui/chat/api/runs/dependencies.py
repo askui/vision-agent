@@ -62,7 +62,7 @@ def create_run_service(session: Session, workspace_id: UUID4) -> RunService:
     Create a RunService with all required dependencies manually.
 
     Use this function when you need a `RunService` outside of FastAPI's
-    dependency injection context (e.g., background tasks, APScheduler callbacks).
+    dependency injection context (e.g. APScheduler callbacks).
 
     Args:
         session (Session): Database session.

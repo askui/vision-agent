@@ -1,7 +1,5 @@
 """FastAPI dependencies for scheduled jobs."""
 
-from typing import Any
-
 from fastapi import Depends
 
 from askui.chat.api.scheduled_jobs.scheduler import scheduler
