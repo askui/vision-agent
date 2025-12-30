@@ -18,12 +18,16 @@ class DbSettings(BaseModel):
         default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_chat.db').as_posix()}",
         description="Database URL for SQLAlchemy connection",
     )
+    scheduler_url: str = Field(
+        default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_scheduler.db').as_posix()}",
+        description="Database URL for APScheduler job storage",
+    )
     auto_migrate: bool = Field(
         default=True,
         description="Whether to run migrations automatically on startup",
     )
 
-    @field_validator("url")
+    @field_validator("url", "scheduler_url")
     @classmethod
     def validate_sqlite_url(cls, v: str) -> str:
         """Ensure only synchronous SQLite URLs are allowed."""

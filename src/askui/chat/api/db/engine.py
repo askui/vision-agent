@@ -2,7 +2,7 @@ import logging
 from sqlite3 import Connection as SQLite3Connection
 from typing import Any
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import create_engine, event
 
 from askui.chat.api.dependencies import get_settings
 
@@ -14,12 +14,8 @@ echo = logger.isEnabledFor(logging.DEBUG)
 engine = create_engine(settings.db.url, connect_args=connect_args, echo=echo)
 
 
-@event.listens_for(Engine, "connect")
+@event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn: SQLite3Connection, connection_record: Any) -> None:  # noqa: ARG001
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
-    # WAL mode - allows concurrent readers + writer
-    cursor.execute("PRAGMA journal_mode=WAL")
-    # Busy timeout - prevents SQLite from hanging on locked databases
-    cursor.execute("PRAGMA busy_timeout=10000")  # 10 seconds
     cursor.close()
