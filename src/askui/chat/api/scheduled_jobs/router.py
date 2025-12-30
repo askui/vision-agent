@@ -4,16 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, status
 
-from askui.chat.api.dependencies import ListQueryDep
 from askui.chat.api.models import ScheduledJobId, WorkspaceId
 from askui.chat.api.scheduled_jobs.dependencies import ScheduledJobServiceDep
-from askui.chat.api.scheduled_jobs.models import (
-    MessageRerunnerData,
-    ScheduledJob,
-    ScheduledJobCreate,
-)
+from askui.chat.api.scheduled_jobs.models import ScheduledJob, ScheduledJobCreate
 from askui.chat.api.scheduled_jobs.service import ScheduledJobService
-from askui.utils.api_utils import ListQuery, ListResponse
+from askui.utils.api_utils import ListResponse
 
 router = APIRouter(prefix="/scheduled-jobs", tags=["scheduled-jobs"])
 
@@ -25,19 +20,10 @@ async def create_scheduled_job(
     scheduled_job_service: ScheduledJobService = ScheduledJobServiceDep,
 ) -> ScheduledJob:
     """Create a new scheduled job."""
-    # Inject workspace_id into the data
-    data = MessageRerunnerData(
-        workspace_id=askui_workspace,
-        thread_id=params.data.thread_id,
-        assistant_id=params.data.assistant_id,
-        model=params.data.model,
-        message=params.data.message,
-    )
 
     return await scheduled_job_service.create(
         workspace_id=askui_workspace,
-        next_fire_time=params.next_fire_time,
-        data=data,
+        params=params,
     )
 
 

@@ -10,9 +10,8 @@ from apscheduler.triggers.date import DateTrigger
 
 from askui.chat.api.models import ScheduledJobId, WorkspaceId
 from askui.chat.api.scheduled_jobs.executor import execute_job
-from askui.chat.api.scheduled_jobs.models import ScheduledJob, ScheduledJobData
-from askui.utils.api_utils import ListQuery, ListResponse, NotFoundError
-from askui.utils.datetime_utils import UnixDatetime
+from askui.chat.api.scheduled_jobs.models import ScheduledJob, ScheduledJobCreate
+from askui.utils.api_utils import ListResponse, NotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,8 @@ class ScheduledJobService:
 
     async def create(
         self,
-        workspace_id: WorkspaceId,  # noqa: ARG002
-        next_fire_time: UnixDatetime,
-        data: ScheduledJobData,
+        workspace_id: WorkspaceId,
+        params: ScheduledJobCreate,
     ) -> ScheduledJob:
         """
         Create a new scheduled job.
@@ -49,8 +47,8 @@ class ScheduledJobService:
             ScheduledJob: The created scheduled job.
         """
         job = ScheduledJob.create(
-            next_fire_time=next_fire_time,
-            data=data,
+            workspace_id=workspace_id,
+            params=params,
         )
 
         # Prepare kwargs for the job callback
@@ -58,15 +56,15 @@ class ScheduledJobService:
         logger.info(
             "Creating scheduled job: id=%s, type=%s, next_fire_time=%s",
             job.id,
-            data.type,
-            next_fire_time,
+            job.data.type,
+            job.next_fire_time,
         )
 
         await self._scheduler.add_schedule(
             func_or_task_id=execute_job,
-            trigger=DateTrigger(run_time=next_fire_time),
+            trigger=DateTrigger(run_time=job.next_fire_time),
             id=job.id,
-            kwargs=data.model_dump(mode="json"),
+            kwargs=job.data.model_dump(mode="json"),
             misfire_grace_time=timedelta(minutes=10),
             job_result_expiration_time=timedelta(weeks=30000),  # Never expire
         )

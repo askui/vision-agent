@@ -123,13 +123,19 @@ class ScheduledJob(BaseModel):
 
     @classmethod
     def create(
-        cls, next_fire_time: UnixDatetime, data: ScheduledJobData
+        cls, workspace_id: WorkspaceId, params: ScheduledJobCreate
     ) -> "ScheduledJob":
         """Create a new ScheduledJob with a generated ID."""
         return cls(
             id=generate_time_ordered_id("schedjob"),
-            next_fire_time=next_fire_time,
-            data=data,
+            next_fire_time=params.next_fire_time,
+            data=MessageRerunnerData(
+                workspace_id=workspace_id,
+                thread_id=params.data.thread_id,
+                assistant_id=params.data.assistant_id,
+                model=params.data.model,
+                message=params.data.message,
+            ),
         )
 
     @classmethod
