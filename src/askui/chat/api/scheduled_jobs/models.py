@@ -2,7 +2,7 @@ from typing import Literal, Union
 
 from apscheduler import Schedule
 from apscheduler.triggers.date import DateTrigger
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 
 from askui.chat.api.messages.models import ROOT_MESSAGE_PARENT_ID, MessageCreate
 from askui.chat.api.models import (
@@ -62,7 +62,7 @@ class _BaseMessageRerunnerDataCreate(BaseModel):
     assistant_id: AssistantId
     model: str
     message: ScheduledMessageCreate
-    askui_token: str
+    askui_token: SecretStr
 
 
 class ScheduledJobCreate(BaseModel):
@@ -171,15 +171,19 @@ class ScheduledJob(BaseModel):
             ValueError: If the schedule has no determinable `next_fire_time`.
         """
         # Extract next_fire_time from schedule or trigger
-        if schedule.next_fire_time is None:
-            msg = f"Schedule {schedule.id} has no next_fire_time"
-            raise ValueError(msg)
-
+        next_fire_time: UnixDatetime
+        if schedule.next_fire_time is not None:
+            next_fire_time = schedule.next_fire_time
+        elif isinstance(schedule.trigger, DateTrigger):
+            next_fire_time = schedule.trigger.run_time
+        else:
+            error_msg = f"Schedule {schedule.id} has no next_fire_time"
+            raise ValueError(error_msg)
         # Reconstruct data from kwargs
         data = MessageRerunnerData.model_validate(schedule.kwargs or {})
 
         return cls(
             id=schedule.id,
-            next_fire_time=schedule.next_fire_time,
+            next_fire_time=next_fire_time,
             data=data,
         )

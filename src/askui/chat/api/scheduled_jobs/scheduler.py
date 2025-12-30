@@ -6,6 +6,7 @@ the APScheduler instance as a singleton to ensure jobs persist across requests.
 """
 
 import logging
+from datetime import timedelta
 from sqlite3 import Connection as SQLite3Connection
 from typing import Any
 
@@ -39,6 +40,7 @@ _data_store: Any = SQLAlchemyDataStore(engine_or_url=scheduler_engine)
 scheduler: AsyncScheduler = AsyncScheduler(
     data_store=_data_store,
     max_concurrent_jobs=1,
+    cleanup_interval=timedelta(minutes=1),  # Cleanup every minute
 )
 
 

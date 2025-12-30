@@ -1,5 +1,6 @@
 """Executor for scheduled job callbacks."""
 
+import base64
 import logging
 import os
 from typing import Any
@@ -16,9 +17,6 @@ from askui.chat.api.scheduled_jobs.models import (
 )
 
 _logger = logging.getLogger(__name__)
-
-_ASKUI_TOKEN_ENV_VAR = "ASKUI_TOKEN"
-_AUTHORIZATION_HEADER_ENV_VAR = "ASKUI__AUTHORIZATION"
 
 
 async def execute_job(
@@ -45,20 +43,18 @@ async def execute_job(
     # future proofing of new job types
     if isinstance(job_data, MessageRerunnerData):  # pyright: ignore[reportUnnecessaryIsInstance]
         # Save previous ASKUI_TOKEN and AUTHORIZATION_HEADER env vars
-        _previous_token = os.environ.get(_ASKUI_TOKEN_ENV_VAR)
-        _previous_authorization = os.environ.get(_AUTHORIZATION_HEADER_ENV_VAR)
+        _previous_authorization = os.environ.get("ASKUI__AUTHORIZATION")
 
         # remove authorization header since it takes precedence over the token and is set when forwarding bearer token
-        del os.environ[_AUTHORIZATION_HEADER_ENV_VAR]
-        os.environ[_ASKUI_TOKEN_ENV_VAR] = job_data.askui_token
+        os.environ["ASKUI__AUTHORIZATION"] = (
+            f"Basic {base64.b64encode(job_data.askui_token.get_secret_value().encode()).decode()}"
+        )
 
         await _execute_message_rerunner_job(job_data)
 
-        # Restore previous ASKUI_TOKEN and AUTHORIZATION_HEADER env vars
-        if _previous_token is not None:
-            os.environ[_ASKUI_TOKEN_ENV_VAR] = _previous_token
+        # Restore previous AUTHORIZATION_HEADER env var
         if _previous_authorization is not None:
-            os.environ[_AUTHORIZATION_HEADER_ENV_VAR] = _previous_authorization
+            os.environ["ASKUI__AUTHORIZATION"] = _previous_authorization
 
 
 async def _execute_message_rerunner_job(

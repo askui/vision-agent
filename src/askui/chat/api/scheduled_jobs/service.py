@@ -2,8 +2,6 @@
 
 import logging
 from datetime import timedelta
-from typing import Any
-from uuid import UUID
 
 from apscheduler import AsyncScheduler, Schedule
 from apscheduler.triggers.date import DateTrigger
@@ -63,7 +61,10 @@ class ScheduledJobService:
             func_or_task_id=execute_job,
             trigger=DateTrigger(run_time=job.next_fire_time),
             id=job.id,
-            kwargs=job.data.model_dump(mode="json"),
+            kwargs={
+                **job.data.model_dump(mode="json"),
+                "askui_token": job.data.askui_token.get_secret_value(),
+            },
             misfire_grace_time=timedelta(minutes=10),
             job_result_expiration_time=timedelta(weeks=30000),  # Never expire
         )
