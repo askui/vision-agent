@@ -9,7 +9,7 @@ import pytest
 from askui.agent import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CachedExecutionToolSettings, CachingSettings
+from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
 
 
 def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:

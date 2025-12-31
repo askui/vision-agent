@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from askui.models.shared.settings import CachedExecutionToolSettings
+from askui.models.shared.settings import CacheExecutionSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
@@ -390,7 +390,7 @@ def test_execute_cached_execution_initializes_with_default_settings() -> None:
 def test_execute_cached_execution_initializes_with_custom_settings() -> None:
     """Test that ExecuteCachedTrajectory accepts custom settings."""
     mock_toolbox = MagicMock(spec=ToolCollection)
-    custom_settings = CachedExecutionToolSettings(delay_time_between_action=1.0)
+    custom_settings = CacheExecutionSettings(delay_time_between_action=1.0)
     tool = ExecuteCachedTrajectory(toolbox=mock_toolbox, settings=custom_settings)
 
     # Should have custom settings initialized

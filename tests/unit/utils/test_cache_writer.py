@@ -7,14 +7,19 @@ from typing import Any
 
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CacheFile, CacheWriterSettings
+from askui.models.shared.settings import CacheFile, CacheWritingSettings
+
+# Note: CacheWritingSettings was renamed to CacheWritingSettings in v0.2
 from askui.utils.caching.cache_writer import CacheWriter
 
 
 def test_cache_writer_initialization() -> None:
     """Test CacheWriter initialization."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
         assert cache_writer.cache_dir == Path(temp_dir)
         assert cache_writer.file_name == "test.json"
         assert cache_writer.messages == []
@@ -35,17 +40,26 @@ def test_cache_writer_creates_cache_directory() -> None:
 def test_cache_writer_adds_json_extension() -> None:
     """Test that CacheWriter adds .json extension if not present."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test"),
+        )
         assert cache_writer.file_name == "test.json"
 
-        cache_writer2 = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer2 = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
         assert cache_writer2.file_name == "test.json"
 
 
 def test_cache_writer_add_message_cb_stores_tool_use_blocks() -> None:
     """Test that add_message_cb stores ToolUseBlockParam from assistant messages."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
 
         tool_use_block = ToolUseBlockParam(
             id="test_id",
@@ -74,7 +88,10 @@ def test_cache_writer_add_message_cb_stores_tool_use_blocks() -> None:
 def test_cache_writer_add_message_cb_ignores_non_tool_use_content() -> None:
     """Test that add_message_cb ignores non-ToolUseBlockParam content."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
 
         message = MessageParam(
             role="assistant",
@@ -94,7 +111,10 @@ def test_cache_writer_add_message_cb_ignores_non_tool_use_content() -> None:
 def test_cache_writer_add_message_cb_ignores_user_messages() -> None:
     """Test that add_message_cb ignores user messages."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
 
         message = MessageParam(
             role="user",
@@ -114,7 +134,10 @@ def test_cache_writer_add_message_cb_ignores_user_messages() -> None:
 def test_cache_writer_detects_cached_execution() -> None:
     """Test that CacheWriter detects when execute_cached_executions_tool is used."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
 
         tool_use_block = ToolUseBlockParam(
             id="cached_exec_id",
@@ -144,8 +167,8 @@ def test_cache_writer_generate_writes_file() -> None:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
-            file_name="output.json",
-            cache_writer_settings=CacheWriterSettings(
+            cache_writing_settings=CacheWritingSettings(
+                filename="output.json",
                 parameter_identification_strategy="preset"
             ),
         )
@@ -200,8 +223,8 @@ def test_cache_writer_generate_auto_names_file() -> None:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
-            file_name="",
-            cache_writer_settings=CacheWriterSettings(
+            cache_writing_settings=CacheWritingSettings(
+                filename="",
                 parameter_identification_strategy="preset"
             ),
         )
@@ -225,7 +248,10 @@ def test_cache_writer_generate_skips_cached_execution() -> None:
     """Test that generate() doesn't write file for cached executions."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
-        cache_writer = CacheWriter(cache_dir=str(cache_dir), file_name="test.json")
+        cache_writer = CacheWriter(
+            cache_dir=str(cache_dir),
+            cache_writing_settings=CacheWritingSettings(filename="test.json"),
+        )
 
         cache_writer.was_cached_execution = True
         cache_writer.messages = [
@@ -247,7 +273,10 @@ def test_cache_writer_generate_skips_cached_execution() -> None:
 def test_cache_writer_reset() -> None:
     """Test that reset() clears messages and filename."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="original.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="original.json"),
+        )
 
         # Add some data
         cache_writer.messages = [
@@ -359,7 +388,10 @@ def test_cache_writer_read_cache_file_v2() -> None:
 def test_cache_writer_set_file_name() -> None:
     """Test that set_file_name() updates the filename."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        cache_writer = CacheWriter(cache_dir=temp_dir, file_name="original.json")
+        cache_writer = CacheWriter(
+            cache_dir=temp_dir,
+            cache_writing_settings=CacheWritingSettings(filename="original.json"),
+        )
 
         cache_writer.set_file_name("new_name")
         assert cache_writer.file_name == "new_name.json"
@@ -374,8 +406,8 @@ def test_cache_writer_generate_resets_after_writing() -> None:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
-            file_name="test.json",
-            cache_writer_settings=CacheWriterSettings(
+            cache_writing_settings=CacheWritingSettings(
+                filename="test.json",
                 parameter_identification_strategy="preset"
             ),
         )
@@ -401,8 +433,8 @@ def test_cache_writer_detects_and_stores_parameters() -> None:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
-            file_name="test.json",
-            cache_writer_settings=CacheWriterSettings(
+            cache_writing_settings=CacheWritingSettings(
+                filename="test.json",
                 parameter_identification_strategy="preset"
             ),
         )
@@ -443,8 +475,8 @@ def test_cache_writer_empty_parameters_when_none_found() -> None:
         cache_dir = Path(temp_dir)
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
-            file_name="test.json",
-            cache_writer_settings=CacheWriterSettings(
+            cache_writing_settings=CacheWritingSettings(
+                filename="test.json",
                 parameter_identification_strategy="preset"
             ),
         )
