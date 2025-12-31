@@ -1,6 +1,6 @@
 # Caching (Experimental)
 
-**CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the caching_strategy to `no`.**
+**CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the strategy to `None`.**
 
 The caching mechanism allows you to record and replay agent action sequences (trajectories) for faster and more robust test execution. This feature is particularly useful for regression testing, where you want to replay known-good interaction sequences to verify that your application still behaves correctly.
 
@@ -356,7 +356,7 @@ with VisionAgent() as agent:
         caching_settings=CachingSettings(
             strategy="execute",
             cache_dir=".cache",
-            execute_cached_trajectory_tool_settings=CacheExecutionSettings(
+            execution_settings=CacheExecutionSettings(
                 delay_time_between_action=1.0  # Wait 1 second between each action
             )
         )
@@ -495,26 +495,6 @@ Each failure record contains:
 - **`failure_count_at_step`**: How many times this specific step has failed
 
 This information helps with cache invalidation decisions and debugging.
-
-### v0.0 Format (Legacy)
-
-The old format was a simple JSON array:
-
-```json
-[
-  {
-    "type": "tool_use",
-    "id": "toolu_01AbCdEfGhIjKlMnOpQrStUv",
-    "name": "computer",
-    "input": {
-      "action": "mouse_move",
-      "coordinate": [150, 200]
-    }
-  }
-]
-```
-
-**Backward Compatibility:** v0.0 cache files are automatically migrated to v0.1 format when read. The system adds default metadata and wraps the trajectory array in the new structure. This migration is transparent and requires no user intervention.
 
 ## How It Works
 
@@ -1123,61 +1103,185 @@ Consider re-recording a cached trajectory when:
 - Execution takes significantly longer than expected
 - The cache has been marked invalid due to failure patterns
 
-## Migration from v0.0 to v0.1
+## Migration from v0.1 to v0.2
 
-**Automatic Migration:** All v0.0 cache files are automatically migrated when read by the v0.1 system. No manual intervention is required.
+v0.2 introduces visual validation and refactored settings structure. Here's what you need to know to migrate from v0.1.
 
-### What Happens During Migration
+### What Changed in v0.2
 
-When a v0.0 cache file (simple JSON array) is read:
+**Functional Changes:**
+- **Visual Validation**: Cache recording now captures visual hashes (pHash/aHash) of UI regions around each click/type action. During execution, these hashes are validated to ensure the UI state matches expectations before executing cached actions.
+- **Smarter Cache Execution**: Visual validation helps detect when the UI has changed, preventing cached actions from executing on wrong elements.
 
-1. System detects v0.0 format (array instead of object with metadata)
-2. Wraps trajectory in v0.1 structure
-3. Adds default metadata:
-   ```json
-   {
-     "version": "0.1",
-     "created_at": "<current_time>",
-     "last_executed_at": null,
-     "execution_attempts": 0,
-     "failures": [],
-     "is_valid": true,
-     "invalidation_reason": null
-   }
-   ```
-4. Extracts any cache_parameters found in trajectory
-5. Returns fully-formed `CacheFile` object
+**API Changes:**
+- **Strategy names renamed** for clarity:
+  - `"read"` → `"execute"`
+  - `"write"` → `"record"`
+  - `"no"` → `None`
+- **Settings refactored** into separate writing and execution settings:
+  - `CacheWritingSettings` for recording-related configuration
+  - `CacheExecutionSettings` for playback-related configuration
+- **Default cache directory** changed from `".cache"` to `".askui_cache"`
 
-### Compatibility Guarantees
+### Step 1: Update Your Code
 
-- All v0.0 cache files continue to work without modification
-- Migration is performed on-the-fly during read
-- Original files are not modified on disk (unless re-written)
-- v0.1 system can read both formats seamlessly
-
-### Programmatic Migration (Optional)
-
-If you prefer to upgrade v0.0 cache files to v0.1 format on disk (rather than letting the system migrate them on-the-fly during read), you can do so programmatically:
-
+**Old v0.1 code:**
 ```python
-from pathlib import Path
-from askui.utils.cache_writer import CacheWriter
-import json
+from askui.models.shared.settings import CachingSettings
 
-# Read v0.0 file (auto-migrates to v0.1 in memory)
-cache_path = Path(".cache/old_cache.json")
-cached_trajectory = CacheWriter.read_cache_file(cache_path)
-
-# Write back to disk in v0.1 format
-with cache_path.open("w", encoding="utf-8") as f:
-    json.dump(cached_trajectory.model_dump(mode="json"), f, indent=2, default=str)
+caching_settings = CachingSettings(
+    caching_strategy="read",  # Old naming
+    cache_dir=".cache",
+    file_name="my_test.json",
+    delay_time_between_action=0.5,
+)
 ```
 
-**Note:** Programmatic migration is optional - all v0.0 caches are automatically migrated during read operations. You only need to manually upgrade cache files if you want them in v0.1 format on disk immediately.
+**New v0.2 code:**
+```python
+from askui.models.shared.settings import (
+    CachingSettings,
+    CacheWritingSettings,
+    CacheExecutionSettings,
+)
 
-## Example: Complete Test Workflow with v0.1 Features
+caching_settings = CachingSettings(
+    strategy="execute",  # New naming (was "read")
+    cache_dir=".askui_cache",  # New default directory
+    writing_settings=CacheWritingSettings(
+        filename="my_test.json",
+        visual_verification_method="phash",  # New in v0.2
+        visual_validation_region_size=100,   # New in v0.2
+        visual_validation_threshold=10,      # New in v0.2
+    ),
+    execution_settings=CacheExecutionSettings(
+        delay_time_between_action=0.5,
+    ),
+)
+```
 
-Here's a complete example showing advanced v0.1 features:
+**Migration checklist:**
+- [ ] Replace `caching_strategy` with `strategy`
+- [ ] Rename `"read"` → `"execute"`, `"write"` → `"record"`, `"no"` → `None`
+- [ ] Move `file_name` → `writing_settings.filename`
+- [ ] Move `delay_time_between_action` → `execution_settings.delay_time_between_action`
+- [ ] Add `writing_settings=CacheWritingSettings(...)` if using record mode
+- [ ] Add `execution_settings=CacheExecutionSettings(...)` if using execute mode
+- [ ] Update `cache_dir` from `".cache"` to `".askui_cache"` (optional but recommended)
+
+### Step 2: Handle Existing Cache Files
+
+**Important:** v0.1 cache files do NOT work with v0.2 due to visual validation changes.
+
+You have two options:
+
+#### Option A: Delete Old Cache Files (Recommended)
+
+The simplest approach is to delete all v0.1 cache files and re-record them with v0.2:
+
+```bash
+# Delete all old cache files
+rm -rf .cache/*.json
+
+# Or if you updated to new directory:
+rm -rf .askui_cache/*.json
+```
+
+Then re-run your workflows in `record` mode to create new v0.2 cache files with visual validation.
+
+#### Option B: Disable Visual Validation (Not Recommended)
+
+If you must use old cache files temporarily, you can disable visual validation:
+
+```python
+writing_settings=CacheWritingSettings(
+    filename="old_cache.json",
+    visual_verification_method="none",  # Disable visual validation
+)
+```
+
+**Warning:** Without visual validation, cached actions may execute on wrong UI elements if the interface has changed. This defeats the primary benefit of v0.2.
+
+### Step 3: Verify Migration
+
+After updating your code and cache files:
+
+1. **Test record mode**: Verify new cache files are created with visual validation
+   ```bash
+   # Check for visual_representation fields in cache file
+   cat .askui_cache/my_test.json | grep -A2 visual_representation
+   ```
+
+2. **Test execute mode**: Verify cached trajectories execute with visual validation
+   - You should see log messages about visual validation during execution
+   - If UI has changed, execution should fail with visual validation errors
+
+3. **Check metadata**: Verify cache files contain v0.2 metadata
+   ```bash
+   cat .askui_cache/my_test.json | grep -A5 '"metadata"'
+   ```
+
+   Should include:
+   ```json
+   "visual_verification_method": "phash",
+   "visual_validation_region_size": 100,
+   "visual_validation_threshold": 10
+   ```
+
+### Example: Complete Migration
+
+**Before (v0.1):**
+```python
+caching_settings = CachingSettings(
+    caching_strategy="both",
+    cache_dir=".cache",
+    file_name="login_test.json",
+    delay_time_between_action=0.3,
+)
+```
+
+**After (v0.2):**
+```python
+caching_settings = CachingSettings(
+    strategy="both",  # Renamed from caching_strategy
+    cache_dir=".askui_cache",  # New default
+    writing_settings=CacheWritingSettings(
+        filename="login_test.json",  # Moved from file_name
+        visual_verification_method="phash",  # New: visual validation
+        visual_validation_region_size=100,   # New: validation region
+        visual_validation_threshold=10,      # New: strictness level
+        parameter_identification_strategy="llm",
+    ),
+    execution_settings=CacheExecutionSettings(
+        delay_time_between_action=0.3,  # Moved to execution_settings
+    ),
+)
+```
+
+### Troubleshooting
+
+**Issue**: Cache execution fails with "Visual validation failed"
+- **Cause**: UI has changed since cache was recorded
+- **Solution**: Re-record the cache or adjust `visual_validation_threshold` (higher = more tolerant)
+
+**Issue**: Import error for `CacheWritingSettings`
+- **Cause**: Old import statement
+- **Solution**: Update imports:
+  ```python
+  from askui.models.shared.settings import (
+      CachingSettings,
+      CacheWritingSettings,
+      CacheExecutionSettings,
+  )
+  ```
+
+**Issue**: Old cache files don't work
+- **Cause**: v0.1 cache files lack visual validation data
+- **Solution**: Delete old cache files and re-record with v0.2
+
+## Example: Complete Test Workflow
+
+Here's a complete example showing the caching system:
 
 ```python
 import logging
@@ -1228,7 +1332,7 @@ with VisionAgent() as agent:
         caching_settings=CachingSettings(
             strategy="execute",
             cache_dir="test_cache",
-            execute_cached_trajectory_tool_settings=CacheExecutionSettings(
+            execution_settings=CacheExecutionSettings(
                 delay_time_between_action=0.75
             )
         )
