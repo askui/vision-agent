@@ -168,8 +168,7 @@ def test_cache_writer_generate_writes_file() -> None:
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             cache_writing_settings=CacheWritingSettings(
-                filename="output.json",
-                parameter_identification_strategy="preset"
+                filename="output.json", parameter_identification_strategy="preset"
             ),
         )
 
@@ -224,8 +223,7 @@ def test_cache_writer_generate_auto_names_file() -> None:
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             cache_writing_settings=CacheWritingSettings(
-                filename="",
-                parameter_identification_strategy="preset"
+                filename="", parameter_identification_strategy="preset"
             ),
         )
 
@@ -407,8 +405,7 @@ def test_cache_writer_generate_resets_after_writing() -> None:
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             cache_writing_settings=CacheWritingSettings(
-                filename="test.json",
-                parameter_identification_strategy="preset"
+                filename="test.json", parameter_identification_strategy="preset"
             ),
         )
 
@@ -434,8 +431,7 @@ def test_cache_writer_detects_and_stores_parameters() -> None:
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             cache_writing_settings=CacheWritingSettings(
-                filename="test.json",
-                parameter_identification_strategy="preset"
+                filename="test.json", parameter_identification_strategy="preset"
             ),
         )
 
@@ -476,8 +472,7 @@ def test_cache_writer_empty_parameters_when_none_found() -> None:
         cache_writer = CacheWriter(
             cache_dir=str(cache_dir),
             cache_writing_settings=CacheWritingSettings(
-                filename="test.json",
-                parameter_identification_strategy="preset"
+                filename="test.json", parameter_identification_strategy="preset"
             ),
         )
 

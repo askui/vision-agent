@@ -352,7 +352,7 @@ class TrajectoryExecutor:
             region = extract_region(
                 current_screenshot, coordinate, size=self.visual_validation_region_size
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Error extracting region for visual validation at step %d: %s",
                 self.current_step_index,
@@ -396,17 +396,19 @@ class TrajectoryExecutor:
         try:
             # Try to call _screenshot() method directly if available
             if hasattr(computer_tool, "_screenshot"):
-                result = computer_tool._screenshot()  # type: ignore[attr-defined]
+                result = computer_tool._screenshot()  # noqa: SLF001
                 if isinstance(result, Image.Image):
                     return result
 
             # Fallback to calling via __call__ with action parameter
-            result = computer_tool(action="screenshot")  # type: ignore[call-arg]
+            result = computer_tool(action="screenshot")
             if isinstance(result, Image.Image):
                 return result
 
-            logger.warning("Screenshot action did not return an Image: %s", type(result))
-            return None
+            logger.warning(
+                "Screenshot action did not return an Image: %s", type(result)
+            )
+            return None  # noqa: TRY300
         except Exception:
             logger.exception("Error capturing screenshot")
             return None

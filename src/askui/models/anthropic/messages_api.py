@@ -72,7 +72,7 @@ class AnthropicMessagesApi(MessagesApi):
                 "BetaMessageParam",
                 message.model_dump(
                     exclude={"stop_reason", "usage"},
-                    context={"for_api": True}  # Triggers exclusion of internal fields
+                    context={"for_api": True},  # Triggers exclusion of internal fields
                 ),
             )
             for message in messages

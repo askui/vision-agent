@@ -219,16 +219,17 @@ class SimpleTokenCounter(TokenCounter):
         token_count = int(len(stringified) / self._chars_per_token)
 
         # Debug: Log if this is a ToolUseBlockParam with visual validation fields
-        if hasattr(block, 'visual_representation') and block.visual_representation:
+        if hasattr(block, "visual_representation") and block.visual_representation:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.debug(
                 "Token counting for %s: stringified_length=%d, tokens=%d, "
                 "has_visual_fields=%s",
-                getattr(block, 'name', 'unknown'),
+                getattr(block, "name", "unknown"),
                 len(stringified),
                 token_count,
-                'visual_representation' in stringified
+                "visual_representation" in stringified,
             )
 
         return token_count
@@ -284,10 +285,10 @@ class SimpleTokenCounter(TokenCounter):
             return obj
 
         # Check if object is a Pydantic model with model_dump method
-        if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
+        if hasattr(obj, "model_dump") and callable(obj.model_dump):
             try:
                 # Use for_api context to exclude internal fields from token counting
-                serialized = obj.model_dump(context={"for_api": True})  # type: ignore[attr-defined]
+                serialized = obj.model_dump(context={"for_api": True})
                 return json.dumps(serialized, separators=(",", ":"))
             except (TypeError, ValueError, AttributeError):
                 pass  # Fall through to default handling

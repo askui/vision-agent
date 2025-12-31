@@ -9,7 +9,11 @@ import pytest
 from askui.agent import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
+from askui.models.shared.settings import (
+    CacheExecutionSettings,
+    CacheWritingSettings,
+    CachingSettings,
+)
 
 
 def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
@@ -24,7 +28,7 @@ def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="execute",
                 cache_dir=str(cache_dir),
             ),
         )
@@ -41,9 +45,11 @@ def test_act_with_caching_strategy_write(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
@@ -68,7 +74,9 @@ def test_act_with_caching_strategy_both(vision_agent: VisionAgent) -> None:
             caching_settings=CachingSettings(
                 strategy="both",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
@@ -86,8 +94,7 @@ def test_act_with_caching_strategy_no(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="no",
-                cache_dir=str(cache_dir),
+                strategy=None,
             ),
         )
 
@@ -106,9 +113,11 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="execute",
                 cache_dir=str(custom_cache_dir),
-                filename=custom_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=custom_filename,
+                ),
             ),
         )
 
@@ -132,7 +141,7 @@ def test_act_with_on_message_and_write_caching_raises_error(
             vision_agent.act(
                 goal="Tell me a joke",
                 caching_settings=CachingSettings(
-                    strategy="write",
+                    strategy="record",
                     cache_dir=str(temp_dir),
                 ),
                 on_message=dummy_callback,
@@ -170,9 +179,11 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
@@ -205,13 +216,14 @@ def test_act_with_custom_cached_execution_tool_settings(
         cache_file.write_text("[]", encoding="utf-8")
 
         # Act with custom execution tool settings
-        custom_settings = CachedExecutionToolSettings(delay_time_between_action=2.0)
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                execute_cached_trajectory_tool_settings=custom_settings,
+                execution_settings=CacheExecutionSettings(
+                    delay_time_between_action=2.0,
+                ),
             ),
         )
 

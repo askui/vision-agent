@@ -1,6 +1,8 @@
 from typing import Any
 
 from pydantic import BaseModel, model_serializer
+from pydantic.functional_serializers import SerializerFunctionWrapHandler
+from pydantic_core import core_schema
 from typing_extensions import Literal
 
 
@@ -84,14 +86,18 @@ class ToolUseBlockParam(BaseModel):
     visual_representation: str | None = None
 
     @model_serializer(mode="wrap")
-    def _serialize_model(self, serializer, info) -> dict[str, Any]:
+    def _serialize_model(
+        self,
+        serializer: SerializerFunctionWrapHandler,
+        info: core_schema.SerializationInfo,
+    ) -> dict[str, Any]:
         """Custom serializer to exclude internal fields when serializing for API.
 
         When context={'for_api': True}, visual validation fields are excluded.
         Otherwise, all fields are included (for cache storage, internal use).
         """
         # Use default serialization
-        data = serializer(self)
+        data: dict[str, Any] = serializer(self)
 
         # If serializing for API, remove internal fields
         if info.context and info.context.get("for_api"):

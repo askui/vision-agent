@@ -322,25 +322,37 @@ class ExecuteCachedTrajectory(Tool):
 
         if cache_file.metadata.visual_verification_method:
             # Cache has visual validation metadata - use those exact settings
-            visual_validation_enabled = cache_file.metadata.visual_verification_method != "none"
+            visual_validation_enabled = (
+                cache_file.metadata.visual_verification_method != "none"
+            )
             visual_hash_method = cache_file.metadata.visual_verification_method
 
             if cache_file.metadata.visual_validation_threshold is not None:
-                visual_validation_threshold = cache_file.metadata.visual_validation_threshold
+                visual_validation_threshold = (
+                    cache_file.metadata.visual_validation_threshold
+                )
 
             if cache_file.metadata.visual_validation_region_size is not None:
-                visual_validation_region_size = cache_file.metadata.visual_validation_region_size
+                visual_validation_region_size = (
+                    cache_file.metadata.visual_validation_region_size
+                )
 
             logger.debug(
-                "Visual validation enabled from cache metadata: method=%s, threshold=%d, region_size=%d",
-                visual_hash_method,
-                visual_validation_threshold,
-                visual_validation_region_size,
+                (
+                    "Visual validation enabled from cache metadata: "
+                    "method=%s, threshold=%d, region_size=%d",
+                    visual_hash_method,
+                    visual_validation_threshold,
+                    visual_validation_region_size,
+                )
             )
         else:
             # Cache doesn't have visual validation metadata - don't validate
             logger.debug(
-                "Visual validation disabled: cache file has no visual validation metadata"
+                (
+                    "Visual validation disabled: cache file has no visual "
+                    "validation metadata"
+                )
             )
 
         logger.debug(

@@ -166,4 +166,6 @@ reports/
 /chat
 /askui_chat.db
 .cache/
+.askui_cache/
 
+playground/*

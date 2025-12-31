@@ -4,7 +4,7 @@ from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockPa
 from askui.models.shared.token_counter import SimpleTokenCounter
 
 
-def test_token_counting_excludes_visual_validation_fields():
+def test_token_counting_excludes_visual_validation_fields() -> None:
     """Verify that visual validation fields don't inflate token counts."""
     # Create two identical tool blocks, one with and one without visual validation
     tool_block_without = ToolUseBlockParam(
@@ -38,7 +38,7 @@ def test_token_counting_excludes_visual_validation_fields():
     )
 
 
-def test_token_counter_uses_api_context():
+def test_token_counter_uses_api_context() -> None:
     """Verify that token counter uses for_api context when stringifying objects."""
     tool_block = ToolUseBlockParam(
         id="test_id",
@@ -62,7 +62,7 @@ def test_token_counter_uses_api_context():
     assert "computer" in stringified
 
 
-def test_token_counting_with_multiple_tool_blocks():
+def test_token_counting_with_multiple_tool_blocks() -> None:
     """Test token counting with multiple tool blocks in one message."""
     blocks = [
         ToolUseBlockParam(

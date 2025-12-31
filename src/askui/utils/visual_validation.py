@@ -127,7 +127,7 @@ def hamming_distance(hash1: str, hash2: str) -> int:
     xor_result = int(hash1, 16) ^ int(hash2, 16)
 
     # Count number of 1s (differing bits)
-    return bin(xor_result).count("1")
+    return (xor_result).bit_count()
 
 
 def extract_region(

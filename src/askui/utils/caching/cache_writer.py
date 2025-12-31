@@ -66,9 +66,15 @@ class CacheWriter:
         self._accumulated_usage = UsageParam()
 
         # Extract visual verification settings from cache_writing_settings
-        self._visual_verification_method = self._cache_writing_settings.visual_verification_method
-        self._visual_validation_region_size = self._cache_writing_settings.visual_validation_region_size
-        self._visual_validation_threshold = self._cache_writing_settings.visual_validation_threshold
+        self._visual_verification_method = (
+            self._cache_writing_settings.visual_verification_method
+        )
+        self._visual_validation_region_size = (
+            self._cache_writing_settings.visual_validation_region_size
+        )
+        self._visual_validation_threshold = (
+            self._cache_writing_settings.visual_validation_threshold
+        )
 
         # Set toolbox for cache writer so it can check which tools are cacheable
         self._toolbox = toolbox
@@ -84,7 +90,8 @@ class CacheWriter:
                         if content.name == "execute_cached_executions_tool":
                             self.was_cached_execution = True
 
-                        # Enhance with visual validation if applicable (skip during cached execution)
+                        # Enhance with visual validation if applicable
+                        # (skip during cached execution)
                         enhanced_content = self._enhance_with_visual_validation(content)
                         self.messages.append(enhanced_content)
 
@@ -250,7 +257,7 @@ class CacheWriter:
             json.dump(cache_file.model_dump(mode="json"), f, indent=4)
         logger.info("Cache file successfully written: %s ", cache_file_path)
 
-    def _enhance_with_visual_validation(
+    def _enhance_with_visual_validation(  # noqa: C901
         self, tool_block: ToolUseBlockParam
     ) -> ToolUseBlockParam:
         """Enhance ToolUseBlockParam with visual validation data if applicable.
@@ -312,7 +319,8 @@ class CacheWriter:
             screenshot = self._capture_screenshot()
             if screenshot is None:
                 logger.warning(
-                    "Visual validation skipped for %s action=%s: screenshot capture failed",
+                    "Visual validation skipped for %s action=%s: "
+                    "screenshot capture failed",
                     tool_block.name,
                     action,
                 )
@@ -326,14 +334,8 @@ class CacheWriter:
             # Compute hash based on method
             if self._visual_verification_method == "phash":
                 visual_hash = compute_phash(region)
-            elif self._visual_verification_method == "ahash":
+            else:  # ahash (none was already handled earlier)
                 visual_hash = compute_ahash(region)
-            else:
-                logger.warning(
-                    "Unknown visual verification method: %s",
-                    self._visual_verification_method,
-                )
-                return tool_block
 
             # Create enhanced ToolUseBlockParam with visual validation data
             enhanced = ToolUseBlockParam(
@@ -346,23 +348,26 @@ class CacheWriter:
             )
 
             logger.info(
-                "✓ Visual validation added to %s action=%s at coordinate %s (hash=%s...)",
+                "✓ Visual validation added to %s action=%s at coordinate %s "
+                "(hash=%s...)",
                 tool_block.name,
                 action,
                 coordinate,
                 visual_hash[:16],
             )
+            return enhanced  # noqa: TRY300
 
-            return enhanced
-
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
-                "Visual validation skipped for %s action=%s: error during enhancement: %s",
+                "Visual validation skipped for %s action=%s: "
+                "error during enhancement: %s",
                 tool_block.name,
                 action,
                 str(e),
             )
-            return tool_block
+            # Fall through to return original tool_block
+
+        return tool_block
 
     def _capture_screenshot(self) -> Image.Image | None:
         """Capture current screenshot using the computer tool.
@@ -390,13 +395,13 @@ class CacheWriter:
         try:
             # Try to call _screenshot() method directly if available
             if hasattr(computer_tool, "_screenshot"):
-                result = computer_tool._screenshot()  # type: ignore[attr-defined]
+                result = computer_tool._screenshot()  # noqa: SLF001
                 if isinstance(result, Image.Image):
                     logger.debug("Screenshot captured successfully via _screenshot()")
                     return result
 
             # Fallback to calling via __call__ with action parameter
-            result = computer_tool(action="screenshot")  # type: ignore[call-arg]
+            result = computer_tool(action="screenshot")
             if isinstance(result, Image.Image):
                 logger.debug("Screenshot captured successfully via __call__")
                 return result
@@ -406,14 +411,14 @@ class CacheWriter:
                 type(result).__name__,
                 str(result)[:100],
             )
-            return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 "Error capturing screenshot for visual validation: %s: %s",
                 type(e).__name__,
                 str(e),
             )
-            return None
+
+        return None
 
     def _accumulate_usage(self, step_usage: UsageParam) -> None:
         """Accumulate usage statistics from a single API call.

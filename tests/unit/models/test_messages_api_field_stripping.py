@@ -3,7 +3,7 @@
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 
 
-def test_tool_use_block_includes_fields_by_default():
+def test_tool_use_block_includes_fields_by_default() -> None:
     """Test that visual validation fields are included in normal serialization."""
     tool_block = ToolUseBlockParam(
         id="test_id",
@@ -21,7 +21,7 @@ def test_tool_use_block_includes_fields_by_default():
     assert serialized["name"] == "computer"
 
 
-def test_tool_use_block_excludes_fields_for_api():
+def test_tool_use_block_excludes_fields_for_api() -> None:
     """Test that visual validation fields are excluded when for_api context is set."""
     tool_block = ToolUseBlockParam(
         id="test_id",
@@ -43,7 +43,7 @@ def test_tool_use_block_excludes_fields_for_api():
     assert serialized["input"] == {"action": "left_click", "coordinate": [100, 200]}
 
 
-def test_tool_use_block_without_visual_validation():
+def test_tool_use_block_without_visual_validation() -> None:
     """Test serialization of tool block without visual validation fields."""
     tool_block = ToolUseBlockParam(
         id="test_id",
@@ -57,11 +57,13 @@ def test_tool_use_block_without_visual_validation():
     for_api = tool_block.model_dump(context={"for_api": True})
 
     # Should not have visual representation field in either case (or it should be None)
-    assert "visual_representation" not in normal or normal["visual_representation"] is None
+    assert (
+        "visual_representation" not in normal or normal["visual_representation"] is None
+    )
     assert "visual_representation" not in for_api
 
 
-def test_message_with_tool_use_context_propagation():
+def test_message_with_tool_use_context_propagation() -> None:
     """Test that context propagates through nested MessageParam serialization."""
     tool_block = ToolUseBlockParam(
         id="test_id",
@@ -82,7 +84,7 @@ def test_message_with_tool_use_context_propagation():
     assert "visual_representation" not in for_api["content"][0]
 
 
-def test_cache_storage_includes_all_fields():
+def test_cache_storage_includes_all_fields() -> None:
     """Test that cache storage (mode='json') includes all fields."""
     tool_block = ToolUseBlockParam(
         id="test_id",
