@@ -187,3 +187,19 @@ class ScheduledJob(BaseModel):
             next_fire_time=next_fire_time,
             data=data,
         )
+
+
+class ScheduledJobExecutionResult(BaseModel):
+    """
+    Return value stored by the job executor in APScheduler's job result.
+
+    This ensures we always have job data available even if the job fails,
+    since APScheduler clears return_value on exception.
+
+    Args:
+        data (ScheduledJobData): The job data that was executed.
+        error (str | None): Error message if the job failed.
+    """
+
+    data: ScheduledJobData
+    error: str | None = None
