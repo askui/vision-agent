@@ -166,7 +166,8 @@ reports/
 .DS_Store
 /chat
 /askui_chat.db
-/askui_scheduler.db
+/askui_chat.db-shm
+/askui_chat.db-wal
 .cache/
 
 bom.json
