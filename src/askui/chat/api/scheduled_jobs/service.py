@@ -142,4 +142,4 @@ class ScheduledJobService:
                 continue
             scheduled_jobs.append(scheduled_job)
 
-        return scheduled_jobs
+        return sorted(scheduled_jobs, key=lambda x: x.next_fire_time)
