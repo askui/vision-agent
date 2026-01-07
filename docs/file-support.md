@@ -1,10 +1,10 @@
-# File Format Support in AskUI Vision Agent
+# File Format Support in AskUI Python SDK
 
-This document provides comprehensive information about how different file formats are supported in the AskUI Vision Agent, including their processing methods and integration with Large Language Models (LLMs).
+This document provides comprehensive information about how different file formats are supported in the AskUI Python SDK, including their processing methods and integration with Large Language Models (LLMs).
 
 ## Supported File Formats
 
-The AskUI Vision Agent supports the following file formats for data extraction and processing:
+The AskUI Python SDK supports the following file formats for data extraction and processing:
 
 ### 📄 PDF Files (.pdf)
 

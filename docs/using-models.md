@@ -1,6 +1,6 @@
 # Using Models
 
-This guide covers all the AI models available in AskUI Vision Agent, their capabilities, how to authenticate with them, and how to create custom models. AskUI Vision Agent supports multiple AI model providers and self-hosted models, each with different strengths and use cases.
+This guide covers all the AI models available in AskUI Python SDK, their capabilities, how to authenticate with them, and how to create custom models. AskUI Python SDK supports multiple AI model providers and self-hosted models, each with different strengths and use cases.
 
 **Important Note:** Although we would love to support all kinds of models, models hosted by us (AskUI) are our primary focus and receive the most comprehensive support, testing, and optimization. Other models rely on community contributions and may have varying levels of support. We highly appreciate community contributions to improve support for other models!
 
