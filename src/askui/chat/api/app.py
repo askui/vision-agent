@@ -22,6 +22,8 @@ from askui.chat.api.mcp_servers.testing import mcp as testing_mcp
 from askui.chat.api.mcp_servers.utility import mcp as utility_mcp
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
+from askui.chat.api.scheduled_jobs.router import router as scheduled_jobs_router
+from askui.chat.api.scheduled_jobs.scheduler import shutdown_scheduler, start_scheduler
 from askui.chat.api.threads.router import router as threads_router
 from askui.chat.api.workflows.router import router as workflows_router
 from askui.chat.migrations.runner import run_migrations
@@ -49,7 +51,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     session = next(get_session())
     mcp_config_service = get_mcp_config_service(session=session, settings=settings)
     mcp_config_service.seed()
+
+    # Start the scheduler for scheduled jobs
+    logger.info("Starting scheduled job scheduler...")
+    await start_scheduler()
+
     yield
+
+    # Shutdown scheduler
+    logger.info("Shutting down scheduled job scheduler...")
+    await shutdown_scheduler()
+
     logger.info("Disconnecting all MCP clients...")
     await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
 
@@ -70,6 +82,7 @@ v1_router.include_router(runs_router)
 v1_router.include_router(mcp_configs_router)
 v1_router.include_router(files_router)
 v1_router.include_router(workflows_router)
+v1_router.include_router(scheduled_jobs_router)
 v1_router.include_router(health_router)
 app.include_router(v1_router)
 

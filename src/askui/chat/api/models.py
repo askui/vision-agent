@@ -10,6 +10,7 @@ McpConfigId = Annotated[str, IdField("mcpcnf")]
 FileId = Annotated[str, IdField("file")]
 MessageId = Annotated[str, IdField("msg")]
 RunId = Annotated[str, IdField("run")]
+ScheduledJobId = Annotated[str, IdField("schedjob")]
 ThreadId = Annotated[str, IdField("thread")]
 WorkspaceId = UUID4
 

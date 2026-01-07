@@ -16,7 +16,7 @@ class DbSettings(BaseModel):
 
     url: str = Field(
         default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_chat.db').as_posix()}",
-        description="Database URL for SQLAlchemy connection",
+        description="Database URL for SQLAlchemy connection (used for all data including scheduler)",
     )
     auto_migrate: bool = Field(
         default=True,
