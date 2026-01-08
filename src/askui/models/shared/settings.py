@@ -1,3 +1,5 @@
+import warnings
+
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
@@ -5,8 +7,10 @@ from anthropic.types.beta import (
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
 )
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Literal
+
+from askui.models.shared.prompts import ActSystemPrompt
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
@@ -19,10 +23,24 @@ class MessageSettings(BaseModel):
 
     betas: list[AnthropicBetaParam] | Omit = omit
     max_tokens: int = 4096
-    system: str | list[BetaTextBlockParam] | Omit = omit
+    system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
     temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)
+
+    @field_validator("system", mode="before")
+    @classmethod
+    def warn_string_deprecated(
+        cls, v: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit
+    ) -> ActSystemPrompt | str | list[BetaTextBlockParam] | Omit:
+        if isinstance(v, str):
+            warnings.warn(
+                "Setting 'system' as a string is deprecated and will be removed in a "
+                "future version. Please use an instance of ActSystemPrompt instead.",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+        return v
 
 
 class ActSettings(BaseModel):

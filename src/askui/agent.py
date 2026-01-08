@@ -15,7 +15,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import COMPUTER_AGENT_SYSTEM_PROMPT
 from askui.tools.computer import Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.list_displays_tool import ListDisplaysTool

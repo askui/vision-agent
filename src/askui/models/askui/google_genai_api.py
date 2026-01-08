@@ -16,8 +16,8 @@ from askui.models.askui.retry_utils import (
 )
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
 from askui.models.models import GetModel, ModelName
-from askui.models.shared.prompts import SYSTEM_PROMPT_GET
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
+from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source

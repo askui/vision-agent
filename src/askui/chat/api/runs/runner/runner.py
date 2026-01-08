@@ -37,7 +37,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
-from askui.prompts.system import caesr_system_prompt
+from askui.prompts.act_prompts import caesr_system_prompt
 
 logger = logging.getLogger(__name__)
 
