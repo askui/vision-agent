@@ -470,11 +470,12 @@ class CacheParameterHandler:
             New value with parameters substituted
         """
         if isinstance(value, str):
-            # Replace all parameters in the string
+            # Replace all parameters in the string using literal string replacement
+            # This avoids regex interpretation issues with backslashes in values
             result = value
             for name, replacement in parameter_values.items():
-                pattern = r"\{\{" + re.escape(name) + r"\}\}"
-                result = re.sub(pattern, replacement, result)
+                placeholder = f"{{{{{name}}}}}"  # Creates "{{parameter_name}}"
+                result = result.replace(placeholder, replacement)
             return result
         if isinstance(value, dict):
             # Recursively substitute in dict values

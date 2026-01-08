@@ -368,6 +368,77 @@ def test_substitute_parameters_with_special_characters() -> None:
     assert result.input["text"] == r"Pattern: .*[test]$"  # type: ignore[index]
 
 
+def test_substitute_parameters_with_backslashes() -> None:
+    """Test substitution with values containing backslashes (e.g., Windows paths).
+
+    This test reveals the bug where backslashes in parameter values cause
+    re.PatternError because re.sub() treats the replacement string as a
+    regex replacement pattern, not a literal string.
+    """
+    tool_block = ToolUseBlockParam(
+        id="1",
+        name="tool",
+        input={"text": "Open file at {{file_path}}"},
+        type="tool_use",
+    )
+
+    # Value contains backslashes (like Windows paths)
+    # Previously raised: re.PatternError: bad escape \A at position 2
+    result = CacheParameterHandler.substitute_parameters(
+        tool_block, {"file_path": "C:\\AskUI\\test"}
+    )
+
+    assert result.input["text"] == "Open file at C:\\AskUI\\test"  # type: ignore[index]
+
+
+def test_substitute_parameters_with_various_backslash_sequences() -> None:
+    """Test substitution with various backslash escape sequences.
+
+    Tests multiple scenarios where backslashes could cause issues:
+    - Windows UNC paths
+    - Regex patterns as values
+    - Various escape sequences that could be misinterpreted
+    """
+    # Test case 1: Windows path with \D
+    tool_block = ToolUseBlockParam(
+        id="1",
+        name="tool",
+        input={"text": "Save to {{path}}"},
+        type="tool_use",
+    )
+
+    result = CacheParameterHandler.substitute_parameters(
+        tool_block, {"path": "D:\\Data\\file.txt"}
+    )
+    assert result.input["text"] == "Save to D:\\Data\\file.txt"  # type: ignore[index]
+
+    # Test case 2: UNC path
+    tool_block2 = ToolUseBlockParam(
+        id="2",
+        name="tool",
+        input={"text": "Network path: {{unc_path}}"},
+        type="tool_use",
+    )
+
+    result2 = CacheParameterHandler.substitute_parameters(
+        tool_block2, {"unc_path": "\\\\server\\share\\folder"}
+    )
+    assert result2.input["text"] == "Network path: \\\\server\\share\\folder"  # type: ignore[index]
+
+    # Test case 3: Regex pattern as value (with backslashes)
+    tool_block3 = ToolUseBlockParam(
+        id="3",
+        name="tool",
+        input={"text": "Match pattern {{regex}}"},
+        type="tool_use",
+    )
+
+    result3 = CacheParameterHandler.substitute_parameters(
+        tool_block3, {"regex": "\\d+\\s+\\w+"}
+    )
+    assert result3.input["text"] == "Match pattern \\d+\\s+\\w+"  # type: ignore[index]
+
+
 def test_substitute_parameters_same_parameter_multiple_times() -> None:
     """Test substituting the same parameter appearing multiple times."""
     tool_block = ToolUseBlockParam(

@@ -113,7 +113,7 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="execute",
+                strategy="record",
                 cache_dir=str(custom_cache_dir),
                 writing_settings=CacheWritingSettings(
                     filename=custom_filename,
