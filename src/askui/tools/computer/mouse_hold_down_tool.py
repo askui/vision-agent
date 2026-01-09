@@ -1,0 +1,31 @@
+from typing import get_args
+
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import MouseButton
+from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+
+
+class ComputerMouseHoldDownTool(ComputerBaseTool):
+    """Computer Mouse Hold Down Tool"""
+
+    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+        super().__init__(
+            name="computer_mouse_hold_down",
+            description="Hold down the mouse button at the current position.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "mouse_button": {
+                        "type": "string",
+                        "description": "The mouse button to hold down.",
+                        "enum": get_args(MouseButton),
+                    },
+                },
+                "required": ["mouse_button"],
+            },
+            agent_os=agent_os,
+        )
+
+    def __call__(self, mouse_button: MouseButton) -> str:
+        self.agent_os.mouse_down(mouse_button)
+        return f"Mouse button {mouse_button} was held down."

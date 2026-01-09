@@ -15,8 +15,9 @@ class AndroidAgentOsFacade(AndroidAgentOs):
 
     def __init__(self, agent_os: AndroidAgentOs) -> None:
         self._agent_os: AndroidAgentOs = agent_os
-        self._target_resolution: Tuple[int, int] = (1280, 800)
+        self._target_resolution: Tuple[int, int] = (1024, 768)
         self._real_screen_resolution: Optional[Tuple[int, int]] = None
+        self.tags = self._agent_os.tags + ["agent_os_facade"]
 
     def connect(self) -> None:
         self._agent_os.connect()
