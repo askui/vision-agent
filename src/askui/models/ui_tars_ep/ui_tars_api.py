@@ -19,7 +19,8 @@ from askui.models.shared.tools import ToolCollection
 from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.tools.agent_os import AgentOs
+from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource, image_to_base64
 from askui.utils.pdf_utils import PdfSource
@@ -108,7 +109,6 @@ class UiTarsApiHandlerSettings(BaseSettings):
 class UiTarsApiHandler(ActModel, LocateModel, GetModel):
     def __init__(
         self,
-        agent_os: ComputerAgentOsFacade,
         reporter: Reporter,
         settings: UiTarsApiHandlerSettings,
         locator_serializer: VlmLocatorSerializer,
@@ -120,6 +120,17 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             base_url=str(self._settings.tars_url),
         )
         self._locator_serializer = locator_serializer
+        self._agent_os = None
+
+    @property
+    def agent_os(self) -> AgentOs | AndroidAgentOs:
+        if self._agent_os is None:
+            error_msg = "agent_os is required for UI-TARS. Please set it using the `agent_os` property."
+            raise RuntimeError(error_msg)
+        return self._agent_os
+
+    @agent_os.setter
+    def agent_os(self, agent_os: AgentOs | AndroidAgentOs) -> None:
         self._agent_os = agent_os
 
     def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:

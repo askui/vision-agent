@@ -186,19 +186,6 @@ class Tool(BaseModel, ABC):
             input_schema=self.input_schema,
         )
 
-    def is_initialized(self) -> bool:
-        """Check if the tool is initialized."""
-        return True
-
-    @property
-    def agent_os(self) -> None:
-        """Get the agent OS. This is not available in base tools.
-
-        Returns:
-            None: The agent OS is not available in base tools.
-        """
-        return None
-
     def to_mcp_tool(
         self, tags: set[str], name_prefix: str | None = None
     ) -> FastMcpTool:
@@ -232,9 +219,6 @@ class ToolWithAgentOS(Tool):
     ) -> None:
         super().__init__(**kwargs, required_tags=required_tags)
         self._agent_os: AgentOs | AndroidAgentOs | None = agent_os
-
-    def is_initialized(self) -> bool:
-        return self._agent_os is not None
 
     @property
     def agent_os(self) -> AgentOs | AndroidAgentOs:
@@ -409,7 +393,7 @@ class ToolCollection:
         """Reset the tools in the collection with new tools."""
         self._tools = tools or []
 
-    def get_agent_os_by_tags(self, tags: list[str]) -> AgentOs | AndroidAgentOs | None:
+    def get_agent_os_by_tags(self, tags: list[str]) -> AgentOs | AndroidAgentOs:
         """Get an agent OS by tags."""
         for agent_os in self._agent_os_list:
             if all(tag in agent_os.tags for tag in tags):
@@ -420,7 +404,7 @@ class ToolCollection:
     def _initialize_tools(self) -> None:
         """Initialize the tools."""
         for tool in self._tools:
-            if not tool.is_initialized():
+            if hasattr(tool, "agent_os") and tool.agent_os is None:
                 agent_os = self.get_agent_os_by_tags(tool.required_tags)
                 tool.agent_os = agent_os
 
