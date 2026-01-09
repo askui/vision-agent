@@ -254,6 +254,26 @@ class AndroidAgentOs(ABC):
     methods.
     """
 
+    @property
+    def tags(self) -> list[str]:
+        """Get the tags for this agent OS.
+
+        Returns:
+            list[str]: A list of tags that identify this agent OS type.
+        """
+        if not hasattr(self, "_tags"):
+            self._tags = ["android"]
+        return self._tags
+
+    @tags.setter
+    def tags(self, tags: list[str]) -> None:
+        """Set the tags for this agent OS.
+
+        Args:
+            tags (list[str]): A list of tags that identify this agent OS type.
+        """
+        self._tags = tags
+
     @abstractmethod
     def connect(self) -> None:
         """

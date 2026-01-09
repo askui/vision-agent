@@ -11,20 +11,16 @@ from typing_extensions import override
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.exceptions import ElementNotFoundError, QueryNoResponseError
-from askui.models.models import (
-    ActModel,
-    GetModel,
-    LocateModel,
-    ModelComposition,
-    PointList,
-)
+from askui.models.models import ActModel, GetModel, LocateModel, ModelComposition
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
-from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.tools import ToolCollection
+from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.reporting import Reporter
-from askui.tools.computer import Computer20241022Tool
+from askui.tools.agent_os import AgentOs
+from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource, image_to_base64
 from askui.utils.pdf_utils import PdfSource
@@ -124,6 +120,18 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             base_url=str(self._settings.tars_url),
         )
         self._locator_serializer = locator_serializer
+        self._agent_os = None
+
+    @property
+    def agent_os(self) -> AgentOs | AndroidAgentOs:
+        if self._agent_os is None:
+            error_msg = "agent_os is required for UI-TARS. Please set it using the `agent_os` property."
+            raise RuntimeError(error_msg)
+        return self._agent_os
+
+    @agent_os.setter
+    def agent_os(self, agent_os: AgentOs | AndroidAgentOs) -> None:
+        self._agent_os = agent_os
 
     def _predict(self, image_url: str, instruction: str, prompt: str) -> str | None:
         chat_completion = self._client.chat.completions.create(
@@ -232,20 +240,8 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             error_msg = "UI-TARS only supports text messages"
             raise ValueError(error_msg)  # noqa: TRY004
 
-        # Find the computer tool
-        computer_tool: Computer20241022Tool | None = None
-        if tools:
-            for tool in tools:
-                if tool.name == "computer":
-                    computer_tool: Computer20241022Tool = tool
-                    break
-
-        if computer_tool is None:
-            error_msg = "Computer tool is required for UI-TARS act() method"
-            raise ValueError(error_msg)
-
         goal = message.content
-        screenshot = computer_tool(action="screenshot")
+        screenshot = self._agent_os.screenshot()
         self.act_history = [
             {
                 "role": "user",
@@ -262,12 +258,10 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
                 ],
             }
         ]
-        self.execute_act(self.act_history, computer_tool)
+        self.execute_act(self.act_history)
 
-    def add_screenshot_to_history(
-        self, message_history: list[dict[str, Any]], computer_tool: Computer20241022Tool
-    ) -> None:
-        screenshot = computer_tool(action="screenshot")
+    def add_screenshot_to_history(self, message_history: list[dict[str, Any]]) -> None:
+        screenshot = self._agent_os.screenshot()
         message_history.append(
             {
                 "role": "user",
@@ -326,9 +320,7 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
 
         return filtered_messages
 
-    def execute_act(
-        self, message_history: list[dict[str, Any]], computer_tool: Tool
-    ) -> None:
+    def execute_act(self, message_history: list[dict[str, Any]]) -> None:
         message_history = self.filter_message_thread(message_history)
 
         chat_completion = self._client.chat.completions.create(
@@ -356,22 +348,20 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
             message_history.append(
                 {"role": "user", "content": [{"type": "text", "text": str(e)}]}
             )
-            self.execute_act(message_history, computer_tool)
+            self.execute_act(message_history)
             return
 
         action = message.parsed_action
         if action.action_type == "click":
-            computer_tool(
-                action="mouse_move", coordinate=(action.start_box.x, action.start_box.y)
-            )
-            computer_tool(action="left_click")
+            self._agent_os.mouse_move(action.start_box.x, action.start_box.y)
+            self._agent_os.click("left")
             time.sleep(1)
         if action.action_type == "type":
-            computer_tool(action="left_click")
-            computer_tool(action="type", text=action.content)
+            self._agent_os.click("left")
+            self._agent_os.type(action.content)
             time.sleep(0.5)
         if action.action_type == "hotkey":
-            computer_tool(action="key", text=action.key)
+            self._agent_os.keyboard_tap(action.key)
             time.sleep(0.5)
         if action.action_type == "call_user":
             time.sleep(1)
@@ -380,8 +370,8 @@ class UiTarsApiHandler(ActModel, LocateModel, GetModel):
         if action.action_type == "finished":
             return
 
-        self.add_screenshot_to_history(message_history, computer_tool)
-        self.execute_act(message_history, computer_tool)
+        self.add_screenshot_to_history(message_history)
+        self.execute_act(message_history)
 
     def _filter_messages(
         self, messages: list[UITarsEPMessage], max_messages: int

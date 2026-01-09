@@ -22,8 +22,8 @@ from askui.models.models import (
     LocateModel,
     ModelComposition,
     ModelName,
-    PointList,
 )
+from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.image_utils import ImageSource

@@ -1,11 +1,11 @@
-from askui.models.shared.tools import Tool
-from askui.tools.agent_os import AgentOs
+from askui.models.shared import ComputerBaseTool
+from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
 
 
-class SetActiveDisplayTool(Tool):
-    def __init__(self, agent_os: AgentOs) -> None:
+class ComputerSetActiveDisplayTool(ComputerBaseTool):
+    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="set_active_display",
+            name="computer_set_active_display",
             description="""
                 Set the display screen from which screenshots are taken and on which
                 actions are performed.
@@ -19,8 +19,8 @@ class SetActiveDisplayTool(Tool):
                 },
                 "required": ["display_id"],
             },
+            agent_os=agent_os,
         )
-        self._agent_os: AgentOs = agent_os
 
     def __call__(self, display_id: int) -> None:
-        self._agent_os.set_display(display_id)
+        self.agent_os.set_display(display_id)

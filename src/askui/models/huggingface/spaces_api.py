@@ -10,7 +10,8 @@ from typing_extensions import override
 from askui.exceptions import AutomationError
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.models import LocateModel, ModelComposition, ModelName, PointList
+from askui.models.models import LocateModel, ModelComposition, ModelName
+from askui.models.types.geometry import PointList
 from askui.utils.image_utils import ImageSource
 
 

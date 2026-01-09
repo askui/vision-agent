@@ -11,6 +11,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
+from askui.models.types.geometry import Point, PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
@@ -140,17 +141,6 @@ class ModelComposition(RootModel[list[ModelDefinition]]):
 
     def __getitem__(self, index: int) -> ModelDefinition:
         return self.root[index]
-
-
-Point = tuple[int, int]
-"""
-A tuple of two integers representing the coordinates of a point on the screen.
-"""
-
-PointList = Annotated[list[Point], Field(min_length=1)]
-"""
-A list of points representing the coordinates of elements on the screen.
-"""
 
 
 class BoundingBox(BaseModel):

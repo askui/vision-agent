@@ -18,4 +18,5 @@ if __name__ == "__main__":
         reload=False,
         workers=1,
         log_config=None,
+        timeout_graceful_shutdown=5,
     )

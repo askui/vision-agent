@@ -37,10 +37,9 @@ from .models.models import (
     ModelChoice,
     ModelName,
     ModelRegistry,
-    Point,
-    PointList,
     TotalModelChoice,
 )
+from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
 from .reporting import Reporter
 from .retry import ConfigurableRetry, Retry
@@ -105,6 +104,11 @@ class AgentBase(ABC):  # noqa: B024
         self._data_extractor = DataExtractor(
             reporter=self._reporter, models=models or {}
         )
+
+        self.act_tool_collection = ToolCollection(tools=tools)
+
+        self.act_settings = ActSettings()
+        self.caching_settings = CachingSettings()
 
     def _init_model_router(
         self,
@@ -300,11 +304,9 @@ class AgentBase(ABC):  # noqa: B024
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
         _model = self._get_model(model, "act")
-        _settings = settings or self._get_default_settings_for_act(_model)
+        _settings = settings or self.act_settings
 
-        _caching_settings: CachingSettings = (
-            caching_settings or self._get_default_caching_settings_for_act(_model)
-        )
+        _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
         tools, on_message, cached_execution_tool = self._patch_act_with_cache(
             _caching_settings, _settings, tools, on_message
@@ -323,14 +325,14 @@ class AgentBase(ABC):  # noqa: B024
         )
 
     def _build_tools(
-        self, tools: list[Tool] | ToolCollection | None, model: str
+        self, tools: list[Tool] | ToolCollection | None, _model: str
     ) -> ToolCollection:
-        default_tools = self._get_default_tools_for_act(model)
+        tool_collection = self.act_tool_collection
         if isinstance(tools, list):
-            return ToolCollection(tools=default_tools + tools)
+            tool_collection.append_tool(*tools)
         if isinstance(tools, ToolCollection):
-            return ToolCollection(default_tools) + tools
-        return ToolCollection(tools=default_tools)
+            tool_collection += tools
+        return tool_collection
 
     def _patch_act_with_cache(
         self,
@@ -398,15 +400,6 @@ class AgentBase(ABC):  # noqa: B024
                 raise ValueError(error_message)
 
         return tools, on_message, cached_execution_tool
-
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
-        return ActSettings()
-
-    def _get_default_caching_settings_for_act(self, model: str) -> CachingSettings:  # noqa: ARG002
-        return CachingSettings()
-
-    def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
-        return self._tools
 
     @overload
     def get(

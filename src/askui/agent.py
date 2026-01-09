@@ -1,36 +1,41 @@
 import logging
-from typing import TYPE_CHECKING, Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional
 
-from anthropic import Omit, omit
 from pydantic import ConfigDict, Field, validate_call
-from typing_extensions import override
 
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import (
-    COMPUTER_USE_20250124_BETA_FLAG,
-    COMPUTER_USE_20251124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
 from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
-from askui.tools.computer import Computer20250124Tool
+from askui.tools.computer import (
+    ComputerGetMousePositionTool,
+    ComputerKeyboardPressedTool,
+    ComputerKeyboardReleaseTool,
+    ComputerKeyboardTapTool,
+    ComputerListDisplaysTool,
+    ComputerMouseClickTool,
+    ComputerMouseHoldDownTool,
+    ComputerMouseReleaseTool,
+    ComputerMouseScrollTool,
+    ComputerMoveMouseTool,
+    ComputerRetrieveActiveDisplayTool,
+    ComputerScreenshotTool,
+    ComputerSetActiveDisplayTool,
+    ComputerTypeTool,
+)
 from askui.tools.exception_tool import ExceptionTool
-from askui.tools.list_displays_tool import ListDisplaysTool
-from askui.tools.retrieve_active_display_tool import RetrieveActiveDisplayTool
-from askui.tools.set_active_display_tool import SetActiveDisplayTool
 
 from .models import ModelComposition
 from .models.models import ModelChoice, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
-from .tools import AgentToolbox, ModifierKey, PcKey
+from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
-
-if TYPE_CHECKING:
-    from anthropic.types import AnthropicBetaParam
 
 logger = logging.getLogger(__name__)
 
@@ -88,13 +93,34 @@ class VisionAgent(AgentBase):
             models=models,
             tools=[
                 ExceptionTool(),
-                SetActiveDisplayTool(agent_os=self.tools.os),
-                RetrieveActiveDisplayTool(agent_os=self.tools.os),
-                ListDisplaysTool(agent_os=self.tools.os),
+                ComputerGetMousePositionTool(),
+                ComputerKeyboardPressedTool(),
+                ComputerKeyboardReleaseTool(),
+                ComputerKeyboardTapTool(),
+                ComputerMouseClickTool(),
+                ComputerMouseHoldDownTool(),
+                ComputerMouseReleaseTool(),
+                ComputerMouseScrollTool(),
+                ComputerMoveMouseTool(),
+                ComputerScreenshotTool(),
+                ComputerTypeTool(),
+                ComputerListDisplaysTool(),
+                ComputerRetrieveActiveDisplayTool(),
+                ComputerSetActiveDisplayTool(),
             ]
             + (act_tools or []),
             agent_os=self.tools.os,
             model_provider=model_provider,
+        )
+        self.act_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
+            self.tools.os
+        )
+        self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
+        self.act_settings = ActSettings(
+            messages=MessageSettings(
+                system=COMPUTER_AGENT_SYSTEM_PROMPT,
+                thinking={"type": "enabled", "budget_tokens": 2048},
+            )
         )
 
     @telemetry.record_call(exclude={"locator"})
@@ -395,34 +421,6 @@ class VisionAgent(AgentBase):
         self._reporter.add_message("User", f'mouse_down "{button}"')
         logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
         self.tools.os.mouse_down(button)
-
-    @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
-        computer_use_beta_flag: list[AnthropicBetaParam] | Omit
-        if "claude-opus-4-5-20251101" in model:
-            computer_use_beta_flag = [COMPUTER_USE_20251124_BETA_FLAG]
-        elif (
-            "claude-sonnet-4-5-20250929" in model
-            or "claude-haiku-4-5-20251001" in model
-            or "claude-opus-4-1-20250805" in model
-            or "claude-opus-4-20250514" in model
-            or "claude-sonnet-4-20250514" in model
-            or "claude-3-7-sonnet-20250219" in model
-        ):
-            computer_use_beta_flag = [COMPUTER_USE_20250124_BETA_FLAG]
-        else:
-            computer_use_beta_flag = omit
-        return ActSettings(
-            messages=MessageSettings(
-                system=COMPUTER_AGENT_SYSTEM_PROMPT,
-                betas=computer_use_beta_flag,
-                thinking={"type": "enabled", "budget_tokens": 2048},
-            ),
-        )
-
-    @override
-    def _get_default_tools_for_act(self, model: str) -> list[Tool]:
-        return self._tools + [Computer20250124Tool(agent_os=self.tools.os)]
 
     @telemetry.record_call()
     @validate_call
