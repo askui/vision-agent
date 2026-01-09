@@ -1,6 +1,6 @@
-# 🤖 AskUI Vision Agent
+# 🤖 AskUI Python SDK
 
-[![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
+[![Release Notes](https://img.shields.io/github/release/askui/askui-python-sdk?style=flat-square)](https://github.com/askui/askui-python-sdk/releases)
 [![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
 
 **Enable AI agents to control your desktop (Windows, MacOS, Linux), mobile (Android, iOS) and HMI devices**
@@ -22,7 +22,7 @@ Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
 ## 📖 Introduction
 
-AskUI Vision Agent is a powerful automation framework that enables you and AI agents to control your desktop, mobile, and HMI devices and automate tasks. With support for multiple AI models, multi-platform compatibility, and enterprise-ready features,
+AskUI Python SDK is a powerful automation framework that enables you and AI agents to control your desktop, mobile, and HMI devices and automate tasks. With support for multiple AI models, multi-platform compatibility, and enterprise-ready features,
 
 https://github.com/user-attachments/assets/a74326f2-088f-48a2-ba1c-4d94d327cbdf
 
@@ -188,11 +188,11 @@ If you see a lot of logs and the first paragraph of the introduction in the cons
 
 Aside from our [official documentation](https://docs.askui.com), we also have some additional guides and examples under the [docs](docs) folder that you may find useful, for example:
 
-- **[Chat](docs/chat.md)** - How to interact with agents through a chat
 - **[Direct Tool Use](docs/direct-tool-use.md)** - How to use the tools, e.g., clipboard, the Agent OS etc.
 - **[Extracting Data](docs/extracting-data.md)** - How to extract data from the screen and documents
 - **[MCP](docs/mcp.md)** - How to use MCP servers to extend the capabilities of an agent
 - **[Observability](docs/observability.md)** - Logging and reporting
+- **[Prompting](docs/prompting.md)** - How to customize system prompts for the Vision Agent
 - **[Telemetry](docs/telemetry.md)** - Which data we gather and how to disable it
 - **[Using Models](docs/using-models.md)** - How to use different models including custom model implementations
 

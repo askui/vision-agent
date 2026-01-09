@@ -3,6 +3,9 @@
 import logging
 from typing import Any
 
+from anthropic.types.beta import BetaTextBlockParam
+from opentelemetry import trace
+
 from askui.models.shared.agent_message_param import (
     MessageParam,
     ToolResultBlockParam,
@@ -15,6 +18,7 @@ from askui.models.shared.agent_on_message_cb import (
     OnMessageCbParam,
 )
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -28,6 +32,7 @@ from askui.utils.caching.cache_manager import CacheManager
 from .speaker import SpeakerResult, Speakers
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class ConversationException(Exception):
@@ -83,6 +88,7 @@ class Conversation:
         # Cache execution context (for communication between tools and CacheExecutor)
         self.cache_execution_context: dict[str, Any] = {}
 
+    @tracer.start_as_current_span("conversation")
     def start(
         self,
         messages: list[MessageParam],
@@ -117,10 +123,16 @@ class Conversation:
         self._on_message = on_message or NULL_ON_MESSAGE_CB
 
         # Initialize truncation strategy
+        system_prompt_raw = self.settings.messages.system
+        system_prompt: str | list[BetaTextBlockParam] | None
+        if isinstance(system_prompt_raw, ActSystemPrompt):
+            system_prompt = str(system_prompt_raw)
+        else:
+            system_prompt = system_prompt_raw
         self._truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=self.tools.to_params(),
-                system=self.settings.messages.system or None,
+                system=system_prompt or None,
                 messages=messages,
                 model=model_name,
             )
@@ -142,6 +154,7 @@ class Conversation:
         # Report final usage
         self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
 
+    @tracer.start_as_current_span("step")
     def _execute_loop(self) -> bool:
         """Execute one step of the conversation loop with speakers.
         Each step includes
@@ -194,6 +207,7 @@ class Conversation:
 
         return self._handle_result_status(result)
 
+    @tracer.start_as_current_span("execute_tool")
     def _execute_tools_if_present(self, message: MessageParam) -> MessageParam | None:
         """Execute tools if the message contains tool use blocks.
 
@@ -229,6 +243,7 @@ class Conversation:
         # Return tool results as a user message
         return MessageParam(content=tool_results, role="user")
 
+    @tracer.start_as_current_span("handle_tool_result")
     def _handle_tool_results(
         self,
         assistant_message: MessageParam,
@@ -309,6 +324,7 @@ class Conversation:
             self.current_speaker.get_name(), processed.model_dump(mode="json")
         )
 
+    @tracer.start_as_current_span("message_callback")
     def _call_on_message(self, message: MessageParam) -> MessageParam | None:
         """Call on_message callback.
 
@@ -323,6 +339,7 @@ class Conversation:
         )
         return self._on_message(OnMessageCbParam(message=message, messages=messages))
 
+    @tracer.start_as_current_span("handle_result_status")
     def _handle_result_status(self, result: SpeakerResult) -> bool:
         if result.status == "done":
             logger.info("Conversation completed successfully")
@@ -340,6 +357,7 @@ class Conversation:
         logger.warning("Unknown result status: %s", result.status)
         return False
 
+    @tracer.start_as_current_span("switch_speaker")
     def switch_speaker(self, speaker_name: str) -> None:
         """Switch to a different speaker.
 
@@ -389,3 +407,15 @@ class Conversation:
         self.accumulated_usage.cache_read_input_tokens = (
             self.accumulated_usage.cache_read_input_tokens or 0
         ) + (step_usage.cache_read_input_tokens or 0)
+
+        current_span = trace.get_current_span()
+        current_span.set_attributes(
+            {
+                "input_tokens": step_usage.input_tokens or 0,
+                "output_tokens": step_usage.output_tokens or 0,
+                "cache_creation_input_tokens": (
+                    step_usage.cache_creation_input_tokens or 0
+                ),
+                "cache_read_input_tokens": step_usage.cache_creation_input_tokens or 0,
+            }
+        )

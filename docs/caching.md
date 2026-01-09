@@ -22,26 +22,27 @@ The caching system works by recording all tool use actions (mouse movements, cli
 
 The caching mechanism supports four strategies, configured via the `caching_settings` parameter in the `act()` method:
 
-- **`"no"`** (default): No caching is used. The agent executes normally without recording or replaying actions.
-- **`"write"`**: Records all agent actions to a cache file for future replay.
-- **`"read"`**: Provides tools to the agent to list and execute previously cached trajectories.
-- **`"both"`**: Combines read and write modes - the agent can use existing cached trajectories and will also record new ones.
+- **`None`** (default): No caching is used. The agent executes normally without recording or replaying actions.
+- **`"record"`**: Records all agent actions to a cache file for future replay.
+- **`"execute"`**: Provides tools to the agent to list and execute previously cached trajectories.
+- **`"both"`**: Combines execute and record modes - the agent can use existing cached trajectories and will also record new ones.
 
 ## Configuration
 
 Caching is configured using the `CachingSettings` class:
 
 ```python
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings, CacheWriterSettings
+from askui.models.shared.settings import CachingSettings, CacheExecutionSettings, CacheWritingSettings
 
 caching_settings = CachingSettings(
-    strategy="write",        # One of: "read", "write", "both", "no"
+    strategy="write",        # One of: "execute", "record", "both", or None
     cache_dir=".cache",      # Directory to store cache files
-    filename="my_test.json", # Filename for the cache file (optional for write mode)
-    cache_writer_settings=CacheWriterSettings(
-        parameter_identification_strategy="llm",
-      )  # Auto-detect dynamic values (default: "llm")
-    execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+    writing_settings=CacheWritingSettings(
+        filename="my_test.json",  # Filename for the cache file (required for write mode)
+        parameter_identification_strategy="llm",  # Auto-detect dynamic values (default: "llm")
+        visual_verification_method="phash",  # Visual validation method (default: "phash")
+    ),
+    execution_settings=CacheExecutionSettings(
         delay_time_between_action=0.5  # Delay in seconds between each cached action
     )
 )
@@ -49,25 +50,43 @@ caching_settings = CachingSettings(
 
 ### Parameters
 
-- **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
-- **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
-- **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
-- **`CacheWriterSettings`**: **New in v0.1!** Configuration for cache recording (formerly CacheWriter, now part of CacheManager). See [Cache Recording Settings](#cache-recording-settings) below.
-- **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
+- **`strategy`**: The caching strategy to use (`"execute"`, `"record"`, `"both"`, or `None`).
+- **`cache_dir`**: Directory where cache files are stored. Defaults to `".askui_cache"`.
+- **`writing_settings`**: Configuration for cache recording when using `"record"` or `"both"` strategy. See [Cache Writing Settings](#cache-writing-settings) below.
+- **`execution_settings`**: Configuration for the trajectory execution when using `"execute"` or `"both"` strategy. See [Cache Execution Settings](#cache-execution-settings) below.
 
-### Cache Recording Settings
+### Cache Writing Settings
 
-- `parameter_identification_strategy`: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
-- `llm_parameter_id_api_provider`: The provider of that will be used for for the llm in the parameter identification (will only be used if `parameter_identification_strategy`is set to `llm`). Defaults to `askui`.
-
-### Execution Settings
-
-The `CachedExecutionToolSettings` class allows you to configure how cached trajectories are executed:
+The `CacheWritingSettings` class allows you to configure how cache files are recorded:
 
 ```python
-from askui.models.shared.settings import CachedExecutionToolSettings
+from askui.models.shared.settings import CacheWritingSettings
 
-execution_settings = CachedExecutionToolSettings(
+writing_settings = CacheWritingSettings(
+    filename="my_test.json",  # Filename for the cache file
+    parameter_identification_strategy="llm",  # Auto-detect dynamic values (default: "llm")
+    visual_verification_method="phash",  # Visual validation method (default: "phash")
+    visual_validation_region_size=100,  # Region size for visual validation (default: 100)
+    visual_validation_threshold=10,  # Threshold for visual validation (default: 10)
+)
+```
+
+#### Parameters
+
+- **`filename`**: Name of the cache file to write to. If not specified, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`). Defaults to `""`.
+- **`parameter_identification_strategy`**: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
+- **`visual_verification_method`**: The method used for visual validation. Options: `"phash"` (perceptual hash), `"ahash"` (average hash), or `"none"` (no validation). Defaults to `"phash"`.
+- **`visual_validation_region_size`**: The size of the region used for visual validation. Defaults to `100`.
+- **`visual_validation_threshold`**: The threshold for visual validation. Defaults to `10`.
+
+### Cache Execution Settings
+
+The `CacheExecutionSettings` class allows you to configure how cached trajectories are executed:
+
+```python
+from askui.models.shared.settings import CacheExecutionSettings
+
+execution_settings = CacheExecutionSettings(
     delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
 )
 ```
@@ -94,9 +113,11 @@ with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="record",
             cache_dir=".cache",
-            filename="login_test.json"
+            writing_settings=CacheWritingSettings(
+                filename="login_test.json"
+            )
         )
     )
 ```
@@ -115,13 +136,13 @@ with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
 ```
 
-When using `strategy="read"`, the agent receives two tools:
+When using `strategy="execute"`, the agent receives two tools:
 
 1. **`RetrieveCachedTestExecutions`**: Lists all available cache files in the cache directory
 2. **`ExecuteCachedTrajectory`**: Executes a cached trajectory. Can start from the beginning (default) or continue from a specific step index using the optional `start_from_step_index` parameter (useful after handling non-cacheable steps)
@@ -142,9 +163,11 @@ with VisionAgent() as agent:
     agent.act(
         goal="Create a new task for today with the title 'Review PR'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="record",
             cache_dir=".cache",
-            filename="create_task.json"
+            writing_settings=CacheWritingSettings(
+                filename="create_task.json"
+            )
         )
     )
 
@@ -154,7 +177,7 @@ with VisionAgent() as agent:
     agent.act(
         goal="Create a task using the cached flow",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -176,7 +199,7 @@ with VisionAgent() as agent:
     agent.act(
         goal="Debug the login form by checking element states",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -209,7 +232,7 @@ This is particularly useful for:
 
 ### Referencing Cache Files in Goal Prompts
 
-When using `strategy="read"` or `strategy="both"`, you need to inform the agent about which cache files are available and when to use them. This is done by including cache file information directly in your goal prompt.
+When using `strategy="execute"` or `strategy="both"`, you need to inform the agent about which cache files are available and when to use them. This is done by including cache file information directly in your goal prompt.
 
 #### Explicit Cache File References
 
@@ -226,7 +249,7 @@ with VisionAgent() as agent:
         If the cache file "open_website_in_chrome.json" is available, please use it
         for this execution. It will open a new window in Chrome and navigate to the website.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -249,7 +272,7 @@ with VisionAgent() as agent:
         Check if a cache file named "{test_id}.json" exists. If it does, use it to
         replay the test actions, then verify the results.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir="test_cache"
         )
     )
@@ -271,7 +294,7 @@ with VisionAgent() as agent:
         Choose the most recent one if multiple are available, as it likely contains
         the most up-to-date interaction sequence.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -295,7 +318,7 @@ with VisionAgent() as agent:
 
         After each cached execution, verify the step completed successfully before proceeding.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -313,15 +336,15 @@ You can customize the delay between cached actions to match your application's r
 
 ```python
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import CachingSettings, CacheExecutionSettings
 
 with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache",
-            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
+            execution_settings=CacheExecutionSettings(
                 delay_time_between_action=1.0  # Wait 1 second between each action
             )
         )
@@ -347,7 +370,9 @@ with VisionAgent() as agent:
         caching_settings=CachingSettings(
             strategy="both",
             cache_dir=".cache",
-            filename="checkout_test.json"
+            writing_settings=CacheWritingSettings(
+                filename="checkout_test.json"
+            )
         )
     )
 ```
@@ -721,14 +746,15 @@ If you prefer manual parameter control:
 
 ```python
 caching_settings = CachingSettings(
-    strategy="write",
-    cache_writer_settings = CacheWriterSettings(
-        parameter_identification_strategy="default"  # Only detect {{...}} syntax
+    strategy="record",
+    writing_settings=CacheWritingSettings(
+        filename="my_cache.json",
+        parameter_identification_strategy="preset"  # Only detect {{...}} syntax
     )
 )
 ```
 
-With `parameter_identification_strategy=default`, only manually specified cache_parameters using the `{{...}}` syntax will be detected.
+With `parameter_identification_strategy=preset`, only manually specified cache_parameters using the `{{...}}` syntax will be detected.
 
 #### Logging
 
@@ -812,7 +838,7 @@ Example:
 ### Current Limitations
 
 - **UI State Sensitivity**: Cached trajectories assume the UI is in the same state as when they were recorded. If the UI has changed significantly, replay may fail.
-- **No on_message Callback**: When using `strategy="write"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
+- **No on_message Callback**: When using `strategy="record"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
 - **Verification Required**: After executing a cached trajectory, the agent should verify that the results are correct, as UI changes may cause partial failures.
 
 ### Best Practices
@@ -1017,4 +1043,4 @@ Planned features for future versions:
 4. **Verify cache_parameters**: Print cache metadata to see what cache_parameters are expected
 5. **Adjust delays**: If timing issues occur, increase `delay_time_between_action` incrementally
 
-For more help, see the [GitHub Issues](https://github.com/askui/vision-agent/issues) or contact support.
+For more help, see the [GitHub Issues](https://github.com/askui/askui-python-sdk/issues) or contact support.

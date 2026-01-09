@@ -4,7 +4,6 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
-from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,12 +18,14 @@ from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
-from askui.prompts.caching import CACHE_USE_PROMPT
+from askui.prompts.act_prompts import CACHE_USE_PROMPT
 from askui.speaker.cache_executor import CacheExecutor
 from askui.speaker.conversation import Conversation
 from askui.speaker.speaker import Speakers
+from askui.telemetry.otel import OtelSettings, setup_opentelemetry_tracing_for_askui_sdk
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
@@ -155,6 +156,7 @@ class AgentBase(ABC):  # noqa: B024
         speakers: Speakers | None = None,
         settings: ActSettings | None = None,
         caching_settings: CachingSettings | None = None,
+        tracing_settings: OtelSettings | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -185,6 +187,7 @@ class AgentBase(ABC):  # noqa: B024
                 sequences (trajectories). Available strategies: "no" (default, no
                 caching), "write" (record actions to cache file), "read" (replay from
                 cached trajectories), "both" (read and write). Defaults to no caching.
+            tracing_settings (OtelSettings | None, optional): Settings for tracing.
 
         Returns:
             None
@@ -208,7 +211,7 @@ class AgentBase(ABC):  # noqa: B024
             Recording actions to a cache file:
             ```python
             from askui import VisionAgent
-            from askui.models.shared.settings import CachingSettings
+            from askui.models.shared.settings import CachingSettings, CacheWritingSettings
 
             with VisionAgent() as agent:
                 agent.act(
@@ -217,9 +220,12 @@ class AgentBase(ABC):  # noqa: B024
                         "username 'admin' and password 'secret123'"
                     ),
                     caching_settings=CachingSettings(
-                        strategy="write",
-                        cache_dir=".cache",
-                        filename="login_flow.json"
+                        strategy="execute",
+                        cache_dir=".askui_cache",
+                        writing_settings=CacheWritingSettings(
+                            filename="login_flow.json"
+                        )
+
                     )
                 )
             ```
@@ -233,8 +239,8 @@ class AgentBase(ABC):  # noqa: B024
                 agent.act(
                     goal="Log in to the application",
                     caching_settings=CachingSettings(
-                        strategy="read",
-                        cache_dir=".cache"
+                        strategy="record",
+                        cache_dir=".askui_cache"
                     )
                 )
                 # Agent will automatically find and use "login_flow.json"
@@ -251,7 +257,9 @@ class AgentBase(ABC):  # noqa: B024
                     caching_settings=CachingSettings(
                         strategy="both",
                         cache_dir=".cache",
-                        filename="checkout.json"
+                        writing_settings=CacheWritingSettings(
+                            filename="checkout.json"
+                        )
                     )
                 )
                 # Agent can use existing caches and will record new actions
@@ -284,11 +292,15 @@ class AgentBase(ABC):  # noqa: B024
             caching_settings or self._get_default_caching_settings_for_act()
         )
 
+        _tracing_settings = tracing_settings
+        if _tracing_settings is not None:
+            setup_opentelemetry_tracing_for_askui_sdk(tracing_settings)
+
         _tools = self._build_tools(tools)
 
         _speakers = self._get_default_speakers(speakers)
 
-        if _caching_settings.strategy != "no":
+        if _caching_settings.strategy is not None:
             _speakers.add_speaker(CacheExecutor())
             _cache_manager = self._patch_act_with_cache(
                 _caching_settings, _settings, _tools, goal_str, _messages_api
@@ -343,31 +355,19 @@ class AgentBase(ABC):  # noqa: B024
         caching_tools: list[Tool] = []
 
         # Setup read mode: add caching tools and modify system prompt
-        if caching_settings.strategy in ["read", "both"]:
+        if caching_settings.strategy in ["execute", "both"]:
             from askui.tools.caching_tools import VerifyCacheExecution
 
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
-                    ExecuteCachedTrajectory(
-                        toolbox=toolbox,
-                        settings=caching_settings.execute_cached_trajectory_tool_settings,
-                    ),
+                    ExecuteCachedTrajectory(),
                     VerifyCacheExecution(),
                 ]
             )
-
-            if isinstance(settings.messages.system, str):
-                settings.messages.system = (
-                    settings.messages.system + "\n" + CACHE_USE_PROMPT
-                )
-            elif isinstance(settings.messages.system, list):
-                # Append as a new text block
-                settings.messages.system = settings.messages.system + [
-                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
-                ]
-            else:  # Omit or None
-                settings.messages.system = CACHE_USE_PROMPT
+            if settings.messages.system is None:
+                settings.messages.system = ActSystemPrompt()
+            settings.messages.system.cache_use = CACHE_USE_PROMPT
             logger.debug("Added cache usage instructions to system prompt")
 
         # Add caching tools to the toolbox
@@ -379,10 +379,10 @@ class AgentBase(ABC):  # noqa: B024
             cache_manager = CacheManager()
             cache_manager.start_recording(
                 cache_dir=caching_settings.cache_dir,
-                file_name=caching_settings.filename,
+                file_name=caching_settings.writing_settings.filename,
                 goal=goal,
                 toolbox=toolbox,
-                cache_writer_settings=caching_settings.cache_writer_settings,
+                cache_writer_settings=caching_settings.writing_settings,
                 messages_api=messages_api,
             )
             return cache_manager
@@ -705,9 +705,7 @@ class AgentBase(ABC):  # noqa: B024
         _screenshot = load_image_source(
             self._agent_os.screenshot() if screenshot is None else screenshot
         )
-        return self._default_locate_model.locate_all_elements(
-            image=_screenshot
-        )
+        return self._default_locate_model.locate_all_elements(image=_screenshot)
 
     @telemetry.record_call(exclude={"screenshot", "annotation_dir"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

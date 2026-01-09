@@ -16,7 +16,7 @@ from askui.models.shared.settings import (
     CacheFailure,
     CacheFile,
     CacheMetadata,
-    CacheWriterSettings,
+    CacheWritingSettings,
 )
 from askui.models.shared.tools import ToolCollection
 from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
@@ -73,7 +73,7 @@ class CacheManager:
         self._toolbox: ToolCollection | None = None
         self._accumulated_usage = UsageParam()
         self._was_cached_execution = False
-        self._cache_writer_settings = CacheWriterSettings()
+        self._cache_writer_settings = CacheWritingSettings()
         self._messages_api: MessagesApi | None = None
 
     def record_execution_attempt(
@@ -271,51 +271,15 @@ class CacheManager:
         with cache_file_path.open("r", encoding="utf-8") as f:
             raw_data = json.load(f)
 
-        # Detect format version
-        if isinstance(raw_data, list):
-            # v0.0 format: just a list of tool use blocks
-            logger.info(
-                "Detected v0.0 cache format in %s, migrating to v0.1",
-                cache_file_path.name,
-            )
-            trajectory = [ToolUseBlockParam(**step) for step in raw_data]
-            # Create default metadata for v0.0 files (migrated to v0.1 format)
-            cache_file = CacheFile(
-                metadata=CacheMetadata(
-                    version="0.1",  # Migrated from v0.0 to v0.1 format
-                    created_at=datetime.fromtimestamp(
-                        cache_file_path.stat().st_ctime, tz=timezone.utc
-                    ),
-                ),
-                trajectory=trajectory,
-                cache_parameters={},
-            )
-            logger.info(
-                "Successfully loaded and migrated v0.0 cache: %s steps, 0 parameters",
-                len(trajectory),
-            )
-            return cache_file
-        if isinstance(raw_data, dict) and "metadata" in raw_data:
-            # v0.1 format: structured with metadata
-            cache_file = CacheFile(**raw_data)
-            logger.info(
-                "Successfully loaded v0.1 cache: %s steps, %s parameters",
-                len(cache_file.trajectory),
-                len(cache_file.cache_parameters),
-            )
-            if cache_file.metadata.goal:
-                logger.debug("Cache goal: %s", cache_file.metadata.goal)
-            return cache_file
-        logger.error(
-            "Unknown cache file format in %s. "
-            "Expected either a list (v0.0) or dict with 'metadata' key (v0.1).",
-            cache_file_path.name,
+        cache_file = CacheFile(**raw_data)
+        logger.info(
+            "Successfully loaded cache: %s steps, %s parameters",
+            len(cache_file.trajectory),
+            len(cache_file.cache_parameters),
         )
-        msg = (
-            f"Unknown cache file format in {cache_file_path}. "
-            "Expected either a list (v0.0) or dict with 'metadata' key (v0.1)."
-        )
-        raise ValueError(msg)
+        if cache_file.metadata.goal:
+            logger.debug("Cache goal: %s", cache_file.metadata.goal)
+        return cache_file
 
     def start_recording(
         self,
@@ -323,7 +287,7 @@ class CacheManager:
         file_name: str = "",
         goal: str | None = None,
         toolbox: ToolCollection | None = None,
-        cache_writer_settings: CacheWriterSettings | None = None,
+        cache_writer_settings: CacheWritingSettings | None = None,
         messages_api: MessagesApi | None = None,
     ) -> None:
         """Start recording a new trajectory.
@@ -349,7 +313,7 @@ class CacheManager:
         self._toolbox = toolbox
         self._accumulated_usage = UsageParam()
         self._was_cached_execution = False
-        self._cache_writer_settings = cache_writer_settings or CacheWriterSettings()
+        self._cache_writer_settings = cache_writer_settings or CacheWritingSettings()
         self._messages_api = messages_api or self._messages_api
 
         logger.info(

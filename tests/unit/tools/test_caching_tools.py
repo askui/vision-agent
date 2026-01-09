@@ -25,7 +25,6 @@ def test_retrieve_cached_test_executions_lists_json_files() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
 
-        # Create valid cache files with v0.1 format
         cache_data = {
             "metadata": {
                 "version": "0.1",

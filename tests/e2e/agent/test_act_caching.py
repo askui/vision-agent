@@ -7,7 +7,11 @@ from pathlib import Path
 from askui.agent import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CachedExecutionToolSettings, CachingSettings
+from askui.models.shared.settings import (
+    CacheExecutionSettings,
+    CacheWritingSettings,
+    CachingSettings,
+)
 
 
 def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
@@ -22,7 +26,7 @@ def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="execute",
                 cache_dir=str(cache_dir),
             ),
         )
@@ -39,9 +43,11 @@ def test_act_with_caching_strategy_write(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
@@ -66,7 +72,9 @@ def test_act_with_caching_strategy_both(vision_agent: VisionAgent) -> None:
             caching_settings=CachingSettings(
                 strategy="both",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
@@ -84,7 +92,7 @@ def test_act_with_caching_strategy_no(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="no",
+                strategy=None,
                 cache_dir=str(cache_dir),
             ),
         )
@@ -104,9 +112,11 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(custom_cache_dir),
-                filename=custom_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=custom_filename,
+                ),
             ),
         )
 
@@ -131,7 +141,7 @@ def test_act_with_on_message_and_write_caching(
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(temp_dir),
             ),
             on_message=callback,
@@ -162,7 +172,9 @@ def test_act_with_on_message_and_both_caching(
             caching_settings=CachingSettings(
                 strategy="both",
                 cache_dir=str(temp_dir),
-                filename="new_cache.json",
+                writing_settings=CacheWritingSettings(
+                    filename="new_cache.json",
+                ),
             ),
             on_message=callback,
         )
@@ -172,7 +184,7 @@ def test_act_with_on_message_and_both_caching(
 
 
 def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
-    """Test that cache file contains ToolUseBlockParam entries in v0.1 format."""
+    """Test that cache file contains ToolUseBlockParam entries."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_filename = "tool_blocks.json"
@@ -181,20 +193,22 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                filename=cache_filename,
+                writing_settings=CacheWritingSettings(
+                    filename=cache_filename,
+                ),
             ),
         )
 
-        # Read and verify cache file structure (v0.1 format)
+        # Read and verify cache file structure
         cache_file = cache_dir / cache_filename
         assert cache_file.exists()
 
         with cache_file.open("r", encoding="utf-8") as f:
             cache_data = json.load(f)
 
-        # v0.1 format should be a dict with metadata, trajectory, and cache_parameters
+        # format should be a dict with metadata, trajectory, and cache_parameters
         assert isinstance(cache_data, dict)
         assert "metadata" in cache_data
         assert "trajectory" in cache_data
@@ -231,13 +245,14 @@ def test_act_with_custom_cached_execution_tool_settings(
         cache_file.write_text("[]", encoding="utf-8")
 
         # Act with custom execution tool settings
-        custom_settings = CachedExecutionToolSettings(delay_time_between_action=2.0)
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="record",
                 cache_dir=str(cache_dir),
-                execute_cached_trajectory_tool_settings=custom_settings,
+                execution_settings=CacheExecutionSettings(
+                    delay_time_between_action=2.0
+                ),
             ),
         )
 

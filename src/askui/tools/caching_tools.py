@@ -4,8 +4,7 @@ from pathlib import Path
 from pydantic import validate_call
 from typing_extensions import override
 
-from ..models.shared.settings import CachedExecutionToolSettings
-from ..models.shared.tools import Tool, ToolCollection
+from ..models.shared.tools import Tool
 from ..utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger()
@@ -138,8 +137,6 @@ class ExecuteCachedTrajectory(Tool):
 
     def __init__(
         self,
-        toolbox: ToolCollection,
-        settings: CachedExecutionToolSettings | None = None,
     ) -> None:
         super().__init__(
             name="execute_cached_executions_tool",
@@ -206,10 +203,6 @@ class ExecuteCachedTrajectory(Tool):
                 "required": ["trajectory_file"],
             },
         )
-        if not settings:
-            settings = CachedExecutionToolSettings()
-        self._settings = settings
-        self._toolbox = toolbox
 
     @override
     @validate_call

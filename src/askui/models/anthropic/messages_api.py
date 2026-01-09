@@ -27,6 +27,7 @@ from askui.models.askui.retry_utils import (
 )
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
     COMPUTER_USE_20251124_BETA_FLAG,
@@ -85,7 +86,7 @@ class AnthropicMessagesApi(MessagesApi):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: str | list[BetaTextBlockParam] | Omit = omit,
+        system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,
@@ -96,6 +97,10 @@ class AnthropicMessagesApi(MessagesApi):
             )
             for message in messages
         ]
+
+        if isinstance(system, ActSystemPrompt):
+            system = str(system)
+
         _betas = betas or _infer_beta_flag(model)
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,

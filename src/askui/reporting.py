@@ -225,7 +225,7 @@ class SimpleHtmlReporter(Reporter):
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Vision Agent Report - {{ timestamp }}</title>
+                <title>AskUI Python SDK Report - {{ timestamp }}</title>
                 <link rel="stylesheet"
                     href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
                 <script
@@ -680,7 +680,7 @@ class SimpleHtmlReporter(Reporter):
                         <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
                             <div class="theme-toggle-slider"></div>
                         </div>
-                        <h1>Vision Agent Report</h1>
+                        <h1>AskUI Python SDK Report</h1>
                         <p>Generated: {{ timestamp }}</p>
                     </div>
 

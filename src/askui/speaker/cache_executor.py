@@ -605,9 +605,6 @@ class CacheExecutor(Speaker):
 
         Returns:
             True if step should be skipped, False otherwise
-
-        Note: As of v0.1, no steps are skipped. All tools in the trajectory
-        are executed, including screenshots and trajectory retrieval tools.
         """
         tools_to_skip: list[str] = ["retrieve_available_trajectories_tool"]
         if step.name in tools_to_skip:

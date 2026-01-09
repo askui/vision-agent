@@ -9,6 +9,7 @@ from anthropic.types.beta import (
 )
 
 from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.tools import ToolCollection
 
 
@@ -23,7 +24,7 @@ class MessagesApi(ABC):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: str | list[BetaTextBlockParam] | Omit = omit,
+        system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,

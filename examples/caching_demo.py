@@ -1,7 +1,7 @@
 import logging
 
 from askui import VisionAgent
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CacheWritingSettings, CachingSettings
 from askui.models.shared.tools import Tool
 from askui.reporting import SimpleHtmlReporter
 from askui.speaker.askui_agent import AskUIAgent
@@ -48,7 +48,11 @@ def caching_demo_1() -> None:
             If available, you can use cache file at caching_demo.json
             """
     caching_settings = CachingSettings(
-        strategy="read", cache_dir=".askui_cache", filename="caching_demo.json"
+        strategy="both",
+        cache_dir=".askui_cache",
+        writing_settings=CacheWritingSettings(
+            filename="caching_demo.json",
+        ),
     )
     with VisionAgent(
         display=1,
@@ -70,7 +74,11 @@ def caching_demo_2() -> None:
             If available, you can use cache file at caching_demo2.json
             """
     caching_settings = CachingSettings(
-        strategy="both", cache_dir=".askui_cache", filename="caching_demo2.json"
+        strategy="both",
+        cache_dir=".askui_cache",
+        writing_settings=CacheWritingSettings(
+            filename="caching_demo2.json",
+        ),
     )
     with VisionAgent(
         display=1,
@@ -88,7 +96,11 @@ def human_demo() -> None:
             the PrintTool.
             """
     caching_settings = CachingSettings(
-        strategy="write", cache_dir=".askui_cache", filename="caching_human_demo.json"
+        strategy="record",
+        cache_dir=".askui_cache",
+        writing_settings=CacheWritingSettings(
+            filename="caching_human_demo.json",
+        ),
     )
     with VisionAgent(
         display=1,

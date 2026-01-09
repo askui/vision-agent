@@ -4,7 +4,6 @@ from typing import Optional
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
-    BetaTextBlockParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
 )
@@ -13,12 +12,14 @@ from typing_extensions import Literal
 
 from askui.models.anthropic.factory import AnthropicApiProvider
 from askui.models.shared.agent_message_param import ToolUseBlockParam, UsageParam
+from askui.models.shared.prompts import ActSystemPrompt
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
 
-CACHING_STRATEGY = Literal["read", "write", "both", "no"]
+CACHING_STRATEGY = Literal["execute", "record", "both"]
 CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
+CACHING_VISUAL_VERIFICATION_METHOD = Literal["phash", "ahash", "none"]
 
 
 class MessageSettings(BaseModel):
@@ -26,7 +27,7 @@ class MessageSettings(BaseModel):
 
     betas: list[AnthropicBetaParam] | Omit = omit
     max_tokens: int = 4096
-    system: str | list[BetaTextBlockParam] | Omit = omit
+    system: ActSystemPrompt | None = None
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
     temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)
@@ -38,23 +39,28 @@ class ActSettings(BaseModel):
     messages: MessageSettings = Field(default_factory=MessageSettings)
 
 
-class CachedExecutionToolSettings(BaseModel):
+class CacheWritingSettings(BaseModel):
+    """Settings for writing/recording cache files."""
+
+    filename: str = ""
+    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
+    llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
+    visual_verification_method: CACHING_VISUAL_VERIFICATION_METHOD = "phash"
+    visual_validation_region_size: int = 100
+    visual_validation_threshold: int = 10
+
+
+class CacheExecutionSettings(BaseModel):
+    """Settings for executing/replaying cache files."""
+
     delay_time_between_action: float = 0.5
 
 
-class CacheWriterSettings(BaseModel):
-    parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
-    llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
-
-
 class CachingSettings(BaseModel):
-    strategy: CACHING_STRATEGY = "no"
-    cache_dir: str = ".cache"
-    filename: str = ""
-    execute_cached_trajectory_tool_settings: CachedExecutionToolSettings = (
-        CachedExecutionToolSettings()
-    )
-    cache_writer_settings: CacheWriterSettings = CacheWriterSettings()
+    strategy: CACHING_STRATEGY | None = None
+    cache_dir: str = ".askui_cache"
+    writing_settings: CacheWritingSettings | None = None
+    execution_settings: CacheExecutionSettings | None = None
 
 
 class CacheFailure(BaseModel):
@@ -77,8 +83,6 @@ class CacheMetadata(BaseModel):
 
 
 class CacheFile(BaseModel):
-    """Cache file structure (v0.1) wrapping trajectory with metadata."""
-
     metadata: CacheMetadata
     trajectory: list[ToolUseBlockParam]
     cache_parameters: dict[str, str] = Field(default_factory=dict)

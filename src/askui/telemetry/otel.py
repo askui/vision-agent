@@ -1,9 +1,6 @@
-from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -38,18 +35,14 @@ class OtelSettings(BaseModel):
         return self
 
 
-def setup_opentelemetry_tracing(app: FastAPI, settings: OtelSettings) -> None:
+def setup_opentelemetry_tracing_for_askui_sdk(settings: OtelSettings) -> None:
     """
-    Set up OpenTelemetry tracing for the FastAPI application.
-
+    Set up OpenTelemetry tracing for VisionAgent
     Args:
-        app (FastAPI): The FastAPI application to instrument for tracing.
         settings (OtelSettings): OpenTelemetry configuration settings containing
             endpoint, secret, service name, and version.
-
     Returns:
         None
-
     """
     resource = Resource.create(
         {
@@ -66,10 +59,9 @@ def setup_opentelemetry_tracing(app: FastAPI, settings: OtelSettings) -> None:
     )
 
     span_processor = BatchSpanProcessor(otlp_exporter)
+
     provider.add_span_processor(span_processor)
 
     trace.set_tracer_provider(provider)
 
-    FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
     HTTPXClientInstrumentor().instrument()
-    SQLAlchemyInstrumentor().instrument()

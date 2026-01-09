@@ -16,6 +16,7 @@ import logging
 
 from askui import VisionAgent
 from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.reporting import SimpleHtmlReporter
@@ -363,7 +364,9 @@ def demo_custom_settings_with_speakers() -> None:
     # Create custom settings
     custom_settings = ActSettings(
         messages=MessageSettings(
-            system="You are a helpful assistant that explains calculations step by step.",
+            system=ActSystemPrompt(
+                system_capabilities="You are a helpful assistant that explains calculations step by step."
+            ),
             thinking={"type": "enabled", "budget_tokens": 1024},
             temperature=1.0,
         ),
