@@ -1,7 +1,10 @@
 import logging
 
 from askui import VisionAgent
-from askui.models.shared.settings import CacheWritingSettings, CachingSettings
+from askui.models.shared.settings import (
+    CacheWritingSettings,
+    CachingSettings,
+)
 from askui.models.shared.tools import Tool
 from askui.reporting import SimpleHtmlReporter
 from askui.speaker.askui_agent import AskUIAgent
@@ -45,7 +48,8 @@ def caching_demo_1() -> None:
             One sentence per screen is sufficient.
             Do not scroll on the screens for that!
             Just summarize the content that is or was visible on the screen.
-            If available, you can use cache file at caching_demo.json
+            If available, you can use cache file at caching_demo.json.
+            Do not use any other caching files!
             """
     caching_settings = CachingSettings(
         strategy="both",

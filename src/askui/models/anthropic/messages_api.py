@@ -93,7 +93,10 @@ class AnthropicMessagesApi(MessagesApi):
     ) -> MessageParam:
         _messages = [
             cast(
-                "BetaMessageParam", message.model_dump(exclude={"stop_reason", "usage"})
+                "BetaMessageParam",
+                message.model_dump(
+                    exclude={"stop_reason", "usage"}, context={"for_api": True}
+                ),
             )
             for message in messages
         ]

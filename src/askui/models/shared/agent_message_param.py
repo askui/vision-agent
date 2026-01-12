@@ -83,7 +83,7 @@ class ToolUseBlockParam(BaseModel):
     cache_control: CacheControlEphemeralParam | None = None
     visual_representation: str | None = None  # Visual hash for cache validation
 
-    @model_serializer(mode="wrap", when_used="json")
+    @model_serializer(mode="wrap")
     def _serialize_model(
         self,
         serializer: core_schema.SerializerFunctionWrapHandler,

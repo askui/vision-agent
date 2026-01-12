@@ -47,7 +47,7 @@ class CacheWritingSettings(BaseModel):
     llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
     visual_verification_method: CACHING_VISUAL_VERIFICATION_METHOD = "phash"
     visual_validation_region_size: int = 100
-    visual_validation_threshold: int = 10
+    visual_validation_threshold: int = 20
 
 
 class CacheExecutionSettings(BaseModel):

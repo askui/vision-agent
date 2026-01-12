@@ -346,13 +346,19 @@ class CacheManager:
         # Extract tool blocks and usage from message history
         self._extract_from_messages(messages)
 
-        # Add visual validation hashes to trajectory (if enabled)
-        self._add_visual_validation(messages)
-
         if self._was_cached_execution:
             logger.info("Will not write cache file as this was a cached execution")
             self._reset_recording_state()
             return "Skipped writing cache (was cached execution)"
+
+        # Blank non-cacheable tool inputs BEFORE parameterization
+        # (so they don't get sent to LLM for parameter identification)
+        if self._toolbox is not None:
+            self._tool_blocks = self._blank_non_cacheable_tool_inputs(
+                self._tool_blocks
+            )
+        else:
+            logger.info("No toolbox set, skipping non-cacheable tool input blanking")
 
         # Auto-generate filename if not provided
         if not self._file_name:
@@ -363,18 +369,14 @@ class CacheManager:
         assert isinstance(self._cache_dir, Path)
         cache_file_path = self._cache_dir / self._file_name
 
-        # Parameterize trajectory
+        # Parameterize trajectory (this creates NEW tool blocks)
         goal_to_save, trajectory_to_save, parameters_dict = (
             self._parameterize_trajectory()
         )
 
-        # Blank non-cacheable tool inputs
-        if self._toolbox is not None:
-            trajectory_to_save = self._blank_non_cacheable_tool_inputs(
-                trajectory_to_save
-            )
-        else:
-            logger.info("No toolbox set, skipping non-cacheable tool input blanking")
+        # Add visual validation hashes to trajectory AFTER parameterization
+        # (so visual_representation fields don't get lost during parameterization)
+        self._add_visual_validation_to_trajectory(trajectory_to_save, messages)
 
         # Generate cache file
         self._generate_cache_file(
@@ -477,26 +479,31 @@ class CacheManager:
 
         return result
 
-    def _add_visual_validation(self, messages: list[MessageParam]) -> None:
-        """Add visual validation hashes to tool use blocks in the recorded trajectory.
+    def _add_visual_validation_to_trajectory(
+        self, trajectory: list[ToolUseBlockParam], messages: list[MessageParam]
+    ) -> None:
+        """Add visual validation hashes to tool use blocks in the trajectory.
 
         This method processes the complete message history to find screenshots
-        and compute visual hashes for actions that require validation (click, text_entry).
-        The hashes are stored in the visual_representation field of each ToolUseBlockParam.
+        and compute visual hashes for actions that require validation.
+        The hashes are stored in the visual_representation field of each
+        ToolUseBlockParam in the provided trajectory.
 
         Args:
+            trajectory: The parameterized trajectory to add validation to
             messages: Complete message history from the conversation
         """
         if self._cache_writer_settings.visual_verification_method == "none":
             logger.debug("Visual validation disabled, skipping hash computation")
             return
 
-        # Build a mapping from tool_use_id to tool_block for quick lookup
+        # Build a mapping from tool_use_id to tool_block in the trajectory
+        # This allows us to update the correct tool block in the trajectory
         tool_block_map: dict[str, ToolUseBlockParam] = {
-            block.id: block for block in self._tool_blocks
+            block.id: block for block in trajectory
         }
 
-        # Iterate through messages to find tool uses and add visual validation
+        # Iterate through messages to find tool uses and their context
         validated_count = 0
         for i, message in enumerate(messages):
             if message.role != "assistant":
@@ -510,25 +517,30 @@ class CacheManager:
                 if block.type != "tool_use" or block.name != "computer":
                     continue
 
-                # Cast to ToolUseBlockParam for type safety
-                if not isinstance(block, ToolUseBlockParam):
+                # Find the corresponding block in the trajectory
+                trajectory_block = tool_block_map.get(block.id)
+                if not trajectory_block:
+                    # This tool use is not in the trajectory (might be non-cacheable)
                     continue
 
                 # Check if this action requires visual validation
-                action = block.input.get("action") if isinstance(block.input, dict) else None  # type: ignore[union-attr]
-                if action not in {"click", "text_entry"}:
+                action = (
+                    block.input.get("action") if isinstance(block.input, dict) else None
+                )  # type: ignore[union-attr]
+                if action not in {"left_click", "right_click", "type", "key"}:
                     # Non-validated actions don't need visual hash
-                    block.visual_representation = None
+                    trajectory_block.visual_representation = None
                     continue
 
                 # Find most recent screenshot BEFORE this tool use
                 screenshot = find_recent_screenshot(messages, from_index=i - 1)
                 if not screenshot:
                     logger.warning(
-                        "No screenshot found before step with tool_id=%s, skipping visual validation",
+                        "No screenshot found before tool_id=%s, "
+                        "skipping visual validation",
                         block.id,
                     )
-                    block.visual_representation = None
+                    trajectory_block.visual_representation = None
                     continue
 
                 # Extract region and compute hash
@@ -541,7 +553,7 @@ class CacheManager:
                     visual_hash = self._compute_visual_hash(
                         region, self._cache_writer_settings.visual_verification_method
                     )
-                    block.visual_representation = visual_hash
+                    trajectory_block.visual_representation = visual_hash
                     validated_count += 1
                     logger.debug(
                         "Added visual validation hash for tool_id=%s (action=%s)",
@@ -552,11 +564,12 @@ class CacheManager:
                     logger.exception(
                         "Failed to compute visual hash for tool_id=%s", block.id
                     )
-                    block.visual_representation = None
+                    trajectory_block.visual_representation = None
 
         if validated_count > 0:
             logger.info(
-                "Added visual validation to %d action(s) in trajectory", validated_count
+                "Added visual validation to %d action(s) in trajectory",
+                validated_count,
             )
 
     def _compute_visual_hash(self, image: Image.Image, method: str) -> str:
@@ -574,13 +587,12 @@ class CacheManager:
         """
         if method == "phash":
             return compute_phash(image, hash_size=8)
-        elif method == "ahash":
+        if method == "ahash":
             return compute_ahash(image, hash_size=8)
-        elif method == "none":
+        if method == "none":
             return ""
-        else:
-            msg = f"Unsupported visual verification method: {method}"
-            raise ValueError(msg)
+        msg = f"Unsupported visual verification method: {method}"
+        raise ValueError(msg)
 
     def _generate_cache_file(
         self,
