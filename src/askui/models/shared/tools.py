@@ -230,15 +230,19 @@ class ToolWithAgentOS(Tool):
         if self._agent_os is None:
             msg = (
                 "Agent OS is not initialized. "
-                "Call `set_agent_os()` or initialize the tool with an "
+                "Call `agent_os = ...` or initialize the tool with an "
                 "agent_os parameter."
             )
-            raise RuntimeError(msg)  # Add Custom Exception
+            raise RuntimeError(msg)
         return self._agent_os
 
     @agent_os.setter
     def agent_os(self, agent_os: AgentOs | AndroidAgentOs) -> None:
         self._agent_os = agent_os
+
+    def is_agent_os_initialized(self) -> bool:
+        """Check if the agent OS is initialized."""
+        return self._agent_os is not None
 
 
 class AgentException(Exception):
@@ -404,7 +408,7 @@ class ToolCollection:
     def _initialize_tools(self) -> None:
         """Initialize the tools."""
         for tool in self._tools:
-            if hasattr(tool, "agent_os") and tool.agent_os is None:
+            if isinstance(tool, ToolWithAgentOS) and not tool.is_agent_os_initialized():
                 agent_os = self.get_agent_os_by_tags(tool.required_tags)
                 tool.agent_os = agent_os
 

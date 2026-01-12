@@ -34,7 +34,7 @@ class ComputerBaseTool(ToolWithAgentOS):
                 "Call `agent_os = ...` or initialize the tool with an "
                 "ComputerAgentOs."
             )
-            raise TypeError(msg)  # Add Custom Exception
+            raise TypeError(msg)
         return agent_os
 
     @agent_os.setter
