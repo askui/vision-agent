@@ -301,7 +301,16 @@ class AgentBase(ABC):  # noqa: B024
         _speakers = self._get_default_speakers(speakers)
 
         if _caching_settings.strategy is not None:
-            _speakers.add_speaker(CacheExecutor())
+            # Extract execution settings for CacheExecutor
+            skip_visual_validation = False
+            if _caching_settings.execution_settings is not None:
+                skip_visual_validation = (
+                    _caching_settings.execution_settings.skip_visual_validation
+                )
+
+            _speakers.add_speaker(
+                CacheExecutor(skip_visual_validation=skip_visual_validation)
+            )
             _cache_manager = self._patch_act_with_cache(
                 _caching_settings, _settings, _tools, goal_str, _messages_api
             )

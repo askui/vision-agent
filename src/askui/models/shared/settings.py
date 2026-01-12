@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
@@ -54,6 +54,7 @@ class CacheExecutionSettings(BaseModel):
     """Settings for executing/replaying cache files."""
 
     delay_time_between_action: float = 0.5
+    skip_visual_validation: bool = False  # Override to disable visual validation
 
 
 class CachingSettings(BaseModel):
@@ -80,6 +81,7 @@ class CacheMetadata(BaseModel):
     failures: list[CacheFailure] = Field(default_factory=list)
     is_valid: bool = True
     invalidation_reason: Optional[str] = None
+    visual_validation: dict[str, Any] | None = None  # Visual validation configuration
 
 
 class CacheFile(BaseModel):

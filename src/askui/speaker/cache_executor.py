@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
+from PIL import Image
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
 
@@ -15,6 +16,13 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
+from askui.utils.visual_validation import (
+    compute_ahash,
+    compute_hamming_distance,
+    compute_phash,
+    extract_region,
+    find_recent_screenshot,
+)
 
 from .conversation import Conversation
 from .speaker import Speaker, SpeakerResult
@@ -61,8 +69,13 @@ class CacheExecutor(Speaker):
     Tool execution is handled by the Conversation class, not by this speaker.
     """
 
-    def __init__(self) -> None:
-        """Initialize Cache Executor speaker."""
+    def __init__(self, skip_visual_validation: bool = False) -> None:
+        """Initialize Cache Executor speaker.
+
+        Args:
+            skip_visual_validation: If True, disable visual validation even if
+                configured in the cache file. Defaults to False.
+        """
         # Cache execution state
         self._executing_from_cache: bool = False
         self._cache_verification_pending: bool = False
@@ -74,7 +87,11 @@ class CacheExecutor(Speaker):
         self._toolbox: ToolCollection | None = None
         self._parameter_values: dict[str, str] = {}
         self._delay_time: float = 0.5
+        self._skip_visual_validation: bool = skip_visual_validation
         self._visual_validation_enabled: bool = False
+        self._visual_validation_method: str = "phash"
+        self._visual_validation_region_size: int = 100
+        self._visual_validation_threshold: int = 10
         self._current_step_index: int = 0
         self._message_history: list[MessageParam] = []
 
@@ -156,7 +173,7 @@ class CacheExecutor(Speaker):
 
         # Get next step from cache (doesn't execute, just prepares the message)
         logger.debug("Getting next step from cache")
-        result: ExecutionResult = self._get_next_step()
+        result: ExecutionResult = self._get_next_step(conversation_messages=messages)
 
         # Handle result based on status
         return self._handle_result(result, cache_manager)
@@ -417,6 +434,33 @@ class CacheExecutor(Speaker):
         self._message_history = []
         self._executing_from_cache = True
 
+        # Enable visual validation if configured in cache metadata
+        # Can be overridden by execution settings
+        visual_validation_config = self.cache_file.metadata.visual_validation
+
+        if self._skip_visual_validation:
+            self._visual_validation_enabled = False
+            logger.info("Visual validation disabled by execution settings")
+        elif visual_validation_config and visual_validation_config.get("enabled"):
+            self._visual_validation_enabled = True
+            self._visual_validation_method = visual_validation_config.get(
+                "method", "phash"
+            )
+            self._visual_validation_region_size = visual_validation_config.get(
+                "region_size", 100
+            )
+            self._visual_validation_threshold = visual_validation_config.get(
+                "threshold", 10
+            )
+            logger.info(
+                "Visual validation enabled (method=%s, threshold=%d)",
+                self._visual_validation_method,
+                self._visual_validation_threshold,
+            )
+        else:
+            self._visual_validation_enabled = False
+            logger.debug("Visual validation disabled or not configured")
+
         logger.info(
             "✓ Cache execution activated: %s (%d steps, starting from step %d)",
             Path(trajectory_file).name,
@@ -475,11 +519,16 @@ class CacheExecutor(Speaker):
             error_message=error_message,
         )
 
-    def _get_next_step(self) -> ExecutionResult:
+    def _get_next_step(
+        self, conversation_messages: list[MessageParam] | None = None
+    ) -> ExecutionResult:
         """Get the next step message from the trajectory.
 
         This method does NOT execute tools - it only prepares the message.
         Tool execution is handled by the Conversation class.
+
+        Args:
+            conversation_messages: Optional conversation messages for visual validation
 
         Returns:
             ExecutionResult with status and the prepared message
@@ -488,9 +537,10 @@ class CacheExecutor(Speaker):
         1. Check if there are more steps to execute
         2. Check if the step should be skipped
         3. Check if the step is non-cacheable (needs agent)
-        4. Substitute parameters
-        5. Create assistant message with tool use block
-        6. Return result (Conversation will execute the tool)
+        4. Perform visual validation if enabled
+        5. Substitute parameters
+        6. Create assistant message with tool use block
+        7. Return result (Conversation will execute the tool)
         """
         # Check if we've completed all steps
         if self._current_step_index >= len(self._trajectory):
@@ -508,7 +558,7 @@ class CacheExecutor(Speaker):
             logger.debug("Skipping step %d: %s", step_index, step.name)
             self._current_step_index += 1
             # Recursively get next step
-            return self._get_next_step()
+            return self._get_next_step(conversation_messages=conversation_messages)
 
         # Check if step needs agent intervention (non-cacheable)
         if self._should_pause_for_agent(step):
@@ -525,9 +575,16 @@ class CacheExecutor(Speaker):
                 tool_result=step,  # Pass the tool use block for reference
             )
 
-        # Visual validation (future feature - currently always passes)
+        # Visual validation - check current UI state matches recorded state
         if self._visual_validation_enabled:
-            is_valid, error_msg = self._validate_step_visually(step)
+            # Find current screenshot from conversation messages
+            current_screenshot = None
+            if conversation_messages:
+                current_screenshot = find_recent_screenshot(conversation_messages)
+
+            is_valid, error_msg = self._validate_step_visually(
+                step, current_screenshot=current_screenshot
+            )
             if not is_valid:
                 logger.warning(
                     "Visual validation failed at step %d: %s",
@@ -612,53 +669,92 @@ class CacheExecutor(Speaker):
         return False
 
     def _validate_step_visually(
-        self, _step: ToolUseBlockParam, _current_screenshot: Any = None
+        self, step: ToolUseBlockParam, current_screenshot: Image.Image | None = None
     ) -> tuple[bool, str | None]:
-        """Hook for visual validation of cached steps using aHash comparison.
+        """Validate cached step using visual hash comparison.
 
-        This is an extension point for future visual validation implementation.
-        Currently returns (True, None) - no validation performed.
-
-        Future implementation will:
-        1. Check if step has visual_validation_required=True
-        2. Compute aHash of current screen region
-        3. Compare with stored visual_hash
-        4. Return validation result based on Hamming distance threshold
+        Compares the current UI state (screenshot) with the stored visual hash
+        from when the trajectory was recorded. If the Hamming distance exceeds
+        the threshold, validation fails.
 
         Args:
-            _step: The trajectory step to validate
-            _current_screenshot: Optional current screen capture (future use)
+            step: The trajectory step to validate (contains visual_representation)
+            current_screenshot: Optional current screenshot (if not provided, will
+                               extract from message history)
 
         Returns:
             Tuple of (is_valid: bool, error_message: str | None)
             - (True, None) if validation passes or is disabled
             - (False, error_msg) if validation fails
-
-        Example future implementation:
-            if not self._visual_validation_enabled:
-                return True, None
-
-            if not step.visual_validation_required:
-                return True, None
-
-            if step.visual_hash is None:
-                return True, None  # No hash stored, skip validation
-
-            # Capture current screen region
-            current_hash = compute_ahash(current_screenshot)
-
-            # Compare hashes
-            distance = hamming_distance(step.visual_hash, current_hash)
-            threshold = 10  # Configurable
-
-            if distance > threshold:
-                return False, (
-                    f"Visual validation failed: UI changed significantly "
-                    f"(distance: {distance} > threshold: {threshold})"
-                )
-
-            return True, None
         """
-        # Future: Implement aHash comparison
-        # For now, always return True (no validation)
-        return True, None
+        # Check if visual validation is enabled
+        if not self._visual_validation_enabled:
+            return True, None
+
+        # Check if step has a visual hash (only click and text_entry actions have them)
+        if not step.visual_representation:
+            # No hash stored, skip validation
+            return True, None
+
+        # Extract current screenshot if not provided
+        if current_screenshot is None:
+            current_screenshot = find_recent_screenshot(self._message_history)
+            if not current_screenshot:
+                # No screenshot available, cannot validate
+                logger.warning("No screenshot found for visual validation, skipping")
+                return True, None
+
+        # Extract region and compute current hash
+        try:
+            # Extract the region around the action coordinate
+            region = extract_region(
+                current_screenshot,
+                step.input,  # type: ignore[arg-type]
+                region_size=self._visual_validation_region_size,
+            )
+
+            # Compute hash using configured method
+            current_hash = self._compute_visual_hash(region)
+
+            # Compare hashes using Hamming distance
+            distance = compute_hamming_distance(step.visual_representation, current_hash)
+
+            # Check if distance exceeds threshold
+            if distance > self._visual_validation_threshold:
+                error_msg = (
+                    f"Visual validation failed: UI has changed significantly. "
+                    f"Hamming distance: {distance} > threshold: {self._visual_validation_threshold}. "
+                    f"The cached action may not work correctly in the current UI state."
+                )
+                return False, error_msg
+
+            # Validation passed
+            logger.debug(
+                "Visual validation passed (distance=%d, threshold=%d)",
+                distance,
+                self._visual_validation_threshold,
+            )
+            return True, None
+
+        except Exception as e:
+            # If validation fails with exception, log and skip validation
+            logger.exception("Failed to perform visual validation")
+            # Return True to continue execution (don't block on validation errors)
+            return True, f"Visual validation skipped due to error: {e}"
+
+    def _compute_visual_hash(self, image: Image.Image) -> str:
+        """Compute visual hash using configured method.
+
+        Args:
+            image: PIL Image to hash
+
+        Returns:
+            String representation of the hash
+        """
+        if self._visual_validation_method == "phash":
+            return compute_phash(image, hash_size=8)
+        elif self._visual_validation_method == "ahash":
+            return compute_ahash(image, hash_size=8)
+        else:
+            msg = f"Unsupported visual validation method: {self._visual_validation_method}"
+            raise ValueError(msg)

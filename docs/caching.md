@@ -1,6 +1,6 @@
 # Caching (Experimental)
 
-**Version: v0.1.1** - Improved architecture with simplified components and better separation of concerns.
+**Version: v0.2** - Added visual validation feature for detecting UI changes during cache execution.
 
 **CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the caching_strategy to `no`.**
 
@@ -12,11 +12,12 @@ The caching system works by recording all tool use actions (mouse movements, cli
 
 **New in v0.1:** The caching system now includes advanced features like parameter support for dynamic values, smart handling of non-cacheable tools that require agent intervention, comprehensive message history tracking, and automatic failure detection with recovery capabilities.
 
-**New in v0.1.1:**
+**New in v0.2:**
 - Simplified architecture: TrajectoryExecutor merged into CacheExecutor speaker for better encapsulation
 - CacheWriter merged into CacheManager - single class now handles all cache file operations (read, write, update)
 - Cache recording simplified: finish_recording() extracts tool blocks from message history instead of using callbacks
 - Cleaner separation of concerns with fewer abstraction layers
+- **Visual Validation**: Screenshot comparison using perceptual hashing to detect UI changes before executing cached actions
 
 ## Caching Strategies
 
@@ -87,7 +88,8 @@ The `CacheExecutionSettings` class allows you to configure how cached trajectori
 from askui.models.shared.settings import CacheExecutionSettings
 
 execution_settings = CacheExecutionSettings(
-    delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
+    delay_time_between_action=0.5,  # Delay in seconds between each action (default: 0.5)
+    skip_visual_validation=False,   # Skip visual validation checks (default: False)
 )
 ```
 
@@ -98,6 +100,14 @@ execution_settings = CacheExecutionSettings(
 You can adjust this value based on your application's responsiveness:
 - For faster applications or quick interactions, you might use a smaller delay (e.g., `0.1` or `0.2` seconds)
 - For slower applications or complex UI updates, you might need a longer delay (e.g., `1.0` or `2.0` seconds)
+
+- **`skip_visual_validation`**: Whether to skip visual validation checks during cache execution. When set to `True`, the system will not perform screenshot comparisons before executing cached actions. This can be useful when:
+  - UI appearance has changed but interactions remain functionally the same
+  - Running in environments where visual validation is unreliable
+  - Debugging cache execution issues
+  - Trading safety for speed
+
+  Defaults to `False` (visual validation enabled if configured in the cache file). See [Visual Validation](#visual-validation) for more details.
 
 ## Usage Examples
 
@@ -386,14 +396,16 @@ In this mode:
 
 **New in v0.1:** Cache files now use an enhanced format with metadata tracking, parameter support, and execution history.
 
-### v0.1 Format (Current)
+**New in v0.2:** Cache files include visual validation metadata and tool use blocks may contain visual representation hashes.
+
+### v0.2 Format (Current)
 
 Cache files are JSON objects with the following structure:
 
 ```json
 {
   "metadata": {
-    "version": "0.1",
+    "version": "0.2",
     "created_at": "2025-12-11T10:30:00Z",
     "goal": "Greet user {{user_name}} and log them in",
     "last_executed_at": "2025-12-11T15:45:00Z",
@@ -407,12 +419,28 @@ Cache files are JSON objects with the following structure:
       }
     ],
     "is_valid": true,
-    "invalidation_reason": null
+    "invalidation_reason": null,
+    "visual_validation": {
+      "enabled": true,
+      "method": "phash",
+      "region_size": 100,
+      "threshold": 10
+    }
   },
   "trajectory": [
     {
       "type": "tool_use",
       "id": "toolu_01AbCdEfGhIjKlMnOpQrStUv",
+      "name": "computer",
+      "input": {
+        "action": "click",
+        "coordinate": [150, 200]
+      },
+      "visual_representation": "8f3c4a9b2d1e5f6a"
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_02XyZaBcDeFgHiJkLmNoPqRs",
       "name": "computer",
       "input": {
         "action": "type",
@@ -421,7 +449,7 @@ Cache files are JSON objects with the following structure:
     },
     {
       "type": "tool_use",
-      "id": "toolu_02XyZaBcDeFgHiJkLmNoPqRs",
+      "id": "toolu_03MnOpQrStUvWxYzAbCdEfGh",
       "name": "print_debug_info",
       "input": {}
     }
@@ -432,18 +460,28 @@ Cache files are JSON objects with the following structure:
 }
 ```
 
-**Note:** In the example above, `print_debug_info` is marked as non-cacheable (`is_cacheable=False`), so its `input` field is blank (`{}`). This saves space and privacy since non-cacheable tools aren't executed from cache anyway.
+**Notes:**
+- In the example above, `print_debug_info` is marked as non-cacheable (`is_cacheable=False`), so its `input` field is blank (`{}`). This saves space and privacy since non-cacheable tools aren't executed from cache anyway.
+- The first tool use block (click action) includes a `visual_representation` field containing the perceptual hash of the UI region at the action coordinate. This hash is used during cache execution to validate that the UI state matches the recorded state.
+- The type action doesn't have a `visual_representation` field because only `click` and `text_entry` actions are validated by default.
 
 #### Metadata Fields
 
-- **`version`**: Cache file format version (currently "0.1")
+- **`version`**: Cache file format version (currently "0.2")
 - **`created_at`**: ISO 8601 timestamp when the cache was created
-- **`goal`**: **New!** The original goal/instruction given to the agent when recording this trajectory. Cache Parameters are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
+- **`goal`**: The original goal/instruction given to the agent when recording this trajectory. Cache Parameters are applied to the goal text just like in the trajectory, making it easy to understand what the cache was designed to accomplish.
 - **`last_executed_at`**: ISO 8601 timestamp of the last execution (null if never executed)
 - **`execution_attempts`**: Number of times this trajectory has been executed
 - **`failures`**: List of failures encountered during execution (see [Failure Tracking](#failure-tracking))
 - **`is_valid`**: Boolean indicating if the cache is still considered valid
 - **`invalidation_reason`**: Optional string explaining why the cache was invalidated
+- **`visual_validation`**: **New in v0.2!** Configuration for visual validation. Contains:
+  - `enabled`: Whether visual validation is enabled
+  - `method`: Hash algorithm used (e.g., "phash", "ahash")
+  - `region_size`: Size of region extracted for hashing
+  - `threshold`: Maximum Hamming distance for validation to pass
+
+  This field is `null` if visual validation was disabled during recording.
 
 #### Cache Parameters
 
@@ -481,31 +519,34 @@ The old format was a simple JSON array:
 
 ## How It Works
 
-### Internal Architecture (v0.1.1)
+### Internal Architecture (v0.2)
 
 The caching system consists of two key components:
 
 1. **`CacheManager`** (Utility)
-   - **v0.1.1**: Now handles both reading and writing cache files (CacheWriter merged in)
+   - **v0.2**: Handles both reading and writing cache files (CacheWriter merged in)
    - Recording methods: start_recording(), add_message_cb(), finish_recording()
    - Records agent actions via on_message callback
    - Handles trajectory recording and parameterization
+   - Computes and stores visual validation hashes during recording
    - Manages cache metadata operations
    - Validates caches using pluggable validation strategies
    - Handles invalidation logic and failure tracking
 
 2. **`CacheExecutor`** (Speaker)
    - Manages cache execution state and orchestrates trajectory replay
-   - **v0.1.1**: Now includes execution logic (merged from TrajectoryExecutor)
+   - **v0.2**: Includes execution logic (merged from TrajectoryExecutor)
    - Executes cached steps directly with parameter substitution
+   - Performs visual validation before executing validated actions
    - Handles delays, non-cacheable tools, and agent switching
    - Owns all execution state (trajectory, toolbox, step index, etc.)
 
-**Key Changes in v0.1.1:**
+**Key Changes in v0.2:**
 - TrajectoryExecutor eliminated - logic merged into CacheExecutor speaker
 - CacheWriter eliminated - recording logic merged into CacheManager
 - CacheManager is now the single source of truth for all cache file operations
 - Cleaner, more cohesive architecture with fewer abstraction layers
+- Visual validation integrated into recording and execution workflows
 
 This separation of concerns ensures:
 - CacheExecutor is a self-contained execution speaker (no delegation needed)
@@ -545,8 +586,9 @@ In read mode:
    - Non-cacheable step management
    - Failure recovery strategies
 3. The agent can list available cache files and choose appropriate ones
-4. During execution via `CacheExecutor` (v0.1.1):
+4. During execution via `CacheExecutor` (v0.2):
    - CacheExecutor executes each step sequentially with configurable delays
+   - Visual validation checks UI state before executing validated actions
    - All tools in the trajectory are executed, including screenshots and retrieval tools
    - Non-cacheable tools trigger a pause with `NEEDS_AGENT` status
    - Cache Parameters are validated and substituted before execution
@@ -595,7 +637,7 @@ class DebugPrintTool(Tool):
 
 During trajectory execution, when a non-cacheable tool is encountered:
 
-1. `CacheExecutor` pauses execution (v0.1.1)
+1. `CacheExecutor` pauses execution (v0.2)
 2. Returns `ExecutionResult` with status `NEEDS_AGENT`
 3. Includes current step index and message history
 4. Agent receives control to execute the step manually
@@ -670,6 +712,119 @@ Agent calls ExecuteCachedTrajectory(start_from_step_index=6)
 ↓
 Execution continues successfully
 ```
+
+## Visual Validation
+
+**New in v0.2:** Visual validation helps ensure that the UI state during cache execution matches the recorded state. This prevents cached actions from executing in the wrong context and causing unexpected behavior.
+
+### How It Works
+
+During cache recording, the system:
+1. Captures screenshots before each `click` and `text_entry` action
+2. Extracts a small region around the action coordinate
+3. Computes a perceptual hash (phash) of the region
+4. Stores the hash in the cached tool use block
+
+During cache execution, before each validated action:
+1. Takes a screenshot of the current UI state
+2. Extracts the same region around the action coordinate
+3. Computes the perceptual hash of the current region
+4. Compares it with the stored hash using Hamming distance
+5. If the distance exceeds the threshold, execution fails with a detailed error
+
+### Configuration
+
+Visual validation is configured via `CacheWritingSettings`:
+
+```python
+from askui.models.shared.settings import CachingSettings, CacheWritingSettings
+
+caching_settings = CachingSettings(
+    strategy="record",
+    writing_settings=CacheWritingSettings(
+        filename="my_test.json",
+        visual_verification_method="phash",    # Hash algorithm: "phash", "ahash", or "none"
+        visual_validation_region_size=100,     # Size of region to compare (pixels)
+        visual_validation_threshold=10,        # Max Hamming distance to accept
+    )
+)
+```
+
+#### Visual Verification Methods
+
+- **`phash` (Perceptual Hash)** - Default. Robust to scaling, aspect ratio changes, and minor modifications. Best for detecting meaningful UI changes while tolerating small variations.
+- **`ahash` (Average Hash)** - Faster but less robust. Good for detecting exact duplicates or very similar images. More sensitive to minor changes.
+- **`none`** - Disables visual validation. No hashes are computed or stored.
+
+#### Region Size and Threshold
+
+- **`visual_validation_region_size`**: Size of the square region (in pixels) centered on the action coordinate. Larger regions provide more context but may be more sensitive to changes outside the target element. Default: `100` pixels.
+
+- **`visual_validation_threshold`**: Maximum Hamming distance (number of differing bits) allowed between hashes. Lower values are stricter. Typical ranges:
+  - `0-5`: Nearly identical (strict validation)
+  - `6-10`: Similar with minor differences (default: `10`)
+  - `11+`: Different images (too permissive)
+
+### Disabling Visual Validation
+
+You can disable visual validation in two ways:
+
+**1. At Recording Time** (prevents hashes from being stored):
+```python
+caching_settings = CachingSettings(
+    strategy="record",
+    writing_settings=CacheWritingSettings(
+        visual_verification_method="none"  # No hashes recorded
+    )
+)
+```
+
+**2. At Execution Time** (ignores stored hashes):
+```python
+caching_settings = CachingSettings(
+    strategy="execute",
+    execution_settings=CacheExecutionSettings(
+        skip_visual_validation=True  # Ignores validation even if hashes exist
+    )
+)
+```
+
+### When Validation Fails
+
+If visual validation detects a UI change during execution:
+1. Cache execution stops at the failed step
+2. Returns `ExecutionResult` with status `FAILED`
+3. Provides error message with Hamming distance details
+4. Agent can review the current screenshot and decide how to proceed
+
+Example error:
+```
+Visual validation failed: UI has changed significantly.
+Hamming distance: 15 > threshold: 10.
+The cached action may not work correctly in the current UI state.
+```
+
+### Use Cases
+
+**Enable visual validation when:**
+- UI is prone to change (redesigns, A/B tests, dynamic content)
+- Precise element targeting is critical
+- Testing high-stakes actions (payments, deletions)
+- Debugging why caches fail unexpectedly
+
+**Disable visual validation when:**
+- UI appearance changes but structure remains stable
+- Testing in environments with expected visual differences (themes, locales)
+- Cache execution is failing due to harmless visual changes
+- Maximum execution speed is needed
+
+### Best Practices
+
+1. **Start with defaults** - `phash` with threshold `10` works well for most cases
+2. **Tune threshold gradually** - If validation is too strict, increase threshold by 2-3
+3. **Use appropriate region size** - Larger for complex UIs, smaller for simple buttons
+4. **Monitor failure patterns** - Consistent validation failures may indicate UI changes
+5. **Combine with agent verification** - Visual validation catches changes; agent verifies results
 
 ## Cache Parameters
 
@@ -1004,7 +1159,6 @@ if __name__ == "__main__":
 
 Planned features for future versions:
 
-- **Visual Validation**: Screenshot comparison using perceptual hashing (aHash) to detect UI changes
 - **Cache Invalidation Strategies**: Configurable validators for automatic cache invalidation
 - **Cache Management Tools**: Tools for listing, validating, and invalidating caches
 - **Smart Retry**: Automatic retry with adjustments when specific failure patterns are detected

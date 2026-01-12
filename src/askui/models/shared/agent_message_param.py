@@ -1,4 +1,7 @@
-from pydantic import BaseModel
+from typing import Any
+
+from pydantic import BaseModel, model_serializer
+from pydantic_core import core_schema
 from typing_extensions import Literal
 
 
@@ -78,6 +81,25 @@ class ToolUseBlockParam(BaseModel):
     name: str
     type: Literal["tool_use"] = "tool_use"
     cache_control: CacheControlEphemeralParam | None = None
+    visual_representation: str | None = None  # Visual hash for cache validation
+
+    @model_serializer(mode="wrap", when_used="json")
+    def _serialize_model(
+        self,
+        serializer: core_schema.SerializerFunctionWrapHandler,
+        info: core_schema.SerializationInfo,
+    ) -> dict[str, Any]:
+        """Exclude visual_representation when serializing for API calls.
+
+        This field is used internally for cache validation and should not be
+        sent to the LLM API. When context={'for_api': True} is set, the field
+        is dropped from the serialized output.
+        """
+        data: dict[str, Any] = serializer(self)
+        # Drop visual_representation if serializing for API
+        if info.context and info.context.get("for_api", False):
+            data.pop("visual_representation", None)
+        return data  # type: ignore[no-any-return]
 
 
 class BetaThinkingBlock(BaseModel):

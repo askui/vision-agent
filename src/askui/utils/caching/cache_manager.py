@@ -4,7 +4,9 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+from PIL import Image
 
 from askui.models.shared.agent_message_param import (
     MessageParam,
@@ -26,6 +28,12 @@ from askui.utils.caching.cache_validator import (
     StaleCacheValidator,
     StepFailureCountValidator,
     TotalFailureRateValidator,
+)
+from askui.utils.visual_validation import (
+    compute_ahash,
+    compute_phash,
+    extract_region,
+    find_recent_screenshot,
 )
 
 logger = logging.getLogger(__name__)
@@ -338,6 +346,9 @@ class CacheManager:
         # Extract tool blocks and usage from message history
         self._extract_from_messages(messages)
 
+        # Add visual validation hashes to trajectory (if enabled)
+        self._add_visual_validation(messages)
+
         if self._was_cached_execution:
             logger.info("Will not write cache file as this was a cached execution")
             self._reset_recording_state()
@@ -466,6 +477,111 @@ class CacheManager:
 
         return result
 
+    def _add_visual_validation(self, messages: list[MessageParam]) -> None:
+        """Add visual validation hashes to tool use blocks in the recorded trajectory.
+
+        This method processes the complete message history to find screenshots
+        and compute visual hashes for actions that require validation (click, text_entry).
+        The hashes are stored in the visual_representation field of each ToolUseBlockParam.
+
+        Args:
+            messages: Complete message history from the conversation
+        """
+        if self._cache_writer_settings.visual_verification_method == "none":
+            logger.debug("Visual validation disabled, skipping hash computation")
+            return
+
+        # Build a mapping from tool_use_id to tool_block for quick lookup
+        tool_block_map: dict[str, ToolUseBlockParam] = {
+            block.id: block for block in self._tool_blocks
+        }
+
+        # Iterate through messages to find tool uses and add visual validation
+        validated_count = 0
+        for i, message in enumerate(messages):
+            if message.role != "assistant":
+                continue
+
+            if isinstance(message.content, str):
+                continue
+
+            # Process tool use blocks in this message
+            for block in message.content:
+                if block.type != "tool_use" or block.name != "computer":
+                    continue
+
+                # Cast to ToolUseBlockParam for type safety
+                if not isinstance(block, ToolUseBlockParam):
+                    continue
+
+                # Check if this action requires visual validation
+                action = block.input.get("action") if isinstance(block.input, dict) else None  # type: ignore[union-attr]
+                if action not in {"click", "text_entry"}:
+                    # Non-validated actions don't need visual hash
+                    block.visual_representation = None
+                    continue
+
+                # Find most recent screenshot BEFORE this tool use
+                screenshot = find_recent_screenshot(messages, from_index=i - 1)
+                if not screenshot:
+                    logger.warning(
+                        "No screenshot found before step with tool_id=%s, skipping visual validation",
+                        block.id,
+                    )
+                    block.visual_representation = None
+                    continue
+
+                # Extract region and compute hash
+                try:
+                    region = extract_region(
+                        screenshot,
+                        block.input,  # type: ignore[arg-type]
+                        region_size=self._cache_writer_settings.visual_validation_region_size,
+                    )
+                    visual_hash = self._compute_visual_hash(
+                        region, self._cache_writer_settings.visual_verification_method
+                    )
+                    block.visual_representation = visual_hash
+                    validated_count += 1
+                    logger.debug(
+                        "Added visual validation hash for tool_id=%s (action=%s)",
+                        block.id,
+                        action,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to compute visual hash for tool_id=%s", block.id
+                    )
+                    block.visual_representation = None
+
+        if validated_count > 0:
+            logger.info(
+                "Added visual validation to %d action(s) in trajectory", validated_count
+            )
+
+    def _compute_visual_hash(self, image: Image.Image, method: str) -> str:
+        """Compute visual hash using specified method.
+
+        Args:
+            image: PIL Image to hash
+            method: Hash method ("phash", "ahash", or "none")
+
+        Returns:
+            String representation of the hash
+
+        Raises:
+            ValueError: If method is not supported
+        """
+        if method == "phash":
+            return compute_phash(image, hash_size=8)
+        elif method == "ahash":
+            return compute_ahash(image, hash_size=8)
+        elif method == "none":
+            return ""
+        else:
+            msg = f"Unsupported visual verification method: {method}"
+            raise ValueError(msg)
+
     def _generate_cache_file(
         self,
         goal_to_save: str | None,
@@ -481,12 +597,23 @@ class CacheManager:
             parameters_dict: Cache parameters dictionary
             cache_file_path: Path to write cache file
         """
+        # Prepare visual validation metadata
+        visual_validation_metadata: dict[str, Any] | None = None
+        if self._cache_writer_settings.visual_verification_method != "none":
+            visual_validation_metadata = {
+                "enabled": True,
+                "method": self._cache_writer_settings.visual_verification_method,
+                "region_size": self._cache_writer_settings.visual_validation_region_size,
+                "threshold": self._cache_writer_settings.visual_validation_threshold,
+            }
+
         cache_file = CacheFile(
             metadata=CacheMetadata(
-                version="0.1.1",
+                version="0.2",
                 created_at=datetime.now(tz=timezone.utc),
                 goal=goal_to_save,
                 token_usage=self._accumulated_usage,
+                visual_validation=visual_validation_metadata,
             ),
             trajectory=trajectory_to_save,
             cache_parameters=parameters_dict,
