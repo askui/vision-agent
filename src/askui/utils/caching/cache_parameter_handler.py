@@ -474,8 +474,8 @@ class CacheParameterHandler:
             # Replace all parameters in the string
             result = value
             for name, replacement in parameter_values.items():
-                pattern = r"\{\{" + re.escape(name) + r"\}\}"
-                result = re.sub(pattern, replacement, result)
+                placeholder = f"{{{{{name}}}}}"  # Creates "{{parameter_name}}"
+                result = result.replace(placeholder, replacement)
             return result
         if isinstance(value, dict):
             # Recursively substitute in dict values
