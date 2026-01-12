@@ -14,6 +14,7 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
     ToolUseBlockParam,
 )
+from askui.models.shared.settings import CacheExecutionSettings
 from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
 from askui.utils.visual_validation import (
@@ -69,12 +70,14 @@ class CacheExecutor(Speaker):
     Tool execution is handled by the Conversation class, not by this speaker.
     """
 
-    def __init__(self, skip_visual_validation: bool = False) -> None:
+    def __init__(self, execution_settings: CacheExecutionSettings) -> None:
         """Initialize Cache Executor speaker.
 
         Args:
             skip_visual_validation: If True, disable visual validation even if
                 configured in the cache file. Defaults to False.
+            visual_validation_threshold: Maximum Hamming distance allowed for
+                visual validation to pass. Defaults to 20.
         """
         # Cache execution state
         self._executing_from_cache: bool = False
@@ -82,16 +85,23 @@ class CacheExecutor(Speaker):
         self._cache_file: "CacheFile | None" = None
         self._cache_file_path: str | None = None
 
-        # Trajectory execution state (merged from TrajectoryExecutor)
+        # Cache Execution Settings
+        self._skip_visual_validation: bool = execution_settings.skip_visual_validation
+        self._visual_validation_threshold: int = (
+            execution_settings.visual_validation_threshold
+        )
+        self._delay_time_between_actions: float = (
+            execution_settings.delay_time_between_action
+        )
+
         self._trajectory: list[ToolUseBlockParam] = []
         self._toolbox: ToolCollection | None = None
         self._parameter_values: dict[str, str] = {}
         self._delay_time: float = 0.5
-        self._skip_visual_validation: bool = skip_visual_validation
         self._visual_validation_enabled: bool = False
         self._visual_validation_method: str = "phash"
         self._visual_validation_region_size: int = 100
-        self._visual_validation_threshold: int = 10
+
         self._current_step_index: int = 0
         self._message_history: list[MessageParam] = []
 
@@ -449,9 +459,7 @@ class CacheExecutor(Speaker):
             self._visual_validation_region_size = visual_validation_config.get(
                 "region_size", 100
             )
-            self._visual_validation_threshold = visual_validation_config.get(
-                "threshold", 10
-            )
+            # Threshold is now taken from execution settings (__init__ parameter)
             logger.info(
                 "Visual validation enabled (method=%s, threshold=%d)",
                 self._visual_validation_method,
@@ -717,7 +725,9 @@ class CacheExecutor(Speaker):
             current_hash = self._compute_visual_hash(region)
 
             # Compare hashes using Hamming distance
-            distance = compute_hamming_distance(step.visual_representation, current_hash)
+            distance = compute_hamming_distance(
+                step.visual_representation, current_hash
+            )
 
             # Check if distance exceeds threshold
             if distance > self._visual_validation_threshold:
@@ -753,8 +763,7 @@ class CacheExecutor(Speaker):
         """
         if self._visual_validation_method == "phash":
             return compute_phash(image, hash_size=8)
-        elif self._visual_validation_method == "ahash":
+        if self._visual_validation_method == "ahash":
             return compute_ahash(image, hash_size=8)
-        else:
-            msg = f"Unsupported visual validation method: {self._visual_validation_method}"
-            raise ValueError(msg)
+        msg = f"Unsupported visual validation method: {self._visual_validation_method}"
+        raise ValueError(msg)

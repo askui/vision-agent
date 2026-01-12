@@ -68,7 +68,6 @@ writing_settings = CacheWritingSettings(
     parameter_identification_strategy="llm",  # Auto-detect dynamic values (default: "llm")
     visual_verification_method="phash",  # Visual validation method (default: "phash")
     visual_validation_region_size=100,  # Region size for visual validation (default: 100)
-    visual_validation_threshold=10,  # Threshold for visual validation (default: 10)
 )
 ```
 
@@ -78,7 +77,6 @@ writing_settings = CacheWritingSettings(
 - **`parameter_identification_strategy`**: When `llm` (default), uses AI to automatically identify and parameterize dynamic values like dates, usernames, and IDs during cache recording. When `preset`, only manually specified cache_parameters (using `{{...}}` syntax) are detected. See [Automatic Cache Parameter Identification](#automatic-parameter-identification).
 - **`visual_verification_method`**: The method used for visual validation. Options: `"phash"` (perceptual hash), `"ahash"` (average hash), or `"none"` (no validation). Defaults to `"phash"`.
 - **`visual_validation_region_size`**: The size of the region used for visual validation. Defaults to `100`.
-- **`visual_validation_threshold`**: The threshold for visual validation. Defaults to `10`.
 
 ### Cache Execution Settings
 
@@ -90,6 +88,7 @@ from askui.models.shared.settings import CacheExecutionSettings
 execution_settings = CacheExecutionSettings(
     delay_time_between_action=0.5,  # Delay in seconds between each action (default: 0.5)
     skip_visual_validation=False,   # Skip visual validation checks (default: False)
+    visual_validation_threshold=20, # Max Hamming distance for validation (default: 20)
 )
 ```
 
@@ -108,6 +107,13 @@ You can adjust this value based on your application's responsiveness:
   - Trading safety for speed
 
   Defaults to `False` (visual validation enabled if configured in the cache file). See [Visual Validation](#visual-validation) for more details.
+
+- **`visual_validation_threshold`**: Maximum Hamming distance (number of differing bits) allowed between the recorded and current visual state for validation to pass. Lower values are stricter. Typical ranges:
+  - `0-10`: Nearly identical (strict validation)
+  - `11-20`: Similar with minor differences (default: `20`)
+  - `21+`: Different images (too permissive)
+
+  This threshold is applied during cache execution and can be adjusted without re-recording the cache. Defaults to `20`. See [Visual Validation](#visual-validation) for more details.
 
 ## Usage Examples
 
@@ -423,8 +429,7 @@ Cache files are JSON objects with the following structure:
     "visual_validation": {
       "enabled": true,
       "method": "phash",
-      "region_size": 100,
-      "threshold": 10
+      "region_size": 100
     }
   },
   "trajectory": [
@@ -479,9 +484,8 @@ Cache files are JSON objects with the following structure:
   - `enabled`: Whether visual validation is enabled
   - `method`: Hash algorithm used (e.g., "phash", "ahash")
   - `region_size`: Size of region extracted for hashing
-  - `threshold`: Maximum Hamming distance for validation to pass
 
-  This field is `null` if visual validation was disabled during recording.
+  This field is `null` if visual validation was disabled during recording. Note that the validation threshold is not stored in the cache file; it is specified during execution via `CacheExecutionSettings.visual_validation_threshold`.
 
 #### Cache Parameters
 
@@ -734,8 +738,9 @@ During cache execution, before each validated action:
 
 ### Configuration
 
-Visual validation is configured via `CacheWritingSettings`:
+Visual validation is configured via `CacheWritingSettings` (for recording) and `CacheExecutionSettings` (for execution):
 
+**Recording Configuration:**
 ```python
 from askui.models.shared.settings import CachingSettings, CacheWritingSettings
 
@@ -745,7 +750,18 @@ caching_settings = CachingSettings(
         filename="my_test.json",
         visual_verification_method="phash",    # Hash algorithm: "phash", "ahash", or "none"
         visual_validation_region_size=100,     # Size of region to compare (pixels)
-        visual_validation_threshold=10,        # Max Hamming distance to accept
+    )
+)
+```
+
+**Execution Configuration:**
+```python
+from askui.models.shared.settings import CachingSettings, CacheExecutionSettings
+
+caching_settings = CachingSettings(
+    strategy="execute",
+    execution_settings=CacheExecutionSettings(
+        visual_validation_threshold=20,  # Max Hamming distance to accept (default: 20)
     )
 )
 ```
@@ -758,12 +774,14 @@ caching_settings = CachingSettings(
 
 #### Region Size and Threshold
 
-- **`visual_validation_region_size`**: Size of the square region (in pixels) centered on the action coordinate. Larger regions provide more context but may be more sensitive to changes outside the target element. Default: `100` pixels.
+- **`visual_validation_region_size`** (Recording): Size of the square region (in pixels) centered on the action coordinate. Larger regions provide more context but may be more sensitive to changes outside the target element. Default: `100` pixels. Configured in `CacheWritingSettings`.
 
-- **`visual_validation_threshold`**: Maximum Hamming distance (number of differing bits) allowed between hashes. Lower values are stricter. Typical ranges:
-  - `0-5`: Nearly identical (strict validation)
-  - `6-10`: Similar with minor differences (default: `10`)
-  - `11+`: Different images (too permissive)
+- **`visual_validation_threshold`** (Execution): Maximum Hamming distance (number of differing bits) allowed between hashes. Lower values are stricter. Typical ranges:
+  - `0-10`: Nearly identical (strict validation)
+  - `11-20`: Similar with minor differences (default: `20`)
+  - `21+`: Different images (too permissive)
+
+  **Key benefit**: The threshold can be adjusted at execution time without re-recording the cache, allowing you to tune validation sensitivity based on your needs. Configured in `CacheExecutionSettings`.
 
 ### Disabling Visual Validation
 
@@ -800,7 +818,7 @@ If visual validation detects a UI change during execution:
 Example error:
 ```
 Visual validation failed: UI has changed significantly.
-Hamming distance: 15 > threshold: 10.
+Hamming distance: 25 > threshold: 20.
 The cached action may not work correctly in the current UI state.
 ```
 
@@ -820,8 +838,8 @@ The cached action may not work correctly in the current UI state.
 
 ### Best Practices
 
-1. **Start with defaults** - `phash` with threshold `10` works well for most cases
-2. **Tune threshold gradually** - If validation is too strict, increase threshold by 2-3
+1. **Start with defaults** - `phash` with threshold `20` works well for most cases
+2. **Tune threshold at execution time** - Adjust `visual_validation_threshold` in `CacheExecutionSettings` without re-recording. If validation is too strict, increase threshold by 5-10; if too permissive, decrease by 5-10.
 3. **Use appropriate region size** - Larger for complex UIs, smaller for simple buttons
 4. **Monitor failure patterns** - Consistent validation failures may indicate UI changes
 5. **Combine with agent verification** - Visual validation catches changes; agent verifies results

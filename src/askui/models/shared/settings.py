@@ -47,7 +47,6 @@ class CacheWritingSettings(BaseModel):
     llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
     visual_verification_method: CACHING_VISUAL_VERIFICATION_METHOD = "phash"
     visual_validation_region_size: int = 100
-    visual_validation_threshold: int = 20
 
 
 class CacheExecutionSettings(BaseModel):
@@ -55,6 +54,7 @@ class CacheExecutionSettings(BaseModel):
 
     delay_time_between_action: float = 0.5
     skip_visual_validation: bool = False  # Override to disable visual validation
+    visual_validation_threshold: int = 20  # Max Hamming distance for validation
 
 
 class CachingSettings(BaseModel):

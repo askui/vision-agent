@@ -19,7 +19,12 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.prompts import ActSystemPrompt
-from askui.models.shared.settings import ActSettings, CachingSettings
+from askui.models.shared.settings import (
+    ActSettings,
+    CacheExecutionSettings,
+    CacheWritingSettings,
+    CachingSettings,
+)
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.act_prompts import CACHE_USE_PROMPT
 from askui.speaker.cache_executor import CacheExecutor
@@ -294,7 +299,7 @@ class AgentBase(ABC):  # noqa: B024
 
         _tracing_settings = tracing_settings
         if _tracing_settings is not None:
-            setup_opentelemetry_tracing_for_askui_sdk(tracing_settings)
+            setup_opentelemetry_tracing_for_askui_sdk(_tracing_settings)
 
         _tools = self._build_tools(tools)
 
@@ -302,15 +307,20 @@ class AgentBase(ABC):  # noqa: B024
 
         if _caching_settings.strategy is not None:
             # Extract execution settings for CacheExecutor
-            skip_visual_validation = False
-            if _caching_settings.execution_settings is not None:
-                skip_visual_validation = (
-                    _caching_settings.execution_settings.skip_visual_validation
+            if (
+                _caching_settings.strategy in ["execute", "both"]
+                and _caching_settings.execution_settings is None
+            ):
+                _caching_settings.execution_settings = CacheExecutionSettings()
+                _speakers.add_speaker(
+                    CacheExecutor(_caching_settings.execution_settings)
                 )
+            if (
+                _caching_settings.strategy in ["record", "both"]
+                and _caching_settings.writing_settings is None
+            ):
+                _caching_settings.writing_settings = CacheWritingSettings()
 
-            _speakers.add_speaker(
-                CacheExecutor(skip_visual_validation=skip_visual_validation)
-            )
             _cache_manager = self._patch_act_with_cache(
                 _caching_settings, _settings, _tools, goal_str, _messages_api
             )

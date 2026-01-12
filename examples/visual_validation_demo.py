@@ -43,10 +43,9 @@ def record_with_visual_validation() -> None:
         cache_dir=".askui_cache",
         writing_settings=CacheWritingSettings(
             filename="visual_validation_demo.json",
-            # Visual validation settings
+            # Visual validation settings (recording)
             visual_verification_method="phash",  # Use perceptual hash
             visual_validation_region_size=100,  # 100px region around action
-            visual_validation_threshold=10,  # Hamming distance threshold
         ),
     )
 
@@ -82,6 +81,7 @@ def replay_with_visual_validation() -> None:
         execution_settings=CacheExecutionSettings(
             delay_time_between_action=0.5,  # Wait 0.5s between actions
             skip_visual_validation=False,  # Enable visual validation
+            visual_validation_threshold=20,  # Max Hamming distance (default: 20)
         ),
     )
 
@@ -133,15 +133,15 @@ def demo_different_thresholds() -> None:
     logger.info("DEMO: Testing different validation thresholds")
     logger.info("=" * 60)
 
-    # Record with default threshold (10)
-    logger.info("\n1. Recording with threshold=10 (moderate sensitivity)...")
+    # Record with visual validation
+    logger.info("\n1. Recording trajectory with visual validation...")
     caching_settings = CachingSettings(
         strategy="record",
         cache_dir=".askui_cache",
         writing_settings=CacheWritingSettings(
             filename="threshold_demo.json",
             visual_verification_method="phash",
-            visual_validation_threshold=10,  # Moderate
+            visual_validation_region_size=100,
         ),
     )
 
@@ -150,25 +150,42 @@ def demo_different_thresholds() -> None:
     with VisionAgent(display=1, act_model_name="claude-sonnet-4-5-20250929") as agent:
         agent.act(goal, caching_settings=caching_settings)
 
-    # Replay with strict threshold (5)
+    # Replay with strict threshold (10) - more sensitive
     logger.info(
-        "\n2. Replaying with threshold=5 (strict - more likely to detect changes)..."
+        "\n2. Replaying with threshold=10 (strict - more likely to detect changes)..."
     )
     caching_settings = CachingSettings(
         strategy="execute",
         cache_dir=".askui_cache",
         execution_settings=CacheExecutionSettings(
             skip_visual_validation=False,
+            visual_validation_threshold=10,  # Strict
         ),
     )
 
-    # Note: threshold comes from cache file metadata, not execution settings
-    # To override, need to modify cache file or re-record
+    with VisionAgent(display=1, act_model_name="claude-sonnet-4-5-20250929") as agent:
+        agent.act(goal, caching_settings=caching_settings)
 
+    # Replay with permissive threshold (30) - less sensitive
     logger.info(
-        "\n✓ Lower threshold = stricter validation (more sensitive to UI changes)"
+        "\n3. Replaying with threshold=30 (permissive - tolerates more changes)..."
     )
+    caching_settings = CachingSettings(
+        strategy="execute",
+        cache_dir=".askui_cache",
+        execution_settings=CacheExecutionSettings(
+            skip_visual_validation=False,
+            visual_validation_threshold=30,  # Permissive
+        ),
+    )
+
+    with VisionAgent(display=1, act_model_name="claude-sonnet-4-5-20250929") as agent:
+        agent.act(goal, caching_settings=caching_settings)
+
+    logger.info("\n✓ Key benefit: Threshold can be adjusted at execution time!")
+    logger.info("✓ Lower threshold = stricter validation (more sensitive to UI changes)")
     logger.info("✓ Higher threshold = looser validation (tolerates minor differences)")
+    logger.info("✓ No need to re-record the cache to try different thresholds!")
 
 
 def main() -> None:

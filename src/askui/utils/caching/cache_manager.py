@@ -616,7 +616,6 @@ class CacheManager:
                 "enabled": True,
                 "method": self._cache_writer_settings.visual_verification_method,
                 "region_size": self._cache_writer_settings.visual_validation_region_size,
-                "threshold": self._cache_writer_settings.visual_validation_threshold,
             }
 
         cache_file = CacheFile(
