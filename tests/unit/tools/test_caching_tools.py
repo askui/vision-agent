@@ -4,12 +4,9 @@ import json
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
-from askui.models.shared.settings import CachedExecutionToolSettings
-from askui.models.shared.tools import ToolCollection
 from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
@@ -210,18 +207,9 @@ def test_retrieve_caches_includes_invalid_when_requested(tmp_path: Path) -> None
 # All validation is done by CacheExecutor speaker, not the tool.
 
 
-def test_execute_cached_execution_initializes_with_toolbox() -> None:
-    """Test that ExecuteCachedTrajectory can be initialized with toolbox."""
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-    assert tool.name == "execute_cached_executions_tool"
-    assert tool._toolbox is mock_toolbox  # noqa: SLF001
-
-
 def test_execute_cached_execution_returns_error_when_file_not_found() -> None:
     """Test that ExecuteCachedTrajectory returns error message if file doesn't exist."""
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
+    tool = ExecuteCachedTrajectory()
 
     result = tool(trajectory_file="/non/existent/file.json")
 
@@ -251,8 +239,7 @@ def test_execute_cached_execution_returns_success_when_file_exists() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
+        tool = ExecuteCachedTrajectory()
 
         result = tool(trajectory_file=str(cache_file))
 
@@ -260,27 +247,6 @@ def test_execute_cached_execution_returns_success_when_file_exists() -> None:
         assert isinstance(result, str)
         assert "✓ Requesting cache execution" in result
         assert "test_trajectory.json" in result
-
-
-def test_execute_cached_execution_initializes_with_default_settings() -> None:
-    """Test that ExecuteCachedTrajectory uses default settings when none provided."""
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
-
-    # Should have default settings initialized
-    assert hasattr(tool, "_settings")
-    assert tool._settings.delay_time_between_action == 0.5  # noqa: SLF001
-
-
-def test_execute_cached_execution_initializes_with_custom_settings() -> None:
-    """Test that ExecuteCachedTrajectory accepts custom settings."""
-    mock_toolbox = MagicMock(spec=ToolCollection)
-    custom_settings = CachedExecutionToolSettings(delay_time_between_action=1.0)
-    tool = ExecuteCachedTrajectory(toolbox=mock_toolbox, settings=custom_settings)
-
-    # Should have custom settings initialized
-    assert hasattr(tool, "_settings")
-    assert tool._settings.delay_time_between_action == 1.0  # noqa: SLF001
 
 
 def test_execute_cached_execution_accepts_parameters() -> None:
@@ -313,8 +279,7 @@ def test_execute_cached_execution_accepts_parameters() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
+        tool = ExecuteCachedTrajectory()
 
         # Tool should accept parameter_values (validation happens in CacheExecutor)
         result = tool(
@@ -352,8 +317,7 @@ def test_execute_cached_execution_accepts_start_from_step_index() -> None:
         with cache_file.open("w", encoding="utf-8") as f:
             json.dump(cache_data, f)
 
-        mock_toolbox = MagicMock(spec=ToolCollection)
-        tool = ExecuteCachedTrajectory(toolbox=mock_toolbox)
+        tool = ExecuteCachedTrajectory()
 
         # Tool should accept start_from_step_index (validation happens in CacheExecutor)
         result = tool(trajectory_file=str(cache_file), start_from_step_index=2)
