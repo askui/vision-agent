@@ -113,6 +113,20 @@ class BetaRedactedThinkingBlock(BaseModel):
     type: Literal["redacted_thinking"]
 
 
+class BetaFileDocumentSourceParam(BaseModel):
+    file_id: str
+    type: Literal["file"] = "file"
+
+
+Source = BetaFileDocumentSourceParam
+
+
+class RequestDocumentBlockParam(BaseModel):
+    source: Source
+    type: Literal["document"] = "document"
+    cache_control: CacheControlEphemeralParam | None = None
+
+
 ContentBlockParam = (
     ImageBlockParam
     | TextBlockParam
@@ -120,6 +134,7 @@ ContentBlockParam = (
     | ToolUseBlockParam
     | BetaThinkingBlock
     | BetaRedactedThinkingBlock
+    | RequestDocumentBlockParam
 )
 
 StopReason = Literal[
