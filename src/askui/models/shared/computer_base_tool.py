@@ -6,7 +6,7 @@ from askui.tools.android.agent_os import AndroidAgentOs
 
 
 class ComputerBaseTool(ToolWithAgentOS):
-    """Tool base class  that has an AgentOs available."""
+    """Tool base class that has an AgentOs available."""
 
     def __init__(
         self,
@@ -30,8 +30,8 @@ class ComputerBaseTool(ToolWithAgentOS):
         agent_os = super().agent_os
         if not isinstance(agent_os, AgentOs):
             msg = (
-                "Agent OS is not an ComputerAgentOs. "
-                "Call `agent_os = ...` or initialize the tool with an "
+                "Agent OS is not a ComputerAgentOs. "
+                "Call `agent_os = ...` or initialize the tool with a "
                 "ComputerAgentOs."
             )
             raise TypeError(msg)

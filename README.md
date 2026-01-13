@@ -221,7 +221,7 @@ from askui import VisionAgent
 from askui.tools.store.computer import ComputerSaveScreenshotTool
 from askui.tools.store.universal import PrintToConsoleTool
 
-withVisionAgent(act_tools=[
+with VisionAgent(act_tools=[
     ComputerSaveScreenshotTool(base_dir="./screenshots"),
     PrintToConsoleTool()
 ]) as agent:
