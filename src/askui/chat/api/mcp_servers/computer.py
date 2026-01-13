@@ -2,6 +2,7 @@ from fastmcp import FastMCP
 
 from askui.tools.askui.askui_controller import AskUiControllerClient
 from askui.tools.computer import (
+    ComputerConnectTool,
     ComputerDisconnectTool,
     ComputerGetMousePositionTool,
     ComputerKeyboardPressedTool,
@@ -13,7 +14,6 @@ from askui.tools.computer import (
     ComputerMouseReleaseTool,
     ComputerMouseScrollTool,
     ComputerMoveMouseTool,
-    ComputerReconnectTool,
     ComputerRetrieveActiveDisplayTool,
     ComputerScreenshotTool,
     ComputerSetActiveDisplayTool,
@@ -41,7 +41,7 @@ TOOLS = [
     ComputerScreenshotTool(COMPUTER_AGENT_OS_FACADE),
     ComputerSetActiveDisplayTool(COMPUTER_AGENT_OS_FACADE),
     ComputerTypeTool(COMPUTER_AGENT_OS_FACADE),
-    ComputerReconnectTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerConnectTool(COMPUTER_AGENT_OS_FACADE),
     ComputerDisconnectTool(COMPUTER_AGENT_OS_FACADE),
 ]
 

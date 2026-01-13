@@ -25,7 +25,7 @@ COMPUTER_AGENT_V1 = AssistantV1(
     ),
     tools=[
         "computer_disconnect",
-        "computer_reconnect",
+        "computer_connect",
         "computer_mouse_click",
         "computer_get_mouse_position",
         "computer_keyboard_pressed",

@@ -1,0 +1,27 @@
+from askui.models.shared import ComputerBaseTool
+from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+
+
+class ComputerConnectTool(ComputerBaseTool):
+    """Computer Connect Tool"""
+
+    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+        super().__init__(
+            name="computer_connect",
+            description=(
+                "Connect to the agent OS controller to enable computer control. "
+                "Useful for establishing an initial connection or reconnecting "
+                "after controller errors. If already connected, this will "
+                "disconnect and reconnect, which may cause previous configuration "
+                "to be lost (e.g., selected display must be reconfigured)."
+                "Must be used once before any other computer tools are used."
+            ),
+            agent_os=agent_os,
+        )
+
+    def __call__(self) -> str:
+        try:
+            self.agent_os.disconnect()
+        finally:
+            self.agent_os.connect()
+            return "Agent OS controller was connected."  # noqa: B012
