@@ -5,8 +5,11 @@ from sqlalchemy.orm import Query, Session
 
 from askui.chat.api.messages.models import (
     ROOT_MESSAGE_PARENT_ID,
+    ContentBlockParam,
     Message,
     MessageCreate,
+    ToolResultBlockParam,
+    ToolUseBlockParam,
 )
 from askui.chat.api.messages.orms import MessageOrm
 from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
@@ -19,12 +22,67 @@ from askui.utils.api_utils import (
     NotFoundError,
 )
 
+_CANCELLED_TOOL_RESULT_CONTENT = (
+    "Tool execution was cancelled because the previous run was interrupted. "
+    "Please retry the operation if needed."
+)
+
 
 class MessageService:
     """Service for managing Message resources with database persistence."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def _create_cancelled_tool_results(
+        self,
+        workspace_id: WorkspaceId,
+        thread_id: ThreadId,
+        parent_message: Message,
+        run_id: str | None,
+    ) -> MessageId:
+        """Create cancelled tool results if parent has pending tool_use blocks.
+
+        Args:
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+            parent_message (Message): The parent message to check for tool_use blocks.
+            run_id (str | None): The run ID to associate with the tool result message.
+
+        Returns:
+            MessageId: The ID of the created tool result message, or the parent
+                message ID if no tool_use blocks were found.
+        """
+        if not isinstance(parent_message.content, list):
+            return parent_message.id
+
+        tool_use_blocks = [
+            block
+            for block in parent_message.content
+            if isinstance(block, ToolUseBlockParam)
+        ]
+        if not tool_use_blocks:
+            return parent_message.id
+
+        tool_result_content: list[ContentBlockParam] = [
+            ToolResultBlockParam(
+                tool_use_id=block.id,
+                content=_CANCELLED_TOOL_RESULT_CONTENT,
+                is_error=True,
+            )
+            for block in tool_use_blocks
+        ]
+        tool_result_params = MessageCreate(
+            role="user",
+            content=tool_result_content,
+            parent_id=parent_message.id,
+            run_id=run_id,
+        )
+        tool_result_message = Message.create(
+            workspace_id, thread_id, tool_result_params
+        )
+        self._session.add(MessageOrm.from_model(tool_result_message))
+        return tool_result_message.id
 
     def _find_by_id(
         self, workspace_id: WorkspaceId, thread_id: ThreadId, message_id: MessageId
@@ -216,8 +274,18 @@ class MessageService:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         params: MessageCreate,
+        inject_cancelled_tool_results: bool = False,
     ) -> Message:
-        """Create a new message."""
+        """Create a new message.
+
+        Args:
+            workspace_id (WorkspaceId): The workspace ID.
+            thread_id (ThreadId): The thread ID.
+            params (MessageCreate): The message creation parameters.
+            inject_cancelled_tool_results (bool, optional): If `True`, inject cancelled
+                tool results when the parent message has pending tool_use blocks.
+                Defaults to `False`.
+        """
         # Validate thread exists
         thread_orm: ThreadOrm | None = (
             self._session.query(ThreadOrm)
@@ -257,6 +325,15 @@ class MessageService:
                     f"Parent message {params.parent_id} not found in thread {thread_id}"
                 )
                 raise NotFoundError(error_msg)
+
+            # If parent has tool_use, create cancelled tool_result first
+            if inject_cancelled_tool_results:
+                params.parent_id = self._create_cancelled_tool_results(
+                    workspace_id,
+                    thread_id,
+                    parent_message_orm.to_model(),
+                    params.run_id,
+                )
 
         message = Message.create(workspace_id, thread_id, params)
         message_orm = MessageOrm.from_model(message)

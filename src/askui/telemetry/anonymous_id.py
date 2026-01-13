@@ -15,7 +15,7 @@ def _read_anonymous_id_from_file() -> str | None:
     """Read anonymous ID from file if it exists."""
     try:
         if _ANONYMOUS_ID_FILE_PATH.exists():
-            return _ANONYMOUS_ID_FILE_PATH.read_text().strip()
+            return _ANONYMOUS_ID_FILE_PATH.read_text(encoding="utf-8").strip()
     except OSError as e:
         logger.warning("Failed to read anonymous ID from file", extra={"error": str(e)})
     return None
@@ -25,7 +25,7 @@ def _write_anonymous_id_to_file(anonymous_id: str) -> bool:
     """Write anonymous ID to file, creating directories if needed."""
     try:
         _ANONYMOUS_ID_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _ANONYMOUS_ID_FILE_PATH.write_text(anonymous_id)
+        _ANONYMOUS_ID_FILE_PATH.write_text(anonymous_id, encoding="utf-8")
     except OSError as e:
         logger.warning("Failed to write anonymous ID to file", extra={"error": str(e)})
     else:

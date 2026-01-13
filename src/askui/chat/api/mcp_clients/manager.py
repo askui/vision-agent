@@ -76,9 +76,9 @@ class McpClientManager:
                     return await self._mcp_clients[mcp_server_name].call_tool(
                         name,
                         arguments,
-                        timeout,
-                        progress_handler,
-                        raise_on_error,
+                        timeout=timeout,
+                        progress_handler=progress_handler,
+                        raise_on_error=raise_on_error,
                     )
         error_msg = f"Unknown tool: {name}"
         if raise_on_error:

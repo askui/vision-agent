@@ -12,6 +12,7 @@ from askui.chat.api.mcp_clients.manager import McpClientManagerManager
 from askui.chat.api.messages.chat_history_manager import ChatHistoryManager
 from askui.chat.api.models import RunId, ThreadId, WorkspaceId
 from askui.chat.api.runs.events.events import DoneEvent, ErrorEvent, Event, RunEvent
+from askui.chat.api.runs.events.io_publisher import IOPublisher
 from askui.chat.api.runs.events.service import EventService
 from askui.chat.api.runs.models import (
     Run,
@@ -43,6 +44,7 @@ class RunService(RunnerRunService):
         self._chat_history_manager = chat_history_manager
         self._settings = settings
         self._event_service = EventService(settings.data_dir, self)
+        self._io_publisher = IOPublisher(settings.enable_io_events)
 
     def _find_by_id(
         self, workspace_id: WorkspaceId | None, thread_id: ThreadId, run_id: RunId
@@ -136,6 +138,7 @@ class RunService(RunnerRunService):
                                 if isinstance(event, DoneEvent) or isinstance(
                                     event, ErrorEvent
                                 ):
+                                    self._io_publisher.publish(event)
                                     break
                             except anyio.EndOfStream:
                                 break
