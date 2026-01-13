@@ -1,5 +1,5 @@
 {
   "agentCanUpdateSnapshot": true,
   "install": "pdm install",
-  "start": "pdm run chat:api"
+  "start": "pdm run examples/caching_demo.py"
 }

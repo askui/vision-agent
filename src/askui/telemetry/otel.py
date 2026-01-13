@@ -18,7 +18,7 @@ class OtelSettings(BaseModel):
         default=None,
         description="Secret for OTLP authentication. Required when enabled=True.",
     )
-    service_name: str = Field(default="chat-api")
+    service_name: str = Field(default="askui-python-sdk")
     service_version: str = Field(default=__version__)
     endpoint: str | None = Field(
         default=None,

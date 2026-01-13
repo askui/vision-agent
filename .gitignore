@@ -163,8 +163,6 @@ cython_debug/
 
 reports/
 .DS_Store
-/chat
-/askui_chat.db
 .cache/
 .askui_cache/
 *todo.md
