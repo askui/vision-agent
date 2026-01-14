@@ -6,10 +6,7 @@ from pydantic import ConfigDict, Field, validate_call
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.settings import (
-    ActSettings,
-    MessageSettings,
-)
+from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
 from askui.tools.computer import (
@@ -34,7 +31,7 @@ from .models import ModelComposition
 from .models.models import ModelChoice, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
-from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
+from .tools import AgentToolbox, ComputerScaledAgentOs, ModifierKey, PcKey
 from .tools.askui import AskUiControllerClient
 
 logger = logging.getLogger(__name__)
@@ -112,7 +109,7 @@ class VisionAgent(AgentBase):
             agent_os=self.tools.os,
             model_provider=model_provider,
         )
-        self.act_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
+        self.act_agent_os_facade: ComputerScaledAgentOs = ComputerScaledAgentOs(
             self.tools.os
         )
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)

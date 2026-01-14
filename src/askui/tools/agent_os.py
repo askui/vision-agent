@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Literal
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
+from askui.models.shared.tool_tags import ToolTags
+
 if TYPE_CHECKING:
     from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
         RenderObjectStyle,
@@ -201,7 +203,7 @@ class AgentOs(ABC):
             list[str]: A list of tags that identify this agent OS type.
         """
         if not hasattr(self, "_tags"):
-            self._tags = ["computer"]
+            self._tags = [ToolTags.COMPUTER.value]
         return self._tags
 
     @tags.setter

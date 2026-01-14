@@ -1,5 +1,6 @@
 from PIL import Image
 
+from askui.models.shared.tool_tags import ToolTags
 from askui.tools.agent_os import (
     AgentOs,
     Coordinate,
@@ -15,7 +16,7 @@ from askui.tools.askui.askui_controller import RenderObjectStyle  # noqa: TC001
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
-class ComputerAgentOsFacade(AgentOs):
+class ComputerScaledAgentOs(AgentOs):
     """
     Facade for AgentOs that adds coordinate scaling functionality.
 
@@ -27,7 +28,7 @@ class ComputerAgentOsFacade(AgentOs):
         self._agent_os = agent_os
         self._target_resolution: tuple[int, int] = (1024, 768)
         self._real_screen_resolution: DisplaySize | None = None
-        self.tags = self._agent_os.tags + ["agent_os_facade"]
+        self.tags = self._agent_os.tags + [ToolTags.SCALED_AGENT_OS.value]
 
     def connect(self) -> None:
         self._agent_os.connect()

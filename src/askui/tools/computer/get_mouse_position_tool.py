@@ -1,16 +1,16 @@
-from askui.models.shared import ComputerBaseTool
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.models.shared import ComputerBaseTool, ToolTags
+from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
 
 
 class ComputerGetMousePositionTool(ComputerBaseTool):
     """Computer Get Mouse Position Tool"""
 
-    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+    def __init__(self, agent_os: ComputerScaledAgentOs | None = None) -> None:
         super().__init__(
             name="computer_get_mouse_position",
             description="Get the current mouse position.",
             agent_os=agent_os,
-            required_tags=["agent_os_facade"],
+            required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
 
     def __call__(self) -> str:

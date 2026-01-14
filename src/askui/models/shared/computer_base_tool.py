@@ -1,5 +1,6 @@
 from typing import Any
 
+from askui.models.shared.tool_tags import ToolTags
 from askui.models.shared.tools import ToolWithAgentOS
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
@@ -15,7 +16,7 @@ class ComputerBaseTool(ToolWithAgentOS):
         **kwargs: Any,
     ) -> None:
         super().__init__(
-            required_tags=["computer"] + (required_tags or []),
+            required_tags=[ToolTags.COMPUTER.value] + (required_tags or []),
             agent_os=agent_os,
             **kwargs,
         )

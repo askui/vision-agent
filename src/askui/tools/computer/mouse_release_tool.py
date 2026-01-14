@@ -1,14 +1,13 @@
 from typing import get_args
 
 from askui.models.shared import ComputerBaseTool
-from askui.tools.agent_os import MouseButton
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.tools.agent_os import AgentOs, MouseButton
 
 
 class ComputerMouseReleaseTool(ComputerBaseTool):
     """Computer Mouse Release Tool"""
 
-    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_mouse_release",
             description="Release the mouse button at the current position.",

@@ -1,6 +1,6 @@
 from .agent_os import AgentOs, Coordinate, ModifierKey, PcKey
 from .askui.command_helpers import create_style
-from .computer_agent_os_facade import ComputerAgentOsFacade
+from .computer_scaled_agent_os import ComputerScaledAgentOs
 from .toolbox import AgentToolbox
 
 __all__ = [
@@ -10,5 +10,5 @@ __all__ = [
     "PcKey",
     "Coordinate",
     "create_style",
-    "ComputerAgentOsFacade",
+    "ComputerScaledAgentOs",
 ]

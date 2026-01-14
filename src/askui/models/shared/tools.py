@@ -324,11 +324,10 @@ class ToolCollection:
         include: set[str] | None = None,
         agent_os_list: list[AgentOs | AndroidAgentOs] | None = None,
     ) -> None:
-        _tools: list[Tool] = tools or []
         self._mcp_client = mcp_client
         self._include = include
         self._agent_os_list: list[AgentOs | AndroidAgentOs] = []
-        self._tools: list[Tool] = _tools
+        self._tools: list[Tool] = tools or []
         if agent_os_list:
             for agent_os in agent_os_list:
                 self.add_agent_os(agent_os)

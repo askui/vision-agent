@@ -2,13 +2,14 @@ from typing import List, Optional, Tuple
 
 from PIL import Image
 
+from askui.models.shared.tool_tags import ToolTags
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
-class AndroidAgentOsFacade(AndroidAgentOs):
+class AndroidScaledAgentOs(AndroidAgentOs):
     """
-    This class is a facade for the AndroidAgentOs class.
+    Facade for AndroidAgentOs that adds coordinate scaling functionality.
     It is used to scale the coordinates to the target resolution
     and back to the real screen resolution.
     """
@@ -17,7 +18,7 @@ class AndroidAgentOsFacade(AndroidAgentOs):
         self._agent_os: AndroidAgentOs = agent_os
         self._target_resolution: Tuple[int, int] = (1024, 768)
         self._real_screen_resolution: Optional[Tuple[int, int]] = None
-        self.tags = self._agent_os.tags + ["agent_os_facade"]
+        self.tags = self._agent_os.tags + [ToolTags.SCALED_AGENT_OS.value]
 
     def connect(self) -> None:
         self._agent_os.connect()

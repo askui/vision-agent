@@ -1,11 +1,11 @@
 from askui.models.shared import ComputerBaseTool
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
 
 
 class ComputerTypeTool(ComputerBaseTool):
     """Computer Type Tool"""
 
-    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+    def __init__(self, agent_os: ComputerScaledAgentOs | None = None) -> None:
         super().__init__(
             name="computer_type",
             description="Type text on the computer.",
@@ -34,5 +34,5 @@ class ComputerTypeTool(ComputerBaseTool):
         self.agent_os.type(text, typing_speed)
         return (
             f"Text was typed: {text} with typing speed: "
-            " {typing_speed} characters per minute."
+            f" {typing_speed} characters per minute."
         )

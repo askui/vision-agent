@@ -1,9 +1,9 @@
 from askui.models.shared import ComputerBaseTool
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.tools.agent_os import AgentOs
 
 
 class ComputerRetrieveActiveDisplayTool(ComputerBaseTool):
-    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_retrieve_active_display",
             description="""

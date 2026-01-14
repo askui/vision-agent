@@ -1,18 +1,18 @@
 from PIL import Image
 
-from askui.models.shared import ComputerBaseTool
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.models.shared import ComputerBaseTool, ToolTags
+from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
 
 
 class ComputerScreenshotTool(ComputerBaseTool):
     """Computer Screenshot Tool"""
 
-    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
+    def __init__(self, agent_os: ComputerScaledAgentOs | None = None) -> None:
         super().__init__(
             name="computer_screenshot",
             description="Take a screenshot of the current screen.",
             agent_os=agent_os,
-            required_tags=["agent_os_facade"],
+            required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
 
     def __call__(self) -> tuple[str, Image.Image]:

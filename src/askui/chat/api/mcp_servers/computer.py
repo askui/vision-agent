@@ -19,12 +19,12 @@ from askui.tools.computer import (
     ComputerSetActiveDisplayTool,
     ComputerTypeTool,
 )
-from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
+from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
 
 mcp = FastMCP(name="AskUI Computer MCP")
 
 COMPUTER_AGENT_OS = AskUiControllerClient()
-COMPUTER_AGENT_OS_FACADE = ComputerAgentOsFacade(COMPUTER_AGENT_OS)
+COMPUTER_AGENT_OS_FACADE = ComputerScaledAgentOs(COMPUTER_AGENT_OS)
 
 TOOLS = [
     ComputerGetMousePositionTool(COMPUTER_AGENT_OS_FACADE),

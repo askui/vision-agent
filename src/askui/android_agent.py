@@ -10,7 +10,7 @@ from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
 from askui.tools.android.agent_os import ANDROID_KEY
-from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
+from askui.tools.android.agent_os_facade import AndroidScaledAgentOs
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
     AndroidDragAndDropTool,
@@ -77,7 +77,7 @@ class AndroidVisionAgent(AgentBase):
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.os = PpadbAgentOs(device_identifier=device, reporter=reporter)
-        self.act_agent_os_facade = AndroidAgentOsFacade(self.os)
+        self.act_agent_os_facade = AndroidScaledAgentOs(self.os)
         super().__init__(
             reporter=reporter,
             model=model,
