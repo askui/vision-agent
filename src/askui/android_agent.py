@@ -63,7 +63,7 @@ class AndroidVisionAgent(AgentBase):
         ```
     """
 
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
+    @telemetry.record_call(exclude={"model_router", "reporters", "tools", "act_tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
