@@ -1,11 +1,11 @@
 from askui.models.shared import ComputerBaseTool, ToolTags
-from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
+from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
 
 
 class ComputerMoveMouseTool(ComputerBaseTool):
     """Computer Mouse Move Tool"""
 
-    def __init__(self, agent_os: ComputerScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
             name="computer_move_mouse",
             description="Move the mouse to a specific position.",

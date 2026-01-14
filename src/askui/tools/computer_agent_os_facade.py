@@ -16,7 +16,7 @@ from askui.tools.askui.askui_controller import RenderObjectStyle  # noqa: TC001
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
-class ComputerScaledAgentOs(AgentOs):
+class ComputerAgentOsFacade(AgentOs):
     """
     Facade for AgentOs that adds coordinate scaling functionality.
 

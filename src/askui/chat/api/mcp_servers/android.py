@@ -1,7 +1,7 @@
 from fastmcp import FastMCP
 
 from askui.chat.api.mcp_servers.android_setup_doc import ANDROID_SETUP_GUIDE
-from askui.tools.android.agent_os_facade import AndroidScaledAgentOs
+from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
 from askui.tools.android.tools import (
     AndroidConnectTool,
@@ -24,7 +24,7 @@ mcp = FastMCP(name="AskUI Android MCP")
 
 # Initialize the AndroidAgentOsFacade
 ANDROID_AGENT_OS = PpadbAgentOs()
-ANDROID_AGENT_OS_FACADE = AndroidScaledAgentOs(ANDROID_AGENT_OS)
+ANDROID_AGENT_OS_FACADE = AndroidAgentOsFacade(ANDROID_AGENT_OS)
 TOOLS = [
     AndroidSelectDeviceBySerialNumberTool(ANDROID_AGENT_OS_FACADE),
     AndroidSelectDisplayByUniqueIDTool(ANDROID_AGENT_OS_FACADE),

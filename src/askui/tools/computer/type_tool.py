@@ -1,11 +1,11 @@
 from askui.models.shared import ComputerBaseTool
-from askui.tools.computer_scaled_agent_os import ComputerScaledAgentOs
+from askui.tools.agent_os import AgentOs
 
 
 class ComputerTypeTool(ComputerBaseTool):
     """Computer Type Tool"""
 
-    def __init__(self, agent_os: ComputerScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_type",
             description="Type text on the computer.",

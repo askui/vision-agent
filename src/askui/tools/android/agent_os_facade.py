@@ -7,7 +7,7 @@ from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDis
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
-class AndroidScaledAgentOs(AndroidAgentOs):
+class AndroidAgentOsFacade(AndroidAgentOs):
     """
     Facade for AndroidAgentOs that adds coordinate scaling functionality.
     It is used to scale the coordinates to the target resolution

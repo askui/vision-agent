@@ -6,7 +6,7 @@ from typing_extensions import override
 
 from askui.models.shared import AndroidBaseTool, ToolTags
 from askui.tools.android.agent_os import ANDROID_KEY
-from askui.tools.android.agent_os_facade import AndroidScaledAgentOs
+from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 
 
 class AndroidScreenshotTool(AndroidBaseTool):
@@ -14,7 +14,7 @@ class AndroidScreenshotTool(AndroidBaseTool):
     Takes a screenshot from the currently connected Android device.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_screenshot_tool",
             description=(
@@ -43,7 +43,7 @@ class AndroidTapTool(AndroidBaseTool):
     The top left corner of the screen is (0, 0).
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_tap_tool",
             description=(
@@ -109,7 +109,7 @@ class AndroidTypeTool(AndroidBaseTool):
     Types the given text on the Android device screen.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_type_tool",
             description=(
@@ -146,7 +146,7 @@ class AndroidDragAndDropTool(AndroidBaseTool):
     Performs a drag and drop gesture on the Android device screen.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_drag_and_drop_tool",
             description=(
@@ -199,7 +199,7 @@ class AndroidDragAndDropTool(AndroidBaseTool):
 
 
 class AndroidKeyTapEventTool(AndroidBaseTool):
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_key_event_tool",
             description=(
@@ -236,7 +236,7 @@ class AndroidSwipeTool(AndroidBaseTool):
     Performs a swipe gesture on the Android device screen.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_swipe_tool",
             description=(
@@ -310,7 +310,7 @@ class AndroidKeyCombinationTool(AndroidBaseTool):
     Performs a key combination on the Android device.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_key_combination_tool",
             description=(
@@ -366,7 +366,7 @@ class AndroidShellTool(AndroidBaseTool):
     Executes a shell command on the Android device.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None) -> None:
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
             name="android_shell_tool",
             description=(
@@ -409,7 +409,7 @@ class AndroidGetConnectedDevicesSerialNumbersTool(AndroidBaseTool):
     Get the connected devices serial numbers.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_get_connected_devices_serial_numbers_tool",
             description="Can be used to get all connected devices serial numbers.",
@@ -427,7 +427,7 @@ class AndroidGetConnectedDisplaysInfosTool(AndroidBaseTool):
     Get the connected displays infos for the current connected device.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_get_connected_device_display_infos_tool",
             description="Can be used to get all connected displays infos for the "
@@ -447,7 +447,7 @@ class AndroidGetCurrentConnectedDeviceInfosTool(AndroidBaseTool):
     Get the current selected device infos.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_get_current_connected_device_infos_tool",
             description="""
@@ -472,7 +472,7 @@ class AndroidSelectDeviceBySerialNumberTool(AndroidBaseTool):
     Select a device by its serial number.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_select_device_by_serial_number_tool",
             description="Can be used to select a device by its serial number.",
@@ -500,7 +500,7 @@ class AndroidSelectDisplayByUniqueIDTool(AndroidBaseTool):
     Select a display by its unique ID.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_select_display_by_unique_id_tool",
             description="Can be used to select a display by its unique ID.",
@@ -528,7 +528,7 @@ class AndroidConnectTool(AndroidBaseTool):
     Connect to the Android device.
     """
 
-    def __init__(self, agent_os: AndroidScaledAgentOs | None = None):
+    def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
             name="android_connect_tool",
             description="""Can be used to connect the adb client to the server.
