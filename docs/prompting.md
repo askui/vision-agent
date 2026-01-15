@@ -328,6 +328,8 @@ prompt = create_web_agent_prompt(
 with WebVisionAgent() as agent:
     agent.act(
         "Find a laptop under $1000 and add it to cart",
+        # CAUTION: this will also override all other MessageSettings
+        # eventually provided earlier!
         settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
