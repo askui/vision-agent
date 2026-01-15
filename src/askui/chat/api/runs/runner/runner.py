@@ -33,9 +33,9 @@ from askui.chat.api.runs.models import (
 )
 from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
-from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
 from askui.prompts.act_prompts import caesr_system_prompt
@@ -96,17 +96,17 @@ class Runner:
         )
 
     def _build_system(self) -> ActSystemPrompt:
-        metadata = json.dumps({
-            **self._get_run_extra_info(),
-            "continued_by_user_at": datetime.now(timezone.utc).strftime(
-                "%A, %B %d, %Y %H:%M:%S %z"
-            ),
-        })
+        metadata = json.dumps(
+            {
+                **self._get_run_extra_info(),
+                "continued_by_user_at": datetime.now(timezone.utc).strftime(
+                    "%A, %B %d, %Y %H:%M:%S %z"
+                ),
+            }
+        )
         assistant_prompt = self._assistant.system if self._assistant.system else ""
 
-        system = caesr_system_prompt(assistant_prompt, metadata)
-        
-        return system
+        return caesr_system_prompt(assistant_prompt, metadata)
 
     async def _run_agent(
         self,
