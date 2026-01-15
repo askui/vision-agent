@@ -24,7 +24,7 @@ class MessagesApi(ABC):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit,
+        system: ActSystemPrompt | str | list[BetaTextBlockParam] | None = None,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,

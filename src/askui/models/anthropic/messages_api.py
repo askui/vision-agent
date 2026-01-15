@@ -62,7 +62,7 @@ class AnthropicMessagesApi(MessagesApi):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit,
+        system: ActSystemPrompt | str | list[BetaTextBlockParam] | None = None,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,
@@ -71,8 +71,13 @@ class AnthropicMessagesApi(MessagesApi):
             cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
             for message in messages
         ]
+        _system: str | list[BetaTextBlockParam] | Omit = omit
         if isinstance(system, ActSystemPrompt):
-            system = str(system)
+            _system = str(system)
+        elif system is None:
+            _system = omit
+        else:
+            _system = system
 
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
@@ -80,7 +85,7 @@ class AnthropicMessagesApi(MessagesApi):
             model=model,
             tools=tools.to_params() if not isinstance(tools, Omit) else omit,
             betas=betas,
-            system=system,
+            system=_system,
             thinking=thinking,
             tool_choice=tool_choice,
             temperature=temperature,

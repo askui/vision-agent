@@ -4,8 +4,6 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
-from anthropic import Omit
-from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, field_validator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,8 +14,8 @@ from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.prompts import ActSystemPrompt
+from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.act_prompts import create_default_prompt
 from askui.prompts.caching import CACHE_USE_PROMPT
@@ -377,12 +375,6 @@ class AgentBase(ABC):  # noqa: B024
                 )
             elif settings.messages.system is None:
                 settings.messages.system = create_default_prompt()
-            else:
-                error_msg = (
-                    "System Prompt must be of type ActSystemPrompt or str, "
-                    f"but got {type(settings.messages.system)}"
-                    )
-                raise ValueError(error_msg)
 
         # Add caching tools to the tools list
         if isinstance(tools, list):
