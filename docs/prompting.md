@@ -15,7 +15,7 @@ The default prompts work well for general use cases, but customizing them for yo
 
 ## Prompt Structure
 
-System prompts should consist of five distinct parts, each wrapped in XML tags:
+System prompts should consist of six distinct parts, each wrapped in XML tags:
 
 | Part | Required | Purpose |
 |------|----------|---------|
@@ -145,6 +145,48 @@ prompt = ActSystemPrompt(
     additional_rules="Your additional rules here"
 )
 ```
+
+### Power User Override (Not Recommended)
+
+**Warning:** This feature is intended for power users only and can lead to unexpected behavior.
+
+`ActSystemPrompt` includes a `prompt` field that completely overrides all structured prompt parts when set. This is useful only if you need full control over the exact prompt text:
+
+```python
+from askui.models.shared.prompts import ActSystemPrompt
+from askui.models.shared.settings import ActSettings, MessageSettings
+
+# Power user override - ignores all other prompt fields
+prompt = ActSystemPrompt(
+    prompt="Your completely custom system prompt here",
+    # All other fields will be ignored when prompt is set:
+    system_capabilities="Ignored",
+    device_information="Ignored",
+    # ... etc
+)
+
+with WebVisionAgent() as agent:
+    agent.act(
+        "Your task",
+        settings=ActSettings(messages=MessageSettings(system=prompt))
+    )
+```
+
+**Important limitations:**
+- ⚠️ Using the `prompt` field will trigger a `UserWarning` on model creation
+- ⚠️ All structured prompt parts (capabilities, device info, etc.) are completely ignored
+- ✅ Other `MessageSettings` fields remain unchanged (betas, thinking, max_tokens, temperature, tool_choice)
+- ✅ Only the system prompt text itself is affected - all other settings remain at their configured values
+
+**When to use this:**
+- You have extensive experience with prompt engineering
+- You need to experiment with completely different prompt structures
+- You're conducting research or debugging specific prompt behaviors
+
+**When NOT to use this:**
+- For normal customization needs (use factory functions or structured fields instead)
+- When you want to maintain the tested structure of default prompts
+- In production environments where reliability is critical
 
 ### Modifying Default Prompts
 
