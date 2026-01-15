@@ -1,91 +1,49 @@
-from typing import Annotated
-
 from fastmcp import FastMCP
-from fastmcp.utilities.types import Image
-from PIL import Image as PILImage
-from pydantic import BaseModel, Field
 
-from askui.models.shared.settings import COMPUTER_USE_20250124_BETA_FLAG
-from askui.tools.agent_os import DisplaysListResponse
 from askui.tools.askui.askui_controller import AskUiControllerClient
 from askui.tools.computer import (
-    RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC,
-    Action20250124,
-    Computer20250124Tool,
-    ScrollDirection,
+    ComputerConnectTool,
+    ComputerDisconnectTool,
+    ComputerGetMousePositionTool,
+    ComputerKeyboardPressedTool,
+    ComputerKeyboardReleaseTool,
+    ComputerKeyboardTapTool,
+    ComputerListDisplaysTool,
+    ComputerMouseClickTool,
+    ComputerMouseHoldDownTool,
+    ComputerMouseReleaseTool,
+    ComputerMouseScrollTool,
+    ComputerMoveMouseTool,
+    ComputerRetrieveActiveDisplayTool,
+    ComputerScreenshotTool,
+    ComputerSetActiveDisplayTool,
+    ComputerTypeTool,
 )
-from askui.utils.image_utils import ImageSource
+from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
 
 mcp = FastMCP(name="AskUI Computer MCP")
 
-RESOLUTION = RESOLUTIONS_RECOMMENDED_BY_ANTHROPIC["WXGA"]
+COMPUTER_AGENT_OS = AskUiControllerClient()
+COMPUTER_AGENT_OS_FACADE = ComputerAgentOsFacade(COMPUTER_AGENT_OS)
 
-active_display = 1
+TOOLS = [
+    ComputerGetMousePositionTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerKeyboardPressedTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerKeyboardReleaseTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerKeyboardTapTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerListDisplaysTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerMouseClickTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerMouseHoldDownTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerMouseReleaseTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerMouseScrollTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerMoveMouseTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerRetrieveActiveDisplayTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerScreenshotTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerSetActiveDisplayTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerTypeTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerConnectTool(COMPUTER_AGENT_OS_FACADE),
+    ComputerDisconnectTool(COMPUTER_AGENT_OS_FACADE),
+]
 
-
-@mcp.tool(
-    description="Interact with your computer",
-    tags={"computer"},
-    meta={
-        "betas": [COMPUTER_USE_20250124_BETA_FLAG],
-        "params": {
-            "name": "computer",
-            "display_width_px": RESOLUTION.width,
-            "display_height_px": RESOLUTION.height,
-            "type": "computer_20250124",
-        },
-    },
-)
-def computer(
-    action: Action20250124,
-    text: str | None = None,
-    coordinate: tuple[Annotated[int, Field(ge=0)], Annotated[int, Field(ge=0)]]
-    | None = None,
-    scroll_direction: ScrollDirection | None = None,
-    scroll_amount: Annotated[int, Field(ge=0)] | None = None,
-    duration: Annotated[float, Field(ge=0.0, le=100.0)] | None = None,
-    key: str | None = None,
-) -> Image | None | str:
-    with AskUiControllerClient(display=active_display) as agent_os:
-        result = Computer20250124Tool(agent_os=agent_os, resolution=RESOLUTION)(
-            action=action,
-            text=text,
-            coordinate=coordinate,
-            scroll_direction=scroll_direction,
-            scroll_amount=scroll_amount,
-            duration=duration,
-            key=key,
-        )
-        if isinstance(result, PILImage.Image):
-            src = ImageSource(result)
-            return Image(data=src.to_bytes(), format="png")
-        return result
-
-
-class Display(BaseModel):
-    id: int
-
-
-@mcp.tool(description="List all available displays", tags={"computer"})
-def list_displays() -> DisplaysListResponse:
-    with AskUiControllerClient(display=active_display) as agent_os:
-        return agent_os.list_displays()
-
-
-@mcp.tool(
-    description="Set the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)",
-    tags={"computer"},
-)
-def set_active_display(
-    display_id: Annotated[int, Field(ge=1)],
-) -> None:
-    global active_display
-    active_display = display_id
-
-
-@mcp.tool(
-    description="Retrieve the active display from which screenshots are taken / on which actions are performed (coordinates are relative to the active display)",
-    tags={"computer"},
-)
-def retrieve_active_display() -> Display:
-    return Display(id=active_display)
+for tool in TOOLS:
+    mcp.add_tool(tool.to_mcp_tool({"computer"}))

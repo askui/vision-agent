@@ -30,6 +30,8 @@ from askui.models.shared.agent_message_param import (
     ToolResultBlockParam,
     ToolUseBlockParam,
 )
+from askui.tools import AgentOs
+from askui.tools.android.agent_os import AndroidAgentOs
 from askui.utils.image_utils import ImageSource
 
 logger = logging.getLogger(__name__)
@@ -165,6 +167,9 @@ class Tool(BaseModel, ABC):
         default_factory=_default_input_schema,
         description="JSON schema for tool parameters",
     )
+    required_tags: list[str] = Field(
+        description="Tags required for the tool", default=[]
+    )
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
@@ -201,6 +206,43 @@ class Tool(BaseModel, ABC):
             description=self.description,
             tags=tags,
         )
+
+
+class ToolWithAgentOS(Tool):
+    """Tool base class  that has an AgentOs available."""
+
+    def __init__(
+        self,
+        required_tags: list[str],
+        agent_os: AgentOs | AndroidAgentOs | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs, required_tags=required_tags)
+        self._agent_os: AgentOs | AndroidAgentOs | None = agent_os
+
+    @property
+    def agent_os(self) -> AgentOs | AndroidAgentOs:
+        """Get the agent OS.
+
+        Returns:
+            AgentOs | AndroidAgentOs: The agent OS instance.
+        """
+        if self._agent_os is None:
+            msg = (
+                "Agent OS is not initialized. "
+                "Call `agent_os = ...` or initialize the tool with an "
+                "agent_os parameter."
+            )
+            raise RuntimeError(msg)
+        return self._agent_os
+
+    @agent_os.setter
+    def agent_os(self, agent_os: AgentOs | AndroidAgentOs) -> None:
+        self._agent_os = agent_os
+
+    def is_agent_os_initialized(self) -> bool:
+        """Check if the agent OS is initialized."""
+        return self._agent_os is not None
 
 
 class AgentException(Exception):
@@ -280,11 +322,23 @@ class ToolCollection:
         tools: list[Tool] | None = None,
         mcp_client: McpClientProtocol | None = None,
         include: set[str] | None = None,
+        agent_os_list: list[AgentOs | AndroidAgentOs] | None = None,
     ) -> None:
-        _tools = tools or []
-        self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
         self._mcp_client = mcp_client
         self._include = include
+        self._agent_os_list: list[AgentOs | AndroidAgentOs] = []
+        self._tools: list[Tool] = tools or []
+        if agent_os_list:
+            for agent_os in agent_os_list:
+                self.add_agent_os(agent_os)
+
+    def add_agent_os(self, agent_os: AgentOs | AndroidAgentOs) -> None:
+        """Add an agent OS to the collection.
+
+        Args:
+            agent_os (AgentOs | AndroidAgentOs): The agent OS instance to add.
+        """
+        self._agent_os_list.append(agent_os)
 
     def retrieve_tool_beta_flags(self) -> list[str]:
         result: set[str] = set()
@@ -302,8 +356,7 @@ class ToolCollection:
         tool_map = {
             **self._get_mcp_tool_params(),
             **{
-                tool_name: tool.to_params()
-                for tool_name, tool in self._tool_map.items()
+                tool_name: tool.to_params() for tool_name, tool in self.tool_map.items()
             },
         }
         filtered_tool_map = {
@@ -335,17 +388,34 @@ class ToolCollection:
             )
         return result
 
-    def append_tool(self, *tools: Tool) -> "Self":
+    def append_tool(self, *tools: Tool) -> None:
         """Append a tool to the collection."""
-        for tool in tools:
-            self._tool_map[tool.to_params()["name"]] = tool
-        return self
+        self._tools.extend(tools)
 
-    def reset_tools(self, tools: list[Tool] | None = None) -> "Self":
+    def reset_tools(self, tools: list[Tool] | None = None) -> None:
         """Reset the tools in the collection with new tools."""
-        _tools = tools or []
-        self._tool_map = {tool.to_params()["name"]: tool for tool in _tools}
-        return self
+        self._tools = tools or []
+
+    def get_agent_os_by_tags(self, tags: list[str]) -> AgentOs | AndroidAgentOs:
+        """Get an agent OS by tags."""
+        for agent_os in self._agent_os_list:
+            if all(tag in agent_os.tags for tag in tags):
+                return agent_os
+        msg = f"Agent OS with tags [{', '.join(tags)}] not found"
+        raise ValueError(msg)
+
+    def _initialize_tools(self) -> None:
+        """Initialize the tools."""
+        for tool in self._tools:
+            if isinstance(tool, ToolWithAgentOS) and not tool.is_agent_os_initialized():
+                agent_os = self.get_agent_os_by_tags(tool.required_tags)
+                tool.agent_os = agent_os
+
+    @property
+    def tool_map(self) -> dict[str, Tool]:
+        """Get the tool map."""
+        self._initialize_tools()
+        return {tool.name: tool for tool in self._tools}
 
     def run(
         self, tool_use_block_params: list[ToolUseBlockParam]
@@ -358,7 +428,7 @@ class ToolCollection:
     def _run_tool(
         self, tool_use_block_param: ToolUseBlockParam
     ) -> ToolResultBlockParam:
-        tool = self._tool_map.get(tool_use_block_param.name)
+        tool = self.tool_map.get(tool_use_block_param.name)
         if tool:
             return self._run_regular_tool(tool_use_block_param, tool)
         mcp_tool = self._get_mcp_tools().get(tool_use_block_param.name)
@@ -461,6 +531,7 @@ class ToolCollection:
 
     def __add__(self, other: "ToolCollection") -> "ToolCollection":
         return ToolCollection(
-            tools=list(self._tool_map.values()) + list(other._tool_map.values()),
+            tools=self._tools + other._tools,
             mcp_client=other._mcp_client or self._mcp_client,
+            agent_os_list=self._agent_os_list + other._agent_os_list,
         )

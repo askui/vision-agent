@@ -9,12 +9,12 @@ from askui.models.models import (
     GetModel,
     LocateModel,
     ModelComposition,
-    PointList,
 )
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
+from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source

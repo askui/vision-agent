@@ -9,16 +9,27 @@ Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
 ## Table of Contents
 
-- [📖 Introduction](#-introduction)
-- [📦 Installation](#-installation)
-  - [AskUI Python Package](#askui-python-package)
-  - [AskUI Agent OS](#askui-agent-os)
-- [🚀 Quickstart](#-quickstart)
+- [🤖 AskUI Vision Agent](#-askui-vision-agent)
+  - [Table of Contents](#table-of-contents)
+  - [📖 Introduction](#-introduction)
+  - [📦 Installation](#-installation)
+    - [AskUI Python Package](#askui-python-package)
+    - [AskUI Agent OS](#askui-agent-os)
+      - [AMD64](#amd64)
+      - [ARM64](#arm64)
+      - [AMD64](#amd64-1)
+      - [ARM64](#arm64-1)
+      - [ARM64](#arm64-2)
+  - [🚀 Quickstart](#-quickstart)
     - [🧑 Control your devices](#-control-your-devices)
     - [🤖 Let AI agents control your devices](#-let-ai-agents-control-your-devices)
-- [📚 Further Documentation](#-further-documentation)
-- [🤝 Contributing](#-contributing)
-- [📜 License](#-license)
+      - [🔐 Sign up with AskUI](#-sign-up-with-askui)
+      - [⚙️ Configure environment variables](#️-configure-environment-variables)
+      - [💻 Example](#-example)
+    - [🛠️ Extending Agents with Tool Store](#️-extending-agents-with-tool-store)
+  - [📚 Further Documentation](#-further-documentation)
+  - [🤝 Contributing](#-contributing)
+  - [📜 License](#-license)
 
 ## 📖 Introduction
 
@@ -183,6 +194,41 @@ with VisionAgent() as agent:
 Run the script with `python <file path>`, e.g `python test.py`.
 
 If you see a lot of logs and the first paragraph of the introduction in the console, congratulations! You've successfully let AI agents control your device to automate a task! If you have any issues, please check the [documentation](https://docs.askui.com/01-tutorials/01-your-first-agent#common-issues-and-solutions) or join our [Discord](https://discord.gg/Gu35zMGxbx) for support.
+
+### 🛠️ Extending Agents with Tool Store
+
+The Tool Store provides optional tools to extend your agents' capabilities. Import tools from `askui.tools.store` and pass them to `agent.act()` or pass them to the agent constructor as `act_tools`.
+
+**Example passing tools to `agent.act()`:**
+```python
+from askui import VisionAgent
+from askui.tools.store.computer import ComputerSaveScreenshotTool
+from askui.tools.store.universal import PrintToConsoleTool
+
+with VisionAgent() as agent:
+    agent.act(
+        "Take a screenshot and save it as demo/demo.png, then print a status message",
+        tools=[
+            ComputerSaveScreenshotTool(base_dir="./screenshots"),
+            PrintToConsoleTool()
+        ]
+    )
+```
+
+**Example passing tools to the agent constructor:**
+```python
+from askui import VisionAgent
+from askui.tools.store.computer import ComputerSaveScreenshotTool
+from askui.tools.store.universal import PrintToConsoleTool
+
+with VisionAgent(act_tools=[
+    ComputerSaveScreenshotTool(base_dir="./screenshots"),
+    PrintToConsoleTool()
+]) as agent:
+    agent.act("Take a screenshot and save it as demo/demo.png, then print a status message")
+```
+
+Tools are organized by category: `universal/` (work with any agent), `computer/` (require `AgentOs`) works  only with VisionAgent and `android/` (require `AndroidAgentOs`) works only with AndroidVisionAgent.
 
 ## 📚 Further Documentation
 
