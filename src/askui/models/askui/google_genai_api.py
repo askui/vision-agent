@@ -95,7 +95,7 @@ class AskUiGoogleGenAiApi(GetModel):
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": _response_schema,
-                    "system_instruction": SYSTEM_PROMPT_GET,
+                    "system_instruction": str(SYSTEM_PROMPT_GET),
                 },
             )
             json_str = generate_content_response.text

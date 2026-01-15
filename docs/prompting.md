@@ -116,7 +116,7 @@ from askui.models.shared.settings import ActSettings, MessageSettings
 with WebVisionAgent() as agent:
     agent.act(
         "Log in with username 'testuser' and password 'testpass123'",
-        settings=ActSettings(messages=MessageSettings(system=str(prompt)))
+        settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
 
@@ -144,9 +144,6 @@ prompt = ActSystemPrompt(
     report_format=NO_REPORT_FORMAT,
     additional_rules="Your additional rules here"
 )
-
-# Convert to string for use in settings
-system_prompt_string = str(prompt)
 ```
 
 ### Modifying Default Prompts

@@ -1,9 +1,28 @@
-from pydantic import BaseModel, Field
+import warnings
+
+from pydantic import BaseModel, Field, model_validator
 
 
-class ActSystemPrompt(BaseModel):
+class SystemPrompt(BaseModel):
+    """Base class for system prompts."""
+
+    prompt: str = Field(default="", description="The system prompt")
+
+    def __str__(self) -> str:
+        return self.prompt
+
+
+class GetSystemPrompt(SystemPrompt, BaseModel):
+    prompt: str = Field(default="", description="The system prompt for the GetModel")
+
+
+class LocateSystemPrompt(SystemPrompt, BaseModel):
+    prompt: str = Field(default="", description="The system prompt for the LocateModel")
+
+
+class ActSystemPrompt(SystemPrompt, BaseModel):
     """
-    System prompt for the Vision Agent's act command following the 5-part structure:
+    System prompt for the Vision Agent's act command following the 6-part structure:
     1. System Capabilities - What the agent can do
     2. Device Information - Information about the device/platform
     3. UI Information - Information about the UI being operated
@@ -30,15 +49,32 @@ class ActSystemPrompt(BaseModel):
     )
     cache_use: str = Field(
         default="",
-        description="If and how tu utilize cache files",
+        description="If and how to utilize cache files",
     )
     additional_rules: str = Field(
         default="",
         description="Additional rules and guidelines",
     )
 
+    @model_validator(mode="after")
+    def warn_on_prompt_override(self) -> "ActSystemPrompt":
+        """Warn if the inherited prompt field is used as a power user override."""
+        if self.prompt:
+            warnings.warn(
+                "Using the 'prompt' field is not recommended for the ActSystemPrompt"
+                " and might lead to unexpected behavior. This field is intended for"
+                " power users only and overrides all other prompt parts.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return self
+
     def __str__(self) -> str:
         """Render the prompt as a string with XML tags wrapping each part."""
+        # If the prompt field is used, return it directly and ignore all other fields
+        if self.prompt:
+            return self.prompt
+
         parts = []
 
         if self.system_capabilities:

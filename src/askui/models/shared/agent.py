@@ -11,7 +11,6 @@ from askui.models.shared.agent_on_message_cb import (
     OnMessageCbParam,
 )
 from askui.models.shared.messages_api import MessagesApi
-from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -141,15 +140,11 @@ class Agent(ActModel):
     ) -> None:
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
-        # Convert ActSystemPrompt to string if present
-        system_prompt = _settings.messages.system
-        if isinstance(system_prompt, ActSystemPrompt):
-            system_prompt = str(system_prompt)
 
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
-                system=system_prompt,
+                system=_settings.messages.system,
                 messages=messages,
                 model=model,
             )

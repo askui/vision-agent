@@ -94,40 +94,6 @@ class Runner:
             params=params,
         )
 
-    def _build_system(self) -> list[BetaTextBlockParam]:
-        metadata = {
-            **self._get_run_extra_info(),
-            "continued_by_user_at": datetime.now(timezone.utc).strftime(
-                "%A, %B %d, %Y %H:%M:%S %z"
-            ),
-        }
-        return [
-            BetaTextBlockParam(
-                type="text", text=caesr_system_prompt(self._assistant.name)
-            ),
-            *(
-                [
-                    BetaTextBlockParam(
-                        type="text",
-                        text=self._assistant.system,
-                    )
-                ]
-                if self._assistant.system
-                else []
-            ),
-            BetaTextBlockParam(
-                type="text",
-                text="Metadata of current conversation: ",
-            ),
-            BetaTextBlockParam(
-                type="text",
-                text=json.dumps(metadata),
-                cache_control=BetaCacheControlEphemeralParam(
-                    type="ephemeral",
-                ),
-            ),
-        ]
-
     async def _run_agent(
         self,
         send_stream: ObjectStream[Event],
@@ -168,7 +134,8 @@ class Runner:
                 include=set(self._assistant.tools),
             )
             betas = tools.retrieve_tool_beta_flags()
-            system = self._build_system()
+            system = caesr_system_prompt()
+            # system = self._build_system()
             model = self._get_model()
             messages = syncify(self._chat_history_manager.retrieve_message_params)(
                 workspace_id=self._workspace_id,

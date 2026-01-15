@@ -14,7 +14,6 @@ from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.act_prompts import create_default_prompt
@@ -369,14 +368,9 @@ class AgentBase(ABC):  # noqa: B024
                     cached_execution_tool,
                 ]
             )
-            if isinstance(settings.messages.system, ActSystemPrompt):
-                settings.messages.system.cache_use = CACHE_USE_PROMPT
-            elif isinstance(settings.messages.system, str):
-                settings.messages.system = (
-                    settings.messages.system + "\n" + CACHE_USE_PROMPT
-                )
-            elif settings.messages.system is None:
+            if settings.messages.system is None:
                 settings.messages.system = create_default_prompt()
+            settings.messages.system.cache_use = CACHE_USE_PROMPT
 
         # Add caching tools to the tools list
         if isinstance(tools, list):
