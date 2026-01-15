@@ -255,7 +255,7 @@ CACHE_USE_PROMPT = (
 )
 
 CAESR_CAPABILITIES = """
-  You are Caesr, a(n) AI agent developed
+  You are Caesr, a(n) AI {{agent_name}} developed
   by AskUI (Germany company), who democratizes automation.
 
   <PERSONALITY>
@@ -622,9 +622,18 @@ or
 """
 
 
-def caesr_system_prompt() -> ActSystemPrompt:
-    return ActSystemPrompt(
-        system_capabilities=CAESR_CAPABILITIES,
-        device_information=WEB_AGENT_DEVICE_INFORMATION,
-        report_format=NO_REPORT_FORMAT,
-    )
+def caesr_system_prompt(
+  agent_name: str = "agent",
+  assistant_prompt: str = "",
+  metadata: str = "",
+) -> ActSystemPrompt:
+    prompt = CAESR_CAPABILITIES.replace("{{agent_name}}", agent_name)
+    prompt += "\n"
+    if assistant_prompt:
+      prompt += assistant_prompt
+      prompt += "\n"
+    prompt += "Metadata of current conversation: "
+    prompt += "\n"
+    prompt += metadata
+    
+    return ActSystemPrompt(prompt=prompt)
