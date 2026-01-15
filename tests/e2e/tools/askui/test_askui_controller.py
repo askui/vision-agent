@@ -178,7 +178,9 @@ def test_operations_before_connect() -> None:
     """Test calling methods before connect() raises appropriate errors"""
     client = AskUiControllerClient(reporter=CompositeReporter(), display=1)
 
-    with pytest.raises(AssertionError, match="Stub is not initialized"):
+    with pytest.raises(
+        AssertionError, match="Stub is not initialized. Call Connect first."
+    ):
         client.screenshot()
 
 

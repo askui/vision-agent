@@ -24,10 +24,22 @@ COMPUTER_AGENT_V1 = AssistantV1(
 </IMPORTANT>"""
     ),
     tools=[
-        "computer",
-        "list_displays",
-        "set_active_display",
-        "retrieve_active_display",
+        "computer_disconnect",
+        "computer_connect",
+        "computer_mouse_click",
+        "computer_get_mouse_position",
+        "computer_keyboard_pressed",
+        "computer_keyboard_release",
+        "computer_keyboard_tap",
+        "computer_list_displays",
+        "computer_mouse_hold_down",
+        "computer_mouse_release",
+        "computer_mouse_scroll",
+        "computer_move_mouse",
+        "computer_retrieve_active_display",
+        "computer_screenshot",
+        "computer_set_active_display",
+        "computer_type",
     ],
 )
 
