@@ -23,6 +23,7 @@ System prompts should consist of five distinct parts, each wrapped in XML tags:
 | Device Information | Yes | Provides platform-specific context (desktop, mobile, web) |
 | UI Information | No (but strongly recommended!) | Custom information about your specific UI |
 | Report Format | Yes | Specifies how to format execution results |
+| Cache Use | No | Specifices when and how the agent should use cache files |
 | Additional Rules | No | Special handling for edge cases or known issues |
 
 ### 1. System Capabilities
@@ -65,7 +66,11 @@ Specifies how the agent should format its execution report.
 - `MD_REPORT_FORMAT` - Markdown formatted summary with observations
 - `NO_REPORT_FORMAT` - No formal report required
 
-### 5. Additional Rules
+### 5. Cache Use Prompt
+
+Will be added automatically depending on your caching settings.
+
+### 6. Additional Rules
 
 Optional rules for handling specific edge cases or known issues with your application.
 

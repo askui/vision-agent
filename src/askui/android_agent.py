@@ -9,7 +9,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
-from askui.prompts.act_prompts import ANDROID_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import create_android_agent_prompt
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
@@ -339,7 +339,7 @@ class AndroidVisionAgent(AgentBase):
     def _get_default_settings_for_act(self, model: str) -> ActSettings:
         return ActSettings(
             messages=MessageSettings(
-                system=ANDROID_AGENT_SYSTEM_PROMPT,
+                system=create_android_agent_prompt(),
                 thinking={"type": "disabled"},
                 temperature=0.0,
             ),

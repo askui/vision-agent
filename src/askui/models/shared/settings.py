@@ -23,7 +23,7 @@ class MessageSettings(BaseModel):
 
     betas: list[AnthropicBetaParam] | Omit = omit
     max_tokens: int = 4096
-    system: ActSystemPrompt | str | list[BetaTextBlockParam] | Omit = omit
+    system: ActSystemPrompt | str | None = None
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
     temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)

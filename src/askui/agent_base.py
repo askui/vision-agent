@@ -17,7 +17,9 @@ from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings, CachingSettings
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.prompts.act_prompts import create_default_prompt
 from askui.prompts.caching import CACHE_USE_PROMPT
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
@@ -367,21 +369,20 @@ class AgentBase(ABC):  # noqa: B024
                     cached_execution_tool,
                 ]
             )
-            if isinstance(settings.messages.system, str):
+            if isinstance(settings.messages.system, ActSystemPrompt):
+                settings.messages.system.cache_use = CACHE_USE_PROMPT
+            elif isinstance(settings.messages.system, str):
                 settings.messages.system = (
                     settings.messages.system + "\n" + CACHE_USE_PROMPT
                 )
-            elif isinstance(settings.messages.system, list):
-                settings.messages.system = settings.messages.system + [
-                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
-                ]
-            elif isinstance(settings.messages.system, Omit):
-                settings.messages.system = (
-                    str(settings.messages.system) + "\n" + CACHE_USE_PROMPT
-                )
+            elif settings.messages.system is None:
+                settings.messages.system = create_default_prompt()
             else:
-                # It's an ActSystemPrompt instance, convert to string and append
-                settings.messages.system = CACHE_USE_PROMPT
+                error_msg = (
+                    "System Prompt must be of type ActSystemPrompt or str, "
+                    f"but got {type(settings.messages.system)}"
+                    )
+                raise ValueError(error_msg)
 
         # Add caching tools to the tools list
         if isinstance(tools, list):

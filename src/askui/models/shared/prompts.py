@@ -8,7 +8,8 @@ class ActSystemPrompt(BaseModel):
     2. Device Information - Information about the device/platform
     3. UI Information - Information about the UI being operated
     4. Report Format - How to format the final report
-    5. Additional Rules - Extra rules and guidelines
+    5. Cache Use - How to use cache files
+    6. Additional Rules - Extra rules and guidelines
     """
 
     system_capabilities: str = Field(
@@ -26,6 +27,10 @@ class ActSystemPrompt(BaseModel):
     report_format: str = Field(
         default="",
         description="How to format the final report",
+    )
+    cache_use: str = Field(
+        default="",
+        description="If and how tu utilize cache files",
     )
     additional_rules: str = Field(
         default="",
@@ -51,6 +56,9 @@ class ActSystemPrompt(BaseModel):
 
         if self.report_format:
             parts.append(f"<REPORT_FORMAT>\n{self.report_format}\n</REPORT_FORMAT>")
+
+        if self.cache_use:
+            parts.append(f"<CACHE_USE>\n{self.cache_use}\n</CACHE_USE>")
 
         if self.additional_rules:
             parts.append(

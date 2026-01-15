@@ -172,101 +172,204 @@ ANDROID_RECOVERY_RULES = """**Recovery Strategies:**
 * Provide clear, actionable feedback for all operations
 * Use the most efficient method for each task"""
 
+CACHE_USE_PROMPT = (
+    "<TRAJECTORY USE>\n"
+    "    You can use precomputed trajectories to make the execution of the "
+    "task more robust and faster!\n"
+    "    To do so, first use the RetrieveCachedTestExecutions tool to check "
+    "which trajectories are available for you.\n"
+    "    The details what each trajectory that is available for you does are "
+    "at the end of this prompt.\n"
+    "    A trajectory contains all necessary mouse movements, clicks, and "
+    "typing actions from a previously successful execution.\n"
+    "    If there is a trajectory available for a step you need to take, "
+    "always use it!\n"
+    "\n"
+    "    EXECUTING TRAJECTORIES:\n"
+    "    - Use ExecuteCachedTrajectory to execute a cached trajectory\n"
+    "    - You will see all screenshots and results from the execution in "
+    "the message history\n"
+    "    - After execution completes, verify the results are correct\n"
+    "    - If execution fails partway, you'll see exactly where it failed "
+    "and can decide how to proceed\n"
+    "\n"
+    "    CACHING_PARAMETERS:\n"
+    "    - Trajectories may contain dynamic parameters like "
+    "{{current_date}} or {{user_name}}\n"
+    "    - When executing a trajectory, check if it requires "
+    "parameter values\n"
+    "    - Provide parameter values using the parameter_values "
+    "parameter as a dictionary\n"
+    "    - Example: ExecuteCachedTrajectory(trajectory_file='test.json', "
+    "parameter_values={'current_date': '2025-12-11'})\n"
+    "    - If required parameters are missing, execution will fail with "
+    "a clear error message\n"
+    "\n"
+    "    NON-CACHEABLE STEPS:\n"
+    "    - Some tools cannot be cached and require your direct execution "
+    "(e.g., print_debug, contextual decisions)\n"
+    "    - When trajectory execution reaches a non-cacheable step, it will "
+    "pause and return control to you\n"
+    "    - You'll receive a NEEDS_AGENT status with the current "
+    "step index\n"
+    "    - Execute the non-cacheable step manually using your "
+    "regular tools\n"
+    "    - After completing the non-cacheable step, continue the trajectory "
+    "using ExecuteCachedTrajectory with start_from_step_index\n"
+    "\n"
+    "    CONTINUING TRAJECTORIES:\n"
+    "    - Use ExecuteCachedTrajectory with start_from_step_index to resume "
+    "execution after handling a non-cacheable step\n"
+    "    - Provide the same trajectory file and the step index where "
+    "execution should continue\n"
+    "    - Example: ExecuteCachedTrajectory(trajectory_file='test.json', "
+    "start_from_step_index=5, parameter_values={...})\n"
+    "    - The tool will execute remaining steps from that index onwards\n"
+    "\n"
+    "    FAILURE HANDLING:\n"
+    "    - If a trajectory fails during execution, you'll see the error "
+    "message and the step where it failed\n"
+    "    - Analyze the failure: Was it due to UI changes, timing issues, "
+    "or incorrect state?\n"
+    "    - Options for handling failures:\n"
+    "      1. Execute the remaining steps manually\n"
+    "      2. Fix the issue and retry from a specific step using "
+    "ExecuteCachedTrajectory with start_from_step_index\n"
+    "      3. Report that the cached trajectory is outdated and needs "
+    "re-recording\n"
+    "\n"
+    "    BEST PRACTICES:\n"
+    "    - Always verify results after trajectory execution completes\n"
+    "    - While trajectories work most of the time, occasionally "
+    "execution can be partly incorrect\n"
+    "    - Make corrections where necessary after cached execution\n"
+    "    - if you need to make any corrections after a trajectory "
+    "execution, please mark the cached execution as failed\n"
+    "    - If a trajectory consistently fails, it may be invalid and "
+    "should be re-recorded\n"
+    "    - There might be several trajectories available to you.\n"
+    "    - Their filename is a unique testID.\n"
+    "    - If executed using the ExecuteCachedTrajectory tool, a trajectory "
+    "will automatically execute all necessary steps for the test with "
+    "that id.\n"
+)
+
+# =============================================================================
+# ActSystemPrompt INSTANCES (recommended usage)
+# =============================================================================
+# Import ActSystemPrompt to avoid circular imports
+
+from askui.models.shared.prompts import ActSystemPrompt  # noqa: E402
+
+def create_default_prompt() -> ActSystemPrompt:
+    return ActSystemPrompt(
+        system_capabilities=GENERAL_CAPABILITIES
+    )
+
+def create_computer_agent_prompt(
+    ui_information: str = "",
+    additional_rules: str = "",
+) -> ActSystemPrompt:
+    """
+    Create a computer agent prompt with optional custom UI information and rules.
+
+    Args:
+        ui_information: Custom UI-specific information
+        additional_rules: Additional rules beyond the default browser rules
+
+    Returns:
+        ActSystemPrompt instance for computer agent
+    """
+    combined_rules = BROWSER_SPECIFIC_RULES
+    if additional_rules:
+        combined_rules = f"{BROWSER_SPECIFIC_RULES}\n\n{additional_rules}"
+
+    return ActSystemPrompt(
+        system_capabilities=COMPUTER_USE_CAPABILITIES,
+        device_information=DESKTOP_DEVICE_INFORMATION,
+        ui_information=ui_information,
+        report_format=NO_REPORT_FORMAT,
+        additional_rules=combined_rules,
+    )
+
+
+def create_android_agent_prompt(
+    ui_information: str = "",
+    additional_rules: str = "",
+) -> ActSystemPrompt:
+    """
+    Create an Android agent prompt with optional custom UI information and rules.
+
+    Args:
+        ui_information: Custom UI-specific information
+        additional_rules: Additional rules beyond the default recovery rules
+
+    Returns:
+        ActSystemPrompt instance for Android agent
+    """
+    combined_rules = ANDROID_RECOVERY_RULES
+    if additional_rules:
+        combined_rules = f"{ANDROID_RECOVERY_RULES}\n\n{additional_rules}"
+
+    return ActSystemPrompt(
+        system_capabilities=ANDROID_CAPABILITIES,
+        device_information=ANDROID_DEVICE_INFORMATION,
+        ui_information=ui_information,
+        report_format=NO_REPORT_FORMAT,
+        additional_rules=combined_rules,
+    )
+
+
+def create_web_agent_prompt(
+    ui_information: str = "",
+    additional_rules: str = "",
+) -> ActSystemPrompt:
+    """
+    Create a web agent prompt with optional custom UI information and rules.
+
+    Args:
+        ui_information: Custom UI-specific information
+        additional_rules: Additional rules beyond the default browser install rules
+
+    Returns:
+        ActSystemPrompt instance for web agent
+    """
+    combined_rules = BROWSER_INSTALL_RULES
+    if additional_rules:
+        combined_rules = f"{BROWSER_INSTALL_RULES}\n\n{additional_rules}"
+
+    return ActSystemPrompt(
+        system_capabilities=WEB_BROWSER_CAPABILITIES,
+        device_information=WEB_AGENT_DEVICE_INFORMATION,
+        ui_information=ui_information,
+        report_format=NO_REPORT_FORMAT,
+        additional_rules=combined_rules,
+    )
 
 # =============================================================================
 # LEGACY PROMPTS (for backwards compatibility)
 # =============================================================================
 
+COMPUTER_AGENT_SYSTEM_PROMPT = (
+  f"<SYSTEM_CAPABILITIES>{COMPUTER_USE_CAPABILITIES}</SYSTEM_CAPABILITIES>"
+  f"<DEVICE_INFORMATION>{DESKTOP_DEVICE_INFORMATION}</DEVICE_INFORMATION>"
+  f"<REPORT_FORMAT>{NO_REPORT_FORMAT}</REPORT_FORMAT>"
+  f"<ADDITIONAL_RULES>{BROWSER_SPECIFIC_RULES}</ADDITIONAL_RULES>"
+)
 
-def caesr_system_prompt(agent_name: str | None = None) -> str:
-    return f"""
-      You are Caesr, a(n) AI {agent_name if agent_name else "agent"} developed
-      by AskUI (Germany company), who democratizes automation.
+ANDROID_AGENT_SYSTEM_PROMPT = (
+  f"<SYSTEM_CAPABILITIES>{ANDROID_CAPABILITIES}</SYSTEM_CAPABILITIES>"
+  f"<DEVICE_INFORMATION>{ANDROID_DEVICE_INFORMATION}</DEVICE_INFORMATION>"
+  f"<REPORT_FORMAT>{NO_REPORT_FORMAT}</REPORT_FORMAT>"
+  f"<ADDITIONAL_RULES>{ANDROID_RECOVERY_RULES}</ADDITIONAL_RULES>"
+)
 
-      <PERSONALITY>
-      - Confident but approachable - you handle complexity so users don't
-        have to
-      - Slightly cheeky but always helpful - use humor to make tech less
-        intimidating
-      - Direct communicator - no corporate fluff or technical jargon
-      - Empowering - remind users they don't need to be developers
-      - Results-focused - "let's make this actually work" attitude
-      - Anti-elitist - AI should be accessible to everyone, not just
-        engineers
-      </PERSONALITY>
-
-      <BEHAVIOR>
-      **When things don't work perfectly (which they won't at first):**
-      - Frame failures as part of the revolution - "We're literally
-        pioneering this stuff"
-      - Be collaborative: "Let's figure this out together" not "You did
-        something wrong"
-      - Normalize iteration: "Rome wasn't automated in a day - first attempt
-        rarely nails it"
-      - Make prompt improvement feel like skill-building: "You're learning to
-        speak the language of automation"
-      - Use inclusive language: "We're all learning how to command these
-        digital allies"
-      - Celebrate small wins: "By Jupiter, that's progress!"
-      - Position debugging as building something lasting: "We're constructing
-        your personal automation empire"
-      </BEHAVIOR>
-      """
-
-
-# =============================================================================
-# STRUCTURED PROMPTS (using ActSystemPrompt)
-# =============================================================================
-# NOTE: These are kept as strings for backward compatibility.
-# To use ActSystemPrompt instances, see the *_PROMPT objects below.
-
-COMPUTER_AGENT_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITIES>
-{COMPUTER_USE_CAPABILITIES}
-</SYSTEM_CAPABILITIES>
-
-<DEVICE_INFORMATION>
-{DESKTOP_DEVICE_INFORMATION}
-</DEVICE_INFORMATION>
-
-<REPORT_FORMAT>
-{NO_REPORT_FORMAT}
-</REPORT_FORMAT>
-
-<ADDITIONAL_RULES>
-{BROWSER_SPECIFIC_RULES}
-</ADDITIONAL_RULES>"""
-
-ANDROID_AGENT_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITIES>
-{ANDROID_CAPABILITIES}
-</SYSTEM_CAPABILITIES>
-
-<DEVICE_INFORMATION>
-{ANDROID_DEVICE_INFORMATION}
-</DEVICE_INFORMATION>
-
-<REPORT_FORMAT>
-{NO_REPORT_FORMAT}
-</REPORT_FORMAT>
-
-<ADDITIONAL_RULES>
-{ANDROID_RECOVERY_RULES}
-</ADDITIONAL_RULES>"""
-
-WEB_AGENT_SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITIES>
-{WEB_BROWSER_CAPABILITIES}
-</SYSTEM_CAPABILITIES>
-
-<DEVICE_INFORMATION>
-{WEB_AGENT_DEVICE_INFORMATION}
-</DEVICE_INFORMATION>
-
-<REPORT_FORMAT>
-{NO_REPORT_FORMAT}
-</REPORT_FORMAT>
-
-<ADDITIONAL_RULES>
-{BROWSER_INSTALL_RULES}
-</ADDITIONAL_RULES>"""
+WEB_AGENT_SYSTEM_PROMPT = (
+  f"<SYSTEM_CAPABILITIES>{WEB_BROWSER_CAPABILITIES}</SYSTEM_CAPABILITIES>"
+  f"<DEVICE_INFORMATION>{WEB_AGENT_DEVICE_INFORMATION}</DEVICE_INFORMATION>"
+  f"<REPORT_FORMAT>{NO_REPORT_FORMAT}</REPORT_FORMAT>"
+  f"<ADDITIONAL_RULES>{BROWSER_INSTALL_RULES}</ADDITIONAL_RULES>"
+)
 
 TESTING_AGENT_SYSTEM_PROMPT = """
 You are an advanced AI testing agent responsible for managing and executing
@@ -485,90 +588,38 @@ or
 """
 
 
-# =============================================================================
-# ActSystemPrompt INSTANCES (recommended usage)
-# =============================================================================
-# Import ActSystemPrompt to avoid circular imports
+def caesr_system_prompt(agent_name: str | None = None) -> str:
+    return f"""
+      You are Caesr, a(n) AI {agent_name if agent_name else "agent"} developed
+      by AskUI (Germany company), who democratizes automation.
 
-from askui.models.shared.prompts import ActSystemPrompt  # noqa: E402
+      <PERSONALITY>
+      - Confident but approachable - you handle complexity so users don't
+        have to
+      - Slightly cheeky but always helpful - use humor to make tech less
+        intimidating
+      - Direct communicator - no corporate fluff or technical jargon
+      - Empowering - remind users they don't need to be developers
+      - Results-focused - "let's make this actually work" attitude
+      - Anti-elitist - AI should be accessible to everyone, not just
+        engineers
+      </PERSONALITY>
 
+      <BEHAVIOR>
+      **When things don't work perfectly (which they won't at first):**
+      - Frame failures as part of the revolution - "We're literally
+        pioneering this stuff"
+      - Be collaborative: "Let's figure this out together" not "You did
+        something wrong"
+      - Normalize iteration: "Rome wasn't automated in a day - first attempt
+        rarely nails it"
+      - Make prompt improvement feel like skill-building: "You're learning to
+        speak the language of automation"
+      - Use inclusive language: "We're all learning how to command these
+        digital allies"
+      - Celebrate small wins: "By Jupiter, that's progress!"
+      - Position debugging as building something lasting: "We're constructing
+        your personal automation empire"
+      </BEHAVIOR>
+      """
 
-def create_computer_agent_prompt(
-    ui_information: str = "",
-    additional_rules: str = "",
-) -> ActSystemPrompt:
-    """
-    Create a computer agent prompt with optional custom UI information and rules.
-
-    Args:
-        ui_information: Custom UI-specific information
-        additional_rules: Additional rules beyond the default browser rules
-
-    Returns:
-        ActSystemPrompt instance for computer agent
-    """
-    combined_rules = BROWSER_SPECIFIC_RULES
-    if additional_rules:
-        combined_rules = f"{BROWSER_SPECIFIC_RULES}\n\n{additional_rules}"
-
-    return ActSystemPrompt(
-        system_capabilities=COMPUTER_USE_CAPABILITIES,
-        device_information=DESKTOP_DEVICE_INFORMATION,
-        ui_information=ui_information,
-        report_format=NO_REPORT_FORMAT,
-        additional_rules=combined_rules,
-    )
-
-
-def create_android_agent_prompt(
-    ui_information: str = "",
-    additional_rules: str = "",
-) -> ActSystemPrompt:
-    """
-    Create an Android agent prompt with optional custom UI information and rules.
-
-    Args:
-        ui_information: Custom UI-specific information
-        additional_rules: Additional rules beyond the default recovery rules
-
-    Returns:
-        ActSystemPrompt instance for Android agent
-    """
-    combined_rules = ANDROID_RECOVERY_RULES
-    if additional_rules:
-        combined_rules = f"{ANDROID_RECOVERY_RULES}\n\n{additional_rules}"
-
-    return ActSystemPrompt(
-        system_capabilities=ANDROID_CAPABILITIES,
-        device_information=ANDROID_DEVICE_INFORMATION,
-        ui_information=ui_information,
-        report_format=NO_REPORT_FORMAT,
-        additional_rules=combined_rules,
-    )
-
-
-def create_web_agent_prompt(
-    ui_information: str = "",
-    additional_rules: str = "",
-) -> ActSystemPrompt:
-    """
-    Create a web agent prompt with optional custom UI information and rules.
-
-    Args:
-        ui_information: Custom UI-specific information
-        additional_rules: Additional rules beyond the default browser install rules
-
-    Returns:
-        ActSystemPrompt instance for web agent
-    """
-    combined_rules = BROWSER_INSTALL_RULES
-    if additional_rules:
-        combined_rules = f"{BROWSER_INSTALL_RULES}\n\n{additional_rules}"
-
-    return ActSystemPrompt(
-        system_capabilities=WEB_BROWSER_CAPABILITIES,
-        device_information=WEB_AGENT_DEVICE_INFORMATION,
-        ui_information=ui_information,
-        report_format=NO_REPORT_FORMAT,
-        additional_rules=combined_rules,
-    )

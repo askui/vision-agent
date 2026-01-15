@@ -15,6 +15,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
+from askui.prompts.act_prompts import create_computer_agent_prompt
 from askui.prompts.act_prompts import COMPUTER_AGENT_SYSTEM_PROMPT
 from askui.tools.computer import Computer20250124Tool
 from askui.tools.exception_tool import ExceptionTool
@@ -414,7 +415,7 @@ class VisionAgent(AgentBase):
             computer_use_beta_flag = omit
         return ActSettings(
             messages=MessageSettings(
-                system=COMPUTER_AGENT_SYSTEM_PROMPT,
+                system=create_computer_agent_prompt(),
                 betas=computer_use_beta_flag,
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
