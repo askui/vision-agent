@@ -57,7 +57,7 @@ class FeatureService:
     def retrieve(self, feature_id: FeatureId) -> Feature:
         try:
             feature_path = self._get_feature_path(feature_id)
-            return Feature.model_validate_json(feature_path.read_text())
+            return Feature.model_validate_json(feature_path.read_text(encoding="utf-8"))
         except FileNotFoundError as e:
             error_msg = f"Feature {feature_id} not found"
             raise NotFoundError(error_msg) from e

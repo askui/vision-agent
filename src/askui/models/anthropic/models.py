@@ -12,7 +12,7 @@ from askui.models.exceptions import (
     QueryNoResponseError,
     QueryUnexpectedResponseError,
 )
-from askui.models.models import GetModel, LocateModel, ModelComposition, PointList
+from askui.models.models import GetModel, LocateModel, ModelComposition
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -21,6 +21,7 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
 )
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource

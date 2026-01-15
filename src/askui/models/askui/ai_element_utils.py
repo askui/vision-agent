@@ -64,7 +64,7 @@ class AiElement(BaseModel):
             image=Image.open(image_path),
             image_path=image_path,
             json_path=json_file_path,
-            metadata=json.loads(json_file_path.read_text()),
+            metadata=json.loads(json_file_path.read_text(encoding="utf-8")),
         )
 
 

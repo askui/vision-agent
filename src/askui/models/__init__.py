@@ -8,8 +8,6 @@ from .models import (
     ModelDefinition,
     ModelName,
     ModelRegistry,
-    Point,
-    PointList,
 )
 from .openrouter.model import OpenRouterModel
 from .openrouter.settings import ChatCompletionsCreateSettings, OpenRouterSettings
@@ -29,6 +27,7 @@ from .shared.agent_message_param import (
     UrlImageSourceParam,
 )
 from .shared.agent_on_message_cb import OnMessageCb, OnMessageCbParam
+from .types.geometry import Point, PointList
 
 __all__ = [
     "ActModel",

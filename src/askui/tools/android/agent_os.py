@@ -210,6 +210,39 @@ class AndroidDisplay:
             f"display_name={self.display_name}, display_id={self.display_id})"
         )
 
+    def get_display_id_flag(self) -> str:
+        """
+        Returns the display ID flag for shell commands.
+
+        Returns:
+            str: The display ID flag in the format `-d {display_id}`.
+        """
+        return f"-d {self.display_id}"
+
+    def get_display_unique_id_flag(self) -> str:
+        """
+        Returns the display unique ID flag for shell screencap command.
+
+        Returns:
+            str: The display unique ID flag in the format `-d {unique_display_id}`.
+        """
+        return f"-d {self.unique_display_id}"
+
+
+class UnknownAndroidDisplay(AndroidDisplay):
+    """
+    Fallback display for when the Agent OS is not able to determine the displays.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(0, "Unknown", 0)
+
+    def get_display_id_flag(self) -> str:
+        return ""
+
+    def get_display_unique_id_flag(self) -> str:
+        return ""
+
 
 class AndroidAgentOs(ABC):
     """
@@ -220,6 +253,26 @@ class AndroidAgentOs(ABC):
     Implementations should provide concrete functionality for these abstract
     methods.
     """
+
+    @property
+    def tags(self) -> list[str]:
+        """Get the tags for this agent OS.
+
+        Returns:
+            list[str]: A list of tags that identify this agent OS type.
+        """
+        if not hasattr(self, "_tags"):
+            self._tags = ["android"]
+        return self._tags
+
+    @tags.setter
+    def tags(self, tags: list[str]) -> None:
+        """Set the tags for this agent OS.
+
+        Args:
+            tags (list[str]): A list of tags that identify this agent OS type.
+        """
+        self._tags = tags
 
     @abstractmethod
     def connect(self) -> None:
