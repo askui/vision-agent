@@ -116,6 +116,8 @@ from askui.models.shared.settings import ActSettings, MessageSettings
 with WebVisionAgent() as agent:
     agent.act(
         "Log in with username 'testuser' and password 'testpass123'",
+        # CAUTION: this will also override all other MessageSettings
+        # eventually provided earlier!
         settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
