@@ -281,7 +281,7 @@ class AskUiControllerClient(AgentOs):
             # We want to catch all other exceptions here and not re-raise them
             msg = (
                 "Error while disconnecting from the AskUI Remote Device Controller"
-                f"Error: {e}"
+                f" Error: {e}"
             )
             logger.exception(msg)
 
@@ -709,7 +709,7 @@ class AskUiControllerClient(AgentOs):
         self,
     ) -> DisplaysListResponse:
         """
-        List all available from the controller.
+        List all available Displays from the controller.
         It includes both real and virtual displays
             without describing the type of display (virtual or real).
 
@@ -869,6 +869,8 @@ class AskUiControllerClient(AgentOs):
     def set_active_window(self, process_id: int, window_id: int) -> int:
         """
         Set the active window for automation.
+        Adds the window as a virtual display and returns the display ID.
+        It raises an error if display length is not increased after adding the window.
 
         Args:
             process_id (int): The ID of the process that owns the window.
@@ -876,6 +878,9 @@ class AskUiControllerClient(AgentOs):
 
         returns:
             int: The new Display ID.
+        Raises:
+            AskUiControllerError:
+            If display length is not increased after adding the window.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
@@ -885,7 +890,7 @@ class AskUiControllerClient(AgentOs):
             "AgentOS", f"set_active_window({process_id}, {window_id})"
         )
 
-        display_length = len(self.list_displays().data)
+        display_length_before_adding_window = len(self.list_displays().data)
 
         self._stub.SetActiveWindow(
             controller_v1_pbs.Request_SetActiveWindow(
@@ -893,7 +898,7 @@ class AskUiControllerClient(AgentOs):
             )
         )
         new_display_length = len(self.list_displays().data)
-        if new_display_length <= display_length:
+        if new_display_length <= display_length_before_adding_window:
             msg = f"Failed to set active window {window_id} for process {process_id}"
             raise AskUiControllerError(msg)
         self._reporter.add_message(

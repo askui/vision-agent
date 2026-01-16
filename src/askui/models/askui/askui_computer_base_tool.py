@@ -16,7 +16,7 @@ class AskUiComputerBaseTool(ComputerBaseTool):
 
     def __init__(
         self,
-        agent_os: AgentOs | None = None,
+        agent_os: AskUiControllerClient | None = None,
         required_tags: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
