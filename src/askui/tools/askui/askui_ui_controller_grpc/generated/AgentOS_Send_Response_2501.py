@@ -372,6 +372,7 @@ ResponsesModels = Union[
 ]
 class Message(BaseModel):
     command: Union[
+        AddRenderObjectResponse,
         GetSystemInfoResponse,
         GetMousePositionResponse,
         SetMousePositionResponse,

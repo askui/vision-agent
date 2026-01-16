@@ -1,17 +1,17 @@
-from askui.models.shared.tools import Tool
+from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
 from askui.tools.askui.askui_controller import AskUiControllerClient
 
 
-class ListProcessTool(Tool):
+class ComputerListProcessTool(AskUiComputerBaseTool):
     """
     Lists all running processes on the computer that have at least one window.
     This is the first step in the window management workflow to discover available
     applications and their process IDs.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient):
+    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
         super().__init__(
-            name="list_process_tool",
+            name="computer_list_process_tool",
             description="""
             Lists all running processes on the computer that have at least one window.
             This tool is used as the first step in window management workflows to
@@ -26,12 +26,11 @@ class ListProcessTool(Tool):
             Returns: A formatted string listing all processes with windows,
             including process name and process ID for each entry.
             """,
+            agent_os=agent_os,
         )
 
-        self._agent_os = agent_os
-
     def __call__(self) -> str:
-        result = self._agent_os.get_process_list(get_extended_info=True)
+        result = self.agent_os.get_process_list(get_extended_info=True)
         processes_with_window = [
             process for process in result.processes if process.extendedInfo.hasWindow
         ]

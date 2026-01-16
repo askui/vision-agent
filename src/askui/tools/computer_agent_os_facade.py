@@ -28,7 +28,7 @@ class ComputerAgentOsFacade(AgentOs):
         self._agent_os = agent_os
         self._target_resolution: tuple[int, int] = (1024, 768)
         self._real_screen_resolution: DisplaySize | None = None
-        self.tags = self._agent_os.tags + [ToolTags.SCALED_AGENT_OS.value]
+        self.tags.append(ToolTags.SCALED_AGENT_OS.value)
 
     def connect(self) -> None:
         self._agent_os.connect()

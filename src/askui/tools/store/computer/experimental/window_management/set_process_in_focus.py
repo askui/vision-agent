@@ -1,17 +1,17 @@
-from askui.models.shared.tools import Tool
+from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
 from askui.tools.askui.askui_controller import AskUiControllerClient
 
 
-class SetProcessInFocusTool(Tool):
+class ComputerSetProcessInFocusTool(AskUiComputerBaseTool):
     """
     Brings a process into focus. The process itself decides which window to bring
     to focus. Use this tool when you want to activate a process and let the
     operating system or the process determine which window should be focused.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient):
+    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
         super().__init__(
-            name="set_process_in_focus_tool",
+            name="computer_set_process_in_focus_tool",
             description="""
             Brings a process into focus. When you use this tool, it activates the
             specified process and brings it to the foreground. The process itself
@@ -48,9 +48,9 @@ class SetProcessInFocusTool(Tool):
                 },
                 "required": ["process_id"],
             },
+            agent_os=agent_os,
         )
-        self._agent_os = agent_os
 
     def __call__(self, process_id: int) -> str:
-        self._agent_os.set_active_process(process_id)
+        self.agent_os.set_active_process(process_id)
         return f"Process with id {process_id} was set in focus."

@@ -1,17 +1,17 @@
-from askui.models.shared.tools import Tool
+from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
 from askui.tools.askui.askui_controller import AskUiControllerClient
 
 
-class SetWindowInFocusTool(Tool):
+class ComputerSetWindowInFocusTool(AskUiComputerBaseTool):
     """
     Brings a specific window to the foreground and sets it as the active
     focused window. Use this tool to switch focus to a particular window
     before performing automation tasks.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient):
+    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
         super().__init__(
-            name="set_window_in_focus_tool",
+            name="computer_set_window_in_focus_tool",
             description="""
             Brings a specific window to the foreground and sets it as the active
             focused window. This tool is used to switch focus to a particular
@@ -53,9 +53,9 @@ class SetWindowInFocusTool(Tool):
                 },
                 "required": ["window_id", "process_id"],
             },
+            agent_os=agent_os,
         )
-        self._agent_os = agent_os
 
     def __call__(self, window_id: int, process_id: int) -> str:
-        self._agent_os.set_window_in_focus(process_id, window_id)
+        self.agent_os.set_window_in_focus(process_id, window_id)
         return f"Window with id {window_id} in process {process_id} was set in focus."

@@ -13,6 +13,7 @@ from PIL import Image
 from typing_extensions import Self, override
 
 from askui.container import telemetry
+from askui.models.shared.tool_tags import ToolTags
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.tools.agent_os import (
     AgentOs,
@@ -193,6 +194,7 @@ class AskUiControllerClient(AgentOs):
         self._controller_server = controller_server or AskUiControllerServer()
         self._session_guid = "{" + str(uuid.uuid4()) + "}"
         self._settings = settings or AskUiControllerClientSettings()
+        self.tags.append(ToolTags.ASKUI_CONTROLLER.value)
 
     @telemetry.record_call()
     @override
@@ -269,11 +271,19 @@ class AskUiControllerClient(AgentOs):
         This method stops the execution, ends the session, closes the gRPC channel,
         and stops the controller server.
         """
-        self._stop_execution()
-        self._stop_session()
-        if self._channel is not None:
-            self._channel.close()
-        self._controller_server.stop()
+        try:
+            self._stop_execution()
+            self._stop_session()
+            if self._channel is not None:
+                self._channel.close()
+            self._controller_server.stop()
+        except Exception as e:  # noqa: BLE001
+            # We want to catch all other exceptions here and not re-raise them
+            msg = (
+                "Error while disconnecting from the AskUI Remote Device Controller"
+                f"Error: {e}"
+            )
+            logger.exception(msg)
 
     @telemetry.record_call()
     def __enter__(self) -> Self:

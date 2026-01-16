@@ -11,6 +11,7 @@ from askui.models.shared.tools import Tool
 from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
 from askui.tools.computer import (
     ComputerGetMousePositionTool,
+    ComputerGetSystemInfoTool,
     ComputerKeyboardPressedTool,
     ComputerKeyboardReleaseTool,
     ComputerKeyboardTapTool,
@@ -90,6 +91,7 @@ class VisionAgent(AgentBase):
             models=models,
             tools=[
                 ExceptionTool(),
+                ComputerGetSystemInfoTool(),
                 ComputerGetMousePositionTool(),
                 ComputerKeyboardPressedTool(),
                 ComputerKeyboardReleaseTool(),

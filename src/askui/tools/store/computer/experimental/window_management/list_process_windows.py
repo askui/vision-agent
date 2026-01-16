@@ -1,17 +1,17 @@
-from askui.models.shared.tools import Tool
+from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
 from askui.tools.askui.askui_controller import AskUiControllerClient
 
 
-class ListProcessWindowsTool(Tool):
+class ComputerListProcessWindowsTool(AskUiComputerBaseTool):
     """
     Lists all windows belonging to a specific process. Use this tool to discover
     available windows within an application after obtaining the process ID from
     list_process_tool.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient):
+    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
         super().__init__(
-            name="list_process_windows_tool",
+            name="computer_list_process_windows_tool",
             description="""
             Lists all windows belonging to a specific process identified by its
             process ID. This tool is used after list_process_tool to discover all
@@ -42,19 +42,12 @@ class ListProcessWindowsTool(Tool):
                 },
                 "required": ["process_id"],
             },
+            agent_os=agent_os,
         )
 
-        self._agent_os = agent_os
-
     def __call__(self, process_id: int) -> str:
-        get_window_list_result = self._agent_os.get_window_list(process_id)
-
-        window_information = [
-            f"Window Name: {window.name} - Window ID: {window.ID}"
-            for window in get_window_list_result.windows
-        ]
-
+        get_window_list_result = self.agent_os.get_window_list(process_id)
         return (
             f"The Process ID: {process_id} has the"
-            f" following windows: {', '.join(window_information)}"
+            f" following windows: {str(get_window_list_result)}"
         )
