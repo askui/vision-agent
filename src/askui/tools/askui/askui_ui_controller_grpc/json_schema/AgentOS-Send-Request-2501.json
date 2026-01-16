@@ -44,12 +44,17 @@
       },
       "required": ["x", "y"]
     },
+    "rotation": {
+      "type": "integer",
+      "minimum": -360,
+      "maximum": 360
+    },
     "renderObjectType": {
       "type": "string",
       "enum": ["Quad", "Line", "Texture", "Image"]
     },
     "renderObjectId": {
-      "type": "number",
+      "type": "integer",
       "minimum": 0,
       "maximum": 18446744073709551615
     },
@@ -90,6 +95,9 @@
         },
         "line-width": {
           "$ref": "#/definitions/length"
+        },
+        "rotation": {
+          "$ref": "#/definitions/rotation"
         }
       },
       "additionalProperties": false
@@ -102,6 +110,13 @@
         "$ref": "#/definitions/location2"
       }
     },
+    "renderShapePoints": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/definitions/location2"
+      }
+    },
     "renderImage": {
       "type": "string",
       "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
@@ -110,6 +125,162 @@
     "renderText": {
       "type": "string",
       "pattern": "^[\\u0020-\\u007F]*$"
+    },
+    "keyNames": {
+      "type": "string",
+      "enum": [
+        "Escape",
+        "Digit1",
+        "Digit2",
+        "Digit3",
+        "Digit4",
+        "Digit5",
+        "Digit6",
+        "Digit7",
+        "Digit8",
+        "Digit9",
+        "Digit0",
+        "OemMinus",
+        "OemPlus",
+        "Back",
+        "Tab",
+        "Q",
+        "W",
+        "E",
+        "R",
+        "T",
+        "Y",
+        "U",
+        "I",
+        "O",
+        "P",
+        "Oem4",
+        "Oem6",
+        "Return",
+        "LControl",
+        "A",
+        "S",
+        "D",
+        "F",
+        "G",
+        "H",
+        "J",
+        "K",
+        "L",
+        "Oem1",
+        "Oem7",
+        "Oem3",
+        "LShift",
+        "Oem5",
+        "Z",
+        "X",
+        "C",
+        "V",
+        "B",
+        "N",
+        "M",
+        "OemComma",
+        "OemPeriod",
+        "Oem2",
+        "RShift",
+        "Multiply",
+        "LMenu",
+        "Space",
+        "Capital",
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5",
+        "F6",
+        "F7",
+        "F8",
+        "F9",
+        "F10",
+        "Numlock",
+        "Scroll",
+        "Numpad7",
+        "Numpad8",
+        "Numpad9",
+        "Subtract",
+        "Numpad4",
+        "Numpad5",
+        "Numpad6",
+        "Add",
+        "Numpad1",
+        "Numpad2",
+        "Numpad3",
+        "Numpad0",
+        "Decimal",
+        "Snapshot",
+        "Oem102",
+        "F11",
+        "F12",
+        "Clear",
+        "OemWsctrl",
+        "DbeKatakana",
+        "OemJump",
+        "DbeFlushstring",
+        "OemBacktab",
+        "OemAuto",
+        "DbeNocodeinput",
+        "Help",
+        "F13",
+        "F14",
+        "F15",
+        "F16",
+        "F17",
+        "F18",
+        "F19",
+        "F20",
+        "F21",
+        "F22",
+        "F23",
+        "OemPa3",
+        "OemReset",
+        "AbntC1",
+        "F24",
+        "OemPa1",
+        "AbntC2",
+        "MediaPrevTrack",
+        "MediaNextTrack",
+        "RControl",
+        "VolumeMute",
+        "LaunchApp2",
+        "MediaPlayPause",
+        "MediaStop",
+        "VolumeDown",
+        "VolumeUp",
+        "BrowserHome",
+        "Divide",
+        "RMenu",
+        "Cancel",
+        "Home",
+        "Up",
+        "Prior",
+        "Left",
+        "Right",
+        "End",
+        "Down",
+        "Next",
+        "Insert",
+        "Delete",
+        "LWin",
+        "RWin",
+        "Apps",
+        "Sleep",
+        "BrowserSearch",
+        "BrowserFavorites",
+        "BrowserRefresh",
+        "BrowserStop",
+        "BrowserForward",
+        "BrowserBack",
+        "LaunchApp1",
+        "LaunchMail",
+        "LaunchMediaSelect",
+        "Pause",
+        "Fn"
+      ]
     }
   },
   "properties": {
@@ -134,23 +305,51 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["GetMousePosition"]
+                  "const": "GetSystemInfo"
                 },
                 "parameters": {
-                  "type": "array"
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["platform", "label", "version", "architecture"]
+                      },
+                      "minItems": 1,
+                      "maxItems": 4,
+                      "uniqueItems": true
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1
                 }
               },
-              "required": ["name"]
+              "required": ["name", "parameters"],
+              "title": "GetSystemInfoCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["SetMousePosition"]
+                  "const": "GetMousePosition"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": ["name"],
+              "title": "GetMousePositionCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "SetMousePosition"
                 },
                 "parameters": {
                   "type": "array",
-                  "prefixItems": [
+                  "items": [
                     {
                       "$ref": "#/definitions/location2"
                     }
@@ -159,19 +358,20 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "SetMousePositionCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["AddRenderObject"]
+                  "const": "AddRenderObject"
                 },
                 "parameters": {
                   "type": "array",
                   "anyOf": [
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Quad"]
@@ -184,7 +384,7 @@
                       "maxItems": 2
                     },
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Line"]
@@ -200,7 +400,7 @@
                       "maxItems": 3
                     },
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Image"]
@@ -216,7 +416,7 @@
                       "maxItems": 3
                     },
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Text"]
@@ -230,23 +430,40 @@
                       ],
                       "minItems": 3,
                       "maxItems": 3
+                    },
+                    {
+                      "items": [
+                        {
+                          "type": "string",
+                          "enum": ["Shape"]
+                        },
+                        {
+                          "$ref": "#/definitions/renderObjectStyle"
+                        },
+                        {
+                          "$ref": "#/definitions/renderShapePoints"
+                        }
+                      ],
+                      "minItems": 3,
+                      "maxItems": 3
                     }
                   ]
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "AddRenderObjectCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["UpdateRenderObject"]
+                  "const": "UpdateRenderObject"
                 },
                 "parameters": {
                   "type": "array",
                   "anyOf": [
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "$ref": "#/definitions/renderObjectId"
                         },
@@ -258,7 +475,7 @@
                       "maxItems": 2
                     },
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "$ref": "#/definitions/renderObjectId"
                         },
@@ -273,7 +490,22 @@
                       "maxItems": 3
                     },
                     {
-                      "prefixItems": [
+                      "items": [
+                        {
+                          "$ref": "#/definitions/renderObjectId"
+                        },
+                        {
+                          "$ref": "#/definitions/renderObjectStyle"
+                        },
+                        {
+                          "$ref": "#/definitions/renderShapePoints"
+                        }
+                      ],
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    {
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Image"]
@@ -289,7 +521,7 @@
                       "maxItems": 3
                     },
                     {
-                      "prefixItems": [
+                      "items": [
                         {
                           "type": "string",
                           "enum": ["Text"]
@@ -307,42 +539,261 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "UpdateRenderObjectCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["DeleteRenderObject"]
+                  "const": "GetRenderObjectInfo"
                 },
                 "parameters": {
                   "type": "array",
-                  "anyOf": [
+                  "items": [
                     {
-                      "prefixItems": [
-                        {
-                          "$ref": "#/definitions/renderObjectId"
-                        }
-                      ],
+                      "$ref": "#/definitions/renderObjectId"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["width", "height"]
+                      },
                       "minItems": 1,
-                      "maxItems": 1
+                      "maxItems": 2,
+                      "uniqueItems": true
                     }
-                  ]
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
                 }
               },
-              "required": ["name", "parameters"]
+              "required": ["name", "parameters"],
+              "title": "GetRenderObjectInfoCommand"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["ClearRenderObjects"]
+                  "const": "DeleteRenderObject"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/renderObjectId"
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": ["name", "parameters"],
+              "title": "DeleteRenderObjectCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearRenderObjects"
                 },
                 "parameters": {
                   "type": "array"
                 }
               },
-              "required": ["name"]
+              "required": ["name"],
+              "title": "ClearRenderObjectsCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetRenderTextWordBreakIndex"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/renderText"
+                    },
+                    {
+                      "$ref": "#/definitions/length"
+                    },
+                    {
+                      "$ref": "#/definitions/length"
+                    },
+                    {
+                      "type": "string",
+                      "enum": ["BreakWord", "BreakAll"]
+                    }
+                  ],
+                  "minItems": 4,
+                  "maxItems": 4
+                }
+              },
+              "required": ["name", "parameters"],
+              "title": "GetRenderTextWordBreakIndexCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "WaitForKeyPress"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": ["name"],
+              "title": "WaitForKeyPressCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "LoadKeyMap"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/keyNames"
+                      }
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": ["name"],
+              "title": "LoadKeyMapCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "LoadCharacterMap"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "$ref": "#/definitions/keyNames"
+                        }
+                      }
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": ["name"],
+              "title": "LoadCharacterMapCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearKeyMap"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": ["name"],
+              "title": "ClearKeyMapCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearCharacterMap"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": ["name"],
+              "title": "ClearCharacterMapCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetActiveProcess"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": ["name"],
+              "title": "GetActiveProcessCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "SetActiveProcess"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 18446744073709551615
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": ["name"],
+              "title": "SetActiveProcessCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetActiveWindow"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": ["name"],
+              "title": "GetActiveWindowCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "SetActiveWindow"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 18446744073709551615
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "required": ["name"],
+              "title": "SetActiveWindowCommand"
             }
           ]
         }

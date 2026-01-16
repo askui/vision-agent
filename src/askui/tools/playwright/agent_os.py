@@ -372,6 +372,7 @@ class PlaywrightAgentOs(AgentOs):
 
         return Display(
             id=1,
+            name="Display",
             size=DisplaySize(
                 width=viewport_size["width"],
                 height=viewport_size["height"],

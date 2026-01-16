@@ -434,6 +434,7 @@ class PynputAgentOs(AgentOs):
 
         return Display(
             id=self._display,
+            name="Display",
             size=DisplaySize(
                 width=monitor["width"],
                 height=monitor["height"],

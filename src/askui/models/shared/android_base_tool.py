@@ -3,6 +3,7 @@ from typing import Any
 from askui.models.shared.tool_tags import ToolTags
 from askui.models.shared.tools import ToolWithAgentOS
 from askui.tools import AgentOs
+from askui.tools.agent_os_type_error import AgentOsTypeError
 from askui.tools.android.agent_os import AndroidAgentOs
 
 
@@ -33,12 +34,10 @@ class AndroidBaseTool(ToolWithAgentOS):
         """
         agent_os = super().agent_os
         if not isinstance(agent_os, AndroidAgentOs):
-            msg = (
-                "Agent OS is not an AndroidAgentOs. "
-                "Call `agent_os = ...` or initialize the tool with an "
-                "AndroidAgentOs."
+            raise AgentOsTypeError(
+                expected_type=AndroidAgentOs,
+                actual_type=type(agent_os),
             )
-            raise TypeError(msg)
         return agent_os
 
     @agent_os.setter
@@ -52,9 +51,8 @@ class AndroidBaseTool(ToolWithAgentOS):
             TypeError: If the agent OS is not an AndroidAgentOs instance.
         """
         if not isinstance(agent_os, AndroidAgentOs):
-            msg = (
-                "Agent OS must be an AndroidAgentOs instance. "
-                f"Got {type(agent_os).__name__} instead."
+            raise AgentOsTypeError(
+                expected_type=AndroidAgentOs,
+                actual_type=type(agent_os),
             )
-            raise TypeError(msg)
         self._agent_os = agent_os

@@ -1,5 +1,5 @@
 from .agent_os import AgentOs, Coordinate, ModifierKey, PcKey
-from .askui.command_helpers import create_style
+from .askui.askui_controller import RenderObjectStyle
 from .computer_agent_os_facade import ComputerAgentOsFacade
 from .toolbox import AgentToolbox
 
@@ -9,6 +9,6 @@ __all__ = [
     "ModifierKey",
     "PcKey",
     "Coordinate",
-    "create_style",
+    "RenderObjectStyle",
     "ComputerAgentOsFacade",
 ]

@@ -473,12 +473,13 @@ class ToolCollection:
         except AgentException:
             raise
         except Exception as e:  # noqa: BLE001
+            error_message = getattr(e, "message", str(e))
             logger.warning(
                 "Tool failed",
-                extra={"tool_name": tool_use_block_param.name, "error": str(e)},
+                extra={"tool_name": tool_use_block_param.name, "error": error_message},
             )
             return ToolResultBlockParam(
-                content=str(e),
+                content=f"Tool raised an unexpected error: {error_message}",
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
             )
