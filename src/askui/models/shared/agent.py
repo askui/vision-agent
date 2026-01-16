@@ -140,10 +140,11 @@ class Agent(ActModel):
     ) -> None:
         _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
+
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
-                system=_settings.messages.system or None,
+                system=_settings.messages.system,
                 messages=messages,
                 model=model,
             )

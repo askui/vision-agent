@@ -6,7 +6,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.prompts.system import WEB_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import WEB_AGENT_SYSTEM_PROMPT
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 from askui.tools.playwright.tools import (

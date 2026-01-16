@@ -8,7 +8,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
-from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import create_android_agent_prompt
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
@@ -106,7 +106,7 @@ class AndroidVisionAgent(AgentBase):
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
         self.act_settings = ActSettings(
             messages=MessageSettings(
-                system=ANDROID_AGENT_SYSTEM_PROMPT,
+                system=create_android_agent_prompt(),
                 thinking={"type": "disabled"},
                 temperature=0.0,
             ),

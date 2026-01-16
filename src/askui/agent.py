@@ -8,7 +8,9 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
-from askui.prompts.system import COMPUTER_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import (
+    create_computer_agent_prompt,
+)
 from askui.tools.computer import (
     ComputerGetMousePositionTool,
     ComputerKeyboardPressedTool,
@@ -115,7 +117,7 @@ class VisionAgent(AgentBase):
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
         self.act_settings = ActSettings(
             messages=MessageSettings(
-                system=COMPUTER_AGENT_SYSTEM_PROMPT,
+                system=create_computer_agent_prompt(),
                 thinking={"type": "enabled", "budget_tokens": 2048},
             )
         )

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from anthropic.types.beta import BetaTextBlockParam, BetaToolUnionParam
+from anthropic.types.beta import BetaToolUnionParam
 from pydantic import Field
 from typing_extensions import override
 
@@ -10,6 +10,7 @@ from askui.models.shared.agent_message_param import (
     MessageParam,
     TextBlockParam,
 )
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.token_counter import SimpleTokenCounter, TokenCounter
 
 # needs to be below limits imposed by endpoint
@@ -25,7 +26,7 @@ class TruncationStrategy:
     def __init__(
         self,
         tools: list[BetaToolUnionParam] | None,
-        system: str | list[BetaTextBlockParam] | None,
+        system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
     ) -> None:
@@ -124,7 +125,7 @@ class SimpleTruncationStrategy(TruncationStrategy):
     def __init__(
         self,
         tools: list[BetaToolUnionParam] | None,
-        system: str | list[BetaTextBlockParam] | None,
+        system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
         max_input_tokens: int = MAX_INPUT_TOKENS,
@@ -327,7 +328,7 @@ class TruncationStrategyFactory:
     def create_truncation_strategy(
         self,
         tools: list[BetaToolUnionParam] | None,
-        system: str | list[BetaTextBlockParam] | None,
+        system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
     ) -> TruncationStrategy:
@@ -359,7 +360,7 @@ class SimpleTruncationStrategyFactory(TruncationStrategyFactory):
     def create_truncation_strategy(
         self,
         tools: list[BetaToolUnionParam] | None,
-        system: str | list[BetaTextBlockParam] | None,
+        system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
     ) -> TruncationStrategy:
