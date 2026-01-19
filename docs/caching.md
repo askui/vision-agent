@@ -846,27 +846,99 @@ Example:
 
 **New in v0.2!** Visual validation ensures cached trajectories execute only when the UI state matches the recorded state, preventing actions from being executed on incorrect UI elements.
 
+### Overview
+
+Visual validation works by creating a "fingerprint" of the UI region around each interaction point (click, type, etc.) during recording. When executing the cached trajectory, it compares the current UI's fingerprint with the stored one to detect if the UI has changed. This prevents cached actions from executing on wrong elements if the interface has been modified.
+
+**Key concept - Hamming distance:** The comparison uses Hamming distance, which counts how many bits differ between two hashes. A distance of 0 means identical UI, while higher values indicate differences. The validation threshold determines how many differences are acceptable before execution stops.
+
 ### How It Works
 
-During cache recording (record mode), the system:
-1. **Captures screenshots** before each interaction (clicks, typing, key presses)
-2. **Extracts a region** (e.g., 100×100 pixels) around the interaction coordinate
-3. **Computes a perceptual hash** of that region using the selected method
-4. **Stores the hash** in the trajectory step along with validation settings
+#### Recording Phase (record mode)
 
-During cache execution (execute mode), the system:
-1. **Captures the current UI state** before each step
-2. **Extracts the same region** around the interaction coordinate
-3. **Computes the hash** of the current region
-4. **Compares hashes** using Hamming distance
-5. **Validates the match** against the threshold
-6. **Executes the step** only if validation passes, otherwise returns control to the agent
+When recording a trajectory with visual validation enabled, the system automatically enhances each interaction step:
+
+1. **Before each interaction** (clicks, typing, key presses), the system:
+   - Captures a screenshot of the current UI state
+   - Identifies the interaction coordinate (e.g., click position at [450, 320])
+   - Extracts a square region around that coordinate (e.g., 100×100 pixels centered at the click point)
+
+2. **Computes a perceptual hash** of the extracted region:
+   - Uses the selected hashing method (pHash or aHash)
+   - Creates a compact hexadecimal fingerprint (e.g., "f7f3c5a08082d1e7")
+   - This hash captures the visual structure of the UI region
+
+3. **Stores the validation data** in the trajectory step:
+   - Adds the hash to the `visual_representation` field
+   - Records validation settings in metadata (method, region size, threshold)
+
+4. **Skips validation for non-interactive actions**:
+   - Screenshots, wait commands, and other passive actions don't need validation
+   - Only actions that interact with specific UI coordinates are validated
+
+**Example trajectory step with visual validation:**
+```json
+{
+  "type": "tool_use",
+  "id": "toolu_01AbCdEfGhIjKlMnOpQrStUv",
+  "name": "computer",
+  "input": {
+    "action": "left_click",
+    "coordinate": [450, 320]
+  },
+  "visual_representation": "f7f3c5a08082d1e7"
+}
+```
+
+#### Execution Phase (execute mode)
+
+When executing a cached trajectory, the system validates each step before execution:
+
+1. **Before each validated step**, the system:
+   - Captures the current screenshot
+   - Extracts the same region around the interaction coordinate (same size as during recording)
+   - Computes the hash of the current region using the same method
+
+2. **Compares the hashes** using Hamming distance:
+   - Converts both hashes to binary and compares bit-by-bit
+   - Counts the number of differing bits (0-64 for 64-bit hashes)
+   - Example: stored="f7f3c5a08082d1e7", current="f7f3c5a08082d1e8" → distance=1 (very similar)
+
+3. **Validates against threshold**:
+   - If distance ≤ threshold: validation passes, step executes
+   - If distance > threshold: validation fails, execution stops, agent takes control
+
+4. **Returns control to agent on failure**:
+   - Provides the failure reason with Hamming distance details
+   - Includes message history and current screenshot
+   - Agent can assess the situation and decide next steps
+
+**Example validation flow:**
+```
+Step 5: left_click at [450, 320]
+  ↓
+Capture current UI screenshot
+  ↓
+Extract 100×100 region around [450, 320]
+  ↓
+Compute pHash: "f7f3c5a08082d1e8"
+  ↓
+Compare with stored: "f7f3c5a08082d1e7"
+  ↓
+Hamming distance: 1 bit differs
+  ↓
+Check: 1 ≤ 10 (threshold) ✓ PASS
+  ↓
+Execute click at [450, 320]
+```
 
 ### Visual Validation Methods
 
+The caching system supports two hashing algorithms for visual validation, each with different trade-offs between accuracy and performance.
+
 #### pHash (Perceptual Hash)
 
-Default method using Discrete Cosine Transform (DCT):
+Default and recommended method using Discrete Cosine Transform (DCT):
 
 ```python
 writing_settings=CacheWritingSettings(
@@ -876,20 +948,42 @@ writing_settings=CacheWritingSettings(
 )
 ```
 
+**How it works:**
+1. Resizes the UI region to 8×8 pixels
+2. Converts to grayscale
+3. Applies 2D Discrete Cosine Transform to extract frequency components
+4. Compares against the median DCT coefficient
+5. Creates a 64-bit binary hash representing the image structure
+6. Converts to hexadecimal (e.g., "f7f3c5a08082d1e7")
+
 **Characteristics:**
-- ✅ Robust to minor changes (compression, scaling, lighting adjustments)
-- ✅ Sensitive to structural changes (moved buttons, different layouts)
+- ✅ Robust to minor changes (JPEG compression, scaling, lighting adjustments, anti-aliasing)
+- ✅ Sensitive to structural changes (moved buttons, different layouts, text changes)
+- ✅ Focus on image structure rather than pixel values
 - ✅ Best for most use cases
-- ⚠️ Slightly slower than aHash
+- ⚠️ Slightly slower than aHash (but still very fast)
 
 **When to use:**
 - Production environments where UI may have subtle variations
-- Cross-platform testing (different rendering engines)
+- Cross-platform testing (different rendering engines, OS themes)
 - Long-lived caches that may encounter minor UI updates
+- Testing with dynamic content (animations, hover effects)
+
+**Example - What pHash tolerates:**
+- Slight color changes from OS dark mode
+- Anti-aliasing differences between displays
+- Minor font rendering variations
+- JPEG compression artifacts
+
+**Example - What pHash detects:**
+- Button moved 10 pixels left
+- Text changed from "Login" to "Sign In"
+- Icon changed to a different shape
+- UI element hidden or shown
 
 #### aHash (Average Hash)
 
-Simpler method using mean pixel values:
+Simpler and faster method using mean pixel values:
 
 ```python
 writing_settings=CacheWritingSettings(
@@ -899,16 +993,33 @@ writing_settings=CacheWritingSettings(
 )
 ```
 
+**How it works:**
+1. Resizes the UI region to 8×8 pixels
+2. Converts to grayscale
+3. Computes the average pixel value
+4. Compares each pixel against the average
+5. Creates a 64-bit binary hash (1 if pixel > average, 0 otherwise)
+6. Converts to hexadecimal
+
 **Characteristics:**
-- ✅ Fast computation
-- ✅ Simple and predictable
-- ⚠️ Less robust to transformations
+- ✅ Fast computation (no DCT required)
+- ✅ Simple and predictable behavior
+- ✅ Good for high-contrast UIs
+- ⚠️ Less robust to transformations (scaling, brightness)
 - ⚠️ More sensitive to color/brightness changes
+- ⚠️ May produce false positives with gradients or shadows
 
 **When to use:**
 - Development/testing environments with controlled conditions
-- Performance-critical scenarios
-- UI that rarely changes
+- Performance-critical scenarios (though pHash is already very fast)
+- UI that rarely changes and has high contrast
+- Simple, flat design interfaces without gradients
+
+**Example - What aHash may struggle with:**
+- OS theme changes (light mode → dark mode)
+- Display brightness differences
+- UI with gradients or shadows
+- Subtle hover state changes
 
 #### Disabled
 
@@ -927,6 +1038,8 @@ writing_settings=CacheWritingSettings(
 
 ### Configuration Options
 
+Visual validation behavior can be tuned using two key parameters: region size and validation threshold. Understanding how to adjust these settings helps balance accuracy and robustness.
+
 #### Region Size
 
 The `visual_validation_region_size` parameter controls the size of the square region extracted around each interaction coordinate:
@@ -940,23 +1053,36 @@ writing_settings=CacheWritingSettings(
 ```
 
 **Smaller regions (50-75 pixels):**
-- ✅ Faster processing
-- ✅ More focused validation (just the element)
-- ⚠️ May miss context changes
+- ✅ Faster processing (less data to hash)
+- ✅ More focused validation (validates just the clicked element)
+- ✅ Less affected by unrelated UI changes nearby
+- ⚠️ May miss important context changes (e.g., surrounding buttons shifting)
+- ⚠️ May not capture entire button or element if it's large
 
 **Larger regions (150-200 pixels):**
-- ✅ Captures more UI context
+- ✅ Captures more UI context (surrounding elements, layout)
 - ✅ Detects broader layout changes
-- ⚠️ Slower processing
-- ⚠️ More sensitive to unrelated UI changes
+- ✅ Better for validating groups of elements
+- ⚠️ Slower processing (more data to hash)
+- ⚠️ More sensitive to unrelated UI changes (ads, notifications)
+- ⚠️ May cause false failures from dynamic content nearby
 
 **Default (100 pixels):**
 - Balanced between speed and context
+- Captures typical button/element plus immediate surroundings
 - Suitable for most use cases
+
+**Choosing the right size:**
+- **Small buttons/icons**: Use 50-75 pixels to focus on just the element
+- **Large buttons/forms**: Use 100-150 pixels to include the full element
+- **Complex layouts**: Use 150-200 pixels to validate surrounding structure
+- **Dynamic UIs**: Use smaller regions to avoid capturing changing content
+
+**Example:** If clicking a login button in a form, a 100×100 pixel region captures the button plus nearby input fields, validating both the button position and form structure.
 
 #### Validation Threshold
 
-The `visual_validation_threshold` parameter controls how similar the UI must be (Hamming distance, 0-64):
+The `visual_validation_threshold` parameter controls how similar the UI must be by setting the maximum allowed Hamming distance (0-64 bits):
 
 ```python
 writing_settings=CacheWritingSettings(
@@ -966,20 +1092,64 @@ writing_settings=CacheWritingSettings(
 )
 ```
 
+**Understanding Hamming distance:**
+- 64-bit hash = 64 opportunities for bits to differ
+- Lower distance = more similar UIs
+- 0 = identical, 64 = completely different
+- Typical meaningful changes cause 5-15 bits to differ
+
 **Lower thresholds (0-5):**
-- Very strict matching
-- Fails on minor UI changes
-- Best for pixel-perfect UIs
+- Very strict matching - nearly pixel-perfect
+- Fails on minor UI changes (hover effects, anti-aliasing)
+- May fail across different displays/OS versions
+- Best for pixel-perfect UIs in controlled environments
+- **Use when:** Testing with identical hardware/software, no UI variations expected
 
 **Medium thresholds (8-15):**
-- Balanced sensitivity
-- Tolerates minor variations
-- **Default: 10**
+- Balanced sensitivity - tolerates minor rendering differences
+- Recommended for most production use
+- Allows minor color/lighting variations while catching structural changes
+- **Default: 10** (good starting point for most cases)
+- **Use when:** Cross-platform testing, UI with minor dynamic elements, production environments
 
 **Higher thresholds (20-30):**
-- Lenient matching
+- Lenient matching - tolerates significant variations
 - May allow too much variation
-- Risk of false positives
+- Risk of false positives (executing on wrong elements)
+- Only use when necessary due to highly dynamic UIs
+- **Use when:** UI has animations, dynamic backgrounds, rotating content
+
+**Practical threshold tuning guide:**
+
+1. **Start with default (10)** and run your cached tests
+2. **If getting false failures** (UI looks correct but validation fails):
+   - Check the Hamming distance in error messages
+   - If consistently 11-15, increase threshold to 15
+   - If consistently 16-20, investigate why UI varies so much
+3. **If execution succeeds incorrectly** (clicks wrong elements):
+   - Decrease threshold to 5-8 for stricter validation
+   - Consider smaller region size to focus validation
+4. **Monitor failure patterns** over multiple runs to find optimal threshold
+
+**Example threshold scenarios:**
+
+```
+Scenario: Button text changed "Login" → "Sign In"
+Hamming distance: ~12-18 bits different
+Threshold 10: ✓ FAIL (correctly detects change)
+Threshold 20: ✗ PASS (incorrectly allows different text)
+
+Scenario: Same button, slight shadow difference
+Hamming distance: ~3-5 bits different
+Threshold 10: ✓ PASS (tolerates rendering difference)
+Threshold 5:  ✓ PASS (strict but still tolerates minor change)
+Threshold 2:  ✗ FAIL (too strict for practical use)
+
+Scenario: Button moved 50 pixels right
+Hamming distance: ~25-35 bits different
+Threshold 10: ✓ FAIL (correctly detects position change)
+Threshold 30: ✗ PASS (too lenient, dangerous!)
+```
 
 ### Validated Actions
 
@@ -1001,58 +1171,274 @@ Visual validation is applied to actions that interact with specific UI coordinat
 
 ### Handling Validation Failures
 
+Visual validation failures indicate that the UI has changed since the trajectory was recorded. The system provides detailed information to help the agent (and you) understand what went wrong and how to proceed.
+
+#### When Validation Fails
+
 When visual validation fails during cache execution:
 
-1. **Execution stops** at the failed step
-2. **Agent receives notification** with details:
-   - Which step failed
-   - The validation error message
-   - Current message history and screenshots
-3. **Agent can decide**:
-   - Take a screenshot to assess current UI state
-   - Execute the step manually if safe
-   - Skip the step and continue
-   - Invalidate the cache and request re-recording
+1. **Execution immediately stops** at the failed step
+2. **Agent receives ExecutionResult** with status="FAILED" containing:
+   - `step_index`: Which step failed (e.g., step 5 of 12)
+   - `error_message`: Validation failure details including Hamming distance
+   - `message_history`: Complete history of all actions up to failure
+   - `screenshots`: Current UI state for visual inspection
 
-Example agent recovery flow:
+3. **Error message format:**
+   ```
+   Visual validation failed: UI region changed significantly
+   (Hamming distance: 15 > threshold: 10)
+   ```
+
+#### Agent Recovery Strategies
+
+The agent has several options when validation fails:
+
+**1. Visual Assessment**
 ```
-Step 5 validation fails: "Visual validation failed: UI region changed (distance: 15 > threshold: 10)"
-↓
-Agent takes screenshot to see current state
-↓
-Agent sees button is present but slightly moved
-↓
-Agent clicks button manually at new location
-↓
-Agent continues execution from step 6
+Agent: Let me take a screenshot to assess the current state
+  ↓
+Screenshot shows button is present but moved slightly
+  ↓
+Agent: The UI layout changed but the button is still functional
 ```
+
+**2. Manual Execution**
+```
+Agent identifies the button at new location
+  ↓
+Agent clicks manually at updated coordinates
+  ↓
+Agent resumes trajectory from next step using start_from_step_index
+```
+
+**3. Adjust and Retry**
+```
+Agent: The UI is correct but threshold is too strict
+  ↓
+Agent recommends increasing threshold to 15
+  ↓
+User re-records cache with adjusted settings
+```
+
+**4. Skip and Continue**
+```
+Agent: This step is optional (e.g., closing a popup)
+  ↓
+Agent skips the failed step
+  ↓
+Agent continues trajectory from step after the failure
+```
+
+**5. Cache Invalidation**
+```
+Agent: UI has fundamentally changed (button removed, workflow different)
+  ↓
+Agent marks cache as invalid
+  ↓
+Agent recommends re-recording the trajectory
+```
+
+#### Complete Example Recovery Flow
+
+```
+Cached Trajectory Execution:
+Step 1-4: ✓ Success
+Step 5: ✗ Visual validation failed
+  - Action: left_click at [450, 320]
+  - Expected hash: f7f3c5a08082d1e7
+  - Current hash:  f7f3c5a08092d1e7
+  - Hamming distance: 15 bits
+  - Threshold: 10 bits
+  - Error: "Visual validation failed: UI region changed significantly"
+
+Agent Recovery Process:
+  ↓
+1. Agent takes screenshot
+  ↓
+2. Agent analyzes current UI:
+   "I can see the login button is still present, but it appears
+    to have moved slightly down. The button text and style are
+    the same."
+  ↓
+3. Agent makes decision:
+   "I'll click the button at its new location to continue"
+  ↓
+4. Agent executes manual click at updated coordinates [450, 335]
+  ↓
+5. Agent resumes cached execution:
+   ExecuteCachedTrajectory(
+     trajectory_file="login.json",
+     start_from_step_index=6  # Skip the failed step 5
+   )
+  ↓
+6. Remaining steps execute successfully
+  ↓
+7. Agent reports:
+   "Cached trajectory completed with one manual intervention.
+    Consider re-recording the cache to update button coordinates."
+```
+
+#### Debugging Validation Failures
+
+**Enable detailed logging** to understand failures:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+```
+
+You'll see output like:
+```
+INFO: ✓ Visual validation added to computer action=left_click at coordinate (450, 320)
+WARNING: Visual validation failed at step 5: Visual validation failed: UI region changed significantly (Hamming distance: 15 > threshold: 10)
+WARNING: Handing execution back to agent.
+```
+
+**Common failure causes and solutions:**
+
+| Failure Cause | Hamming Distance | Solution |
+|---------------|------------------|----------|
+| UI slightly moved | 11-15 | Increase threshold to 15 or re-record |
+| Button text changed | 12-20 | Re-record cache with updated UI |
+| Color scheme changed | 8-12 | Use pHash (more tolerant) or increase threshold |
+| Element completely different | 20+ | Re-record cache - structural change |
+| Threshold too strict | 6-10 | Increase threshold by 5 |
+| Region too large | Varies | Decrease region size to focus on element |
+
+**Analyzing failure patterns:**
+
+If the same step fails repeatedly:
+1. Check the Hamming distance - is it consistently just above threshold?
+2. Take screenshots during recording and execution to compare
+3. Look for dynamic content in the validation region (ads, notifications)
+4. Consider if the element has hover effects or animations
+
+**Best practices for handling failures:**
+
+✅ **Do:**
+- Log all validation failures with Hamming distance
+- Take screenshots to compare expected vs actual UI
+- Adjust threshold based on observed distance patterns
+- Re-record caches after significant UI changes
+- Document why specific thresholds were chosen
+
+❌ **Don't:**
+- Set threshold above 20 without investigation
+- Disable validation without understanding why it fails
+- Ignore repeated failures at the same step
+- Skip validation failures without visual confirmation
 
 ### Best Practices
 
-1. **Choose the right method:**
-   - Use `phash` (default) for most cases
-   - Use `ahash` only for controlled environments
-   - Never use `none` in production
+#### General Recommendations
 
-2. **Tune the threshold:**
-   - Start with default (10)
-   - Increase if getting too many false failures
-   - Decrease if allowing incorrect executions
+1. **Always enable visual validation in production**
+   - Use `visual_verification_method="phash"` (default)
+   - Never use `"none"` unless debugging
+   - Visual validation prevents catastrophic failures from UI changes
 
-3. **Adjust region size:**
-   - Use default (100) initially
-   - Increase for complex layouts
-   - Decrease for simple, isolated elements
+2. **Start with defaults, then tune**
+   - Begin with threshold=10, region_size=100
+   - Monitor validation results for 5-10 executions
+   - Adjust based on observed Hamming distances
+   - Document why you changed settings
 
-4. **Monitor validation logs:**
-   - Enable INFO logging to see validation results
-   - Track failure patterns
-   - Adjust settings based on failure analysis
+3. **Choose the right hash method**
+   - **Use pHash (default)** for 95% of cases - robust and accurate
+   - **Use aHash** only if UI is very static with high contrast
+   - **Never disable** unless explicitly needed for debugging
 
-5. **Re-record when needed:**
-   - After significant UI changes
-   - When validation consistently fails
-   - After threshold/region adjustments
+4. **Size regions appropriately**
+   - **Start with 100×100** (default, balanced)
+   - **Reduce to 50-75** if dynamic content causes false failures
+   - **Increase to 150-200** to validate surrounding layout
+   - **Match element size** - small elements need small regions
+
+5. **Set thresholds based on environment**
+   - **Threshold 5-8**: Identical hardware/software (CI/CD)
+   - **Threshold 10-12**: Mixed environments (default)
+   - **Threshold 15-20**: Highly dynamic UIs (use with caution)
+   - **Never exceed 20** without strong justification
+
+#### Development Workflow
+
+**When recording caches:**
+```python
+# Production-grade settings
+writing_settings=CacheWritingSettings(
+    filename="login_flow.json",
+    visual_verification_method="phash",      # Robust hashing
+    visual_validation_region_size=100,       # Balanced region
+    visual_validation_threshold=10,          # Moderate strictness
+    parameter_identification_strategy="llm", # Auto-detect parameters
+)
+```
+
+**When testing caches:**
+1. Run cached execution 3-5 times to identify consistency
+2. Check logs for validation warnings
+3. Note Hamming distances when failures occur
+4. Adjust threshold if failures are consistent and UI is correct
+5. Re-record if UI has genuinely changed
+
+**When troubleshooting:**
+1. Enable INFO logging: `logging.basicConfig(level=logging.INFO)`
+2. Compare screenshots from recording vs execution
+3. Check if failures are at same step repeatedly
+4. Verify threshold and region size are appropriate
+5. Look for dynamic content in validation regions
+
+#### Production Deployment
+
+**Pre-deployment checklist:**
+- ✅ Visual validation enabled (pHash)
+- ✅ Threshold tested across environments
+- ✅ Region size appropriate for element types
+- ✅ Cache files tested 5+ times successfully
+- ✅ Logging configured to track failures
+- ✅ Failure recovery strategy documented
+
+**Monitoring in production:**
+- Track validation failure rate per cache file
+- Log Hamming distances for failed validations
+- Alert if failure rate exceeds 10%
+- Investigate distance patterns (all ~15? UI changed)
+- Schedule cache re-recording after UI updates
+
+**Re-recording triggers:**
+- UI layout changed (buttons moved, resized)
+- Validation failures exceed 10% of executions
+- Hamming distance consistently above threshold + 5
+- New feature added that changes workflow
+- OS/theme updates that affect rendering
+
+#### Common Pitfalls to Avoid
+
+❌ **Setting threshold too high**
+- Threshold >20 defeats the purpose
+- May execute on wrong elements
+- Only use when absolutely necessary
+
+❌ **Disabling validation due to failures**
+- Investigate why failures occur
+- Adjust settings or re-record instead
+- Disabled validation = unreliable caches
+
+❌ **Using same settings for all UI elements**
+- Small buttons need different settings than large forms
+- Dynamic UIs need higher thresholds
+- Static UIs can use stricter validation
+
+❌ **Ignoring validation logs**
+- Logs show Hamming distances
+- Patterns indicate needed adjustments
+- Silent failures are dangerous
+
+❌ **Not testing across environments**
+- Different OS versions render differently
+- Monitor brightness affects validation
+- Test on target environments before deploying
 
 ### Logging
 
@@ -1074,6 +1460,10 @@ During **execution**, validation happens silently on success. On **failure**, yo
 WARNING: Visual validation failed at step 5: Visual validation failed: UI region changed significantly (Hamming distance: 15 > threshold: 10)
 WARNING: Handing execution back to agent.
 ```
+
+### Technical Implementation
+
+Visual validation is implemented across three main components: `CacheWriter` enhances tool blocks with visual hashes during recording by capturing screenshots before interactions and computing perceptual hashes of UI regions. `TrajectoryExecutor` validates each step before execution by comparing current UI state with stored hashes using Hamming distance. `visual_validation.py` provides the hash algorithms (pHash uses DCT for robustness, aHash uses mean pixel values for speed) and helper functions for region extraction and step validation decisions. The implementation adds ~50-100ms overhead per validated action (primarily screenshot capture time), with each hash consuming just 16 bytes of storage.
 
 ## Limitations and Considerations
 
