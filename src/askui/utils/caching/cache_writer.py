@@ -381,7 +381,7 @@ class CacheWriter:
 
         # Get the computer tool from the toolbox
         tools = self._toolbox.get_tools()
-        computer_tool = tools.get("computer")
+        computer_tool = tools.get("computer_screenshot")
 
         if computer_tool is None:
             logger.warning(
@@ -394,14 +394,14 @@ class CacheWriter:
         # Call the screenshot action
         try:
             # Try to call _screenshot() method directly if available
-            if hasattr(computer_tool, "_screenshot"):
-                result = computer_tool._screenshot()  # noqa: SLF001
+            if hasattr(computer_tool, "agent_os"):
+                result = computer_tool.agent_os.screenshot()  # noqa: SLF001
                 if isinstance(result, Image.Image):
                     logger.debug("Screenshot captured successfully via _screenshot()")
                     return result
 
             # Fallback to calling via __call__ with action parameter
-            result = computer_tool(action="screenshot")
+            result = computer_tool()
             if isinstance(result, Image.Image):
                 logger.debug("Screenshot captured successfully via __call__")
                 return result

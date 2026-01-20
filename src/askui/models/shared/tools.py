@@ -407,7 +407,7 @@ class ToolCollection:
         Returns:
             Dictionary mapping tool names to Tool instances
         """
-        return dict(self._tool_map)
+        return dict(self.tool_map)
 
     def reset_tools(self, tools: list[Tool] | None = None) -> "Self":
         """Reset the tools in the collection with new tools."""
