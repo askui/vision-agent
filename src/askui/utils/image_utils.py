@@ -276,7 +276,6 @@ def _check_coordinates_in_bounds(
         or coordinates[0] > bounds[0]
         or coordinates[1] > bounds[1]
     ):
-        print(bounds)
         error_msg = f"Coordinates {coordinates[0]}, {coordinates[1]} are out of bounds"
         raise ValueError(error_msg)
 
@@ -286,6 +285,7 @@ def scale_coordinates(
     original_size: tuple[int, int],
     target_size: tuple[int, int],
     inverse: bool = False,
+    check_coordinates_in_bounds: bool = True,
 ) -> tuple[int, int]:
     """Scale coordinates between original and scaled image sizes.
 
@@ -294,6 +294,7 @@ def scale_coordinates(
         original_size (tuple[int, int]): The original image size (width, height).
         target_size (tuple[int, int]): The target size (width, height).
         inverse (bool, optional): Whether to scale from target to original. Defaults to `False`.
+        check_coordinates_in_bounds (bool, optional): Whether to check if the scaled coordinates are in bounds. Defaults to `True`.
 
     Returns:
         tuple[int, int]: The scaled coordinates.
@@ -304,9 +305,10 @@ def scale_coordinates(
     scaling_results = _calculate_scaling_for_fit(original_size, target_size)
     offset = _calc_center_offset(scaling_results.size, target_size)
     result = _scale_coordinates(coordinates, offset, scaling_results.factor, inverse)
-    _check_coordinates_in_bounds(
-        result, original_size if inverse else scaling_results.size
-    )
+    if check_coordinates_in_bounds:
+        _check_coordinates_in_bounds(
+            result, original_size if inverse else scaling_results.size
+        )
     return result
 
 

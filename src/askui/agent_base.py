@@ -106,6 +106,7 @@ class AgentBase(ABC):  # noqa: B024
         )
 
         self.act_tool_collection = ToolCollection(tools=tools)
+        self.act_tool_collection.add_agent_os(agent_os)
 
         self.act_settings = ActSettings()
         self.caching_settings = CachingSettings()

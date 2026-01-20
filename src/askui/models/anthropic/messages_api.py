@@ -74,7 +74,7 @@ class AnthropicMessagesApi(MessagesApi):
 
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
-            max_tokens=max_tokens or 4096,
+            max_tokens=max_tokens or 8192,
             model=model,
             tools=tools.to_params() if not isinstance(tools, Omit) else omit,
             betas=betas,

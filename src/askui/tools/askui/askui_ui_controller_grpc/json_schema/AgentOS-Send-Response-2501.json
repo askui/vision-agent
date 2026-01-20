@@ -51,7 +51,38 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["GetMousePosition"]
+                  "const": "GetSystemInfo"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "platform": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "architecture": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": ["name", "actionId", "reponse"],
+              "title": "GetSystemInfoResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetMousePosition"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -67,25 +98,27 @@
                   "required": ["position"]
                 }
               },
-              "required": ["name", "actionId", "response"]
+              "required": ["name", "actionId", "response"],
+              "title": "GetMousePositionResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["SetMousePosition"]
+                  "const": "SetMousePosition"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "SetMousePositionResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["AddRenderObject"]
+                  "const": "AddRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -101,43 +134,427 @@
                   "required": ["id"]
                 }
               },
-              "required": ["name", "actionId", "response"]
+              "required": ["name", "actionId", "response"],
+              "title": "AddRenderObjectResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["UpdateRenderObject"]
+                  "const": "UpdateRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "UpdateRenderObjectResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["DeleteRenderObject"]
+                  "const": "GetRenderObjectInfo"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "width": {
+                      "type": "integer"
+                    },
+                    "height": {
+                      "type": "integer"
+                    }
+                  }
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId", "reponse"],
+              "title": "GetRenderObjectInfoResponse"
             },
             {
               "properties": {
                 "name": {
                   "type": "string",
-                  "enum": ["ClearRenderObjects"]
+                  "const": "DeleteRenderObject"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"]
+              "required": ["name", "actionId"],
+              "title": "DeleteRenderObjectResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearRenderObjects"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "ClearRenderObjectsResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetRenderTextWordBreakIndex"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "index": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["index"]
+                }
+              },
+              "required": ["name", "actionId", "response"],
+              "title": "GetRenderTextWordBreakIndexResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "WaitForKeyPress"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "enum": [
+                        "Undefined",
+                        "Escape",
+                        "Digit1",
+                        "Digit2",
+                        "Digit3",
+                        "Digit4",
+                        "Digit5",
+                        "Digit6",
+                        "Digit7",
+                        "Digit8",
+                        "Digit9",
+                        "Digit0",
+                        "OemMinus",
+                        "OemPlus",
+                        "Back",
+                        "Tab",
+                        "Q",
+                        "W",
+                        "E",
+                        "R",
+                        "T",
+                        "Y",
+                        "U",
+                        "I",
+                        "O",
+                        "P",
+                        "Oem4",
+                        "Oem6",
+                        "Return",
+                        "LControl",
+                        "A",
+                        "S",
+                        "D",
+                        "F",
+                        "G",
+                        "H",
+                        "J",
+                        "K",
+                        "L",
+                        "Oem1",
+                        "Oem7",
+                        "Oem3",
+                        "LShift",
+                        "Oem5",
+                        "Z",
+                        "X",
+                        "C",
+                        "V",
+                        "B",
+                        "N",
+                        "M",
+                        "OemComma",
+                        "OemPeriod",
+                        "Oem2",
+                        "RShift",
+                        "Multiply",
+                        "LMenu",
+                        "Space",
+                        "Capital",
+                        "F1",
+                        "F2",
+                        "F3",
+                        "F4",
+                        "F5",
+                        "F6",
+                        "F7",
+                        "F8",
+                        "F9",
+                        "F10",
+                        "Numlock",
+                        "Scroll",
+                        "Numpad7",
+                        "Numpad8",
+                        "Numpad9",
+                        "Subtract",
+                        "Numpad4",
+                        "Numpad5",
+                        "Numpad6",
+                        "Add",
+                        "Numpad1",
+                        "Numpad2",
+                        "Numpad3",
+                        "Numpad0",
+                        "Decimal",
+                        "Snapshot",
+                        "Oem102",
+                        "F11",
+                        "F12",
+                        "Clear",
+                        "OemWsctrl",
+                        "DbeKatakana",
+                        "OemJump",
+                        "DbeFlushstring",
+                        "OemBacktab",
+                        "OemAuto",
+                        "DbeNocodeinput",
+                        "Help",
+                        "F13",
+                        "F14",
+                        "F15",
+                        "F16",
+                        "F17",
+                        "F18",
+                        "F19",
+                        "F20",
+                        "F21",
+                        "F22",
+                        "F23",
+                        "OemPa3",
+                        "OemReset",
+                        "AbntC1",
+                        "F24",
+                        "OemPa1",
+                        "AbntC2",
+                        "MediaPrevTrack",
+                        "MediaNextTrack",
+                        "RControl",
+                        "VolumeMute",
+                        "LaunchApp2",
+                        "MediaPlayPause",
+                        "MediaStop",
+                        "VolumeDown",
+                        "VolumeUp",
+                        "BrowserHome",
+                        "Divide",
+                        "RMenu",
+                        "Cancel",
+                        "Home",
+                        "Up",
+                        "Prior",
+                        "Left",
+                        "Right",
+                        "End",
+                        "Down",
+                        "Next",
+                        "Insert",
+                        "Delete",
+                        "LWin",
+                        "RWin",
+                        "Apps",
+                        "Sleep",
+                        "BrowserSearch",
+                        "BrowserFavorites",
+                        "BrowserRefresh",
+                        "BrowserStop",
+                        "BrowserForward",
+                        "BrowserBack",
+                        "LaunchApp1",
+                        "LaunchMail",
+                        "LaunchMediaSelect",
+                        "Pause",
+                        "Fn"
+                      ]
+                    }
+                  }
+                }
+              },
+              "required": ["name", "actionId", "reponse"],
+              "title": "WaitForKeyPressResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "LoadKeyMap"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "LoadKeyMapResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "LoadCharacterMap"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "LoadCharacterMapResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearKeyMap"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "ClearKeyMapResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearCharacterMap"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "ClearCharacterMapResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetActiveProcess"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "process": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 18446744073709551615
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "name"]
+                    }
+                  },
+                  "required": ["process"]
+                }
+              },
+              "required": ["name", "actionId", "response"],
+              "title": "GetActiveProcessResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "SetActiveProcess"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "SetActiveProcessResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetActiveWindow"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "window": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 18446744073709551615
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "processId": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 18446744073709551615
+                        },
+                        "processName": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "name", "processId", "processName"]
+                    }
+                  },
+                  "required": ["window"]
+                }
+              },
+              "required": ["name", "actionId", "response"],
+              "title": "GetActiveWindowResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "SetActiveWindow"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": ["name", "actionId"],
+              "title": "SetActiveWindowResponse"
             }
           ]
         }

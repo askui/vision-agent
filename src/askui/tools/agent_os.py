@@ -7,8 +7,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from askui.models.shared.tool_tags import ToolTags
 
 if TYPE_CHECKING:
+    from askui.tools.askui.askui_ui_controller_grpc.generated import (
+        Controller_V1_pb2 as controller_v1_pbs,
+    )
     from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
         RenderObjectStyle,
+    )
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
+        GetActiveProcessResponseModel,
+        GetActiveWindowResponseModel,
+        GetSystemInfoResponseModel,
     )
 
 MouseButton = Literal["left", "middle", "right"]
@@ -175,11 +183,15 @@ class Display(BaseModel):
     )
 
     id: int = Field(validation_alias="displayID")
+    name: str = Field(validation_alias="name")
     size: DisplaySize = Field(validation_alias="sizeInPixels")
 
 
 class DisplaysListResponse(BaseModel):
     data: list[Display] = Field(validation_alias="displays")
+
+    def __str__(self) -> str:
+        return ",".join([str(display) for display in self.data])
 
 
 InputEvent = ClickEvent
@@ -527,5 +539,123 @@ class AgentOs(ABC):
 
         Returns:
             Response confirming the clearing.
+        """
+        raise NotImplementedError
+
+    def get_process_list(
+        self, get_extended_info: bool = False
+    ) -> "controller_v1_pbs.Response_GetProcessList":
+        """
+        Get a list of running processes.
+
+        Args:
+            get_extended_info (bool, optional): Whether to include
+                extended process information.
+                Defaults to `False`.
+
+        Returns:
+            controller_v1_pbs.Response_GetProcessList: Process list response containing:
+                - processes: List of ProcessInfo objects
+        """
+        raise NotImplementedError
+
+    def get_window_list(
+        self, process_id: int
+    ) -> "controller_v1_pbs.Response_GetWindowList":
+        """
+        Get a list of windows for a specific process.
+
+        Args:
+            process_id (int): The ID of the process to get windows for.
+
+        Returns:
+            controller_v1_pbs.Response_GetWindowList: Window list response containing:
+                - windows: List of WindowInfo objects with ID and name
+        """
+        raise NotImplementedError
+
+    def set_mouse_delay(self, delay_ms: int) -> None:
+        """
+        Configure mouse action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for mouse actions.
+        """
+        raise NotImplementedError
+
+    def set_keyboard_delay(self, delay_ms: int) -> None:
+        """
+        Configure keyboard action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for keyboard actions.
+        """
+        raise NotImplementedError
+
+    def set_active_window(self, process_id: int, window_id: int) -> int:
+        """
+        Set the active window for automation.
+        Adds the window as a virtual display and returns the display ID.
+        It raises an error if display length is not increased after adding the window.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+
+        Returns:
+            int: The new Display ID.
+
+        Raises:
+            AskUiControllerError:
+            If display length is not increased after adding the window.
+        """
+        raise NotImplementedError
+
+    def get_system_info(self) -> "GetSystemInfoResponseModel":
+        """
+        Get the system information.
+
+        Returns:
+            GetSystemInfoResponseModel: The system information.
+        """
+        raise NotImplementedError
+
+    def get_active_process(self) -> "GetActiveProcessResponseModel":
+        """
+        Get the active process.
+
+        Returns:
+            GetActiveProcessResponseModel: The active process.
+        """
+        raise NotImplementedError
+
+    def set_active_process(self, process_id: int) -> None:
+        """
+        Set the active process.
+
+        Args:
+            process_id (int): The ID of the process to set as active.
+        """
+        raise NotImplementedError
+
+    def get_active_window(self) -> "GetActiveWindowResponseModel":
+        """
+        Gets the window id and name in addition to the process id
+             and name of the currently active window (in focus).
+
+        Returns:
+            GetActiveWindowResponseModel: The active window.
+        """
+        raise NotImplementedError
+
+    def set_window_in_focus(self, process_id: int, window_id: int) -> None:
+        """
+        Sets the window with the specified windowId of the process
+            with the specified processId active,
+            which brings it to the front and gives it focus.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
         """
         raise NotImplementedError
