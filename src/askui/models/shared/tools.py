@@ -175,6 +175,7 @@ class Tool(BaseModel, ABC):
             "(e.g., print/output/notification/external API tools with state changes). "
             "Default: True."
         ),
+    )
     required_tags: list[str] = Field(
         description="Tags required for the tool", default=[]
     )
@@ -400,7 +401,6 @@ class ToolCollection:
         """Append a tool to the collection."""
         self._tools.extend(tools)
 
-<<<<<<< HEAD
     def get_tools(self) -> dict[str, Tool]:
         """Get all tools in the collection.
 
@@ -410,9 +410,6 @@ class ToolCollection:
         return dict(self._tool_map)
 
     def reset_tools(self, tools: list[Tool] | None = None) -> "Self":
-=======
-    def reset_tools(self, tools: list[Tool] | None = None) -> None:
->>>>>>> origin/main
         """Reset the tools in the collection with new tools."""
         self._tools = tools or []
 
