@@ -3,12 +3,12 @@ from abc import ABC, abstractmethod
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
-    BetaTextBlockParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
 )
 
 from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
 
@@ -23,7 +23,7 @@ class MessagesApi(ABC):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: str | list[BetaTextBlockParam] | Omit = omit,
+        system: SystemPrompt | None = None,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,

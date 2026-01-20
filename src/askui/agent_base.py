@@ -4,7 +4,6 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
-from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, field_validator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,6 +16,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.prompts.act_prompts import create_default_prompt
 from askui.prompts.caching import CACHE_USE_PROMPT
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
@@ -369,17 +369,9 @@ class AgentBase(ABC):  # noqa: B024
                     cached_execution_tool,
                 ]
             )
-            if isinstance(settings.messages.system, str):
-                settings.messages.system = (
-                    settings.messages.system + "\n" + CACHE_USE_PROMPT
-                )
-            elif isinstance(settings.messages.system, list):
-                # Append as a new text block
-                settings.messages.system = settings.messages.system + [
-                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
-                ]
-            else:  # Omit or None
-                settings.messages.system = CACHE_USE_PROMPT
+            if settings.messages.system is None:
+                settings.messages.system = create_default_prompt()
+            settings.messages.system.cache_use = CACHE_USE_PROMPT
 
         # Add caching tools to the tools list
         if isinstance(tools, list):

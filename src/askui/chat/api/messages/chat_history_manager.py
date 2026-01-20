@@ -5,6 +5,7 @@ from askui.chat.api.messages.service import MessageService
 from askui.chat.api.messages.translator import MessageTranslator
 from askui.chat.api.models import MessageId, ThreadId, WorkspaceId
 from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.settings import ActSystemPrompt
 from askui.models.shared.truncation_strategies import TruncationStrategyFactory
 from askui.utils.api_utils import NotFoundError
 
@@ -42,7 +43,7 @@ class ChatHistoryManager:
         workspace_id: WorkspaceId,
         thread_id: ThreadId,
         model: str,
-        system: str | list[BetaTextBlockParam] | None,
+        system: ActSystemPrompt | None,
         tools: list[BetaToolUnionParam],
     ) -> list[MessageParam]:
         truncation_strategy = (

@@ -35,9 +35,10 @@ from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import ToolCollection
-from askui.prompts.system import caesr_system_prompt
+from askui.prompts.act_prompts import caesr_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -94,39 +95,18 @@ class Runner:
             params=params,
         )
 
-    def _build_system(self) -> list[BetaTextBlockParam]:
-        metadata = {
-            **self._get_run_extra_info(),
-            "continued_by_user_at": datetime.now(timezone.utc).strftime(
-                "%A, %B %d, %Y %H:%M:%S %z"
-            ),
-        }
-        return [
-            BetaTextBlockParam(
-                type="text", text=caesr_system_prompt(self._assistant.name)
-            ),
-            *(
-                [
-                    BetaTextBlockParam(
-                        type="text",
-                        text=self._assistant.system,
-                    )
-                ]
-                if self._assistant.system
-                else []
-            ),
-            BetaTextBlockParam(
-                type="text",
-                text="Metadata of current conversation: ",
-            ),
-            BetaTextBlockParam(
-                type="text",
-                text=json.dumps(metadata),
-                cache_control=BetaCacheControlEphemeralParam(
-                    type="ephemeral",
+    def _build_system(self) -> ActSystemPrompt:
+        metadata = json.dumps(
+            {
+                **self._get_run_extra_info(),
+                "continued_by_user_at": datetime.now(timezone.utc).strftime(
+                    "%A, %B %d, %Y %H:%M:%S %z"
                 ),
-            ),
-        ]
+            }
+        )
+        assistant_prompt = self._assistant.system if self._assistant.system else ""
+
+        return caesr_system_prompt(assistant_prompt, metadata)
 
     async def _run_agent(
         self,
