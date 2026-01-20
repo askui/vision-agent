@@ -1,15 +1,15 @@
-from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
-from askui.tools.askui.askui_controller import AskUiControllerClient
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import AgentOs
 
 
-class ComputerSetWindowInFocusTool(AskUiComputerBaseTool):
+class ComputerSetWindowInFocusTool(ComputerBaseTool):
     """
     Brings a specific window to the foreground and sets it as the active
     focused window. Use this tool to switch focus to a particular window
     before performing automation tasks.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_set_window_in_focus_tool",
             description="""

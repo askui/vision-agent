@@ -13,7 +13,6 @@ from PIL import Image
 from typing_extensions import Self, override
 
 from askui.container import telemetry
-from askui.models.shared.tool_tags import ToolTags
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.tools.agent_os import (
     AgentOs,
@@ -194,7 +193,6 @@ class AskUiControllerClient(AgentOs):
         self._controller_server = controller_server or AskUiControllerServer()
         self._session_guid = "{" + str(uuid.uuid4()) + "}"
         self._settings = settings or AskUiControllerClientSettings()
-        self.tags.append(ToolTags.ASKUI_CONTROLLER.value)
 
     @telemetry.record_call()
     @override

@@ -12,14 +12,14 @@ class ComputerMouseScrollTool(ComputerBaseTool):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "x": {
+                    "dx": {
                         "type": "integer",
                         "description": (
                             "The horizontal scroll amount. "
                             "Positive values scroll right, negative values scroll left."
                         ),
                     },
-                    "y": {
+                    "dy": {
                         "type": "integer",
                         "description": (
                             "The vertical scroll amount. "
@@ -27,12 +27,12 @@ class ComputerMouseScrollTool(ComputerBaseTool):
                         ),
                     },
                 },
-                "required": ["x", "y"],
+                "required": ["dx", "dy"],
             },
             agent_os=agent_os,
             required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
 
-    def __call__(self, x: int, y: int) -> str:
-        self.agent_os.mouse_scroll(x, y)
-        return f"Mouse was scrolled by ({x}, {y})."
+    def __call__(self, dx: int, dy: int) -> str:
+        self.agent_os.mouse_scroll(dx, dy)
+        return f"Mouse was scrolled by ({dx}, {dy})."

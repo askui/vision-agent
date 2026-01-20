@@ -1,15 +1,15 @@
-from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
-from askui.tools.askui.askui_controller import AskUiControllerClient
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import AgentOs
 
 
-class ComputerAddWindowAsVirtualDisplayTool(AskUiComputerBaseTool):
+class ComputerAddWindowAsVirtualDisplayTool(ComputerBaseTool):
     """
     Converts a specific window into a virtual display that can be used for automation.
     This tool assigns a display ID to the window, enabling it to be used as a target
     for UI automation tasks.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_add_window_as_virtual_display_tool",
             description="""

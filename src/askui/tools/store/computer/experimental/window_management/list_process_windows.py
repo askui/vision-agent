@@ -1,15 +1,15 @@
-from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
-from askui.tools.askui.askui_controller import AskUiControllerClient
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import AgentOs
 
 
-class ComputerListProcessWindowsTool(AskUiComputerBaseTool):
+class ComputerListProcessWindowsTool(ComputerBaseTool):
     """
     Lists all windows belonging to a specific process. Use this tool to discover
     available windows within an application after obtaining the process ID from
     list_process_tool.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_list_process_windows_tool",
             description="""

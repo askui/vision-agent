@@ -1,8 +1,8 @@
-from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
-from askui.tools.askui.askui_controller import AskUiControllerClient
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import AgentOs
 
 
-class ComputerGetSystemInfoTool(AskUiComputerBaseTool):
+class ComputerGetSystemInfoTool(ComputerBaseTool):
     """
     Get the system information.
     This tool returns the system information as a JSON object.
@@ -13,7 +13,7 @@ class ComputerGetSystemInfoTool(AskUiComputerBaseTool):
     - architecture: The operating system architecture.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_get_system_info_tool",
             description="""

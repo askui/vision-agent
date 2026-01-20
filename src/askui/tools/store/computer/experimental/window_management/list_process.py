@@ -1,15 +1,15 @@
-from askui.models.askui.askui_computer_base_tool import AskUiComputerBaseTool
-from askui.tools.askui.askui_controller import AskUiControllerClient
+from askui.models.shared import ComputerBaseTool
+from askui.tools.agent_os import AgentOs
 
 
-class ComputerListProcessTool(AskUiComputerBaseTool):
+class ComputerListProcessTool(ComputerBaseTool):
     """
     Lists all running processes on the computer that have at least one window.
     This is the first step in the window management workflow to discover available
     applications and their process IDs.
     """
 
-    def __init__(self, agent_os: AskUiControllerClient | None = None) -> None:
+    def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
             name="computer_list_process_tool",
             description="""

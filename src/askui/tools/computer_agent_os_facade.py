@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from PIL import Image
 
 from askui.models.shared.tool_tags import ToolTags
@@ -14,6 +16,16 @@ from askui.tools.agent_os import (
 )
 from askui.tools.askui.askui_controller import RenderObjectStyle  # noqa: TC001
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
+
+if TYPE_CHECKING:
+    from askui.tools.askui.askui_ui_controller_grpc.generated import (
+        Controller_V1_pb2 as controller_v1_pbs,
+    )
+    from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
+        GetActiveProcessResponseModel,
+        GetActiveWindowResponseModel,
+        GetSystemInfoResponseModel,
+    )
 
 
 class ComputerAgentOsFacade(AgentOs):
@@ -73,7 +85,9 @@ class ComputerAgentOsFacade(AgentOs):
         self._agent_os.mouse_up(button)
 
     def mouse_scroll(self, x: int, y: int) -> None:
-        scaled_x, scaled_y = self._scale_coordinates_back(x, y)
+        scaled_x, scaled_y = self._scale_coordinates_back(
+            x, y, check_coordinates_in_bounds=False
+        )
         self._agent_os.mouse_scroll(scaled_x, scaled_y)
 
     def keyboard_pressed(
@@ -137,11 +151,130 @@ class ComputerAgentOsFacade(AgentOs):
     def clear_render_objects(self) -> None:
         self._agent_os.clear_render_objects()
 
+    def get_process_list(
+        self, get_extended_info: bool = False
+    ) -> "controller_v1_pbs.Response_GetProcessList":
+        """
+        Get a list of running processes.
+
+        Args:
+            get_extended_info (bool, optional): Whether to include
+                extended process information.
+                Defaults to `False`.
+
+        Returns:
+            controller_v1_pbs.Response_GetProcessList: Process list response containing:
+                - processes: List of ProcessInfo objects
+        """
+        return self._agent_os.get_process_list(get_extended_info)
+
+    def get_window_list(
+        self, process_id: int
+    ) -> "controller_v1_pbs.Response_GetWindowList":
+        """
+        Get a list of windows for a specific process.
+
+        Args:
+            process_id (int): The ID of the process to get windows for.
+
+        Returns:
+            controller_v1_pbs.Response_GetWindowList: Window list response containing:
+                - windows: List of WindowInfo objects with ID and name
+        """
+        return self._agent_os.get_window_list(process_id)
+
+    def set_mouse_delay(self, delay_ms: int) -> None:
+        """
+        Configure mouse action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for mouse actions.
+        """
+        self._agent_os.set_mouse_delay(delay_ms)
+
+    def set_keyboard_delay(self, delay_ms: int) -> None:
+        """
+        Configure keyboard action delay.
+
+        Args:
+            delay_ms (int): The delay in milliseconds to set for keyboard actions.
+        """
+        self._agent_os.set_keyboard_delay(delay_ms)
+
+    def set_active_window(self, process_id: int, window_id: int) -> int:
+        """
+        Set the active window for automation.
+        Adds the window as a virtual display and returns the display ID.
+        It raises an error if display length is not increased after adding the window.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+
+        Returns:
+            int: The new Display ID.
+
+        Raises:
+            AskUiControllerError:
+            If display length is not increased after adding the window.
+        """
+        return self._agent_os.set_active_window(process_id, window_id)
+
+    def get_system_info(self) -> "GetSystemInfoResponseModel":
+        """
+        Get the system information.
+
+        Returns:
+            GetSystemInfoResponseModel: The system information.
+        """
+        return self._agent_os.get_system_info()
+
+    def get_active_process(self) -> "GetActiveProcessResponseModel":
+        """
+        Get the current active process.
+
+        Returns:
+            GetActiveProcessResponseModel: The active process.
+        """
+        return self._agent_os.get_active_process()
+
+    def set_active_process(self, process_id: int) -> None:
+        """
+        Set the active process.
+
+        Args:
+            process_id (int): The ID of the process to set as active.
+        """
+        self._agent_os.set_active_process(process_id)
+
+    def get_active_window(self) -> "GetActiveWindowResponseModel":
+        """
+        Gets the window id and name in addition to the process id
+             and name of the currently active window (in focus).
+
+        Returns:
+            GetActiveWindowResponseModel: The active window.
+        """
+        return self._agent_os.get_active_window()
+
+    def set_window_in_focus(self, process_id: int, window_id: int) -> None:
+        """
+        Sets the window with the specified windowId of the process
+            with the specified processId active,
+            which brings it to the front and gives it focus.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+        """
+        self._agent_os.set_window_in_focus(process_id, window_id)
+
     def _scale_coordinates_back(
         self,
         x: int,
         y: int,
         from_agent: bool = True,
+        check_coordinates_in_bounds: bool = True,
     ) -> tuple[int, int]:
         if self._real_screen_resolution is None:
             self._real_screen_resolution = self._agent_os.retrieve_active_display().size
@@ -150,4 +283,5 @@ class ComputerAgentOsFacade(AgentOs):
             (self._real_screen_resolution.width, self._real_screen_resolution.height),
             self._target_resolution,
             inverse=from_agent,
+            check_coordinates_in_bounds=check_coordinates_in_bounds,
         )
