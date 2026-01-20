@@ -15,6 +15,7 @@ from typing import Any
 
 from askui.models.shared.agent_message_param import MessageParam, ToolUseBlockParam
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.prompts.caching import CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -171,7 +172,9 @@ class CacheParameterHandler:
             response = messages_api.create_message(
                 messages=[MessageParam(role="user", content=user_message)],
                 model=model,
-                system=CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT,
+                system=ActSystemPrompt(
+                    prompt=CACHING_PARAMETER_IDENTIFIER_SYSTEM_PROMPT
+                ),
                 max_tokens=4096,
                 temperature=0.0,  # Deterministic for analysis
             )
