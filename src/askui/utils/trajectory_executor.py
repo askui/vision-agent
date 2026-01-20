@@ -251,7 +251,7 @@ class TrajectoryExecutor:
         Currently checks if the tool is marked as non-cacheable.
         """
         # Get the tool from toolbox
-        tool = self.toolbox._tool_map.get(step.name)  # noqa: SLF001
+        tool = self.toolbox.tool_map.get(step.name)  # noqa: SLF001
 
         if tool is None:
             # Tool not found in regular tools, might be MCP tool
