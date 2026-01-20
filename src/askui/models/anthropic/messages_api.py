@@ -11,7 +11,6 @@ from anthropic import (
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
     BetaMessageParam,
-    BetaTextBlockParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
 )
@@ -26,6 +25,7 @@ from askui.models.askui.retry_utils import (
 )
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
 
@@ -61,7 +61,7 @@ class AnthropicMessagesApi(MessagesApi):
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
-        system: str | list[BetaTextBlockParam] | Omit = omit,
+        system: SystemPrompt | None = None,
         thinking: BetaThinkingConfigParam | Omit = omit,
         tool_choice: BetaToolChoiceParam | Omit = omit,
         temperature: float | Omit = omit,
@@ -77,6 +77,7 @@ class AnthropicMessagesApi(MessagesApi):
             )
             for message in messages
         ]
+        _system: str | Omit = omit if system is None else str(system)
 
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
@@ -84,7 +85,7 @@ class AnthropicMessagesApi(MessagesApi):
             model=model,
             tools=tools.to_params() if not isinstance(tools, Omit) else omit,
             betas=betas,
-            system=system,
+            system=_system,
             thinking=thinking,
             tool_choice=tool_choice,
             temperature=temperature,

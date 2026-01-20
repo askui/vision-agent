@@ -4,11 +4,14 @@ from typing import TYPE_CHECKING, Literal
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
+from askui.models.shared.tool_tags import ToolTags
+
 if TYPE_CHECKING:
     from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
         RenderObjectStyle,
     )
 
+MouseButton = Literal["left", "middle", "right"]
 
 ModifierKey = Literal[
     "command",
@@ -192,6 +195,26 @@ class AgentOs(ABC):
     methods.
     """
 
+    @property
+    def tags(self) -> list[str]:
+        """Get the tags for this agent OS.
+
+        Returns:
+            list[str]: A list of tags that identify this agent OS type.
+        """
+        if not hasattr(self, "_tags"):
+            self._tags = [ToolTags.COMPUTER.value]
+        return self._tags
+
+    @tags.setter
+    def tags(self, tags: list[str]) -> None:
+        """Set the tags for this agent OS.
+
+        Args:
+            tags (list[str]): A list of tags that identify this agent OS type.
+        """
+        self._tags = tags
+
     @abstractmethod
     def connect(self) -> None:
         """
@@ -249,32 +272,30 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def click(
-        self, button: Literal["left", "middle", "right"] = "left", count: int = 1
-    ) -> None:
+    def click(self, button: MouseButton = "left", count: int = 1) -> None:
         """
         Simulates clicking a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse
+            button (MouseButton, optional): The mouse
                 button to click. Defaults to `"left"`.
             count (int, optional): Number of times to click. Defaults to `1`.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def mouse_down(self, button: Literal["left", "middle", "right"] = "left") -> None:
+    def mouse_down(self, button: MouseButton = "left") -> None:
         """
         Simulates pressing and holding a mouse button.
 
         Args:
-            button (Literal["left", "middle", "right"], optional): The mouse
+            button (MouseButton, optional): The mouse
                 button to press. Defaults to `"left"`.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def mouse_up(self, button: Literal["left", "middle", "right"] = "left") -> None:
+    def mouse_up(self, button: MouseButton = "left") -> None:
         """
         Simulates releasing a mouse button.
 

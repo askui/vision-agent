@@ -273,7 +273,7 @@ class Agent(ActModel):
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
-                system=_settings.messages.system or None,
+                system=_settings.messages.system,
                 messages=messages,
                 model=model,
             )

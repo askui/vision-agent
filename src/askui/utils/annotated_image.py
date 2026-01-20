@@ -2,7 +2,7 @@ from typing import Callable
 
 from PIL import Image
 
-from askui.models.models import PointList
+from askui.models.types.geometry import PointList
 from askui.utils.image_utils import draw_point_on_image
 
 

@@ -1,4 +1,3 @@
-import functools
 from typing import Literal
 
 from anthropic import Anthropic, AnthropicBedrock, AnthropicVertex
@@ -9,7 +8,6 @@ AnthropicApiProvider = Literal["anthropic", "askui", "bedrock", "vertex"]
 AnthropicApiClient = Anthropic | AnthropicBedrock | AnthropicVertex
 
 
-@functools.cache
 def create_api_client(
     api_provider: AnthropicApiProvider,
 ) -> AnthropicApiClient:

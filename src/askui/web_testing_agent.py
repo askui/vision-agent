@@ -1,14 +1,13 @@
 from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
-from typing_extensions import override
 
 from askui.models.shared.settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
-from askui.prompts.system import TESTING_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import TESTING_AGENT_SYSTEM_PROMPT
 from askui.tools.testing.execution_tools import (
     CreateExecutionTool,
     DeleteExecutionTool,
@@ -73,10 +72,7 @@ class WebTestingAgent(WebVisionAgent):
             ],
             model_provider=model_provider,
         )
-
-    @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
-        return ActSettings(
+        self.act_settings = ActSettings(
             messages=MessageSettings(
                 system=TESTING_AGENT_SYSTEM_PROMPT,
                 betas=[COMPUTER_USE_20250124_BETA_FLAG],

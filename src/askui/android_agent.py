@@ -2,14 +2,13 @@ import logging
 from typing import Annotated, overload
 
 from pydantic import ConfigDict, Field, validate_call
-from typing_extensions import override
 
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
-from askui.prompts.system import ANDROID_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import create_android_agent_prompt
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
 from askui.tools.android.ppadb_agent_os import PpadbAgentOs
@@ -64,7 +63,7 @@ class AndroidVisionAgent(AgentBase):
         ```
     """
 
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools"})
+    @telemetry.record_call(exclude={"model_router", "reporters", "tools", "act_tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
@@ -85,24 +84,32 @@ class AndroidVisionAgent(AgentBase):
             retry=retry,
             models=models,
             tools=[
-                AndroidScreenshotTool(self.act_agent_os_facade),
-                AndroidTapTool(self.act_agent_os_facade),
-                AndroidTypeTool(self.act_agent_os_facade),
-                AndroidDragAndDropTool(self.act_agent_os_facade),
-                AndroidKeyTapEventTool(self.act_agent_os_facade),
-                AndroidSwipeTool(self.act_agent_os_facade),
-                AndroidKeyCombinationTool(self.act_agent_os_facade),
-                AndroidShellTool(self.act_agent_os_facade),
-                AndroidSelectDeviceBySerialNumberTool(self.act_agent_os_facade),
-                AndroidSelectDisplayByUniqueIDTool(self.act_agent_os_facade),
-                AndroidGetConnectedDevicesSerialNumbersTool(self.act_agent_os_facade),
-                AndroidGetConnectedDisplaysInfosTool(self.act_agent_os_facade),
-                AndroidGetCurrentConnectedDeviceInfosTool(self.act_agent_os_facade),
+                AndroidScreenshotTool(),
+                AndroidTapTool(),
+                AndroidTypeTool(),
+                AndroidDragAndDropTool(),
+                AndroidKeyTapEventTool(),
+                AndroidSwipeTool(),
+                AndroidKeyCombinationTool(),
+                AndroidShellTool(),
+                AndroidSelectDeviceBySerialNumberTool(),
+                AndroidSelectDisplayByUniqueIDTool(),
+                AndroidGetConnectedDevicesSerialNumbersTool(),
+                AndroidGetConnectedDisplaysInfosTool(),
+                AndroidGetCurrentConnectedDeviceInfosTool(),
                 ExceptionTool(),
             ]
             + (act_tools or []),
             agent_os=self.os,
             model_provider=model_provider,
+        )
+        self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
+        self.act_settings = ActSettings(
+            messages=MessageSettings(
+                system=create_android_agent_prompt(),
+                thinking={"type": "disabled"},
+                temperature=0.0,
+            ),
         )
 
     @overload
@@ -353,13 +360,3 @@ class AndroidVisionAgent(AgentBase):
             f"set_device_by_serial_number(device_sn='{device_sn}')",
         )
         self.os.set_device_by_serial_number(device_sn)
-
-    @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
-        return ActSettings(
-            messages=MessageSettings(
-                system=ANDROID_AGENT_SYSTEM_PROMPT,
-                thinking={"type": "disabled"},
-                temperature=0.0,
-            ),
-        )

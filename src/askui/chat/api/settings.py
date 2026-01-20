@@ -16,7 +16,7 @@ class DbSettings(BaseModel):
 
     url: str = Field(
         default_factory=lambda: f"sqlite:///{(Path.cwd().absolute() / 'askui_chat.db').as_posix()}",
-        description="Database URL for SQLAlchemy connection",
+        description="Database URL for SQLAlchemy connection (used for all data including scheduler)",
     )
     auto_migrate: bool = Field(
         default=True,
@@ -117,4 +117,8 @@ class Settings(BaseSettings):
     otel: OtelSettings = Field(
         default_factory=OtelSettings,
         description="OpenTelemetry configuration settings",
+    )
+    enable_io_events: bool = Field(
+        default=False,
+        description="Whether to enable the publishing events to stdout",
     )

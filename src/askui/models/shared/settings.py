@@ -4,7 +4,6 @@ from typing import Optional
 from anthropic import Omit, omit
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
-    BetaTextBlockParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
 )
@@ -12,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
 from askui.models.shared.agent_message_param import ToolUseBlockParam, UsageParam
+from askui.models.shared.prompts import ActSystemPrompt
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
@@ -26,7 +26,7 @@ class MessageSettings(BaseModel):
 
     betas: list[AnthropicBetaParam] | Omit = omit
     max_tokens: int = 4096
-    system: str | list[BetaTextBlockParam] | Omit = omit
+    system: ActSystemPrompt | None = None
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit
     temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)

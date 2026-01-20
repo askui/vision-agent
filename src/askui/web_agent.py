@@ -1,14 +1,12 @@
 from pydantic import ConfigDict, validate_call
-from typing_extensions import override
 
 from askui.agent import VisionAgent
 from askui.models.shared.settings import (
-    COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.prompts.system import WEB_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import WEB_AGENT_SYSTEM_PROMPT
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 from askui.tools.playwright.tools import (
@@ -58,13 +56,9 @@ class WebVisionAgent(VisionAgent):
             + (act_tools or []),
             model_provider=model_provider,
         )
-
-    @override
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:
-        return ActSettings(
+        self.act_settings = ActSettings(
             messages=MessageSettings(
                 system=WEB_AGENT_SYSTEM_PROMPT,
-                betas=[COMPUTER_USE_20250124_BETA_FLAG],
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
         )

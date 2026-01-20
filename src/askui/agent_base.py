@@ -4,7 +4,6 @@ import types
 from abc import ABC
 from typing import Annotated, Literal, Optional, Type, overload
 
-from anthropic.types.beta import BetaTextBlockParam
 from dotenv import load_dotenv
 from pydantic import ConfigDict, Field, field_validator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,6 +16,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import ActSettings, CachingSettings
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.prompts.act_prompts import create_default_prompt
 from askui.prompts.caching import CACHE_USE_PROMPT
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
@@ -37,10 +37,9 @@ from .models.models import (
     ModelChoice,
     ModelName,
     ModelRegistry,
-    Point,
-    PointList,
     TotalModelChoice,
 )
+from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
 from .reporting import Reporter
 from .retry import ConfigurableRetry, Retry
@@ -105,6 +104,11 @@ class AgentBase(ABC):  # noqa: B024
         self._data_extractor = DataExtractor(
             reporter=self._reporter, models=models or {}
         )
+
+        self.act_tool_collection = ToolCollection(tools=tools)
+
+        self.act_settings = ActSettings()
+        self.caching_settings = CachingSettings()
 
     def _init_model_router(
         self,
@@ -300,11 +304,9 @@ class AgentBase(ABC):  # noqa: B024
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
         _model = self._get_model(model, "act")
-        _settings = settings or self._get_default_settings_for_act(_model)
+        _settings = settings or self.act_settings
 
-        _caching_settings: CachingSettings = (
-            caching_settings or self._get_default_caching_settings_for_act(_model)
-        )
+        _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
         _tools = self._build_tools(tools, _model)
 
@@ -326,14 +328,14 @@ class AgentBase(ABC):  # noqa: B024
         )
 
     def _build_tools(
-        self, tools: list[Tool] | ToolCollection | None, model: str
+        self, tools: list[Tool] | ToolCollection | None, _model: str
     ) -> ToolCollection:
-        default_tools = self._get_default_tools_for_act(model)
+        tool_collection = self.act_tool_collection
         if isinstance(tools, list):
-            return ToolCollection(tools=default_tools + tools)
+            tool_collection.append_tool(*tools)
         if isinstance(tools, ToolCollection):
-            return ToolCollection(default_tools) + tools
-        return ToolCollection(tools=default_tools)
+            tool_collection += tools
+        return tool_collection
 
     def _patch_act_with_cache(
         self,
@@ -373,19 +375,9 @@ class AgentBase(ABC):  # noqa: B024
                     VerifyCacheExecution(),
                 ]
             )
-
-            if isinstance(settings.messages.system, str):
-                settings.messages.system = (
-                    settings.messages.system + "\n" + CACHE_USE_PROMPT
-                )
-            elif isinstance(settings.messages.system, list):
-                # Append as a new text block
-                settings.messages.system = settings.messages.system + [
-                    BetaTextBlockParam(type="text", text=CACHE_USE_PROMPT)
-                ]
-            else:  # Omit or None
-                settings.messages.system = CACHE_USE_PROMPT
-            logger.debug("Added cache usage instructions to system prompt")
+            if settings.messages.system is None:
+                settings.messages.system = create_default_prompt()
+            settings.messages.system.cache_use = CACHE_USE_PROMPT
 
         # Add caching tools to the toolbox
         if caching_tools:
@@ -410,15 +402,6 @@ class AgentBase(ABC):  # noqa: B024
                 raise ValueError(error_message)
 
         return on_message
-
-    def _get_default_settings_for_act(self, model: str) -> ActSettings:  # noqa: ARG002
-        return ActSettings()
-
-    def _get_default_caching_settings_for_act(self, model: str) -> CachingSettings:  # noqa: ARG002
-        return CachingSettings()
-
-    def _get_default_tools_for_act(self, model: str) -> list[Tool]:  # noqa: ARG002
-        return self._tools
 
     @overload
     def get(
