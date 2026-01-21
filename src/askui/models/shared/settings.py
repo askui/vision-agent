@@ -1,12 +1,7 @@
-from anthropic import Omit, omit
-from anthropic.types import AnthropicBetaParam
-from anthropic.types.beta import (
-    BetaThinkingConfigParam,
-    BetaToolChoiceParam,
-)
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
+from askui.models.shared.agent_message_param import ThinkingConfigParam, ToolChoiceParam
 from askui.models.shared.prompts import (
     ActSystemPrompt,
     GetSystemPrompt,
@@ -20,14 +15,21 @@ CACHING_STRATEGY = Literal["read", "write", "both", "no"]
 
 
 class MessageSettings(BaseModel):
+    """Settings for message creation in ActModel operations.
+
+    The `thinking` and `tool_choice` fields are provider-specific dictionaries.
+    For Anthropic models, see: anthropic.types.beta.BetaThinkingConfigParam
+    and anthropic.types.beta.BetaToolChoiceParam
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    betas: list[AnthropicBetaParam] | Omit = omit
+    betas: list[str] | None = None
     max_tokens: int = 8192
     system: ActSystemPrompt | None = None
-    thinking: BetaThinkingConfigParam | Omit = omit
-    tool_choice: BetaToolChoiceParam | Omit = omit
-    temperature: float | Omit = Field(default=omit, ge=0.0, le=1.0)
+    thinking: ThinkingConfigParam | None = None
+    tool_choice: ToolChoiceParam | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ActSettings(BaseModel):

@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 
-from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ThinkingConfigParam,
+    ToolChoiceParam,
+)
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
@@ -17,24 +21,30 @@ class MessagesApi(ABC):
         max_tokens: int | None = None,
         betas: list[str] | None = None,
         system: SystemPrompt | None = None,
-        thinking: dict[str, str] | None = None,
-        tool_choice: dict[str, str] | None = None,
+        thinking: ThinkingConfigParam | None = None,
+        tool_choice: ToolChoiceParam | None = None,
         temperature: float | None = None,
     ) -> MessageParam:
-        """Create a message using the Anthropic API.
+        """Create a message using a Messages API (provider-agnostic).
 
         Args:
-            messages (list[MessageParam]): The messages to create a message.
+            messages (list[MessageParam]): The message history.
             model_id (str): The model identifier to use.
-            tools (ToolCollection | None): The tools to use.
+            tools (ToolCollection | None): The tools available to the model.
             max_tokens (int | None): The maximum number of tokens to generate.
-            betas (list[str] | None): The betas to use.
-            system (SystemPrompt | None): The system to use.
-            thinking (dict[str, str] | None): The thinking to use.
-            tool_choice (dict[str, str] | None): The tool choice to use.
-            temperature (float | None): The temperature to use.
+            betas (list[str] | None): Beta features to enable (provider-specific).
+            system (SystemPrompt | None): The system prompt.
+            thinking (ThinkingConfigParam | None): Thinking configuration (provider-specific).
+            tool_choice (ToolChoiceParam | None): Tool choice configuration (provider-specific).
+            temperature (float | None): The sampling temperature (0-1).
 
         Returns:
-            MessageParam: The created message.
+            MessageParam: The created message from the model.
+
+        Note:
+            The `thinking` and `tool_choice` parameters are provider-specific
+            dictionaries. See the specific MessagesApi implementation for details.
+            For Anthropic: see anthropic.types.beta.BetaThinkingConfigParam and
+            BetaToolChoiceParam.
         """
         raise NotImplementedError
