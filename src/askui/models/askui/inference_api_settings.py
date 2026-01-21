@@ -1,5 +1,6 @@
 import base64
 import logging
+import os
 
 from anthropic import Omit, omit
 from pydantic import UUID4, Field, HttpUrl, SecretStr, model_validator
@@ -35,6 +36,11 @@ class AskUiInferenceApiSettings(BaseSettings):
     workspace_id: UUID4 = Field(
         default=...,
         validation_alias="ASKUI_WORKSPACE_ID",
+    )
+
+    disable_ssl_verification: bool = Field(
+        default=(os.environ.get("ASKUI_DISABLE_SSL_VERIFICATION", "False") == "True"),
+        description="Whether to disable SSL verification for the AskUI Inference API.",
     )
 
     @model_validator(mode="after")

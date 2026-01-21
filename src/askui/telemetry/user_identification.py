@@ -27,6 +27,10 @@ class UserIdentificationSettings(BaseModel):
     # env_prefix
     askui_token: SecretStr | None = Field(default=get_askui_token_from_env())
     askui_workspace_id: str | None = Field(default=os.environ.get("ASKUI_WORKSPACE_ID"))
+    disable_ssl_verification: bool = Field(
+        default=(os.environ.get("ASKUI_DISABLE_SSL_VERIFICATION", "False") == "True"),
+        description="Whether to disable SSL verification for the AskUI Workspaces API.",
+    )
 
     @cached_property
     def askui_token_encoded(self) -> str | None:
@@ -47,7 +51,10 @@ class UserIdentification:
             )
             return
 
-        self._client = httpx.Client(timeout=30.0)
+        self._client = httpx.Client(
+            timeout=30.0,
+            verify=not self._settings.disable_ssl_verification,
+        )
 
     def __enter__(self) -> Self:
         return self
