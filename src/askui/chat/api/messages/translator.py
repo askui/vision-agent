@@ -75,7 +75,6 @@ class RequestDocumentBlockParamTranslator:
             from it and describe what you are seeing, e.g., what is shown in the
             image or figure, and include that description.""",
             source=source,
-            model=ModelName.ASKUI,
         )
         return [
             TextBlockParam(

@@ -15,7 +15,7 @@ from askui.models.askui.retry_utils import (
     wait_for_retry_after_header,
 )
 from askui.models.exceptions import QueryNoResponseError, QueryUnexpectedResponseError
-from askui.models.models import GetModel, ModelName
+from askui.models.models import GetModel, GetSettings, ModelName
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
 from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource
@@ -36,16 +36,15 @@ def _is_retryable_error(exception: BaseException) -> bool:
     return False
 
 
-def _extract_model_id(model: str) -> str:
-    if model == ModelName.ASKUI:
-        return ModelName.GEMINI__2_5__FLASH
-    if model.startswith(ASKUI_MODEL_CHOICE_PREFIX):
-        return model[ASKUI_MODEL_CHOICE_PREFIX_LEN:]
-    return model
+class AskUiGeminiGetModel(GetModel):
+    """GetModel implementation using Google Gemini API (via AskUI proxy)."""
 
-
-class AskUiGoogleGenAiApi(GetModel):
-    def __init__(self, settings: AskUiInferenceApiSettings | None = None) -> None:
+    def __init__(
+        self,
+        model_id: str = ModelName.GEMINI__2_5__FLASH,
+        settings: AskUiInferenceApiSettings | None = None,
+    ) -> None:
+        self._model_id = model_id
         self._settings = settings or AskUiInferenceApiSettings()
         self._client = genai.Client(
             vertexai=True,
@@ -72,7 +71,7 @@ class AskUiGoogleGenAiApi(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
+        get_settings: GetSettings,
     ) -> ResponseSchema | str:
         try:
             _response_schema = to_response_schema(response_schema)
@@ -89,13 +88,21 @@ class AskUiGoogleGenAiApi(GetModel):
                 ],
                 role="user",
             )
+
+            # Use system prompt from settings if provided, otherwise use default
+            system_prompt = (
+                str(get_settings.system_prompt)
+                if get_settings.system_prompt
+                else str(SYSTEM_PROMPT_GET)
+            )
+
             generate_content_response = self._client.models.generate_content(
-                model=f"models/{_extract_model_id(model)}",
+                model=f"models/{self._model_id}",
                 contents=content,
                 config={
                     "response_mime_type": "application/json",
                     "response_schema": _response_schema,
-                    "system_instruction": str(SYSTEM_PROMPT_GET),
+                    "system_instruction": system_prompt,
                 },
             )
             json_str = generate_content_response.text

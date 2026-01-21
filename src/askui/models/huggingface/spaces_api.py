@@ -10,13 +10,16 @@ from typing_extensions import override
 from askui.exceptions import AutomationError
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
-from askui.models.models import LocateModel, ModelComposition, ModelName
+from askui.models.models import LocateModel, LocateSettings, ModelName
 from askui.models.types.geometry import PointList
 from askui.utils.image_utils import ImageSource
 
 
 class HFSpacesHandler(LocateModel):
-    def __init__(self, locator_serializer: VlmLocatorSerializer) -> None:
+    """LocateModel implementation for Hugging Face Spaces models."""
+
+    def __init__(self, model_id: str, locator_serializer: VlmLocatorSerializer) -> None:
+        self._model_id = model_id
         self._clients: dict[str, Client] = {}
         self._spaces: dict[
             str, Callable[[Image.Image, str, str | None], tuple[int, int]]
@@ -65,19 +68,23 @@ class HFSpacesHandler(LocateModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> PointList:
         """Predict element location using Hugging Face Spaces."""
-        if not isinstance(model, str):
-            error_msg = "Model composition is not supported for Hugging Face Spaces"
-            raise NotImplementedError(error_msg)
         try:
             serialized_locator = (
                 self._locator_serializer.serialize(locator)
                 if isinstance(locator, Locator)
                 else locator
             )
-            return [self._spaces[model](image.root, serialized_locator, model)]
+            if self._model_id not in self._spaces:
+                error_msg = f"Unsupported HuggingFace Spaces model: {self._model_id}"
+                raise AutomationError(error_msg)
+            return [
+                self._spaces[self._model_id](
+                    image.root, serialized_locator, self._model_id
+                )
+            ]
         except (ValueError, json.JSONDecodeError, httpx.HTTPError) as e:
             error_msg = f"Hugging Face Spaces Exception: {e}"
             raise AutomationError(error_msg) from e

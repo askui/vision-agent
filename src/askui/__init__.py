@@ -7,6 +7,7 @@ import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
+from . import model_store
 from .agent import VisionAgent
 from .locators import Locator
 from .models import (
@@ -17,16 +18,16 @@ from .models import (
     CitationContentBlockLocationParam,
     CitationPageLocationParam,
     ContentBlockParam,
+    FallbackGetModel,
+    FallbackLocateModel,
     GetModel,
     ImageBlockParam,
     LocateModel,
     MessageParam,
     Model,
-    ModelChoice,
     ModelComposition,
     ModelDefinition,
     ModelName,
-    ModelRegistry,
     OnMessageCb,
     OnMessageCbParam,
     Point,
@@ -72,6 +73,8 @@ __all__ = [
     "CitationPageLocationParam",
     "ConfigurableRetry",
     "ContentBlockParam",
+    "FallbackGetModel",
+    "FallbackLocateModel",
     "GetModel",
     "ImageBlockParam",
     "ImageSource",
@@ -81,11 +84,9 @@ __all__ = [
     "MessageParam",
     "MessageSettings",
     "Model",
-    "ModelChoice",
     "ModelComposition",
     "ModelDefinition",
     "ModelName",
-    "ModelRegistry",
     "ModifierKey",
     "OnMessageCb",
     "OnMessageCbParam",
@@ -102,6 +103,7 @@ __all__ = [
     "ToolUseBlockParam",
     "UrlImageSourceParam",
     "VisionAgent",
+    "model_store",
 ]
 
 if _ANDROID_AGENT_AVAILABLE:

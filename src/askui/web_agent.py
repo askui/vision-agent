@@ -1,6 +1,7 @@
 from pydantic import ConfigDict, validate_call
 
 from askui.agent import VisionAgent
+from askui.models.models import ActModel, GetModel, LocateModel
 from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
@@ -18,8 +19,6 @@ from askui.tools.playwright.tools import (
 )
 from askui.tools.toolbox import AgentToolbox
 
-from .models import ModelComposition
-from .models.models import ModelChoice, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
 
@@ -29,11 +28,11 @@ class WebVisionAgent(VisionAgent):
     def __init__(
         self,
         reporters: list[Reporter] | None = None,
-        model: ModelChoice | ModelComposition | str | None = None,
+        act_model: ActModel | None = None,
+        get_model: GetModel | None = None,
+        locate_model: LocateModel | None = None,
         retry: Retry | None = None,
-        models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
-        model_provider: str | None = None,
     ) -> None:
         agent_os = PlaywrightAgentOs()
         tools = AgentToolbox(
@@ -41,9 +40,10 @@ class WebVisionAgent(VisionAgent):
         )
         super().__init__(
             reporters=reporters,
-            model=model,
+            act_model=act_model,
+            get_model=get_model,
+            locate_model=locate_model,
             retry=retry,
-            models=models,
             tools=tools,
             act_tools=[
                 PlaywrightGotoTool(agent_os=agent_os),
@@ -54,7 +54,6 @@ class WebVisionAgent(VisionAgent):
                 ExceptionTool(),
             ]
             + (act_tools or []),
-            model_provider=model_provider,
         )
         self.act_settings = ActSettings(
             messages=MessageSettings(

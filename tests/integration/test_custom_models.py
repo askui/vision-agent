@@ -92,10 +92,7 @@ class SimpleLocateModel(LocateModel):
         self._point = point
 
     def locate(
-        self,
-        locator: str | Locator,
-        image: ImageSource,
-        model: ModelComposition | str,
+        self, locator: str | Locator, image: ImageSource, model: ModelComposition | str
     ) -> PointList:
         self.locators.append(locator)
         self.images.append(image)
@@ -160,7 +157,7 @@ class TestCustomModels:
     ) -> None:
         """Test registering and using a custom get model."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get("test query", model="custom-get")
+            result = agent.get("test query")
 
         assert result == "test response"
         assert get_model.queries == ["test query"]
@@ -175,9 +172,7 @@ class TestCustomModels:
     ) -> None:
         """Test registering and using a custom get model with a PDF."""
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get(
-                "test query", model="custom-get", source=path_fixtures_dummy_pdf
-            )
+            result = agent.get("test query", source=path_fixtures_dummy_pdf)
 
         assert result == "test response"
         assert get_model.queries == ["test query"]
@@ -197,9 +192,7 @@ class TestCustomModels:
         assert locate_model.models == ["custom-locate"]
 
     def test_register_and_use_model_factory(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
+        self, act_model: SimpleActModel, agent_toolbox_mock: AgentToolbox
     ) -> None:
         """Test registering and using a model factory."""
 
@@ -217,9 +210,7 @@ class TestCustomModels:
         assert act_model.models == ["factory-model"]
 
     def test_register_multiple_models_for_same_task(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
+        self, act_model: SimpleActModel, agent_toolbox_mock: AgentToolbox
     ) -> None:
         """Test registering multiple models for the same task."""
 
@@ -260,20 +251,14 @@ class TestCustomModels:
         get_model.response = response
 
         with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get(
-                "test query",
-                response_schema=SimpleResponseSchema,
-                model="custom-get",
-            )
+            result = agent.get("test query", response_schema=SimpleResponseSchema)
 
         assert isinstance(result, SimpleResponseSchema)
         assert result.value == "test value"
         assert get_model.schemas == [SimpleResponseSchema]
 
     def test_override_default_model(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
+        self, act_model: SimpleActModel, agent_toolbox_mock: AgentToolbox
     ) -> None:
         """Test overriding a default model with a custom one."""
         registry: ModelRegistry = {"askui/claude-sonnet-4-20250514": act_model}
@@ -287,9 +272,7 @@ class TestCustomModels:
         assert act_model.models == ["askui/claude-sonnet-4-20250514"]
 
     def test_model_composition(
-        self,
-        locate_model: SimpleLocateModel,
-        agent_toolbox_mock: AgentToolbox,
+        self, locate_model: SimpleLocateModel, agent_toolbox_mock: AgentToolbox
     ) -> None:
         """Test using model composition with a custom locate model."""
         registry: ModelRegistry = {"askui": locate_model}
@@ -329,16 +312,14 @@ class TestCustomModels:
         with pytest.raises(expected_exception):
             with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
                 if model_name == "custom-act":
-                    agent.get("test query", model=model_name)
+                    agent.get("test query")
                 elif model_name == "custom-get":
                     agent.act("test goal", model=model_name)
                 else:
                     agent.act("test goal", model=model_name)
 
     def test_dymamic_model_initialization(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
+        self, act_model: SimpleActModel, agent_toolbox_mock: AgentToolbox
     ) -> None:
         """Test that model factories are called when needed."""
         init_count = 0

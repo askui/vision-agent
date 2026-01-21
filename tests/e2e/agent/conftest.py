@@ -14,15 +14,14 @@ from askui.models.anthropic.factory import AnthropicApiProvider, create_api_clie
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
+from askui.models.askui.gemini_get_model import AskUiGeminiGetModel
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
 )
-from askui.models.askui.models import AskUiGetModel, AskUiLocateModel
-from askui.models.models import ModelName
+from askui.models.askui.models import AskUiLocateModel
+from askui.models.models import ActModel, GetModel, LocateModel, ModelName
 from askui.models.shared.agent import Agent
-from askui.models.shared.facade import ModelFacade
 from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.annotated_image import AnnotatedImage
@@ -49,9 +48,30 @@ def simple_html_reporter() -> Reporter:
 
 
 @pytest.fixture
-def askui_facade(
+def askui_act_model(
     path_fixtures: pathlib.Path,
-) -> ModelFacade:
+) -> ActModel:
+    reporter = SimpleHtmlReporter()
+    return Agent(
+        model_id=ModelName.CLAUDE__SONNET__4__20250514,
+        messages_api=AnthropicMessagesApi(
+            client=create_api_client(api_provider="askui"),
+            locator_serializer=VlmLocatorSerializer(),
+        ),
+        reporter=reporter,
+    )
+
+
+@pytest.fixture
+def askui_get_model() -> GetModel:
+    return AskUiGeminiGetModel(
+        model_id=ModelName.GEMINI__2_5__FLASH,
+        settings=AskUiInferenceApiSettings(),
+    )
+
+
+@pytest.fixture
+def askui_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     reporter = SimpleHtmlReporter()
     locator_serializer = AskUiLocatorSerializer(
         ai_element_collection=AiElementCollection(
@@ -62,23 +82,9 @@ def askui_facade(
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    act_model = Agent(
-        messages_api=AnthropicMessagesApi(
-            client=create_api_client(api_provider="askui"),
-            locator_serializer=VlmLocatorSerializer(),
-        ),
-        reporter=reporter,
-    )
-    return ModelFacade(
-        act_model=act_model,
-        get_model=AskUiGetModel(
-            google_genai_api=AskUiGoogleGenAiApi(),
-            inference_api=askui_inference_api,
-        ),
-        locate_model=AskUiLocateModel(
-            locator_serializer=locator_serializer,
-            inference_api=askui_inference_api,
-        ),
+    return AskUiLocateModel(
+        locator_serializer=locator_serializer,
+        inference_api=askui_inference_api,
     )
 
 
@@ -98,21 +104,34 @@ def anthropic_messages_api(
 
 
 @functools.cache
-def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
+def anthropic_act_model(api_provider: AnthropicApiProvider) -> ActModel:
     messages_api = anthropic_messages_api(api_provider)
-    act_model = Agent(
+    return Agent(
+        model_id=ModelName.CLAUDE__SONNET__4__20250514,
         messages_api=messages_api,
         reporter=NULL_REPORTER,
     )
-    model = AnthropicModel(
+
+
+@functools.cache
+def anthropic_get_model(api_provider: AnthropicApiProvider) -> GetModel:
+    messages_api = anthropic_messages_api(api_provider)
+    return AnthropicModel(
+        model_id=ModelName.CLAUDE__SONNET__4__20250514,
         settings=AnthropicModelSettings(),
         messages_api=messages_api,
         locator_serializer=vlm_locator_serializer(),
     )
-    return ModelFacade(
-        act_model=act_model,
-        get_model=model,
-        locate_model=model,
+
+
+@functools.cache
+def anthropic_locate_model(api_provider: AnthropicApiProvider) -> LocateModel:
+    messages_api = anthropic_messages_api(api_provider)
+    return AnthropicModel(
+        model_id=ModelName.CLAUDE__SONNET__4__20250514,
+        settings=AnthropicModelSettings(),
+        messages_api=messages_api,
+        locator_serializer=vlm_locator_serializer(),
     )
 
 
@@ -120,22 +139,16 @@ def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
 def vision_agent(
     agent_toolbox_mock: AgentToolbox,
     simple_html_reporter: Reporter,
-    askui_facade: ModelFacade,
+    askui_act_model: ActModel,
+    askui_get_model: GetModel,
+    askui_locate_model: LocateModel,
 ) -> Generator[VisionAgent, None, None]:
     """Fixture providing a VisionAgent instance."""
     with VisionAgent(
         reporters=[simple_html_reporter],
-        models={
-            ModelName.ASKUI: askui_facade,
-            ModelName.ASKUI__AI_ELEMENT: askui_facade,
-            ModelName.ASKUI__COMBO: askui_facade,
-            ModelName.ASKUI__OCR: askui_facade,
-            ModelName.ASKUI__PTA: askui_facade,
-            ModelName.CLAUDE__SONNET__4__20250514: lambda: anthropic_facade(
-                "anthropic"
-            ),
-            "askui/": askui_facade,
-        },
+        act_model=askui_act_model,
+        get_model=askui_get_model,
+        locate_model=askui_locate_model,
         tools=agent_toolbox_mock,
     ) as agent:
         yield agent

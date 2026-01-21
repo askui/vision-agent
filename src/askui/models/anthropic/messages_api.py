@@ -54,10 +54,11 @@ class AnthropicMessagesApi(MessagesApi):
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )
+    @override
     def create_message(
         self,
         messages: list[MessageParam],
-        model: str,
+        model_id: str,
         tools: ToolCollection | Omit = omit,
         max_tokens: int | Omit = omit,
         betas: list[AnthropicBetaParam] | Omit = omit,
@@ -75,7 +76,7 @@ class AnthropicMessagesApi(MessagesApi):
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
             max_tokens=max_tokens or 4096,
-            model=model,
+            model=model_id,
             tools=tools.to_params() if not isinstance(tools, Omit) else omit,
             betas=betas,
             system=_system,

@@ -7,7 +7,11 @@ from anthropic.types.beta import (
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
-from askui.models.shared.prompts import ActSystemPrompt
+from askui.models.shared.prompts import (
+    ActSystemPrompt,
+    GetSystemPrompt,
+    LocateSystemPrompt,
+)
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
@@ -30,6 +34,29 @@ class ActSettings(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: MessageSettings = Field(default_factory=MessageSettings)
+
+
+class GetSettings(BaseModel):
+    """Settings for GetModel operations (data extraction from images/PDFs)."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    max_tokens: int = 4096
+    temperature: float = Field(default=0.5, ge=0.0, le=1.0)
+    system_prompt: GetSystemPrompt | None = None
+    timeout: float | None = None
+
+
+class LocateSettings(BaseModel):
+    """Settings for LocateModel operations (UI element location)."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    query_type: str | None = None
+    confidence_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    max_detections: int = 10
+    timeout: float | None = None
+    system_prompt: LocateSystemPrompt | None = None
 
 
 class CachedExecutionToolSettings(BaseModel):

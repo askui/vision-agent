@@ -6,6 +6,7 @@ import pytest
 
 from askui.models.exceptions import QueryNoResponseError
 from askui.models.openrouter.model import OpenRouterModel
+from askui.models.shared.settings import GetSettings
 from askui.models.types.response_schemas import ResponseSchemaBase
 from askui.utils.image_utils import ImageSource
 
@@ -39,7 +40,7 @@ def test_basic_query_returns_string(
         query="What is in the image?",
         source=image_source_github_login_screenshot,
         response_schema=None,
-        model="test-model",
+        get_settings=GetSettings(),
     )
 
     assert isinstance(result, str)
@@ -66,7 +67,7 @@ def test_query_with_response_schema_returns_validated_object(
         query="What is in the image?",
         source=image_source_github_login_screenshot,
         response_schema=TestResponse,
-        model="test-model",
+        get_settings=GetSettings(),
     )
 
     assert isinstance(result, TestResponse)
@@ -89,7 +90,7 @@ def test_no_response_from_model(
             query="What is in the image?",
             source=image_source_github_login_screenshot,
             response_schema=None,
-            model="test-model",
+            get_settings=GetSettings(),
         )
     mock_openai_client.chat.completions.create.assert_called_once()
 
@@ -108,6 +109,6 @@ def test_malformed_json_from_model(
             query="What is in the image?",
             source=image_source_github_login_screenshot,
             response_schema=TestResponse,
-            model="test-model",
+            get_settings=GetSettings(),
         )
     mock_openai_client.chat.completions.create.assert_called_once()

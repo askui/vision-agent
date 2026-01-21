@@ -12,7 +12,7 @@ from askui.models.exceptions import (
     QueryNoResponseError,
     QueryUnexpectedResponseError,
 )
-from askui.models.models import GetModel, LocateModel, ModelComposition
+from askui.models.models import GetModel, LocateModel
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -22,6 +22,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.prompts import LocateSystemPrompt, SystemPrompt
+from askui.models.shared.settings import GetSettings, LocateSettings
 from askui.models.types.geometry import PointList
 from askui.models.types.response_schemas import ResponseSchema
 from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
@@ -79,10 +80,12 @@ class AnthropicModelSettings(BaseSettings):
 class AnthropicModel(GetModel, LocateModel):
     def __init__(
         self,
+        model_id: str,
         settings: AnthropicModelSettings,
         messages_api: MessagesApi,
         locator_serializer: VlmLocatorSerializer,
     ) -> None:
+        self._model_id = model_id
         self._settings = settings
         self._messages_api = messages_api
         self._locator_serializer = locator_serializer
@@ -92,7 +95,6 @@ class AnthropicModel(GetModel, LocateModel):
         image: ImageSource,
         prompt: str,
         system: SystemPrompt,
-        model: str,
     ) -> str:
         scaled_image = scale_image_to_fit(
             image.root,
@@ -118,7 +120,7 @@ class AnthropicModel(GetModel, LocateModel):
                     ),
                 )
             ],
-            model=model,
+            model_id=self._model_id,
             system=system,
         )
         content: list[ContentBlockParam] = (
@@ -136,11 +138,8 @@ class AnthropicModel(GetModel, LocateModel):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> PointList:
-        if not isinstance(model, str):
-            error_msg = "Model composition is not supported for Claude"
-            raise NotImplementedError(error_msg)
         locator_serialized = (
             self._locator_serializer.serialize(locator)
             if isinstance(locator, Locator)
@@ -156,7 +155,6 @@ class AnthropicModel(GetModel, LocateModel):
                 system=build_system_prompt_locate(
                     str(screen_width), str(screen_height)
                 ),
-                model=model,
             )
             return [
                 scale_coordinates(
@@ -179,12 +177,12 @@ class AnthropicModel(GetModel, LocateModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
+        get_settings: GetSettings,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
             err_msg = (
                 f"PDF or Office Document processing is not supported for the model: "
-                f"{model}"
+                f"{self._model_id}"
             )
             raise NotImplementedError(err_msg)
         try:
@@ -195,7 +193,6 @@ class AnthropicModel(GetModel, LocateModel):
                 image=source,
                 prompt=query,
                 system=SYSTEM_PROMPT_GET,
-                model=model,
             )
         except _UnexpectedResponseError as e:
             if len(e.content) == 0:

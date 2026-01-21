@@ -1,13 +1,12 @@
+from .fallback_model import FallbackGetModel, FallbackLocateModel
 from .models import (
     ActModel,
     GetModel,
     LocateModel,
     Model,
-    ModelChoice,
     ModelComposition,
     ModelDefinition,
     ModelName,
-    ModelRegistry,
 )
 from .openrouter.model import OpenRouterModel
 from .openrouter.settings import ChatCompletionsCreateSettings, OpenRouterSettings
@@ -38,16 +37,16 @@ __all__ = [
     "CitationContentBlockLocationParam",
     "CitationPageLocationParam",
     "ContentBlockParam",
+    "FallbackGetModel",
+    "FallbackLocateModel",
     "GetModel",
     "ImageBlockParam",
     "LocateModel",
     "MessageParam",
     "Model",
-    "ModelChoice",
     "ModelComposition",
     "ModelDefinition",
     "ModelName",
-    "ModelRegistry",
     "OnMessageCb",
     "OnMessageCbParam",
     "OpenRouterModel",

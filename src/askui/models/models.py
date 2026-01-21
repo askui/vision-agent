@@ -1,15 +1,14 @@
 import abc
 import re
 from collections.abc import Iterator
-from typing import Annotated, Callable, Type
+from typing import Annotated, Type
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
-from typing_extensions import Literal, TypedDict
 
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings
+from askui.models.shared.settings import ActSettings, GetSettings, LocateSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.geometry import Point, PointList
 from askui.models.types.response_schemas import ResponseSchema
@@ -252,10 +251,9 @@ class ActModel(abc.ABC):
     def act(
         self,
         messages: list[MessageParam],
-        model: str,
+        act_settings: ActSettings,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
-        settings: ActSettings | None = None,
     ) -> None:
         """
         Execute autonomous actions to achieve a goal, using a message history
@@ -273,10 +271,6 @@ class ActModel(abc.ABC):
         Args:
             messages (list[MessageParam]): The message history to start that
                 determines the actions and following messages.
-            model (str): The name of the model being used, e.g., useful for
-                models registered under multiple keys, e.g., `"my-act-1"` and
-                `"my-act-2"` that depending on the key (passed as `model`)
-                behave differently.
             on_message (OnMessageCb | None, optional): Callback for new messages
                 from either an assistant/agent or a user (including
                 automatic/programmatic tool use, e.g., taking a screenshot).
@@ -287,8 +281,8 @@ class ActModel(abc.ABC):
                 directing the assistant/agent or tool use.
             tools (ToolCollection | None, optional): The tools for the agent.
                 Defaults to `None`.
-            settings (AgentSettings | None, optional): The settings for the agent.
-                Defaults to `None`.
+            act_settings (ActSettings): The settings for this act operation,
+                passed from the agent.
 
         Returns:
             None
@@ -333,7 +327,7 @@ class GetModel(abc.ABC):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
+        get_settings: GetSettings,
     ) -> ResponseSchema | str:
         """Extract information from a source based on a query.
         Args:
@@ -341,8 +335,8 @@ class GetModel(abc.ABC):
             source (Source): The source to analyze (screenshot, image or PDF)
             response_schema (Type[ResponseSchema] | None): Optional Pydantic model class
                 defining the expected response structure
-            model (str): The name of the model being used (useful for models that
-                support multiple configurations)
+            get_settings (GetSettings): The settings for this get operation,
+                passed from the agent
 
         Returns:
             Either a string response or a Pydantic model instance if response_schema is
@@ -384,7 +378,7 @@ class LocateModel(abc.ABC):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> PointList:
         """Find the coordinates of a UI element in an image.
 
@@ -392,8 +386,8 @@ class LocateModel(abc.ABC):
             locator (str | Locator): A description or locator object identifying the
                 element to find
             image (ImageSource): The image to analyze (screenshot or provided image)
-            model (ModelComposition | str): Either a string model name or a
-                `ModelComposition` for models that support composition
+            locate_settings (LocateSettings): The settings for this locate operation,
+                passed from the agent
 
         Returns:
             A list of (x, y) coordinates where the element was found, minimum length 1
@@ -403,14 +397,14 @@ class LocateModel(abc.ABC):
     def locate_all_elements(
         self,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> list[DetectedElement]:
         """Locate all elements in an image.
 
         Args:
             image (ImageSource): The image to analyze (screenshot or provided image)
-            model (ModelComposition | str): Either a string model name or a
-                `ModelComposition` for models that support composition
+            locate_settings (LocateSettings): The settings for this locate operation,
+                passed from the agent
 
         Returns:
             A list of detected elements
@@ -425,72 +419,3 @@ This type represents any model that can be used with `VisionAgent`, whether it's
 `ActModel`, `GetModel`, or `LocateModel`. It's useful for type hints when you need to
 work with models in a generic way.
 """
-
-
-class ModelChoice(TypedDict, total=False):
-    """Type definition for specifying different models for different tasks.
-
-    This `TypedDict` allows you to specify different models for `act()`, `get()`, and
-    `locate()` tasks when initializing `VisionAgent`. All fields are optional.
-
-    Attributes:
-        act: Model name to use for `act()` commands
-        get: Model name to use for `get()` commands
-        locate: Model name or composition to use for `locate()`, `click()`, and
-            `mouse_move()` commands
-    """
-
-    act: str
-    get: str
-    locate: str | ModelComposition
-
-
-class TotalModelChoice(TypedDict):
-    act: str
-    get: str
-    locate: str | ModelComposition
-
-
-ModelRegistry = dict[str, Model | Callable[[], Model]]
-"""Type definition for model registry.
-
-A dictionary mapping model names to either model instances or factory functions (for
-lazy initialization on first use) that create model instances. Used to register custom
-models with `VisionAgent`.
-
-Example:
-    ```python
-    from askui import ModelRegistry, ActModel
-
-    class MyModel(ActModel):
-        def act(
-            self,
-            messages: list[MessageParam],
-            model: str,
-            on_message: OnMessageCb | None = None,
-            tools: list[Tool] | None = None,
-            settings: AgentSettings | None = None,
-        ) -> None:
-            pass  # implement action logic here
-
-    # Registry with model instance
-    registry: ModelRegistry = {
-        "my-model": MyModel()
-    }
-
-    # Registry with model factory
-    def create_model() -> ActModel:
-        return MyModel()
-
-    registry_with_factory: ModelRegistry = {
-        "my-model": create_model
-    }
-    ```
-"""
-
-
-MODEL_TYPES: dict[Literal["act", "get", "locate"], Type[Model]] = {
-    "act": ActModel,
-    "get": GetModel,
-    "locate": LocateModel,
-}

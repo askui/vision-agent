@@ -54,10 +54,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -80,10 +80,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with negative offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -106,10 +106,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with zero offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -131,7 +131,7 @@ class TestVisionAgentOffset:
         )
 
         # Click with Point locator and offset should work
-        vision_agent.click(point_locator, offset=offset, model=model)
+        vision_agent.click(point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()
@@ -157,10 +157,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Mouse move with offset should work without error
-        vision_agent.mouse_move(locator, offset=offset, model=model)
+        vision_agent.mouse_move(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -182,10 +182,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Mouse move with negative offset should work without error
-        vision_agent.mouse_move(locator, offset=offset, model=model)
+        vision_agent.mouse_move(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -207,7 +207,7 @@ class TestVisionAgentOffset:
         )
 
         # Mouse move with Point locator and offset should work
-        vision_agent.mouse_move(point_locator, offset=offset, model=model)
+        vision_agent.mouse_move(point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()
@@ -233,10 +233,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Type with offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, model=model)
+        vision_agent.type(text, locator=locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -261,10 +261,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Type with negative offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, model=model)
+        vision_agent.type(text, locator=locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -289,7 +289,7 @@ class TestVisionAgentOffset:
         )
 
         # Type with Point locator and offset should work
-        vision_agent.type(text, locator=point_locator, offset=offset, model=model)
+        vision_agent.type(text, locator=point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()

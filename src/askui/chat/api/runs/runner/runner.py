@@ -3,7 +3,6 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 
-from anthropic.types.beta import BetaCacheControlEphemeralParam, BetaTextBlockParam
 from anyio.abc import ObjectStream
 from asyncer import asyncify, syncify
 
@@ -33,6 +32,10 @@ from askui.chat.api.runs.models import (
 )
 from askui.chat.api.settings import Settings
 from askui.custom_agent import CustomAgent
+from askui.locators.serializers import VlmLocatorSerializer
+from askui.models.anthropic.factory import create_api_client
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
+from askui.models.shared.agent import Agent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.prompts import ActSystemPrompt
@@ -149,18 +152,29 @@ class Runner:
             )
             betas = tools.retrieve_tool_beta_flags()
             system = self._build_system()
-            model = self._get_model()
+            model_id = self._get_model()
             messages = syncify(self._chat_history_manager.retrieve_message_params)(
                 workspace_id=self._workspace_id,
                 thread_id=self._thread_id,
                 tools=tools.to_params(),
                 system=system,
-                model=model,
+                model=model_id,
             )
-            custom_agent = CustomAgent()
+
+            client = create_api_client(api_provider="askui")
+            locator_serializer = VlmLocatorSerializer()
+            messages_api = AnthropicMessagesApi(
+                client=client,
+                locator_serializer=locator_serializer,
+            )
+            act_model = Agent(
+                model_id=model_id,
+                messages_api=messages_api,
+            )
+
+            custom_agent = CustomAgent(act_model=act_model)
             custom_agent.act(
                 messages,
-                model=model,
                 on_message=on_message,
                 tools=tools,
                 settings=ActSettings(

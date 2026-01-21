@@ -46,7 +46,7 @@ class TestSimpleOcrModel:
         model: ModelComposition,
     ) -> None:
         """Test locating elements using simple OCR model."""
-        x, y = vision_agent.locate("Sign in", github_login_screenshot, model=model)
+        x, y = vision_agent.locate("Sign in", github_login_screenshot)
         assert isinstance(x, int)
         assert isinstance(y, int)
         assert 0 <= x <= github_login_screenshot.width
@@ -91,7 +91,7 @@ class TestWordLevelOcrModel:
         model: ModelComposition,
     ) -> None:
         """Test locating elements using word-level OCR model."""
-        x, y = vision_agent.locate("Sign", github_login_screenshot, model=model)
+        x, y = vision_agent.locate("Sign", github_login_screenshot)
         assert isinstance(x, int)
         assert isinstance(y, int)
         assert 0 <= x <= github_login_screenshot.width
@@ -109,21 +109,17 @@ class TestWordLevelOcrModel:
             vision_agent.locate(
                 Text("Sign in", match_type="exact"),
                 github_login_screenshot,
-                model=model,
             )
             vision_agent.locate(
                 Text("Sign in", match_type="regex"),
                 github_login_screenshot,
-                model=model,
             )
             vision_agent.locate(
                 Text("Sign in", match_type="contains"),
                 github_login_screenshot,
-                model=model,
             )
             assert DEFAULT_SIMILARITY_THRESHOLD != 80
             vision_agent.locate(
                 Text("Sign in", similarity_threshold=80),
                 github_login_screenshot,
-                model=model,
             )

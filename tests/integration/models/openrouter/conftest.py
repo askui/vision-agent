@@ -31,7 +31,9 @@ def mock_openai_client(mocker: MockerFixture) -> MagicMock:
 def openrouter_model(
     settings: OpenRouterSettings, mock_openai_client: MagicMock
 ) -> OpenRouterModel:
-    return OpenRouterModel(settings=settings, client=mock_openai_client)
+    return OpenRouterModel(
+        model_id="test-model", settings=settings, client=mock_openai_client
+    )
 
 
 @pytest.fixture

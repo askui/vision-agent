@@ -7,7 +7,7 @@ from openai import OpenAI
 from typing_extensions import override
 
 from askui.models.exceptions import QueryNoResponseError
-from askui.models.models import GetModel
+from askui.models.models import GetModel, GetSettings
 from askui.models.shared.prompts import GetSystemPrompt
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
 from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
@@ -47,23 +47,16 @@ class OpenRouterModel(GetModel):
     Example:
         ```python
         from askui import VisionAgent
-        from askui.models import (
-            OpenRouterModel,
-            OpenRouterSettings,
-            ModelRegistry,
+        from askui.models import OpenRouterModel, OpenRouterSettings
+
+        # Create OpenRouter model instance
+        openrouter_model = OpenRouterModel(
+            OpenRouterSettings(
+                model="anthropic/claude-opus-4",
+            )
         )
 
-
-        # Register OpenRouter model in the registry
-        custom_models: ModelRegistry = {
-            "my-custom-model": OpenRouterGetModel(
-                OpenRouterSettings(
-                    model="anthropic/claude-opus-4",
-                )
-            ),
-        }
-
-        with VisionAgent(models=custom_models, model={"get":"my-custom-model"}) as agent:
+        with VisionAgent(get_model=openrouter_model) as agent:
             result = agent.get("What is the main heading on the screen?")
             print(result)
         ```
@@ -71,9 +64,11 @@ class OpenRouterModel(GetModel):
 
     def __init__(
         self,
+        model_id: str,
         settings: OpenRouterSettings | None = None,
         client: Optional[OpenAI] = None,
     ):
+        self._model_id = model_id
         self._settings = settings or OpenRouterSettings()
 
         self._client = (
@@ -126,7 +121,7 @@ class OpenRouterModel(GetModel):
             }
 
         chat_completion = self._client.chat.completions.create(  # type: ignore[misc]
-            model=self._settings.model,
+            model=self._model_id,
             extra_body=extra_body,
             response_format=response_format,  # type: ignore[arg-type]
             messages=[
@@ -159,10 +154,10 @@ class OpenRouterModel(GetModel):
             try:
                 response_json = json.loads(model_response)
             except json.JSONDecodeError:
-                error_msg = f"Expected JSON, but model {self._settings.model} returned: {model_response}"  # noqa: E501
+                error_msg = f"Expected JSON, but model {self._model_id} returned: {model_response}"  # noqa: E501
                 logger.exception(
                     "Expected JSON, but model returned",
-                    extra={"model": self._settings.model, "response": model_response},
+                    extra={"model": self._model_id, "response": model_response},
                 )
                 raise ValueError(error_msg) from None
 
@@ -179,21 +174,26 @@ class OpenRouterModel(GetModel):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
+        get_settings: GetSettings,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
-            err_msg = (
-                f"PDF or Office Document processing is not supported for the model: "
-                f"{model}"
-            )
+            err_msg = "PDF or Office Document processing is not supported for OpenRouter model"
             raise NotImplementedError(err_msg)
+
+        # Use system prompt from settings if provided, otherwise use default
+        system_prompt = (
+            get_settings.system_prompt
+            if get_settings.system_prompt
+            else SYSTEM_PROMPT_GET
+        )
+
         response = self._predict(
             image_url=source.to_data_url(),
             instruction=query,
-            prompt=SYSTEM_PROMPT_GET,
+            prompt=system_prompt,
             response_schema=response_schema,
         )
         if response is None:
-            error_msg = f'No response from model "{model}" to query: "{query}"'
+            error_msg = f'No response from model "{self._model_id}" to query: "{query}"'
             raise QueryNoResponseError(error_msg, query)
         return response
