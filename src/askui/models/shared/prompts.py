@@ -75,7 +75,7 @@ class ActSystemPrompt(SystemPrompt, BaseModel):
         if self.prompt:
             return self.prompt
 
-        parts = []
+        parts: list[str] = []
 
         if self.system_capabilities:
             parts.append(
