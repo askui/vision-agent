@@ -89,6 +89,7 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
     mock = mocker.MagicMock(spec=AgentOs)
     mock.retrieve_active_display.return_value = Display(
         id=1,
+        name="Display 1",
         size=DisplaySize(width=100, height=100),
     )
     mock.screenshot.return_value = Image.new("RGB", (100, 100), color="white")

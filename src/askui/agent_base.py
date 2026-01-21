@@ -80,6 +80,7 @@ class AgentBase(ABC):  # noqa: B024
         )
 
         self.act_tool_collection = ToolCollection(tools=tools)
+        self.act_tool_collection.add_agent_os(agent_os)
 
         # Settings stored at agent level (mutable)
         self.act_settings = ActSettings()

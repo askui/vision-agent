@@ -23,7 +23,7 @@ class MessageSettings(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     betas: list[AnthropicBetaParam] | Omit = omit
-    max_tokens: int = 4096
+    max_tokens: int = 8192
     system: ActSystemPrompt | None = None
     thinking: BetaThinkingConfigParam | Omit = omit
     tool_choice: BetaToolChoiceParam | Omit = omit

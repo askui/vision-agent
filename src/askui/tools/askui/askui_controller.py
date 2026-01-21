@@ -26,6 +26,9 @@ from askui.tools.askui.askui_controller_client_settings import (
     AskUiControllerClientSettings,
 )
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
+from askui.tools.askui.askui_ui_controller_grpc.desktop_agent_os_error import (
+    DesktopAgentOsError,
+)
 from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2 as controller_v1_pbs,
 )
@@ -33,26 +36,47 @@ from askui.tools.askui.askui_ui_controller_grpc.generated import (
     Controller_V1_pb2_grpc as controller_v1,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2501 import (  # noqa: E501
+    AddRenderObjectCommand,
+    AskUIAgentOSSendRequestSchema,
+    ClearRenderObjectsCommand,
+    Command,
+    DeleteRenderObjectCommand,
+    GetActiveProcessCommand,
+    GetActiveWindowCommand,
+    GetMousePositionCommand,
+    GetSystemInfoCommand,
+    Guid,
+    Header,
+    Length,
+    Location,
+    Message,
+    Parameter3,
+    RenderImage,
+    RenderObjectId,
     RenderObjectStyle,
+    RenderText,
+    SetActiveProcessCommand,
+    SetActiveWindowCommand,
+    SetMousePositionCommand,
+    UpdateRenderObjectCommand,
 )
 from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_2501 import (  # noqa: E501
-    AskuiAgentosSendResponseSchema,
-)
-from askui.tools.askui.command_helpers import (
-    create_clear_render_objects_command,
-    create_delete_render_object_command,
-    create_get_mouse_position_command,
-    create_image_command,
-    create_line_command,
-    create_quad_command,
-    create_set_mouse_position_command,
-    create_text_command,
-    create_update_render_object_command,
+    AskUIAgentOSSendResponseSchema,
+    GetActiveProcessResponse,
+    GetActiveProcessResponseModel,
+    GetActiveWindowResponse,
+    GetActiveWindowResponseModel,
+    GetSystemInfoResponse,
+    GetSystemInfoResponseModel,
 )
 from askui.utils.annotated_image import AnnotatedImage
 
 from ..utils import process_exists, wait_for_port
-from .exceptions import AskUiControllerOperationTimeoutError
+from .exceptions import (
+    AskUiControllerError,
+    AskUiControllerInvalidCommandError,
+    AskUiControllerOperationTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -245,11 +269,19 @@ class AskUiControllerClient(AgentOs):
         This method stops the execution, ends the session, closes the gRPC channel,
         and stops the controller server.
         """
-        self._stop_execution()
-        self._stop_session()
-        if self._channel is not None:
-            self._channel.close()
-        self._controller_server.stop()
+        try:
+            self._stop_execution()
+            self._stop_session()
+            if self._channel is not None:
+                self._channel.close()
+            self._controller_server.stop()
+        except Exception as e:  # noqa: BLE001
+            # We want to catch all other exceptions here and not re-raise them
+            msg = (
+                "Error while disconnecting from the AskUI Remote Device Controller"
+                f" Error: {e}"
+            )
+            logger.exception(msg)
 
     @telemetry.record_call()
     def __enter__(self) -> Self:
@@ -616,16 +648,17 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             display (int, optional): The display ID to set as active.
+                This can be either a real display ID or a virtual display ID.
                 Defaults to `1`.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
         )
-        self._reporter.add_message("AgentOS", f"set_display({display})")
         self._stub.SetActiveDisplay(
             controller_v1_pbs.Request_SetActiveDisplay(displayID=display)
         )
         self._display = display
+        self._reporter.add_message("AgentOS", f"set_display({display})")
 
     @telemetry.record_call(exclude={"command"})
     @override
@@ -661,6 +694,9 @@ class AskUiControllerClient(AgentOs):
         displays_list_response = self.list_displays()
         for display in displays_list_response.data:
             if display.id == self._display:
+                self._reporter.add_message(
+                    "AgentOS", f"retrieve_active_display() -> {display}"
+                )
                 return display
         error_msg = f"Display {self._display} not found"
         raise ValueError(error_msg)
@@ -671,7 +707,9 @@ class AskUiControllerClient(AgentOs):
         self,
     ) -> DisplaysListResponse:
         """
-        List all available displays including virtual screens.
+        List all available Displays from the controller.
+        It includes both real and virtual displays
+            without describing the type of display (virtual or real).
 
         Returns:
             DisplaysListResponse
@@ -691,7 +729,11 @@ class AskUiControllerClient(AgentOs):
             preserving_proto_field_name=True,
         )
 
-        return DisplaysListResponse.model_validate(response_dict)
+        displays = DisplaysListResponse.model_validate(response_dict)
+
+        self._reporter.add_message("AgentOS", f"list_displays() ->{str(displays)}")
+
+        return displays
 
     @telemetry.record_call()
     def get_process_list(
@@ -717,6 +759,9 @@ class AskUiControllerClient(AgentOs):
 
         response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
             controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
+        )
+        self._reporter.add_message(
+            "AgentOS", f"get_process_list({get_extended_info}) -> {response}"
         )
 
         return response
@@ -745,6 +790,10 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_GetWindowList(processID=process_id)
         )
 
+        self._reporter.add_message(
+            "AgentOS", f"get_window_list({process_id}) -> {response}"
+        )
+
         return response
 
     @telemetry.record_call()
@@ -767,6 +816,9 @@ class AskUiControllerClient(AgentOs):
 
         response: controller_v1_pbs.Response_GetAutomationTargetList = (
             self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+        )
+        self._reporter.add_message(
+            "AgentOS", f"get_automation_target_list() -> {response}"
         )
 
         return response
@@ -812,13 +864,21 @@ class AskUiControllerClient(AgentOs):
         )
 
     @telemetry.record_call()
-    def set_active_window(self, process_id: int, window_id: int) -> None:
+    def set_active_window(self, process_id: int, window_id: int) -> int:
         """
         Set the active window for automation.
+        Adds the window as a virtual display and returns the display ID.
+        It raises an error if display length is not increased after adding the window.
 
         Args:
             process_id (int): The ID of the process that owns the window.
             window_id (int): The ID of the window to set as active.
+
+        returns:
+            int: The new Display ID.
+        Raises:
+            AskUiControllerError:
+            If display length is not increased after adding the window.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
@@ -828,11 +888,22 @@ class AskUiControllerClient(AgentOs):
             "AgentOS", f"set_active_window({process_id}, {window_id})"
         )
 
+        display_length_before_adding_window = len(self.list_displays().data)
+
         self._stub.SetActiveWindow(
             controller_v1_pbs.Request_SetActiveWindow(
                 processID=process_id, windowID=window_id
             )
         )
+        new_display_length = len(self.list_displays().data)
+        if new_display_length <= display_length_before_adding_window:
+            msg = f"Failed to set active window {window_id} for process {process_id}"
+            raise AskUiControllerError(msg)
+        self._reporter.add_message(
+            "AgentOS",
+            f"set_active_window({process_id}, {window_id}) -> {new_display_length}",
+        )
+        return new_display_length
 
     @telemetry.record_call()
     def set_active_automation_target(self, target_id: int) -> None:
@@ -1008,28 +1079,43 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
         )
 
-    def _send_message(self, message: str) -> controller_v1_pbs.Response_Send:
+    def _send_command(self, command: Command) -> AskUIAgentOSSendResponseSchema:
         """
-        Send a general message to the controller.
+        Send a general command to the controller.
 
         Args:
-            message (str): The message to send to the controller.
+            command (Command): The command to send to the controller.
 
         Returns:
-            controller_v1_pbs.Response_Send: Response containing
+            AskUIAgentOSSendResponseSchema: Response containing
                 the message from the controller.
+
+        Raises:
+            AskUiControllerInvalidCommandError: If the command fails schema validation
+                on the server side.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
         )
 
-        self._reporter.add_message("AgentOS", f'send_message("{message}")')
+        header = Header(authentication=Guid(root=self._session_guid))
+        message = Message(header=header, command=command)
 
-        response: controller_v1_pbs.Response_Send = self._stub.Send(
-            controller_v1_pbs.Request_Send(message=message)
-        )
+        request = AskUIAgentOSSendRequestSchema(message=message)
 
-        return response
+        request_str = request.model_dump_json(exclude_none=True, by_alias=True)
+
+        try:
+            response: controller_v1_pbs.Response_Send = self._stub.Send(
+                controller_v1_pbs.Request_Send(message=request_str)
+            )
+        except grpc.RpcError as e:
+            if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
+                details = e.details() if e.details() else None
+                raise AskUiControllerInvalidCommandError(details) from e
+            raise
+
+        return AskUIAgentOSSendResponseSchema.model_validate_json(response.message)
 
     @telemetry.record_call()
     def get_mouse_position(self) -> Coordinate:
@@ -1042,16 +1128,14 @@ class AskUiControllerClient(AgentOs):
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
         )
-        req_json = create_get_mouse_position_command(
-            self._session_guid
-        ).model_dump_json(exclude_unset=True)
         self._reporter.add_message("AgentOS", "get_mouse_position()")
-        res = self._send_message(req_json)
-        parsed_res = AskuiAgentosSendResponseSchema.model_validate_json(res.message)
-        return Coordinate(
-            x=parsed_res.message.command.response.position.x.root,  # type: ignore[union-attr]
-            y=parsed_res.message.command.response.position.y.root,  # type: ignore[union-attr]
+        res = self._send_command(GetMousePositionCommand())
+        coordinate = Coordinate(
+            x=res.message.command.response.position.x.root,  # type: ignore[union-attr]
+            y=res.message.command.response.position.y.root,  # type: ignore[union-attr]
         )
+        self._reporter.add_message("AgentOS", f"get_mouse_position() -> {coordinate}")
+        return coordinate
 
     @telemetry.record_call()
     def set_mouse_position(self, x: int, y: int) -> None:
@@ -1065,11 +1149,10 @@ class AskUiControllerClient(AgentOs):
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized. Call Connect first."
         )
-        req_json = create_set_mouse_position_command(
-            x, y, self._session_guid
-        ).model_dump_json(exclude_unset=True)
+        location = Location(x=Length(root=x), y=Length(root=y))
+        command = SetMousePositionCommand(parameters=[location])
         self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
-        self._send_message(req_json)
+        self._send_command(command)
 
     @telemetry.record_call()
     def render_quad(self, style: RenderObjectStyle) -> int:
@@ -1086,14 +1169,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", f"render_quad({style})")
-        req_json = create_quad_command(style, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
-        )
-        res = self._send_message(req_json)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        command = AddRenderObjectCommand(parameters=["Quad", style])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def render_line(self, style: RenderObjectStyle, points: list[Coordinate]) -> int:
@@ -1111,14 +1189,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
-        req = create_line_command(style, points, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
-        )
-        res = self._send_message(req)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        command = AddRenderObjectCommand(parameters=["Line", style, points])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call(exclude={"image_data"})
     def render_image(self, style: RenderObjectStyle, image_data: str) -> int:
@@ -1136,15 +1209,11 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
-        req = create_image_command(
-            style, image_data, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
-        res = self._send_message(req)
+        image = RenderImage(root=image_data)
+        command = AddRenderObjectCommand(parameters=["Image", style, image])
+        res = self._send_command(command)
 
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def render_text(self, style: RenderObjectStyle, content: str) -> int:
@@ -1162,15 +1231,10 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
-
-        req = create_text_command(style, content, self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
-        )
-        res = self._send_message(req)
-        parsed_response = AskuiAgentosSendResponseSchema.model_validate_json(
-            res.message
-        )
-        return int(parsed_response.message.command.response.id.root)  # type: ignore[union-attr]
+        text = RenderText(root=content)
+        command = AddRenderObjectCommand(parameters=["Text", style, text])
+        res = self._send_command(command)
+        return int(res.message.command.response.id.root)  # type: ignore[union-attr]
 
     @telemetry.record_call()
     def update_render_object(self, object_id: int, style: RenderObjectStyle) -> None:
@@ -1190,10 +1254,9 @@ class AskUiControllerClient(AgentOs):
         self._reporter.add_message(
             "AgentOS", f"update_render_object({object_id}, {style})"
         )
-        req = create_update_render_object_command(
-            object_id, style, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
-        self._send_message(req)
+        render_object_id = RenderObjectId(root=object_id)
+        command = UpdateRenderObjectCommand(parameters=[render_object_id, style])
+        self._send_command(command)
 
     @telemetry.record_call()
     def delete_render_object(self, object_id: int) -> None:
@@ -1207,10 +1270,9 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
-        req = create_delete_render_object_command(
-            object_id, self._session_guid
-        ).model_dump_json(exclude_unset=True, by_alias=True)
-        self._send_message(req)
+        render_object_id = RenderObjectId(root=object_id)
+        command = DeleteRenderObjectCommand(parameters=[render_object_id])
+        self._send_command(command)
 
     @telemetry.record_call()
     def clear_render_objects(self) -> None:
@@ -1221,7 +1283,100 @@ class AskUiControllerClient(AgentOs):
             "Stub is not initialized. Call Connect first."
         )
         self._reporter.add_message("AgentOS", "clear_render_objects()")
-        req = create_clear_render_objects_command(self._session_guid).model_dump_json(
-            exclude_unset=True, by_alias=True
+        command = ClearRenderObjectsCommand()
+        self._send_command(command)
+
+    def get_system_info(self) -> GetSystemInfoResponseModel:
+        """
+        Get the system information.
+
+        Returns:
+            SystemInfo: The system information.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
         )
-        self._send_message(req)
+        self._reporter.add_message("AgentOS", "get_system_info()")
+        command = GetSystemInfoCommand()
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetSystemInfoResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_system_info() -> {res.response}")
+        return res.response
+
+    def get_active_process(self) -> GetActiveProcessResponseModel:
+        """
+        Get the active process.
+
+        Returns:
+            GetActiveProcessResponseModel: The active process.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "get_active_process()")
+        command = GetActiveProcessCommand()
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetActiveProcessResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_active_process() -> {res.response}")
+        return res.response
+
+    def set_active_process(self, process_id: int) -> None:
+        """
+        Set the active process.
+
+        Args:
+            process_id (int): The ID of the process to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", f"set_active_process({process_id})")
+        _process_id = Parameter3(root=process_id)
+        command = SetActiveProcessCommand(parameters=[_process_id])
+        self._send_command(command)
+
+    def get_active_window(self) -> GetActiveWindowResponseModel:
+        """
+        Gets the window id and name in addition to the process id
+             and name of the currently active window (in focus).
+
+
+        Returns:
+            GetActiveWindowResponseModel: The active window.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "get_active_window()")
+        command = GetActiveWindowCommand()
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetActiveWindowResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        self._reporter.add_message("AgentOS", f"get_active_window() -> {res.response}")
+        return res.response
+
+    def set_window_in_focus(self, process_id: int, window_id: int) -> None:
+        """
+        Sets the window with the specified windowId of the process
+            with the specified processId active,
+            which brings it to the front and gives it focus.
+
+        Args:
+            process_id (int): The ID of the process that owns the window.
+            window_id (int): The ID of the window to set as active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message(
+            "AgentOS", f"set_window_in_focus({process_id}, {window_id})"
+        )
+        _process_id = Parameter3(root=process_id)
+        _window_id = Parameter3(root=window_id)
+        command = SetActiveWindowCommand(parameters=[_process_id, _window_id])
+        self._send_command(command)

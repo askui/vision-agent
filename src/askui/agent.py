@@ -14,6 +14,7 @@ from askui.prompts.act_prompts import (
 )
 from askui.tools.computer import (
     ComputerGetMousePositionTool,
+    ComputerGetSystemInfoTool,
     ComputerKeyboardPressedTool,
     ComputerKeyboardReleaseTool,
     ComputerKeyboardTapTool,
@@ -91,6 +92,7 @@ class VisionAgent(AgentBase):
             retry=retry,
             tools=[
                 ExceptionTool(),
+                ComputerGetSystemInfoTool(),
                 ComputerGetMousePositionTool(),
                 ComputerKeyboardPressedTool(),
                 ComputerKeyboardReleaseTool(),

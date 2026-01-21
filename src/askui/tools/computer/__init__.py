@@ -1,6 +1,7 @@
 from .connect_tool import ComputerConnectTool
 from .disconnect_tool import ComputerDisconnectTool
 from .get_mouse_position_tool import ComputerGetMousePositionTool
+from .get_system_info_tool import ComputerGetSystemInfoTool
 from .keyboard_pressed_tool import ComputerKeyboardPressedTool
 from .keyboard_release_tool import ComputerKeyboardReleaseTool
 from .keyboard_tap_tool import ComputerKeyboardTapTool
@@ -16,6 +17,7 @@ from .set_active_display_tool import ComputerSetActiveDisplayTool
 from .type_tool import ComputerTypeTool
 
 __all__ = [
+    "ComputerGetSystemInfoTool",
     "ComputerConnectTool",
     "ComputerDisconnectTool",
     "ComputerGetMousePositionTool",
