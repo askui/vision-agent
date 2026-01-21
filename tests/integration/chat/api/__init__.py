@@ -1,1 +1,0 @@
-# Chat API integration tests
