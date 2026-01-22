@@ -36,6 +36,7 @@ class AskUiInferenceApi:
                 "Content-Type": "application/json",
                 "Authorization": self._settings.authorization_header,
             },
+            verify=self._settings.verify_ssl,
         )
 
     @retry(

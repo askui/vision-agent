@@ -6,7 +6,7 @@ from askui.models.shared.settings import (
     MessageSettings,
 )
 from askui.models.shared.tools import Tool
-from askui.prompts.act_prompts import WEB_AGENT_SYSTEM_PROMPT
+from askui.prompts.act_prompts import create_web_agent_prompt
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 from askui.tools.playwright.tools import (
@@ -58,7 +58,7 @@ class WebVisionAgent(VisionAgent):
         )
         self.act_settings = ActSettings(
             messages=MessageSettings(
-                system=WEB_AGENT_SYSTEM_PROMPT,
+                system=create_web_agent_prompt(),
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
         )

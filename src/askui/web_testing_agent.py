@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
 
+from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import (
     COMPUTER_USE_20250124_BETA_FLAG,
     ActSettings,
@@ -74,7 +75,7 @@ class WebTestingAgent(WebVisionAgent):
         )
         self.act_settings = ActSettings(
             messages=MessageSettings(
-                system=TESTING_AGENT_SYSTEM_PROMPT,
+                system=ActSystemPrompt(prompt=TESTING_AGENT_SYSTEM_PROMPT),
                 betas=[COMPUTER_USE_20250124_BETA_FLAG],
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
