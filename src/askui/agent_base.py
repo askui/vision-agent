@@ -109,9 +109,10 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             goal (str | list[MessageParam]): A description of what the agent should
                 achieve.
-            act_settings (ActSettings | None, optional): Settings for this act execution.
-                Overrides the agent's default settings if provided.
-            act_model (ActModel | None, optional): Model to use for this act execution.
+            act_settings (ActSettings | None, optional): Settings for this act
+                execution. Overrides the agent's default settings if provided.
+            act_model (ActModel | None, optional): Model to use for this act
+                execution.
                 Overrides the agent's default model if provided.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message. Cannot be used

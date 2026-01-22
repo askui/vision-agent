@@ -1,4 +1,4 @@
-"""Tests for VisionAgent.locate() with different locator types and models"""
+"""Tests for VisionAgent.locate() with different locator types"""
 
 import pathlib
 
@@ -8,17 +8,9 @@ from PIL import Image as PILImage
 from askui.agent import VisionAgent
 from askui.locators import AiElement, Element, Prompt, Text
 from askui.locators.locators import Image
-from askui.models import ModelName
 from askui.models.exceptions import ElementNotFoundError
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        ModelName.ASKUI,
-        ModelName.CLAUDE__SONNET__4__20250514,
-    ],
-)
 class TestVisionAgentLocate:
     """Test class for VisionAgent.locate() method."""
 
@@ -26,7 +18,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a simple string locator."""
         locator = "Forgot password?"
@@ -35,7 +26,7 @@ class TestVisionAgentLocate:
         assert 190 <= y <= 260
 
     def test_locate_with_switch_class_locator(
-        self, vision_agent: VisionAgent, path_fixtures: pathlib.Path, model: str
+        self, vision_agent: VisionAgent, path_fixtures: pathlib.Path
     ) -> None:
         """Test locating elements using a class locator."""
         locator = Element("switch")
@@ -47,7 +38,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a class locator."""
         locator = Element("textfield")
@@ -59,7 +49,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a class locator."""
         locator = Element()
@@ -71,7 +60,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a description locator."""
         locator = Prompt("Username textfield")
@@ -83,7 +71,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a text locator."""
         locator = Text("Forgot password?")
@@ -95,7 +82,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a text locator with a typo."""
         locator = Text("Forgot pasword", similarity_threshold=90)
@@ -107,7 +93,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a text locator."""
         locator = Text("Forgot password?", match_type="exact")
@@ -119,7 +104,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a text locator."""
         locator = Text(r"F.*?", match_type="regex")
@@ -131,7 +115,6 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using a text locator."""
         locator = Text("Forgot", match_type="contains")
@@ -143,14 +126,9 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator."""
-        if model in [
-            ModelName.CLAUDE__SONNET__4__20250514,
-        ]:
-            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(image=image)
@@ -162,14 +140,9 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
-            ModelName.CLAUDE__SONNET__4__20250514,
-        ]:
-            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(
@@ -188,14 +161,9 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
-            ModelName.CLAUDE__SONNET__4__20250514,
-        ]:
-            pytest.skip("Skipping test for Anthropic model because not supported yet")
         image_path = path_fixtures / "images" / "github_com__icon.png"
         image = PILImage.open(image_path)
         locator = Image(image=image, threshold=1.0, stop_threshold=1.0)
@@ -206,13 +174,8 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using an AI element locator."""
-        if model in [
-            ModelName.CLAUDE__SONNET__4__20250514,
-        ]:
-            pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon")
         x, y = vision_agent.locate(locator, github_login_screenshot)
         assert 350 <= x <= 570
@@ -222,13 +185,8 @@ class TestVisionAgentLocate:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using image locator with custom parameters."""
-        if model in [
-            ModelName.CLAUDE__SONNET__4__20250514,
-        ]:
-            pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon", threshold=1.0)
         with pytest.raises(ElementNotFoundError):
             vision_agent.locate(locator, github_login_screenshot)

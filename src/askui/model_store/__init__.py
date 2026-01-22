@@ -81,7 +81,7 @@ def list_available_models() -> dict[str, dict[str, Any]]:
             "type": "get",
             "provider": "askui",
             "factory": create_askui_get_model,
-            "description": "AskUI default information extraction model (Gemini 2.5 Flash + AskUI models)",
+            "description": "AskUI default info extraction (Gemini 2.5 Flash + AskUI)",
         },
         "askui_locate": {
             "type": "locate",

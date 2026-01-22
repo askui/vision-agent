@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataExtractor:
-    """Data extraction utility that uses a GetModel to extract information from images/PDFs."""
+    """Data extraction utility using GetModel for images/PDFs."""
 
     def __init__(
         self,

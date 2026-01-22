@@ -32,10 +32,13 @@ class MessagesApi(ABC):
             model_id (str): The model identifier to use.
             tools (ToolCollection | None): The tools available to the model.
             max_tokens (int | None): The maximum number of tokens to generate.
-            betas (list[str] | None): Beta features to enable (provider-specific).
+            betas (list[str] | None): Beta features to enable
+                (provider-specific).
             system (SystemPrompt | None): The system prompt.
-            thinking (ThinkingConfigParam | None): Thinking configuration (provider-specific).
-            tool_choice (ToolChoiceParam | None): Tool choice configuration (provider-specific).
+            thinking (ThinkingConfigParam | None): Thinking configuration
+                (provider-specific).
+            tool_choice (ToolChoiceParam | None): Tool choice configuration
+                (provider-specific).
             temperature (float | None): The sampling temperature (0-1).
 
         Returns:

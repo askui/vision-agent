@@ -3,23 +3,15 @@
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
-import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import Element
-from askui.models import ModelName
 
 if TYPE_CHECKING:
     from askui.models.models import Point
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        ModelName.ASKUI,
-    ],
-)
 class TestVisionAgentOffset:
     """Test class for VisionAgent offset functionality."""
 
@@ -43,7 +35,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with positive offset (right and down)."""
         locator = "Forgot password?"
@@ -69,7 +60,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with negative offset (left and up)."""
         locator = "Forgot password?"
@@ -95,7 +85,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with zero offset (same as no offset)."""
         locator = "Forgot password?"
@@ -120,7 +109,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with Point locator and offset."""
         point_locator: Point = (100, 100)
@@ -146,7 +134,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with positive offset."""
         locator = "Forgot password?"
@@ -171,7 +158,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with negative offset."""
         locator = "Forgot password?"
@@ -196,7 +182,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with Point locator and offset."""
         point_locator: Point = (200, 150)
@@ -221,7 +206,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with positive offset."""
         locator = Element("textfield")
@@ -249,7 +233,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with negative offset."""
         locator = Element("textfield")
@@ -277,7 +260,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with Point locator and offset."""
         point_locator: Point = (460, 195)  # Approximate textfield location

@@ -11,12 +11,6 @@ from askui.locators.locators import AiElement
 from askui.models.exceptions import ElementNotFoundError
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        "askui",
-    ],
-)
 class TestVisionAgentLocateWithRelations:
     """Test class for VisionAgent.locate() method with relations."""
 
@@ -24,7 +18,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using above_of relation."""
         locator = Text("Forgot password?").above_of(Element("textfield"))
@@ -36,7 +29,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using below_of relation."""
         locator = Text("Forgot password?").below_of(Element("textfield"))
@@ -48,7 +40,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using right_of relation."""
         locator = Text("Forgot password?").right_of(Text("Password"))
@@ -60,7 +51,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using left_of relation."""
         locator = Text("Password").left_of(Text("Forgot password?"))
@@ -72,7 +62,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using containing relation."""
         locator = Element("textfield").containing(Text("github.com/login"))
@@ -84,7 +73,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using inside_of relation."""
         locator = Text("github.com/login").inside_of(Element("textfield"))
@@ -96,7 +84,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using nearest_to relation."""
         locator = Element("textfield").nearest_to(Text("Password"))
@@ -109,7 +96,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using and_ relation."""
         locator = Text("Forgot password?").and_(Element("text"))
@@ -121,7 +107,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using or_ relation."""
         locator = Element("textfield").nearest_to(
@@ -135,7 +120,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with index."""
         locator = Element("textfield").below_of(
@@ -149,7 +133,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with index."""
         locator = Element("textfield").below_of(Element("textfield"), index=1)
@@ -162,7 +145,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with index."""
         locator = Text("Sign in").below_of(Text(), index=4, reference_point="any")
@@ -174,7 +156,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with center reference point."""
         locator = Text("Forgot password?").right_of(
@@ -188,7 +169,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with center reference point."""
         locator = Text("Sign in").below_of(Text("Password"), reference_point="center")
@@ -199,7 +179,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
         locator = Text("Forgot password?").right_of(
@@ -213,7 +192,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
         locator = Text("Sign in").below_of(Text("Password"), reference_point="boundary")
@@ -224,7 +202,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with any reference point."""
         locator = Text("Sign in").below_of(Text("Password"), reference_point="any")
@@ -236,7 +213,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using multiple relations with same locator which is not supported by AskUI."""
         locator = (
@@ -251,7 +227,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using chained relations."""
         locator = Text("Sign in").below_of(
@@ -266,7 +241,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using relation with different locator types."""
         locator = Text("Sign in").below_of(
@@ -281,7 +255,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using description with relation."""
         locator = Prompt("Sign in button").below_of(Prompt("Password field"))
@@ -294,7 +267,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using description with relation."""
         locator = Prompt("Sign in button").below_of(
@@ -308,7 +280,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with relation."""
@@ -323,7 +294,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with relation."""
@@ -343,7 +313,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
         path_fixtures: pathlib.Path,
     ) -> None:
         """Test locating elements using image locator with complex relation."""
@@ -360,7 +329,6 @@ class TestVisionAgentLocateWithRelations:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test locating elements using an AI element locator with relation."""
         icon_locator = AiElement("github_com__icon")

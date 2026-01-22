@@ -101,8 +101,8 @@ class FallbackLocateModel(LocateModel):
                     i + 1,
                     len(self._models),
                 )
-                return result
-            except Exception as e:
+                return result  # noqa: TRY300
+            except Exception as e:  # noqa: BLE001, PERF203
                 logger.debug(
                     "Locate model %d/%d failed: %s",
                     i + 1,
@@ -176,11 +176,13 @@ class FallbackGetModel(GetModel):
         Args:
             query (str): The query describing what data to extract.
             source (Source): The source to extract data from.
-            response_schema (Type[ResponseSchema] | None): Optional schema for structured output.
+            response_schema (Type[ResponseSchema] | None): Optional schema for
+                structured output.
             get_settings (GetSettings): Settings for the get operation.
 
         Returns:
-            ResponseSchema | str: The extracted data, either as a string or structured schema.
+            ResponseSchema | str: The extracted data, either as a string or
+                structured schema.
 
         Raises:
             Exception: The exception from the last model if all models fail.
@@ -205,8 +207,8 @@ class FallbackGetModel(GetModel):
                     i + 1,
                     len(self._models),
                 )
-                return result
-            except Exception as e:
+                return result  # noqa: TRY300
+            except Exception as e:  # noqa: BLE001, PERF203
                 logger.debug(
                     "Get model %d/%d failed: %s",
                     i + 1,

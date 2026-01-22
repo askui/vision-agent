@@ -177,7 +177,10 @@ class OpenRouterModel(GetModel):
         get_settings: GetSettings,
     ) -> ResponseSchema | str:
         if isinstance(source, (PdfSource, OfficeDocumentSource)):
-            err_msg = "PDF or Office Document processing is not supported for OpenRouter model"
+            err_msg = (
+                "PDF or Office Document processing is not supported for "
+                "OpenRouter model"
+            )
             raise NotImplementedError(err_msg)
 
         # Use system prompt from settings if provided, otherwise use default

@@ -172,8 +172,8 @@ class AskUiComboLocateModel(AskUiBaseLocateModel):
         logger.debug("Using AskUI Combo locate model (PTA + OCR fallback)")
         if not isinstance(locator, str):
             error_msg = (
-                f"Locators of type `{type(locator)}` are not supported for Combo model. "
-                "Please provide a `str`."
+                f"Locators of type `{type(locator)}` are not supported for "
+                "Combo model. Please provide a `str`."
             )
             raise AutomationError(error_msg)
 
@@ -201,8 +201,8 @@ class AskUiAiElementLocateModel(AskUiBaseLocateModel):
         logger.debug("Using AskUI AI Element locate model")
         if not isinstance(locator, str):
             error_msg = (
-                f"Locators of type `{type(locator)}` are not supported for AI Element model. "
-                "Please provide a `str`."
+                f"Locators of type `{type(locator)}` are not supported for "
+                "AI Element model. Please provide a `str`."
             )
             raise AutomationError(error_msg)
         ai_element_locator = AiElement(locator)

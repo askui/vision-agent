@@ -19,7 +19,13 @@ from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
 )
-from askui.models.askui.models import AskUiLocateModel
+from askui.models.askui.models import (
+    AskUiAiElementLocateModel,
+    AskUiComboLocateModel,
+    AskUiLocateModel,
+    AskUiOcrLocateModel,
+    AskUiPtaLocateModel,
+)
 from askui.models.models import ActModel, GetModel, LocateModel, ModelName
 from askui.models.shared.agent import Agent
 from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
@@ -48,9 +54,7 @@ def simple_html_reporter() -> Reporter:
 
 
 @pytest.fixture
-def askui_act_model(
-    path_fixtures: pathlib.Path,
-) -> ActModel:
+def askui_act_model() -> ActModel:
     reporter = SimpleHtmlReporter()
     return Agent(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
@@ -71,6 +75,35 @@ def askui_get_model() -> GetModel:
 
 
 @pytest.fixture
+def gemini_flash_get_model() -> GetModel:
+    return AskUiGeminiGetModel(
+        model_id=ModelName.GEMINI__2_5__FLASH,
+        settings=AskUiInferenceApiSettings(),
+    )
+
+
+@pytest.fixture
+def gemini_pro_get_model() -> GetModel:
+    return AskUiGeminiGetModel(
+        model_id=ModelName.GEMINI__2_5__PRO,
+        settings=AskUiInferenceApiSettings(),
+    )
+
+
+@pytest.fixture
+def claude_get_model() -> GetModel:
+    return AnthropicModel(
+        model_id=ModelName.CLAUDE__SONNET__4__20250514,
+        settings=AnthropicModelSettings(),
+        messages_api=AnthropicMessagesApi(
+            client=create_api_client(api_provider="anthropic"),
+            locator_serializer=VlmLocatorSerializer(),
+        ),
+        locator_serializer=VlmLocatorSerializer(),
+    )
+
+
+@pytest.fixture
 def askui_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     reporter = SimpleHtmlReporter()
     locator_serializer = AskUiLocatorSerializer(
@@ -83,6 +116,78 @@ def askui_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
         settings=AskUiInferenceApiSettings(),
     )
     return AskUiLocateModel(
+        locator_serializer=locator_serializer,
+        inference_api=askui_inference_api,
+    )
+
+
+@pytest.fixture
+def pta_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    reporter = SimpleHtmlReporter()
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
+        ),
+        reporter=reporter,
+    )
+    askui_inference_api = AskUiInferenceApi(
+        settings=AskUiInferenceApiSettings(),
+    )
+    return AskUiPtaLocateModel(
+        locator_serializer=locator_serializer,
+        inference_api=askui_inference_api,
+    )
+
+
+@pytest.fixture
+def ocr_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    reporter = SimpleHtmlReporter()
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
+        ),
+        reporter=reporter,
+    )
+    askui_inference_api = AskUiInferenceApi(
+        settings=AskUiInferenceApiSettings(),
+    )
+    return AskUiOcrLocateModel(
+        locator_serializer=locator_serializer,
+        inference_api=askui_inference_api,
+    )
+
+
+@pytest.fixture
+def ai_element_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    reporter = SimpleHtmlReporter()
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
+        ),
+        reporter=reporter,
+    )
+    askui_inference_api = AskUiInferenceApi(
+        settings=AskUiInferenceApiSettings(),
+    )
+    return AskUiAiElementLocateModel(
+        locator_serializer=locator_serializer,
+        inference_api=askui_inference_api,
+    )
+
+
+@pytest.fixture
+def combo_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    reporter = SimpleHtmlReporter()
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
+        ),
+        reporter=reporter,
+    )
+    askui_inference_api = AskUiInferenceApi(
+        settings=AskUiInferenceApiSettings(),
+    )
+    return AskUiComboLocateModel(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
