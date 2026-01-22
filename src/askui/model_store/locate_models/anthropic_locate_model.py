@@ -40,7 +40,7 @@ class AnthropicLocateModel(LocateModel):
         self._messages_api = messages_api
         self._locator_serializer = locator_serializer
 
-    def _validate_content(self, content: list[ContentBlockParam]) -> None:
+    def _validate_content(self, content: list[ContentBlockParam]) -> TextBlockParam:
         """Validate that content is a single text block.
 
         Args:
@@ -52,6 +52,7 @@ class AnthropicLocateModel(LocateModel):
         if len(content) != 1 or content[0].type != "text":
             error_msg = "Unexpected response from Anthropic API"
             raise UnexpectedResponseError(error_msg, content)
+        return content[0]
 
     @override
     def locate(
@@ -85,11 +86,10 @@ class AnthropicLocateModel(LocateModel):
                 if isinstance(message.content, list)
                 else [TextBlockParam(text=message.content)]
             )
-            self._validate_content(content)
-            content_text = content[0].text
+            content_text = self._validate_content(content)
             return [
                 scale_coordinates(
-                    extract_click_coordinates(content_text),
+                    extract_click_coordinates(content_text.text),
                     image.root.size,
                     self._settings.resolution,
                     inverse=True,

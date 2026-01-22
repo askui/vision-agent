@@ -2,7 +2,6 @@ from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
 
-from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
