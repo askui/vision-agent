@@ -7,7 +7,13 @@ from pydantic import BaseModel, RootModel
 from pytest_mock import MockerFixture
 
 from askui import ResponseSchemaBase, VisionAgent
+from askui.locators.serializers import VlmLocatorSerializer
 from askui.models import ModelName
+from askui.models.anthropic.factory import create_api_client
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
+from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
+from askui.models.askui.gemini_get_model import AskUiGeminiGetModel
+from askui.models.askui.inference_api import AskUiInferenceApiSettings
 from askui.models.models import GetModel
 from askui.reporting import Reporter
 from askui.tools.toolbox import AgentToolbox
@@ -27,21 +33,53 @@ class BrowserContextResponse(ResponseSchemaBase):
 
 
 @pytest.mark.parametrize(
-    "model",
+    "get_model",
     [
-        None,
-        ModelName.ASKUI,
-        ModelName.ASKUI__GEMINI__2_5__FLASH,
-        ModelName.ASKUI__GEMINI__2_5__PRO,
-        ModelName.CLAUDE__SONNET__4__20250514,
+        pytest.param(None, id="default"),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
+        pytest.param(
+            AnthropicModel(
+                model_id=ModelName.CLAUDE__SONNET__4__20250514,
+                settings=AnthropicModelSettings(),
+                messages_api=AnthropicMessagesApi(
+                    client=create_api_client(api_provider="anthropic"),
+                    locator_serializer=VlmLocatorSerializer(),
+                ),
+                locator_serializer=VlmLocatorSerializer(),
+            ),
+            id="claude",
+        ),
     ],
 )
 def test_get(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel | None,
 ) -> None:
     url = vision_agent.get(
         "What is the current url shown in the url bar?\nUrl: ",
         source=github_login_screenshot,
+        get_model=get_model,
     )
     assert url in ["github.com/login", "https://github.com/login"]
 
@@ -54,38 +92,70 @@ def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
 
 
 @pytest.mark.parametrize(
-    "model",
+    "get_model",
     [
-        ModelName.ASKUI__GEMINI__2_5__FLASH,
-        ModelName.ASKUI__GEMINI__2_5__PRO,
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
     ],
 )
 def test_get_with_pdf_with_gemini_model(
-    vision_agent: VisionAgent, model: str, path_fixtures_dummy_pdf: pathlib.Path
+    vision_agent: VisionAgent,
+    get_model: GetModel,
+    path_fixtures_dummy_pdf: pathlib.Path,
 ) -> None:
     response = vision_agent.get(
-        "What is in the PDF? explain in 1 sentence", source=path_fixtures_dummy_pdf
+        "What is in the PDF? explain in 1 sentence",
+        source=path_fixtures_dummy_pdf,
+        get_model=get_model,
     )
     assert isinstance(response, str)
     assert "is a test " in response.lower()
 
 
 @pytest.mark.parametrize(
-    "model",
+    "get_model",
     [
-        ModelName.ASKUI__GEMINI__2_5__FLASH,
-        ModelName.ASKUI__GEMINI__2_5__PRO,
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
     ],
 )
 def test_get_with_pdf_too_large(
     vision_agent: VisionAgent,
-    model: str,
+    get_model: GetModel,
     path_fixtures_dummy_pdf: pathlib.Path,
     mocker: MockerFixture,
 ) -> None:
     mocker.patch("askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES", 1)
     with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
-        vision_agent.get("What is in the PDF?", source=path_fixtures_dummy_pdf)
+        vision_agent.get(
+            "What is in the PDF?",
+            source=path_fixtures_dummy_pdf,
+            get_model=get_model,
+        )
 
 
 def test_get_with_pdf_too_large_with_default_model(
@@ -109,17 +179,33 @@ def test_get_with_xlsx_with_non_gemini_model_raises_not_implemented(
 
 
 @pytest.mark.parametrize(
-    "model",
+    "get_model",
     [
-        ModelName.ASKUI__GEMINI__2_5__FLASH,
-        ModelName.ASKUI__GEMINI__2_5__PRO,
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
     ],
 )
 def test_get_with_xlsx_with_gemini_model(
-    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+    vision_agent: VisionAgent,
+    get_model: GetModel,
+    path_fixtures_dummy_excel: pathlib.Path,
 ) -> None:
     response = vision_agent.get(
-        "What is the salary of Doe?", source=path_fixtures_dummy_excel
+        "What is the salary of Doe?",
+        source=path_fixtures_dummy_excel,
+        get_model=get_model,
     )
     assert isinstance(response, str)
     assert "20000" in response.lower()
@@ -135,19 +221,34 @@ class SalaryResponse(ResponseSchemaBase):
 
 
 @pytest.mark.parametrize(
-    "model",
+    "get_model",
     [
-        ModelName.ASKUI__GEMINI__2_5__FLASH,
-        ModelName.ASKUI__GEMINI__2_5__PRO,
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
     ],
 )
 def test_get_with_xlsx_with_gemini_model_with_response_schema(
-    vision_agent: VisionAgent, model: str, path_fixtures_dummy_excel: pathlib.Path
+    vision_agent: VisionAgent,
+    get_model: GetModel,
+    path_fixtures_dummy_excel: pathlib.Path,
 ) -> None:
     response = vision_agent.get(
         "What is the salary of Everyone?",
         source=path_fixtures_dummy_excel,
         response_schema=SalaryResponse,
+        get_model=get_model,
     )
     assert isinstance(response, SalaryResponse)
     # sort salaries by name for easier assertion
@@ -228,14 +329,29 @@ def test_get_with_response_schema_with_default_value(
     assert "github.com" in response.url
 
 
-@pytest.mark.parametrize("model", [None, ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(None, id="default"),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_response_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel | None,
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
         source=github_login_screenshot,
         response_schema=UrlResponse,
+        get_model=get_model,
     )
     assert isinstance(response, UrlResponse)
     assert response.url in ["https://github.com/login", "github.com/login"]
@@ -252,14 +368,28 @@ def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
         )
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_nested_and_inherited_response_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "What is the current browser context?",
         source=github_login_screenshot,
         response_schema=BrowserContextResponse,
+        get_model=get_model,
     )
     assert isinstance(response, BrowserContextResponse)
     assert response.page_context.url in ["https://github.com/login", "github.com/login"]
@@ -272,15 +402,29 @@ class LinkedListNode(ResponseSchemaBase):
     next: "LinkedListNode | None"
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_recursive_response_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "Can you extract all segments (domain, path etc.) from the url as a linked list, "
         "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
         source=github_login_screenshot,
         response_schema=LinkedListNode,
+        get_model=get_model,
     )
     assert isinstance(response, LinkedListNode)
     assert response.value == "github.com"
@@ -293,63 +437,141 @@ def test_get_with_recursive_response_schema(
     )
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_string_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "What is the current url shown in the url bar?",
         source=github_login_screenshot,
         response_schema=str,
+        get_model=get_model,
     )
     assert response in ["https://github.com/login", "github.com/login"]
 
 
 @pytest.mark.parametrize(
-    "model", [ModelName.ASKUI, ModelName.ASKUI__GEMINI__2_5__FLASH]
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_flash",
+        ),
+    ],
 )
 def test_get_with_boolean_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
-        "Is this a login page?", source=github_login_screenshot, response_schema=bool
+        "Is this a login page?",
+        source=github_login_screenshot,
+        response_schema=bool,
+        get_model=get_model,
     )
     assert isinstance(response, bool)
     assert response is True
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_integer_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "How many input fields are visible on this page?",
         source=github_login_screenshot,
         response_schema=int,
+        get_model=get_model,
     )
     assert isinstance(response, int)
     assert response > 0
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_float_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "Return a floating point number between 0 and 1 as a rating for how you well this page is designed (0 is the worst, 1 is the best)",
         source=github_login_screenshot,
         response_schema=float,
+        get_model=get_model,
     )
     assert isinstance(response, float)
     assert response > 0
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_returns_str_when_no_schema_specified(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
-        "What is the display showing?", source=github_login_screenshot
+        "What is the display showing?",
+        source=github_login_screenshot,
+        get_model=get_model,
     )
     assert isinstance(response, str)
 
@@ -358,14 +580,28 @@ class Basis(ResponseSchemaBase):
     answer: str
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_basis_schema(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
         source=github_login_screenshot,
         response_schema=Basis,
+        get_model=get_model,
     )
     assert isinstance(response, Basis)
     assert isinstance(response.answer, str)
@@ -379,14 +615,28 @@ class BasisWithNestedRootModel(ResponseSchemaBase):
     answer: RootModel[Answer]
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__FLASH,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="askui",
+        ),
+    ],
+)
 def test_get_with_nested_root_model(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     response = vision_agent.get(
         "What is the display showing?",
         source=github_login_screenshot,
         response_schema=BasisWithNestedRootModel,
+        get_model=get_model,
     )
     assert isinstance(response, BasisWithNestedRootModel)
     assert isinstance(response.answer.root.answer, str)
@@ -419,9 +669,22 @@ class PageDom(ResponseSchemaBase):
     children: list[PageDomElementLevel1]
 
 
-@pytest.mark.parametrize("model", [ModelName.ASKUI__GEMINI__2_5__PRO])
+@pytest.mark.parametrize(
+    "get_model",
+    [
+        pytest.param(
+            AskUiGeminiGetModel(
+                model_id=ModelName.GEMINI__2_5__PRO,
+                settings=AskUiInferenceApiSettings(),
+            ),
+            id="gemini_pro",
+        ),
+    ],
+)
 def test_get_with_deeply_nested_response_schema_with_model_that_does_not_support_recursion(
-    vision_agent: VisionAgent, github_login_screenshot: PILImage.Image, model: str
+    vision_agent: VisionAgent,
+    github_login_screenshot: PILImage.Image,
+    get_model: GetModel,
 ) -> None:
     """Test for deeply nested structure with 4 levels of nesting.
 
@@ -432,5 +695,6 @@ def test_get_with_deeply_nested_response_schema_with_model_that_does_not_support
         "Create a possible dom of the page that goes 4 levels deep",
         source=github_login_screenshot,
         response_schema=PageDom,
+        get_model=get_model,
     )
     assert isinstance(response, PageDom)
