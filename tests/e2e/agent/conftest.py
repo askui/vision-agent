@@ -22,7 +22,6 @@ from askui.model_store.locate_models import (
 )
 from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.anthropic.settings import AnthropicModelSettings
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
@@ -70,7 +69,7 @@ def askui_act_model() -> ActModel:
 def askui_get_model() -> GetModel:
     return AskUiGeminiGetModel(
         model_id=ModelName.GEMINI__2_5__FLASH,
-        settings=AskUiInferenceApiSettings(),
+        inference_api_settings=AskUiInferenceApiSettings(),
     )
 
 
@@ -78,7 +77,7 @@ def askui_get_model() -> GetModel:
 def gemini_flash_get_model() -> GetModel:
     return AskUiGeminiGetModel(
         model_id=ModelName.GEMINI__2_5__FLASH,
-        settings=AskUiInferenceApiSettings(),
+        inference_api_settings=AskUiInferenceApiSettings(),
     )
 
 
@@ -86,7 +85,7 @@ def gemini_flash_get_model() -> GetModel:
 def gemini_pro_get_model() -> GetModel:
     return AskUiGeminiGetModel(
         model_id=ModelName.GEMINI__2_5__PRO,
-        settings=AskUiInferenceApiSettings(),
+        inference_api_settings=AskUiInferenceApiSettings(),
     )
 
 
@@ -94,7 +93,6 @@ def gemini_pro_get_model() -> GetModel:
 def claude_get_model() -> GetModel:
     return AnthropicGetModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
-        settings=AnthropicModelSettings(),
         messages_api=AnthropicMessagesApi(
             client=create_api_client(api_provider="anthropic"),
         ),
@@ -218,7 +216,6 @@ def anthropic_get_model(api_provider: AnthropicApiProvider) -> GetModel:
     messages_api = anthropic_messages_api(api_provider)
     return AnthropicGetModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
-        settings=AnthropicModelSettings(),
         messages_api=messages_api,
     )
 
@@ -228,7 +225,6 @@ def anthropic_locate_model(api_provider: AnthropicApiProvider) -> LocateModel:
     messages_api = anthropic_messages_api(api_provider)
     return AnthropicLocateModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
-        settings=AnthropicModelSettings(),
         messages_api=messages_api,
         locator_serializer=vlm_locator_serializer(),
     )

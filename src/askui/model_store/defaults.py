@@ -73,7 +73,7 @@ def default_get_model() -> GetModel:
     """
     return AskUiGeminiGetModel(
         model_id=ModelName.GEMINI__2_5__FLASH,
-        settings=_get_askui_inference_api_settings(),
+        inference_api_settings=AskUiInferenceApiSettings(),
     )
 
 

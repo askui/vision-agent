@@ -5,10 +5,7 @@ from typing_extensions import override
 from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.anthropic.messages_api import built_messages_for_get_and_locate
-from askui.models.anthropic.settings import (
-    AnthropicModelSettings,
-    UnexpectedResponseError,
-)
+from askui.models.anthropic.settings import UnexpectedResponseError
 from askui.models.anthropic.utils import extract_click_coordinates
 from askui.models.exceptions import ElementNotFoundError
 from askui.models.models import LocateModel
@@ -28,17 +25,31 @@ from askui.utils.image_utils import (
 
 
 class AnthropicLocateModel(LocateModel):
+    """LocateModel implementation for Anthropic Claude models.
+
+    Args:
+        model_id (str): The model identifier (e.g., "claude-sonnet-4-20250514").
+        messages_api (MessagesApi): The messages API for creating messages.
+        locator_serializer (VlmLocatorSerializer): Serializer for locators.
+        locate_settings (LocateSettings | None, optional): Default settings for
+            locate operations. If None, uses default LocateSettings().
+            Can be overridden per-call.
+    """
+
+    # Provider-specific configuration
+    DEFAULT_RESOLUTION: tuple[int, int] = (1280, 800)
+
     def __init__(
         self,
         model_id: str,
-        settings: AnthropicModelSettings,
         messages_api: MessagesApi,
         locator_serializer: VlmLocatorSerializer,
+        locate_settings: LocateSettings | None = None,
     ) -> None:
         self._model_id = model_id
-        self._settings = settings
         self._messages_api = messages_api
         self._locator_serializer = locator_serializer
+        self._locate_settings = locate_settings or LocateSettings()
 
     def _validate_content(self, content: list[ContentBlockParam]) -> TextBlockParam:
         """Validate that content is a single text block.
@@ -68,11 +79,11 @@ class AnthropicLocateModel(LocateModel):
         )
         try:
             prompt = f"Click on {locator_serialized}"
-            screen_width = self._settings.resolution[0]
-            screen_height = self._settings.resolution[1]
+            screen_width = self.DEFAULT_RESOLUTION[0]
+            screen_height = self.DEFAULT_RESOLUTION[1]
             scaled_image = scale_image_to_fit(
                 image.root,
-                self._settings.resolution,
+                self.DEFAULT_RESOLUTION,
             )
             messages = built_messages_for_get_and_locate(scaled_image, prompt)
             system = build_system_prompt_locate(str(screen_width), str(screen_height))
@@ -91,7 +102,7 @@ class AnthropicLocateModel(LocateModel):
                 scale_coordinates(
                     extract_click_coordinates(content_text.text),
                     image.root.size,
-                    self._settings.resolution,
+                    self.DEFAULT_RESOLUTION,
                     inverse=True,
                 )
             ]

@@ -37,22 +37,34 @@ def _is_retryable_error(exception: BaseException) -> bool:
 
 
 class AskUiGeminiGetModel(GetModel):
-    """GetModel implementation using Google Gemini API (via AskUI proxy)."""
+    """GetModel implementation using Google Gemini API (via AskUI proxy).
+
+    Args:
+        model_id (str): The model identifier (default: GEMINI__2_5__FLASH).
+        inference_api_settings (AskUiInferenceApiSettings | None, optional):
+            API configuration for connecting to AskUI inference API.
+            If None, uses default settings.
+        get_settings (GetSettings | None, optional): Default settings for
+            get operations. If None, uses default GetSettings().
+            Can be overridden per-call.
+    """
 
     def __init__(
         self,
         model_id: str = ModelName.GEMINI__2_5__FLASH,
-        settings: AskUiInferenceApiSettings | None = None,
+        inference_api_settings: AskUiInferenceApiSettings | None = None,
+        get_settings: GetSettings | None = None,
     ) -> None:
         self._model_id = model_id
-        self._settings = settings or AskUiInferenceApiSettings()
+        self._get_settings = get_settings or GetSettings()
+        _api_settings = inference_api_settings or AskUiInferenceApiSettings()
         self._client = genai.Client(
             vertexai=True,
             api_key="DummyValueRequiredByGenaiClient",
             http_options=genai_types.HttpOptions(
-                base_url=f"{self._settings.base_url}/proxy/vertexai",
+                base_url=f"{_api_settings.base_url}/proxy/vertexai",
                 headers={
-                    "Authorization": self._settings.authorization_header,
+                    "Authorization": _api_settings.authorization_header,
                 },
             ),
         )

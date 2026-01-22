@@ -3,10 +3,7 @@ from typing import Type
 from typing_extensions import override
 
 from askui.models.anthropic.messages_api import built_messages_for_get_and_locate
-from askui.models.anthropic.settings import (
-    AnthropicModelSettings,
-    UnexpectedResponseError,
-)
+from askui.models.anthropic.settings import UnexpectedResponseError
 from askui.models.exceptions import (
     QueryNoResponseError,
     QueryUnexpectedResponseError,
@@ -27,12 +24,28 @@ from askui.utils.source_utils import Source
 
 
 class AnthropicGetModel(GetModel):
+    """GetModel implementation for Anthropic Claude models.
+
+    Args:
+        model_id (str): The model identifier (e.g., "claude-sonnet-4-20250514").
+        messages_api (MessagesApi): The messages API for creating messages.
+        get_settings (GetSettings | None, optional): Default settings for
+            get operations. If None, uses default GetSettings().
+            Can be overridden per-call.
+    """
+
+    # Provider-specific configuration
+    DEFAULT_RESOLUTION: tuple[int, int] = (1280, 800)
+
     def __init__(
-        self, model_id: str, settings: AnthropicModelSettings, messages_api: MessagesApi
+        self,
+        model_id: str,
+        messages_api: MessagesApi,
+        get_settings: GetSettings | None = None,
     ) -> None:
         self._model_id = model_id
-        self._settings = settings
         self._messages_api = messages_api
+        self._get_settings = get_settings or GetSettings()
 
     def _validate_content(self, content: list[ContentBlockParam]) -> TextBlockParam:
         """Validate that content is a single text block.
@@ -68,7 +81,7 @@ class AnthropicGetModel(GetModel):
                 raise NotImplementedError(error_msg)
             scaled_image = scale_image_to_fit(
                 source.root,
-                self._settings.resolution,
+                self.DEFAULT_RESOLUTION,
             )
             messages = built_messages_for_get_and_locate(scaled_image, query)
             message = self._messages_api.create_message(
