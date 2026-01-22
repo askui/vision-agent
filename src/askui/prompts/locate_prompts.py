@@ -20,3 +20,12 @@ def build_system_prompt_locate(
             "- Do not include any explanation or additional text."
         )
     )
+
+
+QWEN2_PROMPT = (
+    "You are a helpfull assistant to detect objects in images. When asked to detect "
+    "elements based on a description you return bounding boxes for all elements in "
+    "the form of [xmin, ymin, xmax, ymax] whith the values beeing scaled to 1000 by "
+    "1000 pixels. When there are more than one result, answer with a list of bounding "
+    "boxes in the form of [[xmin, ymin, xmax, ymax], [xmin, ymin, xmax, ymax], ...]."
+)

@@ -34,6 +34,19 @@ class AnthropicGetModel(GetModel):
         self._settings = settings
         self._messages_api = messages_api
 
+    def _validate_content(self, content: list[ContentBlockParam]) -> None:
+        """Validate that content is a single text block.
+
+        Args:
+            content (list[ContentBlockParam]): The content to validate
+
+        Raises:
+            UnexpectedResponseError: If content is not a single text block
+        """
+        if len(content) != 1 or content[0].type != "text":
+            error_msg = "Unexpected response from Anthropic API"
+            raise UnexpectedResponseError(error_msg, content)
+
     @override
     def get(
         self,
@@ -67,9 +80,7 @@ class AnthropicGetModel(GetModel):
                 if isinstance(message.content, list)
                 else [TextBlockParam(text=message.content)]
             )
-            if len(content) != 1 or content[0].type != "text":
-                error_msg = "Unexpected response from Anthropic API"
-                raise UnexpectedResponseError(error_msg, content)
+            self._validate_content(content)
             return content[0].text
         except UnexpectedResponseError as e:
             if len(e.content) == 0:

@@ -7,7 +7,6 @@ from pydantic import BaseModel, RootModel
 from pytest_mock import MockerFixture
 
 from askui import ResponseSchemaBase, VisionAgent
-from askui.locators.serializers import VlmLocatorSerializer
 from askui.model_store.get_models import AnthropicGetModel
 from askui.model_store.get_models.gemini_get_model import AskUiGeminiGetModel
 from askui.models import ModelName
@@ -64,9 +63,7 @@ class BrowserContextResponse(ResponseSchemaBase):
                 settings=AnthropicModelSettings(),
                 messages_api=AnthropicMessagesApi(
                     client=create_api_client(api_provider="anthropic"),
-                    locator_serializer=VlmLocatorSerializer(),
                 ),
-                locator_serializer=VlmLocatorSerializer(),
             ),
             id="claude",
         ),

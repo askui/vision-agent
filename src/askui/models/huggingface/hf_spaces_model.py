@@ -12,6 +12,7 @@ from askui.locators.locators import Locator
 from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.models import LocateModel, LocateSettings, ModelName
 from askui.models.types.geometry import PointList
+from askui.prompts.locate_prompts import QWEN2_PROMPT
 from askui.utils.image_utils import ImageSource
 
 
@@ -133,7 +134,7 @@ class HFSpacesHandler(LocateModel):
         self, screenshot: Image.Image, locator: str, model_name: str | None = None
     ) -> tuple[int, int]:
         client = self.get_space_client("maxiw/Qwen2-VL-Detection")
-        system_prompt = "You are a helpfull assistant to detect objects in images. When asked to detect elements based on a description you return bounding boxes for all elements in the form of [xmin, ymin, xmax, ymax] whith the values beeing scaled to 1000 by 1000 pixels. When there are more than one result, answer with a list of bounding boxes in the form of [[xmin, ymin, xmax, ymax], [xmin, ymin, xmax, ymax], ...]."
+        system_prompt = QWEN2_PROMPT
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
             screenshot.save(temp_file, format="PNG")
             temp_file_path = temp_file.name
