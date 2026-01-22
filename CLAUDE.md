@@ -122,7 +122,6 @@ models.register("my-model", custom_model_instance)
 - **Anthropic Claude** (Computer Use, Messages API)
 - **Google Gemini** (via OpenRouter)
 - **Hugging Face Spaces** (Community models)
-- **UI-TARS** (Custom model provider)
 
 ### Agent OS Abstraction
 

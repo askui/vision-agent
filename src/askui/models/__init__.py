@@ -4,8 +4,6 @@ from .models import (
     GetModel,
     LocateModel,
     Model,
-    ModelComposition,
-    ModelDefinition,
     ModelName,
 )
 from .openrouter.model import OpenRouterModel
@@ -44,8 +42,6 @@ __all__ = [
     "LocateModel",
     "MessageParam",
     "Model",
-    "ModelComposition",
-    "ModelDefinition",
     "ModelName",
     "OnMessageCb",
     "OnMessageCbParam",

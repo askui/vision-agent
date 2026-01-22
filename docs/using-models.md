@@ -9,7 +9,7 @@ This guide covers all the AI models available in AskUI Vision Agent, their capab
 - [When to select a different model](#when-to-select-a-different-model)
 - [How to select a model](#how-to-select-a-model)
 - [AskUI models](#askui-models)
-- [Other models and providers: Anthropic, OpenRouter, Huggingface, UI-TARS](#other-models-and-providers-anthropic-openrouter-huggingface-ui-tars)
+- [Other models and providers: Anthropic, OpenRouter, Huggingface](#other-models-and-providers-anthropic-openrouter-huggingface)
 - [Your own custom models](#your-own-custom-models)
 - [Model providers](#model-providers)
 
@@ -19,7 +19,7 @@ The default model is `askui` which is a combination of all kinds of models hoste
 
 But there are cases where you might want to have more control and rather
 - use a specific AskUI-hosted model,
-- try out a new model released by another provider, e.g., Anthropic, OpenRouter, Huggingface, UI-TARS, etc. or
+- try out a new model released by another provider, e.g., Anthropic, OpenRouter, Huggingface, etc. or
 - use your own model.
 
 ## How to select a model
@@ -75,7 +75,7 @@ export ASKUI_WORKSPACE_ID=<your-workspace-id-here>
 export ASKUI_TOKEN=<your-token-here>
 ```
 
-## Other models and providers: Anthropic, OpenRouter, Huggingface, UI-TARS
+## Other models and providers: Anthropic, OpenRouter, Huggingface
 
 **Note:** These models rely on community support and may have varying levels of integration. We welcome and appreciate community contributions to improve their support!
 
@@ -169,37 +169,6 @@ with VisionAgent() as agent:
 ```
 
 **Note:** Hugging Face Spaces host model demos provided by individuals not associated with Hugging Face or AskUI. Don't use these models on screens with sensitive information.
-
-### UI-TARS
-
-You need to host UI-TARS yourself. More information about hosting can be found [here](https://github.com/bytedance/UI-TARS).
-
-#### Model Card
-
-| Model Name | Strengths | Execution Speed | Reliability |
-|------------|-----------|----------------|-------------|
-| `tars` | Good for autonomous goal achievement | Slow, >1s per step | **Medium** - Out-of-the-box not recommended for production |
-
-#### Configuration
-
-**Environment Variables:**
-```shell
-export TARS_URL=<your-tars-endpoint>
-export TARS_API_KEY=<your-tars-api-key>
-export TARS_MODEL_NAME=<your-model-name>
-```
-
-**Example Usage:**
-```python
-from askui import VisionAgent
-
-with VisionAgent(model="tars") as agent:
-    agent.click("Submit button")  # Uses TARS automatically
-    agent.get("What's on screen?")  # Uses TARS automatically
-    agent.act("Search for flights")  # Uses TARS automatically
-```
-
-**Note:** You need to host UI-TARS yourself. More information about hosting can be found [here](https://github.com/bytedance/UI-TARS?tab=readme-ov-file#deployment).
 
 ## Your own custom models
 
