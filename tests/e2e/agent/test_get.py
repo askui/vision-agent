@@ -8,11 +8,12 @@ from pytest_mock import MockerFixture
 
 from askui import ResponseSchemaBase, VisionAgent
 from askui.locators.serializers import VlmLocatorSerializer
+from askui.model_store.get_models import AnthropicGetModel
+from askui.model_store.get_models.gemini_get_model import AskUiGeminiGetModel
 from askui.models import ModelName
 from askui.models.anthropic.factory import create_api_client
 from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
-from askui.models.askui.gemini_get_model import AskUiGeminiGetModel
+from askui.models.anthropic.settings import AnthropicModelSettings
 from askui.models.askui.inference_api import AskUiInferenceApiSettings
 from askui.models.models import GetModel
 from askui.reporting import Reporter
@@ -58,7 +59,7 @@ class BrowserContextResponse(ResponseSchemaBase):
             id="gemini_pro",
         ),
         pytest.param(
-            AnthropicModel(
+            AnthropicGetModel(
                 model_id=ModelName.CLAUDE__SONNET__4__20250514,
                 settings=AnthropicModelSettings(),
                 messages_api=AnthropicMessagesApi(

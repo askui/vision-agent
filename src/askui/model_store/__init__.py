@@ -25,13 +25,13 @@ Example:
 
 from typing import Any, Callable
 
-from askui.models.defaults import (
+from askui.model_store.defaults import (
     default_act_model as create_askui_act_model,
 )
-from askui.models.defaults import (
+from askui.model_store.defaults import (
     default_get_model as create_askui_get_model,
 )
-from askui.models.defaults import (
+from askui.model_store.defaults import (
     default_locate_model as create_askui_locate_model,
 )
 from askui.models.models import ActModel, GetModel, LocateModel

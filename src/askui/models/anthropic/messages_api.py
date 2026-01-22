@@ -15,23 +15,28 @@ from anthropic.types.beta import (
     BetaToolChoiceParam,
     BetaToolUnionParam,
 )
+from PIL.Image import Image
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 from typing_extensions import override
 
-from askui.locators.serializers import VlmLocatorSerializer
 from askui.models.anthropic.factory import AnthropicApiClient
 from askui.models.askui.retry_utils import (
     RETRYABLE_HTTP_STATUS_CODES,
     wait_for_retry_after_header,
 )
 from askui.models.shared.agent_message_param import (
+    Base64ImageSourceParam,
+    ContentBlockParam,
+    ImageBlockParam,
     MessageParam,
+    TextBlockParam,
     ThinkingConfigParam,
     ToolChoiceParam,
 )
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
+from askui.utils.image_utils import image_to_base64
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -39,6 +44,30 @@ def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, APIStatusError):
         return exception.status_code in RETRYABLE_HTTP_STATUS_CODES
     return isinstance(exception, (APIConnectionError, APITimeoutError, APIError))
+
+
+def built_messages_for_get_and_locate(
+    scaled_image: Image, prompt: str
+) -> list[MessageParam]:
+    return [
+        MessageParam(
+            role="user",
+            content=cast(
+                "list[ContentBlockParam]",
+                [
+                    ImageBlockParam(
+                        source=Base64ImageSourceParam(
+                            data=image_to_base64(scaled_image),
+                            media_type="image/png",
+                        ),
+                    ),
+                    TextBlockParam(
+                        text=prompt,
+                    ),
+                ],
+            ),
+        )
+    ]
 
 
 def _parse_to_anthropic_types(
@@ -86,10 +115,8 @@ class AnthropicMessagesApi(MessagesApi):
     def __init__(
         self,
         client: AnthropicApiClient,
-        locator_serializer: VlmLocatorSerializer,
     ) -> None:
         self._client = client
-        self._locator_serializer = locator_serializer
 
     @retry(
         stop=stop_after_attempt(4),  # 3 retries

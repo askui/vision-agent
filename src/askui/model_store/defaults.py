@@ -7,13 +7,13 @@ These are used by AgentBase when no custom models are provided.
 from functools import cache
 
 from askui.locators.serializers import AskUiLocatorSerializer
+from askui.model_store.act_models.agent import AskUIAgent
+from askui.model_store.get_models.gemini_get_model import AskUiGeminiGetModel
+from askui.model_store.locate_models import AskUiLocateModel
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.gemini_get_model import AskUiGeminiGetModel
 from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
-from askui.models.askui.models import AskUiLocateModel
 from askui.models.models import ActModel, GetModel, LocateModel, ModelName
-from askui.models.shared.agent import Agent
 from askui.reporting import NULL_REPORTER
 
 
@@ -48,18 +48,15 @@ def default_act_model() -> ActModel:
     Returns:
         ActModel: Default ActModel instance using Claude Sonnet 4.
     """
-    from askui.locators.serializers import VlmLocatorSerializer
     from askui.models.anthropic.factory import create_api_client
     from askui.models.anthropic.messages_api import AnthropicMessagesApi
 
     client = create_api_client(api_provider="askui")
-    locator_serializer = VlmLocatorSerializer()
     messages_api = AnthropicMessagesApi(
         client=client,
-        locator_serializer=locator_serializer,
     )
 
-    return Agent(
+    return AskUIAgent(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         messages_api=messages_api,
     )

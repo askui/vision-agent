@@ -3,7 +3,7 @@ from typing import Annotated
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
-from askui.models.defaults import default_act_model
+from askui.model_store.defaults import default_act_model
 from askui.models.models import ActModel
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb

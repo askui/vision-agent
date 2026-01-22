@@ -10,24 +10,25 @@ from typing_extensions import override
 
 from askui.agent import VisionAgent
 from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
-from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
-from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.gemini_get_model import AskUiGeminiGetModel
-from askui.models.askui.inference_api import (
-    AskUiInferenceApi,
-    AskUiInferenceApiSettings,
-)
-from askui.models.askui.models import (
+from askui.model_store.act_models.agent import AskUIAgent
+from askui.model_store.get_models import AnthropicGetModel, AskUiGeminiGetModel
+from askui.model_store.locate_models import (
+    AnthropicLocateModel,
     AskUiAiElementLocateModel,
     AskUiComboLocateModel,
     AskUiLocateModel,
     AskUiOcrLocateModel,
     AskUiPtaLocateModel,
 )
+from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
+from askui.models.anthropic.settings import AnthropicModelSettings
+from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.inference_api import (
+    AskUiInferenceApi,
+    AskUiInferenceApiSettings,
+)
 from askui.models.models import ActModel, GetModel, LocateModel, ModelName
-from askui.models.shared.agent import Agent
 from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.annotated_image import AnnotatedImage
@@ -56,11 +57,10 @@ def simple_html_reporter() -> Reporter:
 @pytest.fixture
 def askui_act_model() -> ActModel:
     reporter = SimpleHtmlReporter()
-    return Agent(
+    return AskUIAgent(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         messages_api=AnthropicMessagesApi(
-            client=create_api_client(api_provider="askui"),
-            locator_serializer=VlmLocatorSerializer(),
+            client=create_api_client(api_provider="askui")
         ),
         reporter=reporter,
     )
@@ -92,14 +92,12 @@ def gemini_pro_get_model() -> GetModel:
 
 @pytest.fixture
 def claude_get_model() -> GetModel:
-    return AnthropicModel(
+    return AnthropicGetModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         settings=AnthropicModelSettings(),
         messages_api=AnthropicMessagesApi(
             client=create_api_client(api_provider="anthropic"),
-            locator_serializer=VlmLocatorSerializer(),
         ),
-        locator_serializer=VlmLocatorSerializer(),
     )
 
 
@@ -202,16 +200,13 @@ def vlm_locator_serializer() -> VlmLocatorSerializer:
 def anthropic_messages_api(
     api_provider: AnthropicApiProvider,
 ) -> AnthropicMessagesApi:
-    return AnthropicMessagesApi(
-        client=create_api_client(api_provider=api_provider),
-        locator_serializer=vlm_locator_serializer(),
-    )
+    return AnthropicMessagesApi(client=create_api_client(api_provider=api_provider))
 
 
 @functools.cache
 def anthropic_act_model(api_provider: AnthropicApiProvider) -> ActModel:
     messages_api = anthropic_messages_api(api_provider)
-    return Agent(
+    return AskUIAgent(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         messages_api=messages_api,
         reporter=NULL_REPORTER,
@@ -221,18 +216,17 @@ def anthropic_act_model(api_provider: AnthropicApiProvider) -> ActModel:
 @functools.cache
 def anthropic_get_model(api_provider: AnthropicApiProvider) -> GetModel:
     messages_api = anthropic_messages_api(api_provider)
-    return AnthropicModel(
+    return AnthropicGetModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         settings=AnthropicModelSettings(),
         messages_api=messages_api,
-        locator_serializer=vlm_locator_serializer(),
     )
 
 
 @functools.cache
 def anthropic_locate_model(api_provider: AnthropicApiProvider) -> LocateModel:
     messages_api = anthropic_messages_api(api_provider)
-    return AnthropicModel(
+    return AnthropicLocateModel(
         model_id=ModelName.CLAUDE__SONNET__4__20250514,
         settings=AnthropicModelSettings(),
         messages_api=messages_api,

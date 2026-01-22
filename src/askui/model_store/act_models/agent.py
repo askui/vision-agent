@@ -23,7 +23,7 @@ from askui.reporting import NULL_REPORTER, Reporter
 logger = logging.getLogger(__name__)
 
 
-class Agent(ActModel):
+class AskUIAgent(ActModel):
     """Base class for agents that can execute autonomous actions.
 
     This class provides common functionality for both AskUI and Anthropic agents,

@@ -12,7 +12,7 @@ from typing_extensions import Self
 
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.defaults import (
+from askui.model_store.defaults import (
     default_act_model,
     default_get_model,
     default_locate_model,

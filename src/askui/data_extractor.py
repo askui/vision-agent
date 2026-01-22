@@ -5,7 +5,7 @@ from typing import Annotated, Type, overload
 from PIL import Image as PILImage
 from pydantic import Field
 
-from askui.models.defaults import default_get_model
+from askui.model_store.defaults import default_get_model
 from askui.models.models import GetModel
 from askui.models.shared.settings import GetSettings
 from askui.reporting import NULL_REPORTER, Reporter
