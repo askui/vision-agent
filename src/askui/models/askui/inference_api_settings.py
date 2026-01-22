@@ -38,9 +38,9 @@ class AskUiInferenceApiSettings(BaseSettings):
         validation_alias="ASKUI_WORKSPACE_ID",
     )
 
-    disable_ssl_verification: bool = Field(
-        default=(os.environ.get("ASKUI_DISABLE_SSL_VERIFICATION", "False") == "True"),
-        description="Whether to disable SSL verification for the AskUI Inference API.",
+    verify_ssl: bool = Field(
+        default=(os.environ.get("ASKUI_HTTP_SSL_VERIFICATION", "True") == "True"),
+        description="Whether to use SSL verification for the AskUI Inference API.",
     )
 
     @model_validator(mode="after")
