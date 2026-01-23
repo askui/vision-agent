@@ -3,20 +3,35 @@ import logging
 from typing_extensions import override
 
 from askui.locators.locators import Locator, Prompt, Text
-from askui.models.askui.models import AskUiBaseLocateModel
+from askui.models.askui.locate_api import AskUiInferenceLocateApi, LocateApi
 from askui.models.exceptions import (
     AutomationError,
     ElementNotFoundError,
+    IncompatibleApiError,
 )
-from askui.models.models import LocateSettings
+from askui.models.models import DetectedElement, LocateModel, LocateSettings
 from askui.models.types.geometry import PointList
 from askui.utils.image_utils import ImageSource
 
 logger = logging.getLogger(__name__)
 
 
-class AskUiComboLocateModel(AskUiBaseLocateModel):
-    """AskUI Combo locate model - tries PTA first, falls back to OCR."""
+class AskUiComboLocateModel(LocateModel):
+    """AskUI Combo locate model - tries PTA first, falls back to OCR.
+
+    Args:
+        locate_api (LocateApi): The locate API for making locate requests.
+            Must be an instance of AskUiInferenceLocateApi.
+    """
+
+    def __init__(self, locate_api: LocateApi) -> None:
+        if not isinstance(locate_api, AskUiInferenceLocateApi):
+            raise IncompatibleApiError(
+                model_name="AskUiComboLocateModel",
+                expected_api="AskUiInferenceLocateApi",
+                actual_api=type(locate_api).__name__,
+            )
+        self._locate_api = locate_api
 
     @override
     def locate(
@@ -36,9 +51,17 @@ class AskUiComboLocateModel(AskUiBaseLocateModel):
         # Try PTA first
         try:
             prompt_locator = Prompt(locator)
-            return self._locate(prompt_locator, image)
+            return self._locate_api.locate(prompt_locator, image, locate_settings)
         except ElementNotFoundError:
             # Fall back to OCR
             logger.debug("PTA failed, falling back to OCR")
             text_locator = Text(locator)
-            return self._locate(text_locator, image)
+            return self._locate_api.locate(text_locator, image, locate_settings)
+
+    @override
+    def locate_all_elements(
+        self,
+        image: ImageSource,
+        locate_settings: LocateSettings,
+    ) -> list[DetectedElement]:
+        return self._locate_api.locate_all_elements(image, locate_settings)

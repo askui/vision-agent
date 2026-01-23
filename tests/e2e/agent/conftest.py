@@ -27,6 +27,7 @@ from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
 )
+from askui.models.askui.locate_api import AskUiInferenceLocateApi
 from askui.models.models import ActModel, GetModel, LocateModel, ModelName
 from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
@@ -111,10 +112,11 @@ def askui_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    return AskUiLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
+    return AskUiLocateModel(locate_api=locate_api)
 
 
 @pytest.fixture
@@ -129,10 +131,11 @@ def pta_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    return AskUiPtaLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
+    return AskUiPtaLocateModel(locate_api=locate_api)
 
 
 @pytest.fixture
@@ -147,10 +150,11 @@ def ocr_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    return AskUiOcrLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
+    return AskUiOcrLocateModel(locate_api=locate_api)
 
 
 @pytest.fixture
@@ -165,10 +169,11 @@ def ai_element_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    return AskUiAiElementLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
+    return AskUiAiElementLocateModel(locate_api=locate_api)
 
 
 @pytest.fixture
@@ -183,10 +188,11 @@ def combo_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
     askui_inference_api = AskUiInferenceApi(
         settings=AskUiInferenceApiSettings(),
     )
-    return AskUiComboLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=askui_inference_api,
     )
+    return AskUiComboLocateModel(locate_api=locate_api)
 
 
 @functools.cache

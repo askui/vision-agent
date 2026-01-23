@@ -13,6 +13,7 @@ from askui.model_store.locate_models import AskUiLocateModel
 from askui.models.askui.ai_element_utils import AiElementCollection
 from askui.models.askui.inference_api import AskUiInferenceApi
 from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
+from askui.models.askui.locate_api import AskUiInferenceLocateApi
 from askui.models.models import ActModel, GetModel, LocateModel, ModelName
 from askui.reporting import NULL_REPORTER
 
@@ -88,8 +89,9 @@ def default_locate_model() -> LocateModel:
     """
     locator_serializer = _get_askui_locator_serializer()
     inference_api = _get_askui_inference_api()
-
-    return AskUiLocateModel(
+    locate_api = AskUiInferenceLocateApi(
         locator_serializer=locator_serializer,
         inference_api=inference_api,
     )
+
+    return AskUiLocateModel(locate_api=locate_api)
