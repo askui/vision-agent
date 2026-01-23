@@ -120,11 +120,8 @@ OpenRouter is not available by default. You need to configure it:
 
 ```python
 from askui import VisionAgent
-from askui.models import (
-    OpenRouterModel,
-    OpenRouterSettings,
-    ModelRegistry,
-)
+from askui.model_store import OpenRouterGetModel
+from askui.models.openrouter import OpenRouterSettings
 
 MODEL_KEY = "my-custom-model"
 
