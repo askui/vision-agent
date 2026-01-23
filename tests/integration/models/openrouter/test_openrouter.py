@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
+from askui.model_store.get_models.openRouter_get_model import OpenRouterModel
 from askui.models.exceptions import QueryNoResponseError
-from askui.models.openrouter.model import OpenRouterModel
 from askui.models.shared.settings import GetSettings
 from askui.models.types.response_schemas import ResponseSchemaBase
 from askui.utils.image_utils import ImageSource

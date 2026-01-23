@@ -6,7 +6,6 @@ from .models import (
     Model,
     ModelName,
 )
-from .openrouter.model import OpenRouterModel
 from .openrouter.settings import ChatCompletionsCreateSettings, OpenRouterSettings
 from .shared.agent_message_param import (
     Base64ImageSourceParam,
@@ -45,7 +44,6 @@ __all__ = [
     "ModelName",
     "OnMessageCb",
     "OnMessageCbParam",
-    "OpenRouterModel",
     "OpenRouterSettings",
     "Point",
     "PointList",

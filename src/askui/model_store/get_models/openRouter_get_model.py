@@ -8,14 +8,13 @@ from typing_extensions import override
 
 from askui.models.exceptions import QueryNoResponseError
 from askui.models.models import GetModel, GetSettings
+from askui.models.openrouter.settings import OpenRouterSettings
 from askui.models.shared.prompts import GetSystemPrompt
 from askui.models.types.response_schemas import ResponseSchema, to_response_schema
 from askui.prompts.get_prompts import SYSTEM_PROMPT_GET
 from askui.utils.excel_utils import OfficeDocumentSource
 from askui.utils.pdf_utils import PdfSource
 from askui.utils.source_utils import Source
-
-from .settings import OpenRouterSettings
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,8 @@ class OpenRouterModel(GetModel):
     Example:
         ```python
         from askui import VisionAgent
-        from askui.models import OpenRouterModel, OpenRouterSettings
+        from askui.model_store import OpenRouterModel
+        from askui.models.openrouter import OpenRouterSettings
 
         # Create OpenRouter model instance
         openrouter_model = OpenRouterModel(
