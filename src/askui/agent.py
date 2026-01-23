@@ -7,7 +7,7 @@ from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.models import ActModel, GetModel, LocateModel, Point
-from askui.models.shared.settings import ActSettings, MessageSettings
+from askui.models.shared.settings import ActSettings, LocateSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
@@ -134,6 +134,8 @@ class VisionAgent(AgentBase):
         button: Literal["left", "middle", "right"] = "left",
         repeat: Annotated[int, Field(gt=0)] = 1,
         offset: Optional[Point] = None,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
@@ -143,6 +145,8 @@ class VisionAgent(AgentBase):
             button ('left' | 'middle' | 'right', optional): Specifies which mouse button to click. Defaults to `'left'`.
             repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -169,7 +173,7 @@ class VisionAgent(AgentBase):
             msg += f" with offset {offset}"
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
-        self._click(locator, button, repeat, offset)
+        self._click(locator, button, repeat, offset, locate_settings, locate_model)
 
     def _click(
         self,
@@ -177,18 +181,28 @@ class VisionAgent(AgentBase):
         button: Literal["left", "middle", "right"],
         repeat: int,
         offset: Optional[Point],
+        locate_settings: LocateSettings | None,
+        locate_model: LocateModel | None,
     ) -> None:
         if locator is not None:
-            self._mouse_move(locator, offset)
+            self._mouse_move(locator, offset, locate_settings, locate_model)
         self.tools.os.click(button, repeat)
 
     def _mouse_move(
         self,
         locator: str | Locator | Point,
         offset: Optional[Point],
+        locate_settings: LocateSettings | None,
+        locate_model: LocateModel | None,
     ) -> None:
         point: Point = (
-            locator if isinstance(locator, tuple) else self._locate(locator=locator)[0]
+            locator
+            if isinstance(locator, tuple)
+            else self._locate(
+                locator=locator,
+                locate_settings=locate_settings,
+                locate_model=locate_model,
+            )[0]
         )
         if offset is not None:
             point = (point[0] + offset[0], point[1] + offset[1])
@@ -200,6 +214,8 @@ class VisionAgent(AgentBase):
         self,
         locator: str | Locator | Point,
         offset: Optional[Point] = None,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
@@ -207,6 +223,8 @@ class VisionAgent(AgentBase):
         Args:
             locator (str | Locator | Point): UI element description, structured locator, or absolute coordinates (x, y).
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -221,7 +239,7 @@ class VisionAgent(AgentBase):
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, offset)
+        self._mouse_move(locator, offset, locate_settings, locate_model)
 
     @telemetry.record_call()
     @validate_call
@@ -265,6 +283,8 @@ class VisionAgent(AgentBase):
         locator: str | Locator | Point | None = None,
         offset: Optional[Point] = None,
         clear: bool = True,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
@@ -279,6 +299,8 @@ class VisionAgent(AgentBase):
             locator (str | Locator | Point | None, optional): UI element description, structured locator, or absolute coordinates (x, y). If `None`, types at current focus.
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             clear (bool, optional): Whether to triple click on the element to give it focus and select the current text before typing. Defaults to `True`.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -305,6 +327,8 @@ class VisionAgent(AgentBase):
                 button="left",
                 repeat=repeat,
                 offset=offset,
+                locate_settings=locate_settings,
+                locate_model=locate_model,
             )
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
