@@ -27,7 +27,7 @@ We are removing ModelRouter and ModelRegistry entirely, replacing them with dire
 - **Model discovery**: New `askui.model_store` module with `list_available_models()` for discovery
 
 **Model Types & BYOM:**
-- **ActModel**: Complex agentic loop - BYOM via `GenericActModel` + custom `MessagesApi`
+- **ActModel**: Complex agentic loop - BYOM via `AskUIAgent` + custom `MessagesApi`
 - **GetModel**: Data extraction - direct interface implementation (BYOM rarely needed)
 - **LocateModel**: Element location - direct interface implementation (BYOM rarely needed)
 
@@ -39,7 +39,6 @@ We are removing ModelRouter and ModelRegistry entirely, replacing them with dire
 
 **What's Added (~200 LOC):**
 - `GetSettings` and `LocateSettings` classes
-- `GenericActModel` for BYOM agentic use cases
 - `askui.model_store` module for model discovery
 - `FallbackModel` for simple composition
 - Factory functions per provider (e.g., `create_claude_act_model()`)
@@ -223,7 +222,7 @@ The three model types have fundamentally different characteristics:
 
 **ActModel (Agentic Loop)**
 - Complex tool-calling loop with message history
-- **BYOM Supported**: Use `MessagesApi` abstraction or `GenericActModel`
+- **BYOM Supported**: Use `AskUIAgent` with custom `MessagesApi`
 - Primary extension point for custom LLMs
 
 **GetModel (Data Extraction)**
@@ -238,10 +237,12 @@ The three model types have fundamentally different characteristics:
 
 ---
 
-**Approach A: Custom ActModel via GenericActModel + MessagesApi (BYOM)**
+**Approach A: Custom ActModel via AskUIAgent + MessagesApi (BYOM)**
 ```python
 from askui import VisionAgent
-from askui.models import GenericActModel, MessagesApi, MessageParam
+from askui.model_store.act_models.agent import AskUIAgent
+from askui.models.shared.messages_api import MessagesApi
+from askui.models.shared.agent_message_param import MessageParam
 
 class MyMessagesApi(MessagesApi):
     def create_message(self, messages, model_id, tools, **kwargs):
@@ -249,8 +250,8 @@ class MyMessagesApi(MessagesApi):
         response = my_provider.chat(messages=messages, model=model_id, tools=tools)
         return MessageParam.model_validate(response)
 
-# GenericActModel configured with custom MessagesApi
-my_act_model = GenericActModel(
+# AskUIAgent configured with custom MessagesApi
+my_act_model = AskUIAgent(
     messages_api=MyMessagesApi(),
     model_id="my-custom-llm-v2"
 )
@@ -456,7 +457,7 @@ agent2 = AndroidVisionAgent(act_model=claude_sonnet)  # Android settings
 ```python
 # ActModel implementations (only model_id, no settings)
 ClaudeActModel(model_id: str)
-GenericActModel(model_id: str, messages_api: MessagesApi)
+AskUIAgent(model_id: str, messages_api: MessagesApi)
 
 # GetModel implementations (only model_id, no settings)
 GeminiGetModel(model_id: str)
@@ -539,7 +540,6 @@ class ClaudeActModel(ActModel):
 
 **Add:**
 - `src/askui/models/defaults.py` - Default model factories (~50 lines)
-- `src/askui/models/generic_act_model.py` - GenericActModel wrapper for MessagesApi (~100 lines)
 - `src/askui/model_store/` - Model discovery and listing (~50 lines)
 
 **Estimated addition:** ~200 lines of code
@@ -953,8 +953,8 @@ def serialize_act_model(model: ActModel) -> dict[str, Any]:
         return {"type": "askui_act", "config": {"model_id": model.model_id}}
     elif isinstance(model, ClaudeActModel):
         return {"type": "claude_act", "config": {"provider": model.provider, "model_id": model.model_id}}
-    elif isinstance(model, GenericActModel):
-        return {"type": "generic_act", "config": {"model_id": model.model_id, "messages_api_class": f"{model.messages_api.__module__}.{model.messages_api.__class__.__name__}"}}
+    elif isinstance(model, AskUIAgent):
+        return {"type": "askui_agent", "config": {"model_id": model.model_id, "messages_api_class": f"{model.messages_api.__module__}.{model.messages_api.__class__.__name__}"}}
     else:
         return {"type": "custom", "config": {"class_path": f"{model.__module__}.{model.__class__.__name__}"}}
 
@@ -1006,7 +1006,6 @@ agent = VisionAgent(act_model=act_model, get_model=get_model, locate_model=locat
 ### 8.1 Core Model System Changes
 - [ ] Update model interfaces to use `model_id` parameter name instead of `model`
 - [ ] Update `MessagesApi` to use `model_id` parameter
-- [ ] Create `src/askui/models/generic_act_model.py` with GenericActModel class
 - [ ] Create Settings classes for each model type:
   - [ ] Keep `ActSettings` and `MessageSettings` as-is (already exist)
   - [ ] Create `GetSettings` class in `src/askui/models/shared/settings.py`
@@ -1059,7 +1058,7 @@ agent = VisionAgent(act_model=act_model, get_model=get_model, locate_model=locat
 ### 8.5 Testing
 - [ ] Remove all tests for ModelRouter and ModelRegistry
 - [ ] Write tests for new direct injection API
-- [ ] Write tests for GenericActModel with custom MessagesApi
+- [ ] Write tests for AskUIAgent with custom MessagesApi
 - [ ] Write tests for model_store.list_available_models()
 - [ ] Write tests for FallbackModel composition
 - [ ] Update integration tests to use new API
@@ -1069,7 +1068,7 @@ agent = VisionAgent(act_model=act_model, get_model=get_model, locate_model=locat
 - [ ] Update all code examples to use new API
 - [ ] Add terminology clarification section (Model vs Model ID)
 - [ ] Document model_store usage for discovering available models
-- [ ] Document BYOM approach with GenericActModel + MessagesApi
+- [ ] Document BYOM approach with AskUIAgent + MessagesApi
 - [ ] Add examples for each provider's factory functions
 - [ ] Document Chat API serialization approach (for Chat API team reference)
 
@@ -1203,7 +1202,7 @@ mock_act_model.act.assert_called_once()
 - ActModel needs complex tool-calling loop → MessagesApi abstraction
 - GetModel and LocateModel are simpler → direct interface implementation sufficient
 - Users can still implement GetModel/LocateModel interfaces if needed
-- Focus BYOM documentation on ActModel + GenericActModel + MessagesApi
+- Focus BYOM documentation on ActModel + AskUIAgent + MessagesApi
 
 ---
 
@@ -1270,7 +1269,7 @@ agent = VisionAgent(model=Models.ASKUI)
 **Decision:** ❌ Rejected - Not extensible for BYOM
 
 ### 12.5 Generic Models for All Three Types
-**Approach:** Have GenericActModel, GenericGetModel, GenericLocateModel all using MessagesApi
+**Approach:** Have AskUIAgent (ActModel), and direct model implementations for Get/Locate
 
 **Pros:** Consistent pattern across all model types
 
@@ -1280,7 +1279,7 @@ agent = VisionAgent(model=Models.ASKUI)
 - Users can just implement interfaces directly if needed
 - MessagesApi is tool-calling specific (not applicable to simple Get/Locate)
 
-**Decision:** ⚠️ Partially accepted - Only GenericActModel needed (MessagesApi for ActModel only)
+**Decision:** ⚠️ Accepted - AskUIAgent provides BYOM for ActModel via MessagesApi injection
 
 ---
 
@@ -1291,7 +1290,7 @@ This proposal simplifies the AskUI VisionAgent library model system by:
 1. **Removing complexity:** Eliminate ModelRouter and ModelRegistry (~600 LOC)
 2. **Improving clarity:** Direct injection makes execution flow obvious
 3. **Maintaining flexibility:** Custom models via:
-   - GenericActModel + MessagesApi (for BYOM agentic tasks)
+   - AskUIAgent + MessagesApi (for BYOM agentic tasks)
    - Direct interface implementation (for custom Get/Locate)
 4. **Enhancing type safety:** Compile-time checking instead of runtime lookups
 5. **Streamlining composition:** Simple fallback chains instead of complex strategies
