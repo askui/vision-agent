@@ -131,7 +131,7 @@ Run the script with `python <file path>`, e.g `python test.py` to see if it work
 
 ### 🤖 Let AI agents control your devices
 
-In order to let AI agents control your devices, you need to be able to connect to an AI model (provider). We host some models ourselves and support several other ones, e.g. Anthropic, OpenRouter, Hugging Face, etc. out of the box. If you want to use a model provider or model that is not supported, you can easily plugin your own (see [Custom Models](docs/custom-models.md)).
+In order to let AI agents control your devices, you need to be able to connect to an AI model (provider). We host some models ourselves and support several other ones, e.g. Anthropic, OpenRouter, Hugging Face, etc. out of the box. If you want to use a model provider or model that is not supported, you can easily plugin your own (see [Custom Models](docs/using-models.md#using-custom-models)).
 
 For this example, we will us AskUI as the model provider to easily get started.
 
@@ -240,7 +240,7 @@ Aside from our [official documentation](https://docs.askui.com), we also have so
 - **[MCP](docs/mcp.md)** - How to use MCP servers to extend the capabilities of an agent
 - **[Observability](docs/observability.md)** - Logging and reporting
 - **[Telemetry](docs/telemetry.md)** - Which data we gather and how to disable it
-- **[Using Models](docs/using-models.md)** - How to use different models including how to register your own custom models
+- **[Using Models](docs/using-models.md#using-custom-models)** - How to use different models including how to register your own custom models
 
 ## 🤝 Contributing
 
