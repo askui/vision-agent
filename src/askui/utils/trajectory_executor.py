@@ -7,7 +7,7 @@ steps, error handling, and agent intervention.
 
 import logging
 import time
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -24,6 +24,10 @@ from askui.utils.visual_validation import (
     get_validation_coordinate,
     validate_visual_hash,
 )
+
+if TYPE_CHECKING:
+    from askui.tools.android.tools import AndroidScreenshotTool
+    from askui.tools.computer import ComputerScreenshotTool
 
 logger = logging.getLogger(__name__)
 
@@ -379,30 +383,54 @@ class TrajectoryExecutor:
         return is_valid, error_msg
 
     def _capture_screenshot(self) -> Image.Image | None:
-        """Capture current screenshot using the computer tool.
+        """Capture current screenshot using the available screenshot tool.
+
+        Supports both computer and Android screenshot tools.
 
         Returns:
             PIL Image or None if screenshot capture fails
         """
-        # Get the computer tool from toolbox
+        # Get the tools from toolbox
         tools = self.toolbox.get_tools()
-        computer_tool = tools.get("computer_screenshot")
 
-        if computer_tool is None:
-            logger.debug("Computer tool not found in toolbox")
+        # Try to find a screenshot tool (computer or Android)
+        screenshot_tool = None
+        tool_names = [
+            "computer_screenshot",
+            "android_screenshot_tool",
+        ]
+
+        for tool_name in tool_names:
+            screenshot_tool = tools.get(tool_name)
+            if screenshot_tool is not None:
+                assert isinstance(
+                    screenshot_tool, (ComputerScreenshotTool, AndroidScreenshotTool)
+                )
+                logger.debug("Found screenshot tool: %s", tool_name)
+                break
+
+        if screenshot_tool is None:
+            logger.warning("No screenshot tool found in toolbox")
             return None
 
         # Call the screenshot action
         try:
             # Try to call _screenshot() method directly if available
-            if hasattr(computer_tool, "agent_os"):
-                result = computer_tool.agent_os.screenshot()  # noqa: SLF001
+            if hasattr(screenshot_tool, "agent_os"):
+                result = screenshot_tool.agent_os.screenshot()
                 if isinstance(result, Image.Image):
                     return result
 
-            # Fallback to calling via __call__ with action parameter
-            result = computer_tool()
-            if isinstance(result, Image.Image):
+            # Fallback to calling via __call__
+            result = screenshot_tool()
+
+            # Handle different return types
+            # Android tool returns tuple[str, Image.Image]
+            if isinstance(result, tuple) and len(result) >= 2:
+                if isinstance(result[1], Image.Image):
+                    return result[1]
+            # Computer tool returns Image.Image directly
+            elif isinstance(result, Image.Image):
                 return result
 
             logger.warning(
