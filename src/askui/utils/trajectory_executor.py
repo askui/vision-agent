@@ -7,7 +7,7 @@ steps, error handling, and agent intervention.
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -18,16 +18,14 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.tools import ToolCollection
+from askui.tools.android.tools import AndroidScreenshotTool
+from askui.tools.computer import ComputerScreenshotTool
 from askui.utils.cache_parameter_handler import CacheParameterHandler
 from askui.utils.visual_validation import (
     extract_region,
     get_validation_coordinate,
     validate_visual_hash,
 )
-
-if TYPE_CHECKING:
-    from askui.tools.android.tools import AndroidScreenshotTool
-    from askui.tools.computer import ComputerScreenshotTool
 
 logger = logging.getLogger(__name__)
 
