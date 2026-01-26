@@ -6,7 +6,8 @@ from pydantic import ConfigDict, Field, validate_call
 from askui.agent_base import AgentBase
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.shared.settings import ActSettings, MessageSettings
+from askui.models.models import ActModel, GetModel, LocateModel, Point
+from askui.models.shared.settings import ActSettings, LocateSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
@@ -30,8 +31,6 @@ from askui.tools.computer import (
 )
 from askui.tools.exception_tool import ExceptionTool
 
-from .models import ModelComposition
-from .models.models import ModelChoice, ModelRegistry, Point
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
@@ -51,9 +50,11 @@ class VisionAgent(AgentBase):
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
-        model (ModelChoice | ModelComposition | str | None, optional): The default choice or name of the model(s) to be used for vision tasks. Can be overridden by the `model` parameter in the `click()`, `get()`, `act()` etc. methods.
+        act_model (ActModel | None, optional): Custom ActModel instance. If `None`, uses default.
+        get_model (GetModel | None, optional): Custom GetModel instance. If `None`, uses default.
+        locate_model (LocateModel | None, optional): Custom LocateModel instance. If `None`, uses default.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
-        models (ModelRegistry | None, optional): A registry of models to make available to the `VisionAgent` so that they can be selected using the `model` parameter of `VisionAgent` or the `model` parameter of its `click()`, `get()`, `act()` etc. methods. Entries in the registry override entries in the default model registry.
+        act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
 
     Example:
         ```python
@@ -66,18 +67,18 @@ class VisionAgent(AgentBase):
         ```
     """
 
-    @telemetry.record_call(exclude={"model_router", "reporters", "tools", "act_tools"})
+    @telemetry.record_call(exclude={"reporters", "tools", "act_tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
-        model: ModelChoice | ModelComposition | str | None = None,
+        act_model: ActModel | None = None,
+        get_model: GetModel | None = None,
+        locate_model: LocateModel | None = None,
         retry: Retry | None = None,
-        models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
-        model_provider: str | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
@@ -88,9 +89,7 @@ class VisionAgent(AgentBase):
         )
         super().__init__(
             reporter=reporter,
-            model=model,
             retry=retry,
-            models=models,
             tools=[
                 ExceptionTool(),
                 ComputerGetSystemInfoTool(),
@@ -111,12 +110,15 @@ class VisionAgent(AgentBase):
             ]
             + (act_tools or []),
             agent_os=self.tools.os,
-            model_provider=model_provider,
+            act_model=act_model,
+            get_model=get_model,
+            locate_model=locate_model,
         )
         self.act_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
             self.tools.os
         )
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
+        # Override default act settings with computer-specific settings
         self.act_settings = ActSettings(
             messages=MessageSettings(
                 system=create_computer_agent_prompt(),
@@ -132,7 +134,8 @@ class VisionAgent(AgentBase):
         button: Literal["left", "middle", "right"] = "left",
         repeat: Annotated[int, Field(gt=0)] = 1,
         offset: Optional[Point] = None,
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
@@ -142,7 +145,8 @@ class VisionAgent(AgentBase):
             button ('left' | 'middle' | 'right', optional): Specifies which mouse button to click. Defaults to `'left'`.
             repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to click on using the `locator`.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -169,7 +173,7 @@ class VisionAgent(AgentBase):
             msg += f" with offset {offset}"
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
-        self._click(locator, button, repeat, offset, model)
+        self._click(locator, button, repeat, offset, locate_settings, locate_model)
 
     def _click(
         self,
@@ -177,22 +181,28 @@ class VisionAgent(AgentBase):
         button: Literal["left", "middle", "right"],
         repeat: int,
         offset: Optional[Point],
-        model: ModelComposition | str | None,
+        locate_settings: LocateSettings | None,
+        locate_model: LocateModel | None,
     ) -> None:
         if locator is not None:
-            self._mouse_move(locator, offset, model)
+            self._mouse_move(locator, offset, locate_settings, locate_model)
         self.tools.os.click(button, repeat)
 
     def _mouse_move(
         self,
         locator: str | Locator | Point,
         offset: Optional[Point],
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None,
+        locate_model: LocateModel | None,
     ) -> None:
         point: Point = (
             locator
             if isinstance(locator, tuple)
-            else self._locate(locator=locator, model=model)[0]
+            else self._locate(
+                locator=locator,
+                locate_settings=locate_settings,
+                locate_model=locate_model,
+            )[0]
         )
         if offset is not None:
             point = (point[0] + offset[0], point[1] + offset[1])
@@ -204,7 +214,8 @@ class VisionAgent(AgentBase):
         self,
         locator: str | Locator | Point,
         offset: Optional[Point] = None,
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
@@ -212,7 +223,8 @@ class VisionAgent(AgentBase):
         Args:
             locator (str | Locator | Point): UI element description, structured locator, or absolute coordinates (x, y).
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element to move the mouse to using the `locator`.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -222,13 +234,12 @@ class VisionAgent(AgentBase):
                 agent.mouse_move("Submit button")  # Moves cursor to submit button
                 agent.mouse_move((300, 150))       # Moves cursor to absolute coordinates (300, 150)
                 agent.mouse_move("Close")          # Moves cursor to close element
-                agent.mouse_move("Profile picture", model="custom_model")  # Uses specific model
                 agent.mouse_move("Menu", offset=(5, 10))  # Move 5 pixels right and 10 pixels down from "Menu"
             ```
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
         logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, offset, model)
+        self._mouse_move(locator, offset, locate_settings, locate_model)
 
     @telemetry.record_call()
     @validate_call
@@ -271,8 +282,9 @@ class VisionAgent(AgentBase):
         text: Annotated[str, Field(min_length=1)],
         locator: str | Locator | Point | None = None,
         offset: Optional[Point] = None,
-        model: ModelComposition | str | None = None,
         clear: bool = True,
+        locate_settings: LocateSettings | None = None,
+        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
@@ -286,8 +298,9 @@ class VisionAgent(AgentBase):
             text (str): The text to be typed. Must be at least `1` character long.
             locator (str | Locator | Point | None, optional): UI element description, structured locator, or absolute coordinates (x, y). If `None`, types at current focus.
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
-            model (ModelComposition | str | None, optional): The composition or name of the model(s) to be used for locating the element, i.e., input field, to type into using the `locator`.
             clear (bool, optional): Whether to triple click on the element to give it focus and select the current text before typing. Defaults to `True`.
+            locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
+            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
@@ -297,7 +310,6 @@ class VisionAgent(AgentBase):
                 agent.type("Hello, world!")  # Types "Hello, world!" at current focus
                 agent.type("user@example.com", locator="Email")  # Clicks on "Email" input, then types
                 agent.type("username", locator=(200, 100))  # Clicks at coordinates (200, 100), then types
-                agent.type("password123", locator="Password field", model="custom_model")  # Uses specific model
                 agent.type("Hello, world!", locator="Textarea", clear=False)  # Types "Hello, world!" into textarea without clearing
                 agent.type("text", locator="Input field", offset=(5, 0))  # Click 5 pixels right of "Input field", then type
             ```
@@ -315,7 +327,8 @@ class VisionAgent(AgentBase):
                 button="left",
                 repeat=repeat,
                 offset=offset,
-                model=model,
+                locate_settings=locate_settings,
+                locate_model=locate_model,
             )
         logger.debug("VisionAgent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
@@ -482,8 +495,8 @@ class VisionAgent(AgentBase):
 
             with VisionAgent() as agent:
                 # Use for Windows
-                agent.cli(fr'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
-                agent.cli(fr'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
+                agent.cli(r'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
+                agent.cli(r'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
 
                 # Mac
                 agent.cli("open -a chrome")  # Open Chrome non-blocking for mac

@@ -1,15 +1,13 @@
 import abc
 import re
-from collections.abc import Iterator
-from typing import Annotated, Callable, Type
+from typing import Type
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel
-from typing_extensions import Literal, TypedDict
+from pydantic import BaseModel, ConfigDict
 
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings
+from askui.models.shared.settings import ActSettings, GetSettings, LocateSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.types.geometry import Point, PointList
 from askui.models.types.response_schemas import ResponseSchema
@@ -42,105 +40,9 @@ class ModelName:
     HF__SPACES__QWEN__QWEN2_VL_2B_INSTRUCT = "Qwen/Qwen2-VL-2B-Instruct"
     HF__SPACES__QWEN__QWEN2_VL_7B_INSTRUCT = "Qwen/Qwen2-VL-7B-Instruct"
     HF__SPACES__SHOWUI__2B = "showlab/ShowUI-2B"
-    TARS = "tars"
 
 
 MODEL_DEFINITION_PROPERTY_REGEX_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
-
-
-ModelDefinitionProperty = Annotated[
-    str, Field(pattern=MODEL_DEFINITION_PROPERTY_REGEX_PATTERN)
-]
-
-
-class ModelDefinition(BaseModel):
-    """
-    A definition of a model.
-
-    Args:
-        task (str): The task the model is trained for, e.g., end-to-end OCR
-            (`"e2e_ocr"`) or object detection (`"od"`)
-        architecture (str): The architecture of the model, e.g., `"easy_ocr"` or
-            `"yolo"`
-        version (str): The version of the model
-        interface (str): The interface the model is trained for, e.g.,
-            `"online_learning"`
-        use_case (str, optional): The use case the model is trained for. In the case
-            of workspace specific AskUI models, this is often the workspace id but
-            with "-" replaced by "_". Defaults to
-            `"00000000_0000_0000_0000_000000000000"` (custom null value).
-        tags (list[str], optional): Tags for identifying the model that cannot be
-            represented by other properties, e.g., `["trained", "word_level"]`
-    """
-
-    model_config = ConfigDict(
-        validate_by_name=True,
-    )
-    task: ModelDefinitionProperty = Field(
-        description=(
-            "The task the model is trained for, e.g., end-to-end OCR (e2e_ocr) or "
-            "object detection (od)"
-        ),
-        examples=["e2e_ocr", "od"],
-    )
-    architecture: ModelDefinitionProperty = Field(
-        description="The architecture of the model", examples=["easy_ocr", "yolo"]
-    )
-    version: str = Field(pattern=r"^[0-9]{1,6}$")
-    interface: ModelDefinitionProperty = Field(
-        description="The interface the model is trained for",
-        examples=["online_learning"],
-    )
-    use_case: ModelDefinitionProperty = Field(
-        description=(
-            "The use case the model is trained for. In the case of workspace specific "
-            'AskUI models, this is often the workspace id but with "-" replaced by "_"'
-        ),
-        examples=[
-            "fb3b9a7b_3aea_41f7_ba02_e55fd66d1c1e",
-            "00000000_0000_0000_0000_000000000000",
-        ],
-        default="00000000_0000_0000_0000_000000000000",
-        serialization_alias="useCase",
-    )
-    tags: list[ModelDefinitionProperty] = Field(
-        default_factory=list,
-        description=(
-            "Tags for identifying the model that cannot be represented by other "
-            "properties"
-        ),
-        examples=["trained", "word_level"],
-    )
-
-    @property
-    def model_name(self) -> str:
-        """
-        The name of the model.
-        """
-        return "-".join(
-            [
-                self.task,
-                self.architecture,
-                self.interface,
-                self.use_case,
-                self.version,
-                *self.tags,
-            ]
-        )
-
-
-class ModelComposition(RootModel[list[ModelDefinition]]):
-    """
-    A composition of models (list of `ModelDefinition`) to be used for a task, e.g.,
-    locating an element on the screen to be able to click on it or extracting text from
-    an image.
-    """
-
-    def __iter__(self) -> Iterator[ModelDefinition]:  # type: ignore
-        return iter(self.root)
-
-    def __getitem__(self, index: int) -> ModelDefinition:
-        return self.root[index]
 
 
 class BoundingBox(BaseModel):
@@ -252,10 +154,9 @@ class ActModel(abc.ABC):
     def act(
         self,
         messages: list[MessageParam],
-        model: str,
+        act_settings: ActSettings,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
-        settings: ActSettings | None = None,
     ) -> None:
         """
         Execute autonomous actions to achieve a goal, using a message history
@@ -273,10 +174,6 @@ class ActModel(abc.ABC):
         Args:
             messages (list[MessageParam]): The message history to start that
                 determines the actions and following messages.
-            model (str): The name of the model being used, e.g., useful for
-                models registered under multiple keys, e.g., `"my-act-1"` and
-                `"my-act-2"` that depending on the key (passed as `model`)
-                behave differently.
             on_message (OnMessageCb | None, optional): Callback for new messages
                 from either an assistant/agent or a user (including
                 automatic/programmatic tool use, e.g., taking a screenshot).
@@ -287,8 +184,8 @@ class ActModel(abc.ABC):
                 directing the assistant/agent or tool use.
             tools (ToolCollection | None, optional): The tools for the agent.
                 Defaults to `None`.
-            settings (AgentSettings | None, optional): The settings for the agent.
-                Defaults to `None`.
+            act_settings (ActSettings): The settings for this act operation,
+                passed from the agent.
 
         Returns:
             None
@@ -297,6 +194,32 @@ class ActModel(abc.ABC):
             NotImplementedError: If the method is not implemented.
         """  # noqa: E501
         raise NotImplementedError
+
+    def to_telemetry_dict(self) -> dict[str, str]:
+        """Return a JSON-serializable representation for telemetry.
+
+        For ActModels, this includes the model_id and MessagesApi class name.
+
+        Returns:
+            dict[str, str]: A dictionary with telemetry information about this model.
+                Includes: "type", "class", "model_id", "messages_api".
+
+        Example:
+            ```python
+            {
+                "type": "act_model",
+                "class": "AskUIAgent",
+                "model_id": "claude-sonnet-4-20250514",
+                "messages_api": "AnthropicMessagesApi"
+            }
+            ```
+        """
+        return {
+            "type": "act_model",
+            "class": self.__class__.__name__,
+            "model_id": self.__getattribute__("_model_id" or "-"),
+            "messages_api": self._messages_api.__class__.__name__,  # type: ignore[attr-defined]
+        }
 
 
 class GetModel(abc.ABC):
@@ -333,7 +256,7 @@ class GetModel(abc.ABC):
         query: str,
         source: Source,
         response_schema: Type[ResponseSchema] | None,
-        model: str,
+        get_settings: GetSettings,
     ) -> ResponseSchema | str:
         """Extract information from a source based on a query.
         Args:
@@ -341,14 +264,36 @@ class GetModel(abc.ABC):
             source (Source): The source to analyze (screenshot, image or PDF)
             response_schema (Type[ResponseSchema] | None): Optional Pydantic model class
                 defining the expected response structure
-            model (str): The name of the model being used (useful for models that
-                support multiple configurations)
+            get_settings (GetSettings): The settings for this get operation,
+                passed from the agent
 
         Returns:
             Either a string response or a Pydantic model instance if response_schema is
             provided
         """
         raise NotImplementedError
+
+    def to_telemetry_dict(self) -> dict[str, str]:
+        """Return a JSON-serializable representation for telemetry.
+
+        For GetModels, this includes the class name.
+
+        Returns:
+            dict[str, str]: A dictionary with telemetry information about this model.
+                Includes: "type", "class".
+
+        Example:
+            ```python
+            {
+                "type": "get_model",
+                "class": "AskUiGeminiGetModel"
+            }
+            ```
+        """
+        return {
+            "type": "get_model",
+            "class": self.__class__.__name__,
+        }
 
 
 class LocateModel(abc.ABC):
@@ -362,14 +307,12 @@ class LocateModel(abc.ABC):
     Example:
         ```python
         from askui import LocateModel, VisionAgent, Locator, ImageSource, PointList
-        from askui.models import ModelComposition
 
         class MyLocateModel(LocateModel):
             def locate(
                 self,
                 locator: str | Locator,
                 image: ImageSource,
-                model: ModelComposition | str,
             ) -> PointList:
                 # Implement custom locate logic
                 return [(100, 100)]
@@ -384,7 +327,7 @@ class LocateModel(abc.ABC):
         self,
         locator: str | Locator,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> PointList:
         """Find the coordinates of a UI element in an image.
 
@@ -392,8 +335,8 @@ class LocateModel(abc.ABC):
             locator (str | Locator): A description or locator object identifying the
                 element to find
             image (ImageSource): The image to analyze (screenshot or provided image)
-            model (ModelComposition | str): Either a string model name or a
-                `ModelComposition` for models that support composition
+            locate_settings (LocateSettings): The settings for this locate operation,
+                passed from the agent
 
         Returns:
             A list of (x, y) coordinates where the element was found, minimum length 1
@@ -403,19 +346,41 @@ class LocateModel(abc.ABC):
     def locate_all_elements(
         self,
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> list[DetectedElement]:
         """Locate all elements in an image.
 
         Args:
             image (ImageSource): The image to analyze (screenshot or provided image)
-            model (ModelComposition | str): Either a string model name or a
-                `ModelComposition` for models that support composition
+            locate_settings (LocateSettings): The settings for this locate operation,
+                passed from the agent
 
         Returns:
             A list of detected elements
         """
         raise NotImplementedError
+
+    def to_telemetry_dict(self) -> dict[str, str]:
+        """Return a JSON-serializable representation for telemetry.
+
+        For LocateModels, this includes the class name.
+
+        Returns:
+            dict[str, str]: A dictionary with telemetry information about this model.
+                Includes: "type", "class".
+
+        Example:
+            ```python
+            {
+                "type": "locate_model",
+                "class": "AskUiPtaLocateModel"
+            }
+            ```
+        """
+        return {
+            "type": "locate_model",
+            "class": self.__class__.__name__,
+        }
 
 
 Model = ActModel | GetModel | LocateModel
@@ -425,72 +390,3 @@ This type represents any model that can be used with `VisionAgent`, whether it's
 `ActModel`, `GetModel`, or `LocateModel`. It's useful for type hints when you need to
 work with models in a generic way.
 """
-
-
-class ModelChoice(TypedDict, total=False):
-    """Type definition for specifying different models for different tasks.
-
-    This `TypedDict` allows you to specify different models for `act()`, `get()`, and
-    `locate()` tasks when initializing `VisionAgent`. All fields are optional.
-
-    Attributes:
-        act: Model name to use for `act()` commands
-        get: Model name to use for `get()` commands
-        locate: Model name or composition to use for `locate()`, `click()`, and
-            `mouse_move()` commands
-    """
-
-    act: str
-    get: str
-    locate: str | ModelComposition
-
-
-class TotalModelChoice(TypedDict):
-    act: str
-    get: str
-    locate: str | ModelComposition
-
-
-ModelRegistry = dict[str, Model | Callable[[], Model]]
-"""Type definition for model registry.
-
-A dictionary mapping model names to either model instances or factory functions (for
-lazy initialization on first use) that create model instances. Used to register custom
-models with `VisionAgent`.
-
-Example:
-    ```python
-    from askui import ModelRegistry, ActModel
-
-    class MyModel(ActModel):
-        def act(
-            self,
-            messages: list[MessageParam],
-            model: str,
-            on_message: OnMessageCb | None = None,
-            tools: list[Tool] | None = None,
-            settings: AgentSettings | None = None,
-        ) -> None:
-            pass  # implement action logic here
-
-    # Registry with model instance
-    registry: ModelRegistry = {
-        "my-model": MyModel()
-    }
-
-    # Registry with model factory
-    def create_model() -> ActModel:
-        return MyModel()
-
-    registry_with_factory: ModelRegistry = {
-        "my-model": create_model
-    }
-    ```
-"""
-
-
-MODEL_TYPES: dict[Literal["act", "get", "locate"], Type[Model]] = {
-    "act": ActModel,
-    "get": GetModel,
-    "locate": LocateModel,
-}

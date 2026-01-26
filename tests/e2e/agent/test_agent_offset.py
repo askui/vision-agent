@@ -3,23 +3,15 @@
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
-import pytest
 from PIL import Image as PILImage
 
 from askui.agent import VisionAgent
 from askui.locators import Element
-from askui.models import ModelName
 
 if TYPE_CHECKING:
     from askui.models.models import Point
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        ModelName.ASKUI,
-    ],
-)
 class TestVisionAgentOffset:
     """Test class for VisionAgent offset functionality."""
 
@@ -43,7 +35,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with positive offset (right and down)."""
         locator = "Forgot password?"
@@ -54,10 +45,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -69,7 +60,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with negative offset (left and up)."""
         locator = "Forgot password?"
@@ -80,10 +70,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with negative offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -95,7 +85,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with zero offset (same as no offset)."""
         locator = "Forgot password?"
@@ -106,10 +95,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Click with zero offset should work without error
-        vision_agent.click(locator, offset=offset, model=model)
+        vision_agent.click(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -120,7 +109,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test clicking with Point locator and offset."""
         point_locator: Point = (100, 100)
@@ -131,7 +119,7 @@ class TestVisionAgentOffset:
         )
 
         # Click with Point locator and offset should work
-        vision_agent.click(point_locator, offset=offset, model=model)
+        vision_agent.click(point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()
@@ -146,7 +134,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with positive offset."""
         locator = "Forgot password?"
@@ -157,10 +144,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Mouse move with offset should work without error
-        vision_agent.mouse_move(locator, offset=offset, model=model)
+        vision_agent.mouse_move(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -171,7 +158,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with negative offset."""
         locator = "Forgot password?"
@@ -182,10 +168,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Mouse move with negative offset should work without error
-        vision_agent.mouse_move(locator, offset=offset, model=model)
+        vision_agent.mouse_move(locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -196,7 +182,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test mouse movement with Point locator and offset."""
         point_locator: Point = (200, 150)
@@ -207,7 +192,7 @@ class TestVisionAgentOffset:
         )
 
         # Mouse move with Point locator and offset should work
-        vision_agent.mouse_move(point_locator, offset=offset, model=model)
+        vision_agent.mouse_move(point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()
@@ -221,7 +206,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with positive offset."""
         locator = Element("textfield")
@@ -233,10 +217,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Type with offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, model=model)
+        vision_agent.type(text, locator=locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -249,7 +233,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with negative offset."""
         locator = Element("textfield")
@@ -261,10 +244,10 @@ class TestVisionAgentOffset:
         )
 
         # Get original position
-        x, y = vision_agent.locate(locator, github_login_screenshot, model=model)
+        x, y = vision_agent.locate(locator, github_login_screenshot)
 
         # Type with negative offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, model=model)
+        vision_agent.type(text, locator=locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -277,7 +260,6 @@ class TestVisionAgentOffset:
         self,
         vision_agent: VisionAgent,
         github_login_screenshot: PILImage.Image,
-        model: str,
     ) -> None:
         """Test typing with Point locator and offset."""
         point_locator: Point = (460, 195)  # Approximate textfield location
@@ -289,7 +271,7 @@ class TestVisionAgentOffset:
         )
 
         # Type with Point locator and offset should work
-        vision_agent.type(text, locator=point_locator, offset=offset, model=model)
+        vision_agent.type(text, locator=point_locator, offset=offset)
 
         # Verify calls
         mock_screenshot.assert_not_called()

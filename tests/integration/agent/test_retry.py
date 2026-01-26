@@ -5,8 +5,8 @@ from httpx import HTTPStatusError
 
 from askui import ConfigurableRetry, LocateModel, VisionAgent
 from askui.locators.locators import Locator
-from askui.models import ModelComposition
 from askui.models.exceptions import ElementNotFoundError, ModelNotFoundError
+from askui.models.shared.settings import LocateSettings
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 
@@ -26,7 +26,7 @@ class FailingLocateModel(LocateModel):
         self,
         locator: Union[str, Locator],
         image: ImageSource,  # noqa: ARG002
-        model: Union[ModelComposition, str],  # noqa: ARG002
+        locate_settings: LocateSettings,  # noqa: ARG002
     ) -> list[Tuple[int, int]]:
         self.calls += 1
         if self.calls <= self.fail_times:
@@ -48,9 +48,7 @@ def always_failing_model() -> FailingLocateModel:
 def vision_agent_with_retry(
     failing_model: FailingLocateModel, agent_toolbox_mock: AgentToolbox
 ) -> VisionAgent:
-    return VisionAgent(
-        models={"failing-locate": failing_model}, tools=agent_toolbox_mock
-    )
+    return VisionAgent(locate_model=failing_model, tools=agent_toolbox_mock)
 
 
 @pytest.fixture
@@ -58,7 +56,7 @@ def vision_agent_with_retry_on_multiple_exceptions(
     failing_model: FailingLocateModel, agent_toolbox_mock: AgentToolbox
 ) -> VisionAgent:
     return VisionAgent(
-        models={"failing-locate": failing_model},
+        locate_model=failing_model,
         tools=agent_toolbox_mock,
         retry=ConfigurableRetry(
             on_exception_types=(
@@ -78,7 +76,7 @@ def vision_agent_always_fail(
     always_failing_model: FailingLocateModel, agent_toolbox_mock: AgentToolbox
 ) -> VisionAgent:
     return VisionAgent(
-        models={"always-fail": always_failing_model},
+        locate_model=always_failing_model,
         tools=agent_toolbox_mock,
         retry=ConfigurableRetry(
             on_exception_types=(ElementNotFoundError,),
@@ -92,9 +90,7 @@ def vision_agent_always_fail(
 def test_locate_retries_and_succeeds(
     vision_agent_with_retry: VisionAgent, failing_model: FailingLocateModel
 ) -> None:
-    result = vision_agent_with_retry.locate(
-        "something", screenshot=None, model="failing-locate"
-    )
+    result = vision_agent_with_retry.locate("something", screenshot=None)
     assert result == (10, 10)
     assert failing_model.calls == 3  # 2 fails + 1 success
 
@@ -104,7 +100,7 @@ def test_locate_retries_on_multiple_exceptions_and_succeeds(
     failing_model: FailingLocateModel,
 ) -> None:
     result = vision_agent_with_retry_on_multiple_exceptions.locate(
-        "something", screenshot=None, model="failing-locate"
+        "something", screenshot=None
     )
     assert result == (10, 10)
     assert failing_model.calls == 3
@@ -114,21 +110,19 @@ def test_locate_retries_and_fails(
     vision_agent_always_fail: VisionAgent, always_failing_model: FailingLocateModel
 ) -> None:
     with pytest.raises(ElementNotFoundError):
-        vision_agent_always_fail.locate(
-            "something", screenshot=None, model="always-fail"
-        )
+        vision_agent_always_fail.locate("something", screenshot=None)
     assert always_failing_model.calls == 3  # Only 3 attempts
 
 
 def test_click_retries(
     vision_agent_with_retry: VisionAgent, failing_model: FailingLocateModel
 ) -> None:
-    vision_agent_with_retry.click("something", model="failing-locate")
+    vision_agent_with_retry.click("something")
     assert failing_model.calls == 3
 
 
 def test_mouse_move_retries(
     vision_agent_with_retry: VisionAgent, failing_model: FailingLocateModel
 ) -> None:
-    vision_agent_with_retry.mouse_move("something", model="failing-locate")
+    vision_agent_with_retry.mouse_move("something")
     assert failing_model.calls == 3
