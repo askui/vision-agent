@@ -55,7 +55,7 @@ execution_settings = CachedExecutionToolSettings(
 
 #### Parameters
 
-- **`delay_time_between_action`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements have time to respond before the next action is executed. Defaults to `0.5` seconds.
+- **`delay_time_between_action`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements can materialize before the next action is executed. Defaults to `0.5` seconds.
 
 You can adjust this value based on your application's responsiveness:
 - For faster applications or quick interactions, you might use a smaller delay (e.g., `0.1` or `0.2` seconds)
@@ -75,7 +75,7 @@ with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="write", # you could also use "both" here
             cache_dir=".cache",
             filename="login_test.json"
         )
@@ -96,7 +96,7 @@ with VisionAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="read", # you could also use "both" here
             cache_dir=".cache"
         )
     )
@@ -111,7 +111,7 @@ The agent will automatically check if a relevant cached trajectory exists and us
 
 ### Referencing Cache Files in Goal Prompts
 
-When using `strategy="read"` or `strategy="both"`, you need to inform the agent about which cache files are available and when to use them. This is done by including cache file information directly in your goal prompt.
+When using `strategy="read"` or `strategy="both"`, **you need to inform the agent about which cache files are available and when to use them**. This is done by including cache file information directly in your goal prompt.
 
 #### Explicit Cache File References
 
@@ -124,8 +124,8 @@ from askui.models.shared.settings import CachingSettings
 with VisionAgent() as agent:
     agent.act(
         goal="""Open the website in Google Chrome.
-        
-        If the cache file "open_website_in_chrome.json" is available, please use it 
+
+        If the cache file "open_website_in_chrome.json" is available, please use it
         for this execution. It will open a new window in Chrome and navigate to the website.""",
         caching_settings=CachingSettings(
             strategy="read",
@@ -147,8 +147,8 @@ test_id = "TEST_001"
 with VisionAgent() as agent:
     agent.act(
         goal=f"""Execute test {test_id} according to the test definition.
-        
-        Check if a cache file named "{test_id}.json" exists. If it does, use it to 
+
+        Check if a cache file named "{test_id}.json" exists. If it does, use it to
         replay the test actions, then verify the results.""",
         caching_settings=CachingSettings(
             strategy="read",
@@ -168,9 +168,9 @@ from askui.models.shared.settings import CachingSettings
 with VisionAgent() as agent:
     agent.act(
         goal="""Fill out the user registration form.
-        
-        Look for cache files that match the pattern "user_registration_*.json". 
-        Choose the most recent one if multiple are available, as it likely contains 
+
+        Look for cache files that match the pattern "user_registration_*.json".
+        Choose the most recent one if multiple are available, as it likely contains
         the most up-to-date interaction sequence.""",
         caching_settings=CachingSettings(
             strategy="read",
@@ -190,11 +190,11 @@ from askui.models.shared.settings import CachingSettings
 with VisionAgent() as agent:
     agent.act(
         goal="""Complete the full checkout process:
-        
+
         1. If "login.json" exists, use it to log in
         2. If "add_to_cart.json" exists, use it to add items to cart
         3. If "checkout.json" exists, use it to complete the checkout
-        
+
         After each cached execution, verify the step completed successfully before proceeding.""",
         caching_settings=CachingSettings(
             strategy="read",
@@ -353,9 +353,9 @@ print("\nReplaying login flow for regression test...")
 with VisionAgent() as agent:
     agent.act(
         goal="""Log in to the application.
-        
-        If the cache file "user_login.json" is available, please use it to replay 
-        the login sequence. It contains the steps to navigate to the login page and 
+
+        If the cache file "user_login.json" is available, please use it to replay
+        the login sequence. It contains the steps to navigate to the login page and
         authenticate with the test credentials.""",
         caching_settings=CachingSettings(
             strategy="read",
@@ -366,3 +366,9 @@ with VisionAgent() as agent:
         )
     )
 ```
+
+## See Also
+
+- **[02_Prompting.md](./02_Prompting.md)** - System prompts and customizing agent behavior
+- **[03_Using-Models-and-BYOM.md](./03_Using-Models-and-BYOM.md)** - Choose and configure AI models
+- **[00_Overview.md](./00_Overview.md)** - AskUI Vision Agent overview and architecture

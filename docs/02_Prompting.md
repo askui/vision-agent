@@ -15,15 +15,15 @@ The default prompts work well for general use cases, but customizing them for yo
 
 ## Prompt Structure
 
-System prompts should consist of six distinct parts, each wrapped in XML tags:
+System prompts for the AskUI VisionAgent consist of six distinct parts:
 
-| Part | Required | Purpose |
-|------|----------|---------|
+| Part | Default | Purpose |
+|------|---------|---------|
 | System Capabilities | Yes | Defines what the agent can do and how it should behave |
 | Device Information | Yes | Provides platform-specific context (desktop, mobile, web) |
 | UI Information | No (but strongly recommended!) | Custom information about your specific UI |
 | Report Format | Yes | Specifies how to format execution results |
-| Cache Use | No | Specifices when and how the agent should use cache files |
+| Cache Use | Yes | Specifices when and how the agent should use cache files |
 | Additional Rules | No | Special handling for edge cases or known issues |
 
 ### 1. System Capabilities
@@ -35,7 +35,7 @@ Defines the agent's core capabilities and operational guidelines.
 - `WEB_BROWSER_CAPABILITIES` - For web applications
 - `ANDROID_CAPABILITIES` - For Android devices
 
-**Important:** We recommend using the default AskUI capabilities unless you have specific requirements, as custom capabilities can lead to unexpected behavior.
+**Important:** We strongly recommend using the default AskUI capabilities unless you have specific requirements, as custom capabilities can lead to unexpected behavior.
 
 ### 2. Device Information
 
@@ -227,15 +227,14 @@ prompt = create_computer_agent_prompt(
 
 ### UI Information
 
-- **Document navigation patterns**: Explain how users navigate through your application.
+- **Document navigation patterns**: Explain how users navigate through your application, as one would expect in a documentation.
 - **Identify unique elements**: Point out non-standard UI components or interactions.
-- **Specify timing requirements**: Note any delays, loading states, or async operations.
 - **List forbidden actions**: Explicitly state what the agent should NOT do.
 
 ### Additional Rules
 
+- **Handle indiviual failures**: Add specific instructions to overcome agent failures that you commonly encounter
 - **Target specific issues**: Use this section to address known failure scenarios.
-- **Provide context**: Explain when and why a rule applies.
 - **Include examples**: Show concrete examples of the situation you're addressing.
 - **Keep it current**: Update rules as your application changes.
 
@@ -310,17 +309,17 @@ prompt = create_web_agent_prompt(
     - Product images may take 1-2 seconds to load
     - Cart updates trigger 500ms animation
     - Checkout validation shows spinner for 1-3 seconds
-
-    **DO NOT:**
-    - Click "Complete Purchase" without explicit user confirmation
-    - Submit payment information
-    - Delete items from saved lists
     """,
     additional_rules="""
     - Always verify cart contents before proceeding to checkout
     - Wait for page transitions to complete before taking next action
     - If "Out of Stock" message appears, report it and stop execution
     - Ignore promotional popups that may appear during browsing
+
+    **DO NOT:**
+    - Click "Complete Purchase" without explicit user confirmation
+    - Submit payment information
+    - Delete items from saved lists
     """
 )
 
