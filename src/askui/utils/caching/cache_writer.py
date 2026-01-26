@@ -20,6 +20,8 @@ from askui.models.shared.settings import (
     CacheWritingSettings,
 )
 from askui.models.shared.tools import ToolCollection
+from askui.tools.android.tools import AndroidScreenshotTool
+from askui.tools.computer import ComputerScreenshotTool
 from askui.utils.cache_parameter_handler import CacheParameterHandler
 from askui.utils.visual_validation import (
     compute_ahash,
@@ -287,30 +289,23 @@ class CacheWriter:
             )
             return tool_block
 
-        # Check if this tool input should be validated
-        action = None
-        if isinstance(tool_block.input, dict):
-            action = tool_block.input.get("action")
-
-        if not should_validate_step(tool_block.name, action):
-            logger.debug(
-                "Visual validation skipped for %s action=%s: not a validatable action",
+        if not should_validate_step(tool_block.name):
+            logger.info(
+                "Visual validation skipped for %s: not a validatable tool",
                 tool_block.name,
-                action,
             )
             return tool_block
 
         # Get validation coordinate
         if not isinstance(tool_block.input, dict):
-            logger.debug("Visual validation skipped: input is not a dict")
+            logger.warning("Visual validation skipped: input is not a dict")
             return tool_block
 
         coordinate = get_validation_coordinate(tool_block.input)
         if coordinate is None:
-            logger.debug(
-                "Visual validation skipped for %s action=%s: no coordinate found",
+            logger.warning(
+                "Visual validation skipped for %s: no coordinate found",
                 tool_block.name,
-                action,
             )
             return tool_block
 
@@ -319,10 +314,8 @@ class CacheWriter:
             screenshot = self._capture_screenshot()
             if screenshot is None:
                 logger.warning(
-                    "Visual validation skipped for %s action=%s: "
-                    "screenshot capture failed",
+                    "Visual validation skipped for %s: screenshot capture failed",
                     tool_block.name,
-                    action,
                 )
                 return tool_block
 
@@ -348,10 +341,8 @@ class CacheWriter:
             )
 
             logger.info(
-                "✓ Visual validation added to %s action=%s at coordinate %s "
-                "(hash=%s...)",
+                "✓ Visual validation added to %s at coordinate %s (hash=%s...)",
                 tool_block.name,
-                action,
                 coordinate,
                 visual_hash[:16],
             )
@@ -359,10 +350,8 @@ class CacheWriter:
 
         except Exception as e:  # noqa: BLE001
             logger.warning(
-                "Visual validation skipped for %s action=%s: "
-                "error during enhancement: %s",
+                "Visual validation skipped for %s: error during enhancement: %s",
                 tool_block.name,
-                action,
                 str(e),
             )
             # Fall through to return original tool_block
@@ -381,44 +370,48 @@ class CacheWriter:
 
         # Get the computer tool from the toolbox
         tools = self._toolbox.get_tools()
-        computer_tool = tools.get("computer_screenshot")
+        screenshot_tool = None
+        tool_names = [
+            "computer_screenshot",
+            "android_screenshot_tool",
+        ]
+        for tool_name in tool_names:
+            screenshot_tool = tools.get(tool_name)
+            if screenshot_tool is not None:
+                assert isinstance(
+                    screenshot_tool, (ComputerScreenshotTool, AndroidScreenshotTool)
+                )
+                logger.debug("Found screenshot tool: %s", tool_name)
+                break
 
-        if computer_tool is None:
-            logger.warning(
-                "Cannot capture screenshot: computer tool not found in toolbox. "
-                "Available tools: %s",
-                list(tools.keys()),
-            )
+        if screenshot_tool is None:
+            logger.warning("No screenshot tool found in toolbox")
             return None
 
         # Call the screenshot action
         try:
             # Try to call _screenshot() method directly if available
-            if hasattr(computer_tool, "agent_os"):
-                result = computer_tool.agent_os.screenshot()  # noqa: SLF001
+            if hasattr(screenshot_tool, "agent_os"):
+                result = screenshot_tool.agent_os.screenshot()
                 if isinstance(result, Image.Image):
-                    logger.debug("Screenshot captured successfully via _screenshot()")
                     return result
 
-            # Fallback to calling via __call__ with action parameter
-            result = computer_tool()
-            if isinstance(result, Image.Image):
-                logger.debug("Screenshot captured successfully via __call__")
+            # Handle different return types
+            # Android tool returns tuple[str, Image.Image]
+            if isinstance(result, tuple) and len(result) >= 2:
+                if isinstance(result[1], Image.Image):
+                    return result[1]
+            # Computer tool returns Image.Image directly
+            elif isinstance(result, Image.Image):
                 return result
 
             logger.warning(
-                "Screenshot action did not return an Image. Type: %s, Value: %s",
-                type(result).__name__,
-                str(result)[:100],
+                "Screenshot action did not return an Image: %s", type(result)
             )
-        except Exception as e:  # noqa: BLE001
-            logger.warning(
-                "Error capturing screenshot for visual validation: %s: %s",
-                type(e).__name__,
-                str(e),
-            )
-
-        return None
+            return None  # noqa: TRY300
+        except Exception:
+            logger.exception("Error capturing screenshot")
+            return None
 
     def _accumulate_usage(self, step_usage: UsageParam) -> None:
         """Accumulate usage statistics from a single API call.

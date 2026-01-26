@@ -207,7 +207,7 @@ def validate_visual_hash(
     return False, error_msg, distance
 
 
-def should_validate_step(tool_name: str, action: str | None = None) -> bool:
+def should_validate_step(tool_name: str) -> bool:
     """Determine if a tool step should have visual validation.
 
     Args:
@@ -216,26 +216,18 @@ def should_validate_step(tool_name: str, action: str | None = None) -> bool:
 
     Returns:
         True if step should be validated
-
-    Steps that should be validated:
-    - Mouse clicks (left_click, right_click, double_click, middle_click)
-    - Type actions (verify input field hasn't moved)
-    - Key presses targeting specific UI elements
     """
     # Computer tool with click or type actions
-    if tool_name == "computer":
-        if action in [
-            "left_click",
-            "right_click",
-            "double_click",
-            "middle_click",
-            "type",
-            "key",
-        ]:
-            return True
+    if tool_name in [
+        "android_tap_tool",
+        "android_drag_and_drop_tool",
+        "android_swipe_tool",
+        "computer_mouse_click",
+        "computer_mouse_scroll",
+        "computer_move_mouse",
+    ]:
+        return True
 
-    # Other tools that interact with specific UI regions
-    # Add more as needed
     return False
 
 
@@ -256,6 +248,10 @@ def get_validation_coordinate(tool_input: dict[str, Any]) -> tuple[int, int] | N
         coord = tool_input["coordinate"]
         if isinstance(coord, list) and len(coord) == 2:
             return (int(coord[0]), int(coord[1]))
+    elif "x" in tool_input and "y" in tool_input:
+        return (int(tool_input["x"]), int(tool_input["y"]))
+    elif "x1" in tool_input and "y1" in tool_input:
+        return (int(tool_input["x1"]), int(tool_input["y1"]))
 
     return None
 
