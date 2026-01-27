@@ -234,7 +234,6 @@ Tools are organized by category: `universal/` (work with any agent), `computer/`
 
 Aside from our [official documentation](https://docs.askui.com), we also have some additional guides and examples under the [docs](docs) folder that you may find useful, for example:
 
-- **[Chat](docs/chat.md)** - How to interact with agents through a chat
 - **[Direct Tool Use](docs/direct-tool-use.md)** - How to use the tools, e.g., clipboard, the Agent OS etc.
 - **[Extracting Data](docs/extracting-data.md)** - How to extract data from the screen and documents
 - **[MCP](docs/mcp.md)** - How to use MCP servers to extend the capabilities of an agent
