@@ -224,6 +224,7 @@ Controls behavior of ActModel operations:
 ```python
 from askui import VisionAgent
 from askui.models.shared.settings import ActSettings, MessageSettings
+from askui.prompts.act_prompts import create_computer_agent_prompt
 
 # Configure at agent level
 with VisionAgent() as agent:
@@ -241,7 +242,7 @@ with VisionAgent() as agent:
         messages=MessageSettings(
             max_tokens=8192,
             temperature=0.5,
-            betas=["computer-use-2025-01-24"],
+            system=create_computer_agent_prompt(),
         )
     )
 

@@ -15,7 +15,7 @@ This guide will get AskUI Vision Agent installed and configured on your system.
 
 ## Python Package Installation
 
-AskUI Vision Agent requires Python 3.10 or higher.
+AskUI Vision Agent requires Python >=3.10, and <3.14.
 
 ```bash
 pip install askui[all]
@@ -33,14 +33,6 @@ If you want a minimal installation without optional dependencies:
 
 ```bash
 pip install askui
-```
-
-You can then install specific extras as needed:
-
-```bash
-pip install askui[anthropic]  # Anthropic Claude support
-pip install askui[openrouter]  # OpenRouter support
-pip install askui[documents]  # PDF, Excel, Word support
 ```
 
 ## Agent OS Installation
@@ -224,9 +216,8 @@ If this runs successfully and prints the first paragraph, congratulations! Your 
 **Problem**: Error connecting to Agent OS
 
 **Solutions**:
-1. Check if Agent OS is running (look for the system tray icon)
-2. Restart Agent OS from your applications menu
-3. Reinstall Agent OS if the problem persists
+1. Restart Agent OS
+2. Reinstall Agent OS if the problem persists
 
 ### Authentication Errors
 
