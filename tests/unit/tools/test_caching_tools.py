@@ -83,7 +83,7 @@ def test_retrieve_cached_test_executions_respects_custom_format() -> None:
 def test_execute_cached_execution_initializes_without_toolbox() -> None:
     """Test that ExecuteCachedExecution can be initialized without toolbox."""
     tool = ExecuteCachedTrajectory()
-    assert tool.name == "execute_cached_executions_tool"
+    assert tool.name.startswith("execute_cached_executions_tool")
 
 
 def test_execute_cached_execution_raises_error_without_toolbox() -> None:

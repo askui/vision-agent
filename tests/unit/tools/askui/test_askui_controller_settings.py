@@ -104,7 +104,8 @@ class TestAskUiControllerSettings:
             with pytest.raises(
                 ValueError, match="Either ASKUI_COMPONENT_REGISTRY_FILE"
             ):
-                AskUiControllerSettings()
+                settings = AskUiControllerSettings()
+                _ = settings.controller_path
 
     def test_build_controller_path_windows(self) -> None:
         """Test _build_controller_path for Windows platform."""
