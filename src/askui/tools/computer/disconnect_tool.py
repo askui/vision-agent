@@ -7,7 +7,7 @@ class ComputerDisconnectTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_disconnect",
+            name="disconnect",
             description=(
                 "Disconnect from the agent OS controller. "
                 "Needs to be used once you are done with the task and want to stop"

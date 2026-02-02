@@ -11,7 +11,7 @@ class ComputerListProcessWindowsTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_list_process_windows_tool",
+            name="list_process_windows_tool",
             description="""
             Lists all windows belonging to a specific process identified by its
             process ID. This tool is used after list_process_tool to discover all

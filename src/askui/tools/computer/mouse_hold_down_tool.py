@@ -9,7 +9,7 @@ class ComputerMouseHoldDownTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_mouse_hold_down",
+            name="mouse_hold_down",
             description="Hold down the mouse button at the current position.",
             input_schema={
                 "type": "object",

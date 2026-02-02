@@ -7,7 +7,7 @@ class ComputerTypeTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_type",
+            name="type",
             description="Type text on the computer.",
             input_schema={
                 "type": "object",

@@ -7,7 +7,7 @@ class ComputerMoveMouseTool(ComputerBaseTool):
 
     def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="computer_move_mouse",
+            name="move_mouse",
             description="Move the mouse to a specific position.",
             input_schema={
                 "type": "object",

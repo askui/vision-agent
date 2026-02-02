@@ -11,7 +11,7 @@ class ComputerSetProcessInFocusTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_set_process_in_focus_tool",
+            name="set_process_in_focus_tool",
             description="""
             Brings a process into focus. When you use this tool, it activates the
             specified process and brings it to the foreground. The process itself

@@ -9,7 +9,7 @@ class ComputerKeyboardReleaseTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_keyboard_release",
+            name="keyboard_release",
             description="Release a keyboard key.",
             input_schema={
                 "type": "object",

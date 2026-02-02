@@ -1,5 +1,7 @@
 import logging
+import re
 import types
+import uuid
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from functools import wraps
@@ -19,7 +21,7 @@ from fastmcp.tools import Tool as FastMcpTool
 from fastmcp.utilities.types import Image as FastMcpImage
 from mcp import Tool as McpTool
 from PIL import Image
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from typing_extensions import Self
 
 from askui.models.shared.agent_message_param import (
@@ -161,7 +163,9 @@ def _create_tool_result_block_param_for_playwright_error(
 
 
 class Tool(BaseModel, ABC):
-    name: str = Field(description="Name of the tool")
+    model_config = ConfigDict(populate_by_name=True)
+
+    base_name: str = Field(alias="name", description="Name of the tool")
     description: str = Field(description="Description of what the tool does")
     input_schema: InputSchema = Field(
         default_factory=_default_input_schema,
@@ -171,11 +175,31 @@ class Tool(BaseModel, ABC):
         description="Tags required for the tool", default=[]
     )
 
+    _unique_id: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
+
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
         """Executes the tool with the given arguments."""
         error_msg = "Tool subclasses must implement __call__ method"
         raise NotImplementedError(error_msg)
+
+    @property
+    def name(self) -> str:
+        """Returns the unique name for this tool instance."""
+        name_parts = [self.base_name]
+        if len(self.required_tags) > 0:
+            name_parts.append(f"tags_{'_'.join(self.required_tags)}")
+        name_parts.append(self._unique_id)
+        name = "_".join(name_parts)
+        # Ensure name matches pattern ^[a-zA-Z0-9_-]$
+        name = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+        # Ensure name is not longer than 64 characters
+        return name[:64]
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """Sets the base name of the tool."""
+        self.base_name = value
 
     def to_params(
         self,

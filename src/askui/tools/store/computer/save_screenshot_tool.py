@@ -41,7 +41,7 @@ class ComputerSaveScreenshotTool(ComputerBaseTool):
 
     def __init__(self, base_dir: str) -> None:
         super().__init__(
-            name="computer_save_screenshot_tool",
+            name="save_screenshot_tool",
             description=(
                 "Saves a screenshot of the currently active computer screen "
                 "to disk as a PNG image file. The screenshot is captured from the "
