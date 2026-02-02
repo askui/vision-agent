@@ -2,9 +2,8 @@ import pathlib
 import sys
 from functools import cached_property
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 class RemoteDeviceController(BaseModel):
@@ -92,22 +91,6 @@ class AskUiControllerSettings(BaseSettings):
                     raise ValueError(error_msg)
 
         return value
-
-    @model_validator(mode="after")
-    def validate_either_component_registry_or_installation_directory_is_set(
-        self,
-    ) -> "Self":
-        if (
-            self.component_registry_file is None
-            and self.installation_directory is None
-            and self.controller_path_setting is None
-        ):
-            error_msg = (
-                "Either ASKUI_COMPONENT_REGISTRY_FILE, ASKUI_INSTALLATION_DIRECTORY, "
-                "or ASKUI_CONTROLLER_PATH environment variable must be set"
-            )
-            raise ValueError(error_msg)
-        return self
 
     def _find_remote_device_controller_by_installation_directory(
         self,

@@ -12,8 +12,12 @@ class ReadFromFileTool(Tool):
     accessing any text-based data stored on the filesystem during execution.
 
     Args:
-        base_dir (str): The base directory path where files will be read from.
+        base_dir (str | Path): The base directory path where files will be read from.
             All file paths will be relative to this directory.
+
+        encoding_to_try (list[str]): The list of encodings to try to read the file.
+            If not provided, the default encodings will be used. The default encodings
+            are "utf-8" and "latin-1".
 
     Example:
         ```python
@@ -28,7 +32,14 @@ class ReadFromFileTool(Tool):
         ```
     """
 
-    def __init__(self, base_dir: str) -> None:
+    def __init__(
+        self,
+        base_dir: str | Path,
+        encoding_to_try: list[str] | None = None,
+    ) -> None:
+        if not isinstance(base_dir, Path):
+            base_dir = Path(base_dir)
+        base_dir = base_dir.absolute()
         super().__init__(
             name="read_from_file_tool",
             description=(
@@ -55,7 +66,8 @@ class ReadFromFileTool(Tool):
                 "required": ["file_path"],
             },
         )
-        self._base_dir = Path(base_dir)
+        self._base_dir = base_dir
+        self._encoding_to_try = encoding_to_try or ["utf-8", "latin-1"]
 
     def __call__(self, file_path: str) -> str:
         """
@@ -72,6 +84,7 @@ class ReadFromFileTool(Tool):
         Raises:
             FileNotFoundError: If the file does not exist.
             OSError: If the file cannot be read due to filesystem errors.
+            RuntimeError: If the file cannot be read due to encoding errors.
         """
         absolute_file_path = self._base_dir / file_path
 
@@ -83,5 +96,18 @@ class ReadFromFileTool(Tool):
             error_msg = f"Path is not a file: {absolute_file_path}"
             raise ValueError(error_msg)
 
-        content = absolute_file_path.read_text(encoding="utf-8")
+        content = None
+        for encoding in self._encoding_to_try:
+            try:
+                content = absolute_file_path.read_text(encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if not content:
+            error_msg = (
+                f"Failed to read file {absolute_file_path} with any"
+                f" of the encodings: {', '.join(self._encoding_to_try)}"
+            )
+            raise RuntimeError(error_msg)
         return f"Content of {absolute_file_path}:\n\n{content}"

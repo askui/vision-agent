@@ -163,7 +163,9 @@ def _create_tool_result_block_param_for_playwright_error(
 
 
 class Tool(BaseModel, ABC):
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(
+        validate_by_alias=True,
+    )
 
     base_name: str = Field(alias="name", description="Name of the tool")
     description: str = Field(description="Description of what the tool does")

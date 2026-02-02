@@ -13,7 +13,7 @@ class WriteToFileTool(Tool):
     creating reports, or storing any text-based data during execution.
 
     Args:
-        base_dir (str): The base directory path where files will be written.
+        base_dir (str | Path): The base directory path where files will be written.
             All file paths will be relative to this directory. The base directory
             will be created if it doesn't exist.
 
@@ -41,12 +41,16 @@ class WriteToFileTool(Tool):
         ```
     """
 
-    def __init__(self, base_dir: str) -> None:
+    def __init__(self, base_dir: str | Path) -> None:
+        if not isinstance(base_dir, Path):
+            base_dir = Path(base_dir)
+        base_dir = base_dir.absolute()
         super().__init__(
             name="write_to_file_tool",
             description=(
                 "Writes text content to a file on the filesystem. The file path is "
-                "relative to the base directory specified during tool initialization. "
+                f"relative to the base directory '{base_dir}' specified during tool "
+                "initialization. "
                 "The directory structure will be created automatically if it doesn't "
                 "exist. You can choose to overwrite existing files or append to them "
                 "by setting the append parameter. Use this tool to save results, "
@@ -59,13 +63,11 @@ class WriteToFileTool(Tool):
                     "file_path": {
                         "type": "string",
                         "description": (
-                            "The relative path of the file where content should be "
-                            "written. The path is relative to the base directory "
-                            "specified during tool initialization. For example, if "
-                            "base_dir is '/output' and file_path is "
-                            "'results/data.txt', the file will be written to "
-                            "'/output/results/data.txt'. Subdirectories will be "
-                            "created automatically if needed."
+                            "The relative path of the file to write to. The path is "
+                            f"relative to the base directory '{base_dir}' specified "
+                            "during tool initialization. For example, if file_path "
+                            "is 'config/settings.txt', the file will be written to "
+                            f"'{base_dir}/config/settings.txt'."
                         ),
                     },
                     "content": {
@@ -92,8 +94,7 @@ class WriteToFileTool(Tool):
                 "required": ["file_path", "content", "append"],
             },
         )
-        self._base_dir = Path(base_dir)
-        self._base_dir.mkdir(parents=True, exist_ok=True)
+        self._base_dir = base_dir
 
     def __call__(self, file_path: str, content: str, append: bool) -> str:
         """

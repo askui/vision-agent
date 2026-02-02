@@ -13,7 +13,7 @@ class ListFilesTool(Tool):
     directories during execution.
 
     Args:
-        base_dir (str): The base directory path where file listing will start.
+        base_dir (str | Path): The base directory path where file listing will start.
             All directory paths will be relative to this directory.
 
     Example:
@@ -29,7 +29,10 @@ class ListFilesTool(Tool):
         ```
     """
 
-    def __init__(self, base_dir: str) -> None:
+    def __init__(self, base_dir: str | Path) -> None:
+        if not isinstance(base_dir, Path):
+            base_dir = Path(base_dir)
+        base_dir = base_dir.absolute()
         super().__init__(
             name="list_files_tool",
             description=(
@@ -66,7 +69,7 @@ class ListFilesTool(Tool):
                 "required": [],
             },
         )
-        self._base_dir = Path(base_dir)
+        self._base_dir = base_dir
 
     def __call__(self, directory_path: str = "", recursive: bool = False) -> str:
         """
