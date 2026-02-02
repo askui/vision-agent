@@ -102,7 +102,7 @@ class TestAskUiControllerSettings:
         """Test that ValueError is raised when no environment variables are set."""
         with patch.dict("os.environ", {}, clear=True):
             with pytest.raises(
-                ValueError, match="Either ASKUI_COMPONENT_REGISTRY_FILE"
+                ValueError, match="No AskUI Remote Device Controller found. Please set"
             ):
                 settings = AskUiControllerSettings()
                 _ = settings.controller_path
@@ -394,7 +394,7 @@ class TestAskUiControllerSettings:
                 patch.object(settings, "controller_path_setting", None),
             ):
                 with pytest.raises(
-                    AssertionError, match="No AskUI Remote Device Controller found"
+                    ValueError, match="No AskUI Remote Device Controller found"
                 ):
                     _ = settings.controller_path
 
