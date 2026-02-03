@@ -49,12 +49,12 @@ class LoadImageTool(Tool):
     def __init__(self, base_dir: str | Path) -> None:
         if not isinstance(base_dir, Path):
             base_dir = Path(base_dir)
-        base_dir = base_dir.absolute()
+        absolute = base_dir.absolute()
         super().__init__(
             name="load_image_tool",
             description=(
                 "Loads an image from the filesystem and returns it for analysis or "
-                f"processing. The base directory is set to '{base_dir}' during tool "
+                f"processing. The base directory is set to '{absolute}' during tool "
                 "initialization. All image paths are relative to this base directory. "
                 "Supports common image formats (PNG, JPEG, BMP, GIF, etc.). Images are "
                 "automatically scaled to fit within a target size for efficient "
@@ -69,10 +69,10 @@ class LoadImageTool(Tool):
                         "type": "string",
                         "description": (
                             "The relative path of the image file to load. The path is "
-                            f"relative to the base directory '{base_dir}' specified "
+                            f"relative to the base directory '{absolute}' specified "
                             "during tool initialization. For example, if image_path "
                             "is 'screenshots/login.png', the image will be loaded from "
-                            f"'{base_dir}/screenshots/login.png'."
+                            f"'{absolute}/screenshots/login.png'."
                         ),
                     },
                 },

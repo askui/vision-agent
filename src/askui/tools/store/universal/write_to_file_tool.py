@@ -44,12 +44,12 @@ class WriteToFileTool(Tool):
     def __init__(self, base_dir: str | Path) -> None:
         if not isinstance(base_dir, Path):
             base_dir = Path(base_dir)
-        base_dir = base_dir.absolute()
+        absolute = base_dir.absolute()
         super().__init__(
             name="write_to_file_tool",
             description=(
                 "Writes text content to a file on the filesystem. The file path is "
-                f"relative to the base directory '{base_dir}' specified during tool "
+                f"relative to the base directory '{absolute}' specified during tool "
                 "initialization. "
                 "The directory structure will be created automatically if it doesn't "
                 "exist. You can choose to overwrite existing files or append to them "
@@ -64,10 +64,10 @@ class WriteToFileTool(Tool):
                         "type": "string",
                         "description": (
                             "The relative path of the file to write to. The path is "
-                            f"relative to the base directory '{base_dir}' specified "
+                            f"relative to the base directory '{absolute}' specified "
                             "during tool initialization. For example, if file_path "
                             "is 'config/settings.txt', the file will be written to "
-                            f"'{base_dir}/config/settings.txt'."
+                            f"'{absolute}/config/settings.txt'."
                         ),
                     },
                     "content": {

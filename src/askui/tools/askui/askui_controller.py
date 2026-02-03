@@ -218,17 +218,20 @@ class AskUiControllerClient(AgentOs):
         self._start_execution()
         self.set_display(self._display)
 
+    def _get_stub(self) -> controller_v1.ControllerAPIStub:
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized. Call `connect()` first."
+        )
+        return self._stub
+
     def _run_recorder_action(
         self,
         acion_class_id: controller_v1_pbs.ActionClassID,
         action_parameters: controller_v1_pbs.ActionParameters,
     ) -> controller_v1_pbs.Response_RunRecordedAction:
         time.sleep(self._pre_action_wait)
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         response: controller_v1_pbs.Response_RunRecordedAction = (
-            self._stub.RunRecordedAction(
+            self._get_stub().RunRecordedAction(
                 controller_v1_pbs.Request_RunRecordedAction(
                     sessionInfo=self._session_info,
                     actionClassID=acion_class_id,
@@ -240,10 +243,7 @@ class AskUiControllerClient(AgentOs):
         time.sleep((response.requiredMilliseconds / 1000))
         num_retries = 0
         for _ in range(self._max_retries):
-            assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-                "Stub is not initialized. Call `connect()` first."
-            )
-            poll_response: controller_v1_pbs.Response_Poll = self._stub.Poll(
+            poll_response: controller_v1_pbs.Response_Poll = self._get_stub().Poll(
                 controller_v1_pbs.Request_Poll(
                     sessionInfo=self._session_info,
                     pollEventID=controller_v1_pbs.PollEventID.PollEventID_ActionFinished,
@@ -312,10 +312,7 @@ class AskUiControllerClient(AgentOs):
         self.disconnect()
 
     def _start_session(self) -> None:
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        response = self._stub.StartSession(
+        response = self._get_stub().StartSession(
             controller_v1_pbs.Request_StartSession(
                 sessionGUID=self._session_guid, immediateExecution=True
             )
@@ -323,26 +320,17 @@ class AskUiControllerClient(AgentOs):
         self._session_info = response.sessionInfo
 
     def _stop_session(self) -> None:
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        self._stub.EndSession(
+        self._get_stub().EndSession(
             controller_v1_pbs.Request_EndSession(sessionInfo=self._session_info)
         )
 
     def _start_execution(self) -> None:
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        self._stub.StartExecution(
+        self._get_stub().StartExecution(
             controller_v1_pbs.Request_StartExecution(sessionInfo=self._session_info)
         )
 
     def _stop_execution(self) -> None:
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        self._stub.StopExecution(
+        self._get_stub().StopExecution(
             controller_v1_pbs.Request_StopExecution(sessionInfo=self._session_info)
         )
 
@@ -360,10 +348,7 @@ class AskUiControllerClient(AgentOs):
             Image.Image: A PIL Image object containing the screenshot.
 
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        screenResponse = self._stub.CaptureScreen(
+        screenResponse = self._get_stub().CaptureScreen(
             controller_v1_pbs.Request_CaptureScreen(
                 sessionInfo=self._session_info,
                 captureParameters=controller_v1_pbs.CaptureParameters(
@@ -651,10 +636,7 @@ class AskUiControllerClient(AgentOs):
                 This can be either a real display ID or a virtual display ID.
                 Defaults to `1`.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        self._stub.SetActiveDisplay(
+        self._get_stub().SetActiveDisplay(
             controller_v1_pbs.Request_SetActiveDisplay(displayID=display)
         )
         self._display = display
@@ -714,14 +696,11 @@ class AskUiControllerClient(AgentOs):
         Returns:
             DisplaysListResponse
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", "list_displays()")
 
         response: controller_v1_pbs.Response_GetDisplayInformation = (
-            self._stub.GetDisplayInformation(controller_v1_pbs.Request_Void())
+            self._get_stub().GetDisplayInformation(controller_v1_pbs.Request_Void())
         )
 
         response_dict = MessageToDict(
@@ -751,14 +730,15 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_GetProcessList: Process list response containing:
                 - processes: List of ProcessInfo objects
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"get_process_list({get_extended_info})")
 
-        response: controller_v1_pbs.Response_GetProcessList = self._stub.GetProcessList(
-            controller_v1_pbs.Request_GetProcessList(getExtendedInfo=get_extended_info)
+        response: controller_v1_pbs.Response_GetProcessList = (
+            self._get_stub().GetProcessList(
+                controller_v1_pbs.Request_GetProcessList(
+                    getExtendedInfo=get_extended_info
+                )
+            )
         )
         self._reporter.add_message(
             "AgentOS", f"get_process_list({get_extended_info}) -> {response}"
@@ -780,14 +760,13 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_GetWindowList: Window list response containing:
                 - windows: List of WindowInfo objects with ID and name
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"get_window_list({process_id})")
 
-        response: controller_v1_pbs.Response_GetWindowList = self._stub.GetWindowList(
-            controller_v1_pbs.Request_GetWindowList(processID=process_id)
+        response: controller_v1_pbs.Response_GetWindowList = (
+            self._get_stub().GetWindowList(
+                controller_v1_pbs.Request_GetWindowList(processID=process_id)
+            )
         )
 
         self._reporter.add_message(
@@ -808,14 +787,11 @@ class AskUiControllerClient(AgentOs):
                 Automation target list response:
                 - targets: List of AutomationTarget objects
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", "get_automation_target_list()")
 
         response: controller_v1_pbs.Response_GetAutomationTargetList = (
-            self._stub.GetAutomationTargetList(controller_v1_pbs.Request_Void())
+            self._get_stub().GetAutomationTargetList(controller_v1_pbs.Request_Void())
         )
         self._reporter.add_message(
             "AgentOS", f"get_automation_target_list() -> {response}"
@@ -831,13 +807,10 @@ class AskUiControllerClient(AgentOs):
         Args:
             delay_ms (int): The delay in milliseconds to set for mouse actions.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"set_mouse_delay({delay_ms})")
 
-        self._stub.SetMouseDelay(
+        self._get_stub().SetMouseDelay(
             controller_v1_pbs.Request_SetMouseDelay(
                 sessionInfo=self._session_info, delayInMilliseconds=delay_ms
             )
@@ -851,13 +824,10 @@ class AskUiControllerClient(AgentOs):
         Args:
             delay_ms (int): The delay in milliseconds to set for keyboard actions.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"set_keyboard_delay({delay_ms})")
 
-        self._stub.SetKeyboardDelay(
+        self._get_stub().SetKeyboardDelay(
             controller_v1_pbs.Request_SetKeyboardDelay(
                 sessionInfo=self._session_info, delayInMilliseconds=delay_ms
             )
@@ -880,9 +850,6 @@ class AskUiControllerClient(AgentOs):
             AskUiControllerError:
             If display length is not increased after adding the window.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message(
             "AgentOS", f"set_active_window({process_id}, {window_id})"
@@ -890,7 +857,7 @@ class AskUiControllerClient(AgentOs):
 
         display_length_before_adding_window = len(self.list_displays().data)
 
-        self._stub.SetActiveWindow(
+        self._get_stub().SetActiveWindow(
             controller_v1_pbs.Request_SetActiveWindow(
                 processID=process_id, windowID=window_id
             )
@@ -913,15 +880,12 @@ class AskUiControllerClient(AgentOs):
         Args:
             target_id (int): The ID of the automation target to set as active.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message(
             "AgentOS", f"set_active_automation_target({target_id})"
         )
 
-        self._stub.SetActiveAutomationTarget(
+        self._get_stub().SetActiveAutomationTarget(
             controller_v1_pbs.Request_SetActiveAutomationTarget(ID=target_id)
         )
 
@@ -944,9 +908,6 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_ScheduleBatchedAction: Response containing
                 the scheduled action ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message(
             "AgentOS",
@@ -954,7 +915,7 @@ class AskUiControllerClient(AgentOs):
         )
 
         response: controller_v1_pbs.Response_ScheduleBatchedAction = (
-            self._stub.ScheduleBatchedAction(
+            self._get_stub().ScheduleBatchedAction(
                 controller_v1_pbs.Request_ScheduleBatchedAction(
                     sessionInfo=self._session_info,
                     actionClassID=action_class_id,
@@ -970,13 +931,10 @@ class AskUiControllerClient(AgentOs):
         """
         Start executing batched actions.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", "start_batch_run()")
 
-        self._stub.StartBatchRun(
+        self._get_stub().StartBatchRun(
             controller_v1_pbs.Request_StartBatchRun(sessionInfo=self._session_info)
         )
 
@@ -985,13 +943,10 @@ class AskUiControllerClient(AgentOs):
         """
         Stop executing batched actions.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", "stop_batch_run()")
 
-        self._stub.StopBatchRun(
+        self._get_stub().StopBatchRun(
             controller_v1_pbs.Request_StopBatchRun(sessionInfo=self._session_info)
         )
 
@@ -1004,16 +959,13 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Response_GetActionCount: Response
                 containing the action count.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
+
+        response: controller_v1_pbs.Response_GetActionCount = (
+            self._get_stub().GetActionCount(
+                controller_v1_pbs.Request_GetActionCount(sessionInfo=self._session_info)
+            )
         )
-
-        self._reporter.add_message("AgentOS", "get_action_count()")
-
-        response: controller_v1_pbs.Response_GetActionCount = self._stub.GetActionCount(
-            controller_v1_pbs.Request_GetActionCount(sessionInfo=self._session_info)
-        )
-
+        self._reporter.add_message("AgentOS", f"get_action_count() -> {response}")
         return response
 
     @telemetry.record_call()
@@ -1030,13 +982,10 @@ class AskUiControllerClient(AgentOs):
                 - actionClassID: The action class ID
                 - actionParameters: The action parameters
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"get_action({action_index})")
 
-        response: controller_v1_pbs.Response_GetAction = self._stub.GetAction(
+        response: controller_v1_pbs.Response_GetAction = self._get_stub().GetAction(
             controller_v1_pbs.Request_GetAction(
                 sessionInfo=self._session_info, actionIndex=action_index
             )
@@ -1052,13 +1001,10 @@ class AskUiControllerClient(AgentOs):
         Args:
             action_id (int): The ID of the action to remove.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", f"remove_action({action_id})")
 
-        self._stub.RemoveAction(
+        self._get_stub().RemoveAction(
             controller_v1_pbs.Request_RemoveAction(
                 sessionInfo=self._session_info, actionID=action_id
             )
@@ -1069,13 +1015,10 @@ class AskUiControllerClient(AgentOs):
         """
         Clear all recorded or batched actions.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         self._reporter.add_message("AgentOS", "remove_all_actions()")
 
-        self._stub.RemoveAllActions(
+        self._get_stub().RemoveAllActions(
             controller_v1_pbs.Request_RemoveAllActions(sessionInfo=self._session_info)
         )
 
@@ -1094,9 +1037,6 @@ class AskUiControllerClient(AgentOs):
             AskUiControllerInvalidCommandError: If the command fails schema validation
                 on the server side.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
 
         header = Header(authentication=Guid(root=self._session_guid))
         message = Message(header=header, command=command)
@@ -1106,7 +1046,7 @@ class AskUiControllerClient(AgentOs):
         request_str = request.model_dump_json(exclude_none=True, by_alias=True)
 
         try:
-            response: controller_v1_pbs.Response_Send = self._stub.Send(
+            response: controller_v1_pbs.Response_Send = self._get_stub().Send(
                 controller_v1_pbs.Request_Send(message=request_str)
             )
         except grpc.RpcError as e:
@@ -1125,9 +1065,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             Coordinate: Response containing the result of the mouse position change.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", "get_mouse_position()")
         res = self._send_command(GetMousePositionCommand())
         coordinate = Coordinate(
@@ -1146,9 +1083,6 @@ class AskUiControllerClient(AgentOs):
             x (int): The horizontal coordinate (in pixels) to set the cursor to.
             y (int): The vertical coordinate (in pixels) to set the cursor to.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         location = Location(x=Length(root=x), y=Length(root=y))
         command = SetMousePositionCommand(parameters=[location])
         self._reporter.add_message("AgentOS", f"set_mouse_position({x},{y})")
@@ -1165,9 +1099,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             int: Object ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", f"render_quad({style})")
         command = AddRenderObjectCommand(parameters=["Quad", style])
         res = self._send_command(command)
@@ -1185,9 +1116,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             int: Object ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", f"render_line({style}, {points})")
         command = AddRenderObjectCommand(parameters=["Line", style, points])
         res = self._send_command(command)
@@ -1205,9 +1133,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             int: Object ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", f"render_image({style}, [image_data])")
         image = RenderImage(root=image_data)
         command = AddRenderObjectCommand(parameters=["Image", style, image])
@@ -1227,9 +1152,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             int: Object ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", f"render_text({style}, {content})")
         text = RenderText(root=content)
         command = AddRenderObjectCommand(parameters=["Text", style, text])
@@ -1248,9 +1170,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             int: Object ID.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message(
             "AgentOS", f"update_render_object({object_id}, {style})"
         )
@@ -1266,9 +1185,6 @@ class AskUiControllerClient(AgentOs):
         Args:
             object_id (RenderObjectId): The ID of the render object to delete.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", f"delete_render_object({object_id})")
         render_object_id = RenderObjectId(root=object_id)
         command = DeleteRenderObjectCommand(parameters=[render_object_id])
@@ -1279,9 +1195,6 @@ class AskUiControllerClient(AgentOs):
         """
         Clear all render objects from the display.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
         self._reporter.add_message("AgentOS", "clear_render_objects()")
         command = ClearRenderObjectsCommand()
         self._send_command(command)
