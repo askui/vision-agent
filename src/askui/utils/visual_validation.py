@@ -222,7 +222,6 @@ def should_validate_step(tool_name: str) -> bool:
         "android_tap_tool",
         "android_drag_and_drop_tool",
         "android_swipe_tool",
-        "computer_mouse_click",
         "computer_mouse_scroll",
         "computer_move_mouse",
     ]:

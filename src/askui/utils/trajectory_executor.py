@@ -7,7 +7,7 @@ steps, error handling, and agent intervention.
 
 import logging
 import time
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -340,7 +340,12 @@ class TrajectoryExecutor:
 
         # Capture current screenshot if not provided
         if current_screenshot is None:
-            current_screenshot = self._capture_screenshot()
+            screenshot_tool = self._get_screenshot_tool(step.name)
+            if screenshot_tool is None:
+                logger.warning("Could not find correct screenshot tool")
+                return True, None
+
+            current_screenshot = self._capture_screenshot(screenshot_tool)
             if current_screenshot is None:
                 logger.warning(
                     "Could not capture screenshot for visual validation at step %d",
@@ -380,7 +385,46 @@ class TrajectoryExecutor:
 
         return is_valid, error_msg
 
-    def _capture_screenshot(self) -> Image.Image | None:
+    def _get_screenshot_tool(
+        self, step_name: str
+    ) -> Union[ComputerScreenshotTool, AndroidScreenshotTool, None]:
+        """
+        Get the available screenshot tool for the correct device.
+
+        Returns:
+            Tool or None if no screenshot tool is found for the device
+        """
+        # Get the tools from toolbox
+        tools = self.toolbox.get_tools()
+
+        # Try to find a screenshot tool (computer or Android)
+        screenshot_tool = None
+        if "computer" in step_name:
+            tool_name = "computer_screenshot"
+        elif "android" in step_name:
+            tool_name = "android_screenshot_tool"
+        else:
+            warning_msg = f"Cannot infer screenshot tool for step {step_name}"
+            logger.warning(warning_msg)
+            return None
+
+        screenshot_tool = tools.get(tool_name)
+        if screenshot_tool is not None:
+            assert isinstance(
+                screenshot_tool, (ComputerScreenshotTool, AndroidScreenshotTool)
+            )
+            logger.debug("Found screenshot tool: %s", tool_name)
+            return screenshot_tool
+
+        if screenshot_tool is None:
+            logger.warning("No screenshot tool found in toolbox")
+            return None
+
+        return None
+
+    def _capture_screenshot(
+        self, screenshot_tool: Union[ComputerScreenshotTool, AndroidScreenshotTool]
+    ) -> Image.Image | None:
         """Capture current screenshot using the available screenshot tool.
 
         Supports both computer and Android screenshot tools.
@@ -388,48 +432,24 @@ class TrajectoryExecutor:
         Returns:
             PIL Image or None if screenshot capture fails
         """
-        # Get the tools from toolbox
-        tools = self.toolbox.get_tools()
-
-        # Try to find a screenshot tool (computer or Android)
-        screenshot_tool = None
-        tool_names = [
-            "computer_screenshot",
-            "android_screenshot_tool",
-        ]
-
-        for tool_name in tool_names:
-            screenshot_tool = tools.get(tool_name)
-            if screenshot_tool is not None:
-                assert isinstance(
-                    screenshot_tool, (ComputerScreenshotTool, AndroidScreenshotTool)
-                )
-                logger.debug("Found screenshot tool: %s", tool_name)
-                break
-
-        if screenshot_tool is None:
-            logger.warning("No screenshot tool found in toolbox")
-            return None
 
         # Call the screenshot action
         try:
             # Try to call _screenshot() method directly if available
             if hasattr(screenshot_tool, "agent_os"):
                 result = screenshot_tool.agent_os.screenshot()
-                if isinstance(result, Image.Image):
-                    return result
-
-            # Fallback to calling via __call__
-            result = screenshot_tool()
+            else:
+                # Fallback to calling via __call__
+                _, result = screenshot_tool()
 
             # Handle different return types
+            # Computer tool returns Image.Image directly
+            if isinstance(result, Image.Image):
+                return result
             # Android tool returns tuple[str, Image.Image]
             if isinstance(result, tuple) and len(result) >= 2:
                 if isinstance(result[1], Image.Image):
                     return result[1]
-            # Computer tool returns Image.Image directly
-            elif isinstance(result, Image.Image):
-                return result
 
             logger.warning(
                 "Screenshot action did not return an Image: %s", type(result)

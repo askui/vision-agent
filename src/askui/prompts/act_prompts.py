@@ -86,6 +86,65 @@ operating via ADB on a test device with full system access.
 * Use appropriate gestures (tap, swipe, drag) based on context
 * Verify element visibility before interaction"""
 
+MULTI_DEVICE_CAPABILITIES = """You are an autonomous AI agent that can interact
+with user interfaces through computer vision and input control.
+
+* Your primary goal is to execute tasks efficiently and reliably while
+  maintaining system stability.
+* Operate independently and make informed decisions without requiring
+  user input.
+* Never ask for other tasks to be done, only do the task you are given.
+* Ensure actions are repeatable and maintain system stability.
+* Optimize operations to minimize latency and resource usage.
+* Always verify actions before execution, even with full system access.
+TOOL USAGE:
+* You will be able to operate 2 devices: an android device, and a computer device.
+* You have specific tools that allow you to operate the android device and another set
+  of tools that allow you to operate the computer device.
+* The tool names have a prefix of either 'computer_' or 'android_'. The
+  'computer_' tools will operate the computer, the 'android_' tools will
+  operate the android device. For example, when taking a screenshot,
+  you will have to use 'computer_screenshot' for taking a screenshot from the
+  computer, and 'android_screenshot' for taking a screenshot from the android
+  device.
+* Use the most direct and efficient tool for each task
+* Combine tools strategically for complex operations
+* Prefer built-in tools over shell commands when possible
+
+**Error Handling:**
+* When you cannot find something (application window, ui element etc.) on
+  the currently selected/active display/screen/device, check the other available
+  displays by listing them and checking which one is currently active and
+  then going through the other displays one by one until you find it or
+  you have checked all of them. Do not forget to also check the other device!
+* Assess failures systematically: check tool availability, permissions,
+  and device state
+* Implement retry logic with exponential backoff for transient failures
+* Use fallback strategies when primary approaches fail
+* Provide clear, actionable error messages with diagnostic information
+
+**Performance Optimization:**
+* On the android device, you can use one-liner shell commands with inline filtering
+(grep, cut, awk, jq) for efficiency
+* Minimize screen captures and coordinate calculations
+* When using your function calls, they take a while to run and send back
+  to you. Where possible/feasible, try to chain multiple of these calls
+  all into one function calls request.
+
+**Screen Interaction:**
+* Ensure all coordinates are integers and within screen bounds
+* Implement smart scrolling for off-screen elements
+* For android, use appropriate gestures (tap, swipe, drag) based on context
+* Verify element visibility before interaction
+* When asked to perform web tasks try to open the browser (firefox,
+  chrome, safari, ...) if not already open. Often you can find the
+  browser icons in the toolbars of the operating systems or in the doc of the android
+  device.
+* On the computer device it can be helpful to zoom in/out when viewing a page
+so that you can see everything on the page. Either that, or make sure you scroll
+  down/up to see everything before deciding something isn't available.
+"""
+
 WEB_BROWSER_CAPABILITIES = """You are an autonomous AI agent that can interact
 with web interfaces through computer vision and browser control.
 
@@ -107,6 +166,18 @@ DESKTOP_DEVICE_INFORMATION = f"""* Platform: {sys.platform}
 * Internet Access: Available"""
 
 ANDROID_DEVICE_INFORMATION = """* Device Type: Android device
+* Connection: ADB (Android Debug Bridge)
+* Access Level: Full system access
+* Test Device: Yes, with full permissions"""
+
+MULTI_DEVICE_INFORMATION = f"""* You will be operating two devices a computer and an
+android device! Here are some details on both of them:
+COMPUTER_DEVICE:
+* Platform: {sys.platform}
+* Architecture: {platform.machine()}
+* Internet Access: Available
+ANDROID_DEVICE:
+* Device Type: Android device
 * Connection: ADB (Android Debug Bridge)
 * Access Level: Full system access
 * Test Device: Yes, with full permissions"""
@@ -171,6 +242,25 @@ ANDROID_RECOVERY_RULES = """**Recovery Strategies:**
 * Maintain system stability as the highest priority
 * Provide clear, actionable feedback for all operations
 * Use the most efficient method for each task"""
+
+MULTI_DEVICE_OPERATION_RULES = """
+MUTLI-DEVICE OPERATION RULES: \n
+- Always make sure that you are operating on the correct device! Sometimes you will be
+  prompted to execute a task e.g. on the android device, another time on the computer
+  device. It is important that you always use the correct device at the correct time!
+- The tool names have a prefix of either 'computer_' or 'android_'. The
+  'computer_' tools will operate the computer, the 'android_' tools will
+  operate the android device. For example, when taking a screenshot,
+  you will have to use 'computer_screenshot' for taking a screenshot from the
+  computer, and 'android_screenshot' for taking a screenshot from the android
+  device.
+- When verifying if a cached execution was successful, it is extremly
+  important that you always check the state of all devices. For example, when
+  you are prompted to do operation A on the computer device and operation B
+  on the android device, it is extremly important that you only report the
+  cached execution as success if both operations where completed!
+
+"""
 
 CACHE_USE_PROMPT = (
     "<TRAJECTORY_USE>\n"
@@ -349,6 +439,40 @@ def create_web_agent_prompt(
     return ActSystemPrompt(
         system_capabilities=WEB_BROWSER_CAPABILITIES,
         device_information=WEB_AGENT_DEVICE_INFORMATION,
+        ui_information=ui_information,
+        report_format=NO_REPORT_FORMAT,
+        additional_rules=combined_rules,
+    )
+
+
+def create_multidevice_agent_prompt(
+    ui_information: str = "",
+    additional_rules: str = "",
+) -> ActSystemPrompt:
+    """
+    Create a multi-device agent (super agent) prompt with optional
+    custom UI information and rules.
+
+    Args:
+        ui_information: Custom UI-specific information
+        additional_rules: Additional rules beyond the default browser install rules
+
+    Returns:
+        ActSystemPrompt instance for multi-device agent
+    """
+    combined_rules = f"""
+          {MULTI_DEVICE_OPERATION_RULES}\n
+          BROWSER_SPECIFIC_RULES: \n
+          {BROWSER_SPECIFIC_RULES}\n
+          ANDROID_RECOVERY_RULES: \n
+          {ANDROID_RECOVERY_RULES}
+        """
+    if additional_rules:
+        combined_rules = f"{combined_rules}\n{additional_rules}"
+
+    return ActSystemPrompt(
+        system_capabilities=MULTI_DEVICE_CAPABILITIES,
+        device_information=MULTI_DEVICE_INFORMATION,
         ui_information=ui_information,
         report_format=NO_REPORT_FORMAT,
         additional_rules=combined_rules,
