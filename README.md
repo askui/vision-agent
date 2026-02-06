@@ -1,4 +1,4 @@
-# 🤖 AskUI Vision Agent
+# 🤖 AskUI Python SDK
 
 [![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
 [![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -33,7 +33,7 @@ Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
 ## 📖 Introduction
 
-AskUI Vision Agent is a powerful automation framework that enables you and AI agents to control your desktop, mobile, and HMI devices and automate tasks. With support for multiple AI models, multi-platform compatibility, and enterprise-ready features,
+AskUI Python SDK is a powerful automation framework that enables you and AI agents to control your desktop, mobile, and HMI devices and automate tasks. With support for multiple AI models, multi-platform compatibility, and enterprise-ready features,
 
 https://github.com/user-attachments/assets/a74326f2-088f-48a2-ba1c-4d94d327cbdf
 

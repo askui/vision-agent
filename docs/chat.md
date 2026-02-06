@@ -2,7 +2,7 @@
 
 **⚠️ Warning:** AskUI Chat is currently in an experimental stage and has several limitations (see below).
 
-AskUI Chat is a web application that allows interacting with an AskUI Vision Agent similar how it can be
+AskUI Chat is a web application that allows interacting with an AskUI Python SDK similar how it can be
 done with `VisionAgent.act()` or `AndroidVisionAgent.act()` but in a more interactive manner that involves less code.
 
 ## Table of Contents
@@ -35,8 +35,8 @@ pip install askui[chat]
 
 To use the chat, configure the following environment variables:
 
-- `ASKUI_TOKEN`: AskUI Vision Agent behind chat uses currently the AskUI API
-- `ASKUI_WORKSPACE_ID`: AskUI Vision Agent behind chat uses currently the AskUI API
+- `ASKUI_TOKEN`: AskUI Python SDK behind chat uses currently the AskUI API
+- `ASKUI_WORKSPACE_ID`: AskUI Python SDK behind chat uses currently the AskUI API
 - `ASKUI__CHAT_API__DATA_DIR` (optional, defaults to `$(pwd)/chat`): Currently, the AskUI chat stores all data in a directory locally. You can change the default directory by setting this environment variable.
 - `ASKUI__CHAT_API__HOST` (optional, defaults to `127.0.0.1`): The host to bind the chat API to.
 - `ASKUI__CHAT_API__PORT` (optional, defaults to `9261`): The port to bind the chat API to.
