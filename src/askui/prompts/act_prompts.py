@@ -93,7 +93,8 @@ with user interfaces through computer vision and input control.
   maintaining system stability.
 * Operate independently and make informed decisions without requiring
   user input.
-* Never ask for other tasks to be done, only do the task you are given.
+* Focus on completing the exact task given without deviation or expansion.
+* Task completion includes all necessary verification and correction steps.
 * Ensure actions are repeatable and maintain system stability.
 * Optimize operations to minimize latency and resource usage.
 * Always verify actions before execution, even with full system access.
@@ -243,23 +244,86 @@ ANDROID_RECOVERY_RULES = """**Recovery Strategies:**
 * Provide clear, actionable feedback for all operations
 * Use the most efficient method for each task"""
 
-MULTI_DEVICE_OPERATION_RULES = """
-MUTLI-DEVICE OPERATION RULES: \n
-- Always make sure that you are operating on the correct device! Sometimes you will be
-  prompted to execute a task e.g. on the android device, another time on the computer
-  device. It is important that you always use the correct device at the correct time!
-- The tool names have a prefix of either 'computer_' or 'android_'. The
-  'computer_' tools will operate the computer, the 'android_' tools will
-  operate the android device. For example, when taking a screenshot,
-  you will have to use 'computer_screenshot' for taking a screenshot from the
-  computer, and 'android_screenshot' for taking a screenshot from the android
-  device.
-- When verifying if a cached execution was successful, it is extremly
-  important that you always check the state of all devices. For example, when
-  you are prompted to do operation A on the computer device and operation B
-  on the android device, it is extremly important that you only report the
-  cached execution as success if both operations where completed!
+CACHE_VERIFICATION_PROTOCOL = """
+CACHE EXECUTION VERIFICATION (MANDATORY):
+After any cache execution (whether successful, failed, or paused), you MUST
+perform the following verification steps before reporting completion:
 
+1. CAPTURE STATE: Take a screenshot from EVERY device involved in the task:
+   - If task involves computer: call computer_screenshot
+   - If task involves Android: call android_screenshot_tool
+   - Do this EVEN IF the cache execution reported success
+
+2. ANALYZE COMPLETENESS: For each device, verify against the goal:
+   - Check if expected UI changes occurred
+   - Verify expected applications/screens are visible
+   - Confirm expected data/text is present
+
+3. IDENTIFY GAPS: Determine which operations completed vs which did not:
+   - Cache may have completed only computer operations
+   - Cache may have completed only Android operations
+   - Cache may have partially completed on one or both devices
+
+4. COMPLETE REMAINING WORK: If ANY device is not in the expected state:
+   - DO NOT report the task as complete
+   - Manually execute the remaining operations
+   - Continue until ALL devices reach the expected state
+
+5. FINAL VERIFICATION: Only after completing step 4:
+   - Take final screenshots of ALL devices
+   - Confirm ALL goal requirements are met
+   - Then and ONLY then report task completion
+
+CRITICAL: The message "[CACHE EXECUTION COMPLETED]" does NOT mean the task
+is complete. It only means the cache executor finished replaying cached steps.
+You MUST verify actual task completion across ALL devices as described above.
+"""
+
+MULTI_DEVICE_SUCCESS_CRITERIA = """
+A multi-device task is ONLY complete when ALL of the following are true:
+1. ✓ Every device mentioned in the goal has been verified with a screenshot
+2. ✓ Each device's screenshot shows the expected end state
+3. ✓ All operations specified in the goal have been confirmed complete
+4. ✓ No errors or unexpected states are visible on any device
+
+RED FLAGS - DO NOT report success if:
+- ✗ You haven't taken a screenshot from every device in the goal
+- ✗ Any device's screenshot doesn't match the expected state
+- ✗ You only completed operations on one device but goal mentioned multiple
+- ✗ The cache executor completed but you haven't verified device states
+- ✗ You see error messages, wrong screens, or unexpected UI on any device
+"""
+
+MULTI_DEVICE_OPERATION_RULES = """
+MULTI-DEVICE OPERATION RULES:
+
+1. DEVICE SELECTION:
+   - You control TWO devices: a computer and an Android device
+   - Tools have prefixes: 'computer_' for computer, 'android_' for Android
+   - Example: computer_screenshot vs android_screenshot_tool
+   - Always use the correct prefix for the target device
+
+2. TASK EXECUTION:
+   - Read the goal carefully to identify which device(s) are involved
+   - Execute operations on the correct device as specified
+   - Some tasks require operations on BOTH devices
+
+3. STATE VERIFICATION (CRITICAL):
+   - After completing operations, verify EVERY device's state
+   - Take screenshots from ALL devices mentioned in the goal
+   - Confirm each device reached its expected state
+   - Do NOT skip verification even if no errors occurred
+
+4. MULTI-DEVICE SUCCESS:
+   - Task is complete ONLY when ALL devices are verified correct
+   - Partial completion (one device done, one not) is NOT success
+   - Report success only after confirming all devices with screenshots
+
+5. CACHE EXECUTION WITH MULTIPLE DEVICES:
+   - Cache execution may include steps for both devices
+   - Cache completing does NOT guarantee both devices are correct
+   - Follow CACHE VERIFICATION PROTOCOL after every cache execution
+   - Verify BOTH devices even if cache reports success
 """
 
 CACHE_USE_PROMPT = (
@@ -306,14 +370,24 @@ CACHE_USE_PROMPT = (
     "\n"
     "FAILURE HANDLING:\n"
     "- On failure, you'll see the error and failed step index\n"
-    "- Options: (1) Execute remaining steps manually, (2) Retry from specific step"
-    " using start_from_step_index, (3) Report trajectory as outdated\n"
-    "- Mark failing trajectories as invalid after the execution\n"
+    "- You MUST take one of these actions:\n"
+    "  (1) Execute ALL remaining steps manually to complete the task, OR\n"
+    "  (2) Retry from the failed step using start_from_step_index\n"
+    "- DO NOT report the task as complete until you have verified success\n"
+    "- If the cache is consistently failing, mark it as invalid using\n"
+    "  verify_cache_execution with success=False\n"
+    "\n"
+    "PARTIAL COMPLETION:\n"
+    "- Cache execution completing some steps does NOT mean task completion\n"
+    "- You MUST verify ALL devices are in the expected state (see CACHE\n"
+    "  VERIFICATION PROTOCOL)\n"
+    "- Complete any remaining operations before reporting success\n"
     "\n"
     "BEST PRACTICES:\n"
     "- Always verify results after execution\n"
-    "- Trajectories occasionally execute incorrectly - make corrections as needed\n"
-    "- Mark executions as failed if corrections are required\n"
+    "- Never assume cache success means task success\n"
+    "- Check EVERY device involved in the task\n"
+    "- Mark executions as failed if ANY corrections were needed\n"
     "- Trajectory filenames are unique test IDs that automatically execute all steps"
     " for that test\n"
     "</TRAJECTORY_USE>\n"
@@ -461,12 +535,18 @@ def create_multidevice_agent_prompt(
         ActSystemPrompt instance for multi-device agent
     """
     combined_rules = f"""
-          {MULTI_DEVICE_OPERATION_RULES}\n
-          BROWSER_SPECIFIC_RULES: \n
-          {BROWSER_SPECIFIC_RULES}\n
-          ANDROID_RECOVERY_RULES: \n
-          {ANDROID_RECOVERY_RULES}
-        """
+{CACHE_VERIFICATION_PROTOCOL}
+
+{MULTI_DEVICE_SUCCESS_CRITERIA}
+
+{MULTI_DEVICE_OPERATION_RULES}
+
+BROWSER RULES:
+{BROWSER_SPECIFIC_RULES}
+
+ANDROID RECOVERY:
+{ANDROID_RECOVERY_RULES}
+"""
     if additional_rules:
         combined_rules = f"{combined_rules}\n{additional_rules}"
 
