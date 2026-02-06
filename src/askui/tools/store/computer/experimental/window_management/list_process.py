@@ -11,7 +11,7 @@ class ComputerListProcessTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_list_process_tool",
+            name="list_process_tool",
             description="""
             Lists all running processes on the computer that have at least one window.
             This tool is used as the first step in window management workflows to

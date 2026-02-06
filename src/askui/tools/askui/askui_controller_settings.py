@@ -2,9 +2,8 @@ import pathlib
 import sys
 from functools import cached_property
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 class RemoteDeviceController(BaseModel):
@@ -93,22 +92,6 @@ class AskUiControllerSettings(BaseSettings):
 
         return value
 
-    @model_validator(mode="after")
-    def validate_either_component_registry_or_installation_directory_is_set(
-        self,
-    ) -> "Self":
-        if (
-            self.component_registry_file is None
-            and self.installation_directory is None
-            and self.controller_path_setting is None
-        ):
-            error_msg = (
-                "Either ASKUI_COMPONENT_REGISTRY_FILE, ASKUI_INSTALLATION_DIRECTORY, "
-                "or ASKUI_CONTROLLER_PATH environment variable must be set"
-            )
-            raise ValueError(error_msg)
-        return self
-
     def _find_remote_device_controller_by_installation_directory(
         self,
     ) -> pathlib.Path | None:
@@ -177,11 +160,14 @@ class AskUiControllerSettings(BaseSettings):
             or self._find_remote_device_controller_by_component_registry_file()
             or self._find_remote_device_controller_by_installation_directory()
         )
-        assert result is not None, (
-            "No AskUI Remote Device Controller found. Please set the "
-            "ASKUI_COMPONENT_REGISTRY_FILE, ASKUI_INSTALLATION_DIRECTORY, or "
-            "ASKUI_CONTROLLER_PATH environment variable."
-        )
+        if result is None:
+            error_msg = (
+                "No AskUI Remote Device Controller found. Please set the "
+                "ASKUI_COMPONENT_REGISTRY_FILE, ASKUI_INSTALLATION_DIRECTORY, or "
+                "ASKUI_CONTROLLER_PATH environment variable."
+            )
+            raise ValueError(error_msg)
+
         if not result.is_file():
             error_msg = (
                 "AskUIRemoteDeviceController executable does not exist under "

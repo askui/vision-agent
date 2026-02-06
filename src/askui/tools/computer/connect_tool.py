@@ -7,7 +7,7 @@ class ComputerConnectTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_connect",
+            name="connect",
             description=(
                 "Connect to the agent OS controller to enable computer control. "
                 "Useful for establishing an initial connection or reconnecting "

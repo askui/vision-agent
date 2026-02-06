@@ -5,7 +5,7 @@ from askui.tools.agent_os import AgentOs
 class ComputerListDisplaysTool(ComputerBaseTool):
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_list_displays",
+            name="list_displays",
             description="""
                 List all the available displays on the computer.
             """,

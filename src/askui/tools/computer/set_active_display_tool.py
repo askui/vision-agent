@@ -5,7 +5,7 @@ from askui.tools.agent_os import AgentOs
 class ComputerSetActiveDisplayTool(ComputerBaseTool):
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_set_active_display",
+            name="set_active_display",
             description="""
                 Set the display screen from which screenshots are taken and on which
                 actions are performed.

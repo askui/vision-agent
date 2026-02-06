@@ -7,7 +7,7 @@ class ComputerGetMousePositionTool(ComputerBaseTool):
 
     def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="computer_get_mouse_position",
+            name="get_mouse_position",
             description="Get the current mouse position.",
             agent_os=agent_os,
             required_tags=[ToolTags.SCALED_AGENT_OS.value],

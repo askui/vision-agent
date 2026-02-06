@@ -9,7 +9,7 @@ class ComputerScreenshotTool(ComputerBaseTool):
 
     def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="computer_screenshot",
+            name="screenshot",
             description="Take a screenshot of the current screen.",
             agent_os=agent_os,
             required_tags=[ToolTags.SCALED_AGENT_OS.value],

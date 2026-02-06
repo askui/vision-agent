@@ -15,7 +15,7 @@ class ComputerGetSystemInfoTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_get_system_info_tool",
+            name="get_system_info_tool",
             description="""
                 Get the system information.
                 This tool returns the system information as a JSON object.
