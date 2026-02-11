@@ -242,20 +242,43 @@ def get_validation_coordinate(tool_input: dict[str, Any]) -> tuple[int, int] | N
     For click actions, returns the click coordinate.
     For type actions, returns the coordinate of the text input field.
     """
-    # Computer tool coordinates
+
+    def try_pair(x_val: Any, y_val: Any) -> tuple[int, int] | None:
+        x = _safe_int(x_val)
+        y = _safe_int(y_val)
+        if x is None or y is None:
+            return None
+        return (x, y)
+
     if "coordinate" in tool_input:
         coord = tool_input["coordinate"]
         if isinstance(coord, list) and len(coord) == 2:
-            return (int(coord[0]), int(coord[1]))
-    elif "x" in tool_input and "y" in tool_input:
-        return (int(tool_input["x"]), int(tool_input["y"]))
-    elif "x1" in tool_input and "y1" in tool_input:
-        return (int(tool_input["x1"]), int(tool_input["y1"]))
+            result = try_pair(coord[0], coord[1])
+            if result is not None:
+                return result
+
+    if "x" in tool_input and "y" in tool_input:
+        result = try_pair(tool_input["x"], tool_input["y"])
+        if result is not None:
+            return result
+
+    if "x1" in tool_input and "y1" in tool_input:
+        result = try_pair(tool_input["x1"], tool_input["y1"])
+        if result is not None:
+            return result
 
     return None
 
 
 # Private helper functions
+
+
+def _safe_int(value: Any) -> int | None:
+    """Try converting value to int, return None if not possible."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _dct_2d(image_array: NDArray[np.float32]) -> NDArray[np.complex128]:
