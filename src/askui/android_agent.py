@@ -3,10 +3,11 @@ from typing import Annotated, overload
 
 from pydantic import ConfigDict, Field, validate_call
 
-from askui.agent_base import AgentBase
+from askui.agent_base import Agent
+from askui.agent_settings import AgentSettings
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.models import ActModel, GetModel, LocateModel, Point
+from askui.models.models import Point
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import create_android_agent_prompt
@@ -36,7 +37,7 @@ from .retry import Retry
 logger = logging.getLogger(__name__)
 
 
-class AndroidVisionAgent(AgentBase):
+class AndroidAgent(Agent):
     """
     A vision-based agent that can interact with Android devices through computer vision and AI.
 
@@ -46,17 +47,15 @@ class AndroidVisionAgent(AgentBase):
     Args:
         device (str | int, optional): The Android device to connect to. Can be either a serial number (as a `str`) or an index (as an `int`) representing the position in the `adb devices` list. Index `0` refers to the first device. Defaults to `0`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        act_model (ActModel | None, optional): Custom ActModel instance. If `None`, uses default.
-        get_model (GetModel | None, optional): Custom GetModel instance. If `None`, uses default.
-        locate_model (LocateModel | None, optional): Custom LocateModel instance. If `None`, uses default.
+        settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
 
     Example:
         ```python
-        from askui import AndroidVisionAgent
+        from askui import AndroidAgent
 
-        with AndroidVisionAgent() as agent:
+        with AndroidAgent() as agent:
             agent.tap("Submit button")
             agent.type("Hello World")
             agent.act("Open settings menu")
@@ -69,9 +68,7 @@ class AndroidVisionAgent(AgentBase):
         self,
         device: str | int = 0,
         reporters: list[Reporter] | None = None,
-        act_model: ActModel | None = None,
-        get_model: GetModel | None = None,
-        locate_model: LocateModel | None = None,
+        settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
     ) -> None:
@@ -99,9 +96,7 @@ class AndroidVisionAgent(AgentBase):
             ]
             + (act_tools or []),
             agent_os=self.os,
-            act_model=act_model,
-            get_model=get_model,
-            locate_model=locate_model,
+            settings=settings,
         )
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
         # Override default act settings with Android-specific settings
@@ -139,9 +134,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.tap("Submit button")
                 agent.tap((100, 100))
         """
@@ -154,7 +149,7 @@ class AndroidVisionAgent(AgentBase):
             msg += f" on {target}"
             self._reporter.add_message("User", msg)
             logger.debug(
-                "VisionAgent received instruction to click",
+                "AndroidAgent received instruction to click",
                 extra={"target": target},
             )
             point = self._locate(locator=target)[0]
@@ -175,16 +170,16 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.type("Hello, world!")  # Types "Hello, world!"
                 agent.type("user@example.com")  # Types an email address
                 agent.type("password123")  # Types a password
             ```
         """
         self._reporter.add_message("User", f'type: "{text}"')
-        logger.debug("VisionAgent received instruction to type", extra={"text": text})
+        logger.debug("AndroidAgent received instruction to type", extra={"text": text})
         self.os.type(text)
 
     @telemetry.record_call()
@@ -201,9 +196,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.key_tap("HOME")  # Taps the home key
                 agent.key_tap("BACK")  # Taps the back key
             ```
@@ -226,9 +221,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.key_combination(["HOME", "BACK"])  # Taps the home key and then the back key
                 agent.key_combination(["HOME", "BACK"], duration_in_ms=200)  # Taps the home key and then the back key for 200ms.
             ```
@@ -253,9 +248,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.shell("pm list packages")  # Lists all installed packages
                 agent.shell("dumpsys battery")  # Displays battery information
             ```
@@ -285,9 +280,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.drag_and_drop(100, 100, 200, 200)  # Drags and drops from (100, 100) to (200, 200)
                 agent.drag_and_drop(100, 100, 200, 200, duration_in_ms=2000)  # Drags and drops from (100, 100) to (200, 200) with a 2000ms duration
         """
@@ -319,9 +314,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.swipe(100, 100, 200, 200)  # Swipes from (100, 100) to (200, 200)
                 agent.swipe(100, 100, 200, 200, duration_in_ms=2000)  # Swipes from (100, 100) to (200, 200) with a 2000ms duration
         """
@@ -347,9 +342,9 @@ class AndroidVisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.set_device_by_serial_number("Pixel 6")  # Sets the active device to the Pixel 6
         """
         self._reporter.add_message(

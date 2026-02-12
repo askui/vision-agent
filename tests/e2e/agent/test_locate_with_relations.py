@@ -1,22 +1,22 @@
-"""Tests for VisionAgent.locate() with different locator types and models"""
+"""Tests for Agent.locate() with different locator types and models"""
 
 import pathlib
 
 import pytest
 from PIL import Image as PILImage
 
-from askui.agent import VisionAgent
+from askui.agent import ComputerAgent
 from askui.locators import Element, Image, Prompt, Text
 from askui.locators.locators import AiElement
 from askui.models.exceptions import ElementNotFoundError
 
 
-class TestVisionAgentLocateWithRelations:
-    """Test class for VisionAgent.locate() method with relations."""
+class TestAgentLocateWithRelations:
+    """Test class for Agent.locate() method with relations."""
 
     def test_locate_with_above_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using above_of relation."""
@@ -27,7 +27,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_below_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using below_of relation."""
@@ -38,7 +38,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_right_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using right_of relation."""
@@ -49,7 +49,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_left_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using left_of relation."""
@@ -60,7 +60,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_containing_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using containing relation."""
@@ -71,7 +71,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_inside_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using inside_of relation."""
@@ -82,7 +82,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_nearest_to_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using nearest_to relation."""
@@ -94,7 +94,7 @@ class TestVisionAgentLocateWithRelations:
     @pytest.mark.skip("Skipping tests for now because it is failing for unknown reason")
     def test_locate_with_and_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using and_ relation."""
@@ -105,7 +105,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_or_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using or_ relation."""
@@ -118,7 +118,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_index(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -131,7 +131,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_index_greater_0(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -143,7 +143,7 @@ class TestVisionAgentLocateWithRelations:
     @pytest.mark.skip("Skipping tests for now because it is failing for unknown reason")
     def test_locate_with_relation_index_greater_1(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with index."""
@@ -154,7 +154,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_reference_point_center(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with center reference point."""
@@ -167,7 +167,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_reference_point_center_raises_when_element_cannot_be_located(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with center reference point."""
@@ -177,7 +177,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_reference_point_boundary(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
@@ -190,7 +190,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_reference_point_boundary_raises_when_element_cannot_be_located(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with boundary reference point."""
@@ -200,7 +200,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_reference_point_any(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with any reference point."""
@@ -211,7 +211,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_multiple_relations_with_same_locator_raises(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using multiple relations with same locator which is not supported by AskUI."""
@@ -225,7 +225,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_chained_relations(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using chained relations."""
@@ -239,7 +239,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_relation_different_locator_types(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using relation with different locator types."""
@@ -253,7 +253,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_description_and_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using description with relation."""
@@ -265,7 +265,7 @@ class TestVisionAgentLocateWithRelations:
     @pytest.mark.skip("Skipping tests for now because it is failing for unknown reason")
     def test_locate_with_description_and_complex_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using description with relation."""
@@ -278,7 +278,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_image_and_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         path_fixtures: pathlib.Path,
     ) -> None:
@@ -292,7 +292,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_image_in_relation_to_other_image(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         path_fixtures: pathlib.Path,
     ) -> None:
@@ -311,7 +311,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_image_and_complex_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         path_fixtures: pathlib.Path,
     ) -> None:
@@ -327,7 +327,7 @@ class TestVisionAgentLocateWithRelations:
 
     def test_locate_with_ai_element_locator_relation(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test locating elements using an AI element locator with relation."""

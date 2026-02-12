@@ -44,9 +44,9 @@ Direct tool use is ideal when you:
 The Agent OS (Operating System controller) provides direct access to mouse, keyboard, and screen operations:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Mouse clicking
     agent.tools.os.click("left", 2)  # Double-click
     agent.tools.os.click("right", 1)  # Right-click
@@ -75,9 +75,9 @@ with VisionAgent() as agent:
 The web browser tool, powered by Python's [webbrowser](https://docs.python.org/3/library/webbrowser.html) module, allows you to launch and control web browsers:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Open URL in default browser
     agent.tools.webbrowser.open("http://www.google.com")
 
@@ -98,9 +98,9 @@ with VisionAgent() as agent:
 The clipboard tool, powered by [pyperclip](https://github.com/asweigart/pyperclip), provides cross-platform clipboard access:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Copy text to clipboard
     agent.tools.clipboard.copy("Hello, clipboard!")
 
@@ -124,14 +124,14 @@ with VisionAgent() as agent:
 For multi-monitor setups, specify which display the agent should control using the `display` parameter:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
 # Control primary monitor (default)
-with VisionAgent(display=1) as agent:
+with ComputerAgent(display=1) as agent:
     agent.click("Start button")
 
 # Control secondary monitor
-with VisionAgent(display=2) as agent:
+with ComputerAgent(display=2) as agent:
     agent.click("Application window")
 ```
 
@@ -157,9 +157,9 @@ Choose the right approach based on your needs:
 **Example combining both approaches:**
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Use agentic command to locate and click element
     agent.click("Login button")
 
@@ -214,7 +214,7 @@ Prompts are reusable templates that define common interaction patterns:
 
 ### Using MCP with AskUI Vision Agent
 
-AskUI supports MCP tools through both the library (`VisionAgent.act()`, `AndroidVisionAgent.act()`) and the Chat API. Tool usage comprises:
+AskUI supports MCP tools through both the library (`ComputerAgent.act()`, `AndroidComputerAgent.act()`) and the Chat API. Tool usage comprises:
 1. Listing available tools from MCP servers
 2. Passing tool definitions to the model
 3. Calling tools when the model requests them
@@ -229,7 +229,7 @@ Integrate MCP tools directly into your agents by creating an MCP client and pass
 from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig, RemoteMCPServer
 
-from askui.agent import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.tools import ToolCollection
@@ -258,8 +258,8 @@ def on_message(param: OnMessageCbParam) -> MessageParam | None:
     return param.message
 
 
-# Use with VisionAgent
-with VisionAgent() as agent:
+# Use with ComputerAgent
+with ComputerAgent() as agent:
     agent.act(
         "Use the `test_stdio_server_test_stdio_tool`",
         tools=tools,
@@ -410,11 +410,11 @@ Import tools from `askui.tools.store` and pass them to your agent in one of two 
 **Option 1: Pass tools to `agent.act()`:**
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.tools.store.computer import ComputerSaveScreenshotTool
 from askui.tools.store.universal import PrintToConsoleTool
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Take a screenshot and save it as demo/demo.png, then print a status message",
         tools=[
@@ -427,11 +427,11 @@ with VisionAgent() as agent:
 **Option 2: Pass tools to the agent constructor:**
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.tools.store.computer import ComputerSaveScreenshotTool
 from askui.tools.store.universal import PrintToConsoleTool
 
-with VisionAgent(act_tools=[
+with ComputerAgent(act_tools=[
     ComputerSaveScreenshotTool(base_dir="./screenshots"),
     PrintToConsoleTool()
 ]) as agent:
@@ -455,7 +455,7 @@ Work with any agent type, no special dependencies required.
 
 #### Computer Tools (`computer/`)
 
-Require `AgentOs` and work with `VisionAgent` for desktop automation.
+Require `AgentOs` and work with `ComputerAgent` for desktop automation.
 
 **Examples:**
 - `ComputerSaveScreenshotTool(base_dir)` - Save screenshots to disk
@@ -465,7 +465,7 @@ Require `AgentOs` and work with `VisionAgent` for desktop automation.
 
 **Import from:** `askui.tools.store.computer`
 
-**Requirements:** Only available with `VisionAgent`
+**Requirements:** Only available with `ComputerAgent`
 
 #### Android Tools (`android/`)
 

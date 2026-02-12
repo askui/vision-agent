@@ -32,7 +32,7 @@ class FallbackLocateModel(LocateModel):
     Example:
         ```python
         from askui import VisionAgent
-        from askui.model_store.locate_models import (
+        from askui.models.askui.locate_models import (
             AskUiPtaLocateModel,
             AskUiOcrLocateModel,
         )

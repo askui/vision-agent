@@ -27,10 +27,10 @@ Reporting provides human-readable logs of agent actions, perfect for debugging, 
 AskUI Vision Agent includes `SimpleHtmlReporter`, which generates an HTML report of all agent actions with screenshots:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.reporting import SimpleHtmlReporter
 
-with VisionAgent(reporters=[SimpleHtmlReporter()]) as agent:
+with ComputerAgent(reporters=[SimpleHtmlReporter()]) as agent:
     agent.act("Search for flights from New York to London")
     agent.click("Filter by direct flights")
     result = agent.get("What's the cheapest option?")
@@ -93,7 +93,7 @@ class CustomReporter(Reporter):
         print(f"\nReport complete: {len(self.messages)} messages")
         # Write to file, upload to service, etc.
 
-with VisionAgent(reporters=[CustomReporter()]) as agent:
+with ComputerAgent(reporters=[CustomReporter()]) as agent:
     agent.act("Search for flights")
 ```
 
@@ -111,7 +111,7 @@ Use multiple reporters simultaneously to serve different purposes:
 ```python
 from askui.reporting import SimpleHtmlReporter
 
-with VisionAgent(reporters=[
+with ComputerAgent(reporters=[
     SimpleHtmlReporter(),           # Human-readable HTML report
     CustomReporter(),               # Custom logging/alerting
     DatabaseReporter(),             # Store in database
@@ -190,7 +190,7 @@ set ASKUI__VA__TELEMETRY__ENABLED=False
 import os
 os.environ["ASKUI__VA__TELEMETRY__ENABLED"] = "False"
 
-from askui import VisionAgent
+from askui import ComputerAgent
 # Telemetry is now disabled for this session
 ```
 
@@ -340,7 +340,7 @@ Use the right observability mechanism for your needs:
 ## Example: Complete Observability Setup
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.reporting import SimpleHtmlReporter
 import os
 
@@ -368,7 +368,7 @@ class JsonReporter(Reporter):
             json.dump(self.log, f, indent=2)
 
 # Run agent with full observability
-with VisionAgent(reporters=[
+with ComputerAgent(reporters=[
     SimpleHtmlReporter(output_dir="./reports"),
     JsonReporter("execution.json")
 ]) as agent:

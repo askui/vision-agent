@@ -7,25 +7,19 @@ import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
-from . import model_store
-from .agent import VisionAgent
+from .agent import ComputerAgent
+from .agent_base import Agent
+from .agent_settings import AgentSettings
 from .locators import Locator
 from .models import (
-    ActModel,
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
     CitationCharLocationParam,
     CitationContentBlockLocationParam,
     CitationPageLocationParam,
     ContentBlockParam,
-    FallbackGetModel,
-    FallbackLocateModel,
-    GetModel,
     ImageBlockParam,
-    LocateModel,
     MessageParam,
-    Model,
-    ModelName,
     OnMessageCb,
     OnMessageCbParam,
     Point,
@@ -45,7 +39,7 @@ from .utils.image_utils import ImageSource
 from .utils.source_utils import InputSource
 
 try:
-    from .android_agent import AndroidVisionAgent
+    from .android_agent import AndroidAgent
 
     _ANDROID_AGENT_AVAILABLE = True
 except ImportError:
@@ -62,7 +56,9 @@ except ImportError:
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
-    "ActModel",
+    "Agent",
+    "ComputerAgent",
+    "AgentSettings",
     "ActSettings",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
@@ -71,18 +67,12 @@ __all__ = [
     "CitationPageLocationParam",
     "ConfigurableRetry",
     "ContentBlockParam",
-    "FallbackGetModel",
-    "FallbackLocateModel",
-    "GetModel",
     "ImageBlockParam",
     "ImageSource",
     "InputSource",
-    "LocateModel",
     "Locator",
     "MessageParam",
     "MessageSettings",
-    "Model",
-    "ModelName",
     "ModifierKey",
     "OnMessageCb",
     "OnMessageCbParam",
@@ -98,12 +88,10 @@ __all__ = [
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
-    "VisionAgent",
-    "model_store",
 ]
 
 if _ANDROID_AGENT_AVAILABLE:
-    __all__ += ["AndroidVisionAgent"]
+    __all__ += ["AndroidAgent"]
 
 if _WEB_AGENTS_AVAILABLE:
     __all__ += ["WebVisionAgent", "WebTestingAgent"]

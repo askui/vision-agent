@@ -1,7 +1,7 @@
 from pydantic import ConfigDict, validate_call
 
-from askui.agent import VisionAgent
-from askui.models.models import ActModel, GetModel, LocateModel
+from askui.agent import ComputerAgent
+from askui.agent_settings import AgentSettings
 from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
@@ -23,14 +23,12 @@ from .reporting import Reporter
 from .retry import Retry
 
 
-class WebVisionAgent(VisionAgent):
+class WebVisionAgent(ComputerAgent):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
         reporters: list[Reporter] | None = None,
-        act_model: ActModel | None = None,
-        get_model: GetModel | None = None,
-        locate_model: LocateModel | None = None,
+        settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
     ) -> None:
@@ -40,9 +38,7 @@ class WebVisionAgent(VisionAgent):
         )
         super().__init__(
             reporters=reporters,
-            act_model=act_model,
-            get_model=get_model,
-            locate_model=locate_model,
+            settings=settings,
             retry=retry,
             tools=tools,
             act_tools=[

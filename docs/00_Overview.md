@@ -18,9 +18,9 @@ AskUI Vision Agent offers two complementary approaches:
 
 **1. Programmatic Control**
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.click("Submit button")
     agent.type("test@example.com")
     result = agent.get("What's the current page title?")
@@ -30,7 +30,7 @@ Direct, single-step commands for precise UI control. Like traditional automation
 
 **2. Agentic Control (Goal-based)**
 ```python
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Search for flights from New York to London, "
         "filter by direct flights, and show me the cheapest option"
@@ -94,14 +94,14 @@ Here's a complete example to get you started:
 
 ```python
 import os
-from askui import VisionAgent
+from askui import ComputerAgent
 
 # Set your credentials (sign up at https://www.askui.com)
 os.environ["ASKUI_WORKSPACE_ID"] = "<your-workspace-id>"
 os.environ["ASKUI_TOKEN"] = "<your-token>"
 
 # Programmatic approach
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.click("Login button")
     agent.type("user@example.com")
     agent.click("Password field")
@@ -113,7 +113,7 @@ with VisionAgent() as agent:
     print(welcome_message)
 
 # Agentic approach
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Log in with email 'user@example.com' and password 'password123', "
         "then tell me what the welcome message says"

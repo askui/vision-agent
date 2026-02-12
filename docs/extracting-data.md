@@ -56,10 +56,10 @@ Instead of taking a screenshot, you can analyze specific images or documents:
 
 ```python
 from PIL import Image
-from askui import VisionAgent
+from askui import ComputerAgent
 from pathlib import Path
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # From PIL Image
     image = Image.open("screenshot.png")
     result = agent.get("What's in this image?", source=image)
@@ -86,7 +86,7 @@ with VisionAgent() as agent:
 For structured data extraction, use Pydantic models extending `ResponseSchemaBase`:
 
 ```python
-from askui import ResponseSchemaBase, VisionAgent
+from askui import ComputerAgent, ResponseSchemaBase
 from PIL import Image
 import json
 
@@ -97,7 +97,7 @@ class UserInfo(ResponseSchemaBase):
 class UrlResponse(ResponseSchemaBase):
     url: str
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Get structured data
     user_info = agent.get(
         "What is the username and online status?",

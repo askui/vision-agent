@@ -5,7 +5,6 @@ from typing import Annotated, Type, overload
 from PIL import Image as PILImage
 from pydantic import Field
 
-from askui.model_store.defaults import default_get_model
 from askui.models.models import GetModel
 from askui.models.shared.settings import GetSettings
 from askui.reporting import NULL_REPORTER, Reporter
@@ -25,7 +24,12 @@ class DataExtractor:
         get_model: GetModel | None = None,
         reporter: Reporter = NULL_REPORTER,
     ) -> None:
-        self._get_model = get_model or default_get_model()
+        if get_model is not None:
+            self._get_model = get_model
+        else:
+            from askui.agent_settings import AgentSettings
+
+            self._get_model = AgentSettings().to_get_model()
         self._reporter = reporter
         self.get_settings = GetSettings()
 

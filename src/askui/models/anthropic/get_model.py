@@ -1,3 +1,5 @@
+"""AnthropicGetModel — GetModel implementation for Anthropic Claude models."""
+
 from typing import Type
 
 from typing_extensions import override

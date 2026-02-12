@@ -45,20 +45,14 @@ class OpenRouterModel(GetModel):
 
     Example:
         ```python
-        from askui import VisionAgent
-        from askui.model_store import OpenRouterModel
+        from askui.models.openrouter.get_model import OpenRouterModel
         from askui.models.openrouter import OpenRouterSettings
 
         # Create OpenRouter model instance
         openrouter_model = OpenRouterModel(
-            OpenRouterSettings(
-                model="anthropic/claude-opus-4",
-            )
+            model_id="anthropic/claude-opus-4",
+            settings=OpenRouterSettings(),
         )
-
-        with VisionAgent(get_model=openrouter_model) as agent:
-            result = agent.get("What is the main heading on the screen?")
-            print(result)
         ```
     """  # noqa: E501
 

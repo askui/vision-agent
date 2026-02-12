@@ -5,7 +5,7 @@ import pytest
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
-from askui.model_store.get_models.openRouter_get_model import OpenRouterModel
+from askui.models.openrouter.get_model import OpenRouterModel
 from askui.models.openrouter.settings import OpenRouterSettings
 from askui.utils.image_utils import ImageSource
 

@@ -1,50 +1,70 @@
-"""Integration tests for custom model usage with direct injection."""
+"""Integration tests for custom provider usage with AgentSettings."""
 
 import pathlib
-from typing import Any
+from typing import Any, Union
 
 import pytest
 from typing_extensions import override
 
 from askui import (
-    ActModel,
-    GetModel,
-    LocateModel,
+    AgentSettings,
+    ComputerAgent,
     Point,
     PointList,
     ResponseSchema,
     ResponseSchemaBase,
-    VisionAgent,
 )
 from askui.locators.locators import Locator
-from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings, GetSettings, LocateSettings
+from askui.model_providers.detection_provider import DetectionProvider
+from askui.model_providers.image_qa_provider import ImageQAProvider
+from askui.model_providers.vlm_provider import VlmProvider
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ThinkingConfigParam,
+    ToolChoiceParam,
+)
+from askui.models.shared.prompts import SystemPrompt
+from askui.models.shared.settings import GetSettings, LocateSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
 
 
-class SimpleActModel(ActModel):
-    """Simple act model that records goals."""
+class SimpleVlmProvider(VlmProvider):
+    """Simple VLM provider that records goals."""
 
-    def __init__(self) -> None:
-        self.goals: list[list[dict[str, str]]] = []
+    def __init__(self, model_id: str = "test-model") -> None:
+        self.goals: list[list[dict[str, Any]]] = []
+        self._model_id = model_id
+
+    @property
+    @override
+    def model_id(self) -> str:
+        return self._model_id
 
     @override
-    def act(
+    def create_message(
         self,
         messages: list[MessageParam],
-        act_settings: ActSettings,
-        on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
-    ) -> None:
-        self.goals.append([message.model_dump(mode="json") for message in messages])
+        max_tokens: int | None = None,
+        betas: list[str] | None = None,
+        system: SystemPrompt | None = None,
+        thinking: ThinkingConfigParam | None = None,
+        tool_choice: ToolChoiceParam | None = None,
+        temperature: float | None = None,
+    ) -> MessageParam:
+        self.goals.append([msg.model_dump(mode="json") for msg in messages])
+        return MessageParam(
+            role="assistant",
+            content="done",
+            stop_reason="end_turn",
+        )
 
 
-class SimpleGetModel(GetModel):
-    """Simple get model that returns a fixed response."""
+class SimpleImageQAProvider(ImageQAProvider):
+    """Simple image Q&A provider that returns a fixed response."""
 
     def __init__(self, response: str | ResponseSchemaBase = "test response") -> None:
         self.queries: list[str] = []
@@ -53,7 +73,7 @@ class SimpleGetModel(GetModel):
         self.response = response
 
     @override
-    def get(
+    def query(
         self,
         query: str,
         source: Source,
@@ -76,8 +96,8 @@ class SimpleGetModel(GetModel):
         raise ValueError(err_msg)
 
 
-class SimpleLocateModel(LocateModel):
-    """Simple locate model that returns fixed coordinates."""
+class SimpleDetectionProvider(DetectionProvider):
+    """Simple detection provider that returns fixed coordinates."""
 
     def __init__(self, point: Point = (100, 100)) -> None:
         self.locators: list[str | Locator] = []
@@ -85,15 +105,23 @@ class SimpleLocateModel(LocateModel):
         self._point = point
 
     @override
-    def locate(
+    def detect(
         self,
-        locator: str | Locator,
+        locator: Union[str, Locator],
         image: ImageSource,
         locate_settings: LocateSettings,
     ) -> PointList:
         self.locators.append(locator)
         self.images.append(image)
         return [self._point]
+
+    @override
+    def detect_all(
+        self,
+        image: ImageSource,
+        locate_settings: LocateSettings,
+    ) -> list:
+        return []
 
 
 class SimpleResponseSchema(ResponseSchemaBase):
@@ -102,216 +130,154 @@ class SimpleResponseSchema(ResponseSchemaBase):
     value: str
 
 
-class TestCustomModels:
-    """Test suite for custom model direct injection."""
+class TestCustomProviders:
+    """Test suite for custom provider injection via AgentSettings."""
 
     @pytest.fixture
-    def act_model(self) -> SimpleActModel:
-        return SimpleActModel()
+    def vlm_provider(self) -> SimpleVlmProvider:
+        return SimpleVlmProvider()
 
     @pytest.fixture
-    def get_model(self) -> SimpleGetModel:
-        return SimpleGetModel()
+    def image_qa_provider(self) -> SimpleImageQAProvider:
+        return SimpleImageQAProvider()
 
     @pytest.fixture
-    def locate_model(self) -> SimpleLocateModel:
-        return SimpleLocateModel()
+    def detection_provider(self) -> SimpleDetectionProvider:
+        return SimpleDetectionProvider()
 
-    def test_inject_and_use_custom_act_model(
+    def test_inject_and_use_custom_vlm_provider(
         self,
-        act_model: SimpleActModel,
+        vlm_provider: SimpleVlmProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test injecting and using a custom act model."""
-        with VisionAgent(act_model=act_model, tools=agent_toolbox_mock) as agent:
+        """Test injecting and using a custom VLM provider."""
+        with ComputerAgent(
+            settings=AgentSettings(vlm_provider=vlm_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
             agent.act("test goal")
 
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
+        assert len(vlm_provider.goals) == 1
+        assert len(vlm_provider.goals[0]) == 1
+        msg = vlm_provider.goals[0][0]
+        assert msg["role"] == "user"
+        assert msg["stop_reason"] is None
+        content = msg["content"]
+        if isinstance(content, str):
+            assert content == "test goal"
+        else:
+            assert any(
+                block.get("text") == "test goal"
+                for block in content
+                if isinstance(block, dict)
+            )
 
-    def test_inject_and_use_custom_get_model(
+    def test_inject_and_use_custom_image_qa_provider(
         self,
-        get_model: SimpleGetModel,
+        image_qa_provider: SimpleImageQAProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test injecting and using a custom get model."""
-        with VisionAgent(get_model=get_model, tools=agent_toolbox_mock) as agent:
+        """Test injecting and using a custom image Q&A provider."""
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
             result = agent.get("test query")
 
         assert result == "test response"
-        assert get_model.queries == ["test query"]
+        assert image_qa_provider.queries == ["test query"]
 
-    def test_inject_and_use_custom_get_model_with_pdf(
+    def test_inject_and_use_custom_image_qa_provider_with_pdf(
         self,
-        get_model: SimpleGetModel,
+        image_qa_provider: SimpleImageQAProvider,
         agent_toolbox_mock: AgentToolbox,
         path_fixtures_dummy_pdf: pathlib.Path,
     ) -> None:
-        """Test injecting and using a custom get model with a PDF."""
-        with VisionAgent(get_model=get_model, tools=agent_toolbox_mock) as agent:
+        """Test injecting and using a custom image Q&A provider with a PDF."""
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
             result = agent.get("test query", source=path_fixtures_dummy_pdf)
 
         assert result == "test response"
-        assert get_model.queries == ["test query"]
+        assert image_qa_provider.queries == ["test query"]
 
-    def test_inject_and_use_custom_locate_model(
+    def test_inject_and_use_custom_detection_provider(
         self,
-        locate_model: SimpleLocateModel,
+        detection_provider: SimpleDetectionProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test injecting and using a custom locate model."""
-        with VisionAgent(locate_model=locate_model, tools=agent_toolbox_mock) as agent:
+        """Test injecting and using a custom detection provider."""
+        with ComputerAgent(
+            settings=AgentSettings(detection_provider=detection_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
             agent.click("test element")
 
-        assert locate_model.locators == ["test element"]
+        assert detection_provider.locators == ["test element"]
 
-    def test_inject_all_custom_models(
+    def test_inject_all_custom_providers(
         self,
-        act_model: SimpleActModel,
-        get_model: SimpleGetModel,
-        locate_model: SimpleLocateModel,
+        vlm_provider: SimpleVlmProvider,
+        image_qa_provider: SimpleImageQAProvider,
+        detection_provider: SimpleDetectionProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test injecting all custom models at once."""
-        with VisionAgent(
-            act_model=act_model,
-            get_model=get_model,
-            locate_model=locate_model,
+        """Test injecting all custom providers at once."""
+        with ComputerAgent(
+            settings=AgentSettings(
+                vlm_provider=vlm_provider,
+                image_qa_provider=image_qa_provider,
+                detection_provider=detection_provider,
+            ),
             tools=agent_toolbox_mock,
         ) as agent:
             agent.act("test goal")
             result = agent.get("test query")
             agent.click("test element")
 
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
-        assert get_model.queries == ["test query"]
+        assert len(vlm_provider.goals) == 1
+        assert len(vlm_provider.goals[0]) == 1
+        msg = vlm_provider.goals[0][0]
+        assert msg["role"] == "user"
+        assert msg["stop_reason"] is None
+        content = msg["content"]
+        if isinstance(content, str):
+            assert content == "test goal"
+        else:
+            assert any(
+                block.get("text") == "test goal"
+                for block in content
+                if isinstance(block, dict)
+            )
+        assert image_qa_provider.queries == ["test query"]
         assert result == "test response"
-        assert locate_model.locators == ["test element"]
+        assert detection_provider.locators == ["test element"]
 
-    def test_per_call_act_model_override(
+    def test_use_response_schema_with_custom_image_qa_provider(
         self,
-        act_model: SimpleActModel,
+        image_qa_provider: SimpleImageQAProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test overriding the act model for a single call."""
-
-        class AnotherActModel(ActModel):
-            def __init__(self) -> None:
-                self.goals: list[list[dict[str, str]]] = []
-
-            @override
-            def act(
-                self,
-                messages: list[MessageParam],
-                act_settings: ActSettings,
-                on_message: OnMessageCb | None = None,
-                tools: ToolCollection | None = None,
-            ) -> None:
-                self.goals.append(
-                    [message.model_dump(mode="json") for message in messages]
-                )
-
-        another_model = AnotherActModel()
-
-        with VisionAgent(act_model=act_model, tools=agent_toolbox_mock) as agent:
-            # Use default model
-            agent.act("first goal")
-
-            # Override for this call
-            agent.act("second goal", act_model=another_model)
-
-            # Use default model again
-            agent.act("third goal")
-
-        # Default model should have been called twice
-        assert act_model.goals == [
-            [{"role": "user", "content": "first goal", "stop_reason": None}],
-            [{"role": "user", "content": "third goal", "stop_reason": None}],
-        ]
-
-        # Override model should have been called once
-        assert another_model.goals == [
-            [{"role": "user", "content": "second goal", "stop_reason": None}],
-        ]
-
-    def test_per_call_get_model_override(
-        self,
-        get_model: SimpleGetModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test overriding the get model for a single call."""
-        another_model = SimpleGetModel(response="another response")
-
-        with VisionAgent(get_model=get_model, tools=agent_toolbox_mock) as agent:
-            # Use default model
-            result1 = agent.get("first query")
-
-            # Override for this call
-            result2 = agent.get("second query", get_model=another_model)
-
-            # Use default model again
-            result3 = agent.get("third query")
-
-        assert result1 == "test response"
-        assert result2 == "another response"
-        assert result3 == "test response"
-
-        # Default model should have been called twice
-        assert get_model.queries == ["first query", "third query"]
-
-        # Override model should have been called once
-        assert another_model.queries == ["second query"]
-
-    def test_per_call_locate_model_override(
-        self,
-        locate_model: SimpleLocateModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test overriding the locate model for a single call."""
-        another_model = SimpleLocateModel(point=(200, 200))
-
-        with VisionAgent(locate_model=locate_model, tools=agent_toolbox_mock) as agent:
-            # Use default model
-            agent.locate("first element")
-
-            # Override for this call
-            agent.locate("second element", locate_model=another_model)
-
-            # Use default model again
-            agent.locate("third element")
-
-        # Default model should have been called twice
-        assert locate_model.locators == ["first element", "third element"]
-
-        # Override model should have been called once
-        assert another_model.locators == ["second element"]
-
-    def test_use_response_schema_with_custom_get_model(
-        self,
-        get_model: SimpleGetModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test using a response schema with a custom get model."""
+        """Test using a response schema with a custom image Q&A provider."""
         response = SimpleResponseSchema(value="test value")
-        get_model.response = response
+        image_qa_provider.response = response
 
-        with VisionAgent(get_model=get_model, tools=agent_toolbox_mock) as agent:
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
             result = agent.get("test query", response_schema=SimpleResponseSchema)
 
         assert isinstance(result, SimpleResponseSchema)
         assert result.value == "test value"
-        assert get_model.schemas == [SimpleResponseSchema]
+        assert image_qa_provider.schemas == [SimpleResponseSchema]
 
-    def test_defaults_to_built_in_models_when_not_provided(
+    def test_defaults_to_built_in_providers_when_not_provided(
         self,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
         """Test agent uses built-in defaults when custom ones not provided."""
-        # This should not raise an error even though we're not providing custom
-        # models - verifies the agent initializes correctly with defaults
-        with VisionAgent(tools=agent_toolbox_mock) as agent:
-            # Agent should initialize successfully without custom models
+        with ComputerAgent(tools=agent_toolbox_mock) as agent:
             assert agent is not None

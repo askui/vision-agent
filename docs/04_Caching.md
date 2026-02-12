@@ -68,10 +68,10 @@ You can adjust this value based on your application's responsiveness:
 Record agent actions to a cache file for later replay:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
@@ -89,10 +89,10 @@ After execution, a cache file will be created at `.cache/login_test.json` contai
 Provide the agent with access to previously recorded trajectories:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
@@ -118,10 +118,10 @@ When using `strategy="read"` or `strategy="both"`, **you need to inform the agen
 For specific tasks, mention the cache file name and what it accomplishes:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="""Open the website in Google Chrome.
 
@@ -139,12 +139,12 @@ with VisionAgent() as agent:
 For test suites or repetitive workflows, you can establish naming conventions:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
 test_id = "TEST_001"
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal=f"""Execute test {test_id} according to the test definition.
 
@@ -162,10 +162,10 @@ with VisionAgent() as agent:
 You can also provide general instructions for the agent to identify applicable cache files:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="""Fill out the user registration form.
 
@@ -184,10 +184,10 @@ with VisionAgent() as agent:
 For complex workflows, you can reference multiple cache files:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="""Complete the full checkout process:
 
@@ -214,10 +214,10 @@ with VisionAgent() as agent:
 You can customize the delay between cached actions to match your application's responsiveness:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
@@ -240,10 +240,10 @@ This is particularly useful when:
 Enable both reading and writing simultaneously:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="Complete the checkout process",
         caching_settings=CachingSettings(
@@ -333,12 +333,12 @@ The delay between actions can be customized using `CachedExecutionToolSettings` 
 Here's a complete example showing how to record and replay a test:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
 
 # Step 1: Record a successful login flow
 print("Recording login flow...")
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="Navigate to the login page and log in with username 'testuser' and password 'testpass123'",
         caching_settings=CachingSettings(
@@ -350,7 +350,7 @@ with VisionAgent() as agent:
 
 # Step 2: Later, replay the login flow for regression testing
 print("\nReplaying login flow for regression test...")
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         goal="""Log in to the application.
 

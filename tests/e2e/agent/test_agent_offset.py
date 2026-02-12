@@ -1,22 +1,22 @@
-"""Tests for VisionAgent offset functionality with different locator types and models"""
+"""Tests for Agent offset functionality with different locator types and models"""
 
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 from PIL import Image as PILImage
 
-from askui.agent import VisionAgent
+from askui.agent import ComputerAgent
 from askui.locators import Element
 
 if TYPE_CHECKING:
     from askui.models.models import Point
 
 
-class TestVisionAgentOffset:
-    """Test class for VisionAgent offset functionality."""
+class TestAgentOffset:
+    """Test class for Agent offset functionality."""
 
     def _setup_mocks(
-        self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
+        self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
     ) -> tuple[Mock, Mock, Mock, Mock]:
         """Helper method to setup common mocks."""
         mock_mouse_move = Mock()
@@ -33,7 +33,7 @@ class TestVisionAgentOffset:
 
     def test_click_with_positive_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test clicking with positive offset (right and down)."""
@@ -58,7 +58,7 @@ class TestVisionAgentOffset:
 
     def test_click_with_negative_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test clicking with negative offset (left and up)."""
@@ -83,7 +83,7 @@ class TestVisionAgentOffset:
 
     def test_click_with_zero_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test clicking with zero offset (same as no offset)."""
@@ -107,7 +107,7 @@ class TestVisionAgentOffset:
 
     def test_click_with_point_locator_and_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test clicking with Point locator and offset."""
@@ -132,7 +132,7 @@ class TestVisionAgentOffset:
 
     def test_mouse_move_with_positive_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test mouse movement with positive offset."""
@@ -156,7 +156,7 @@ class TestVisionAgentOffset:
 
     def test_mouse_move_with_negative_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test mouse movement with negative offset."""
@@ -180,7 +180,7 @@ class TestVisionAgentOffset:
 
     def test_mouse_move_with_point_locator_and_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test mouse movement with Point locator and offset."""
@@ -204,7 +204,7 @@ class TestVisionAgentOffset:
 
     def test_type_with_positive_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test typing with positive offset."""
@@ -231,7 +231,7 @@ class TestVisionAgentOffset:
 
     def test_type_with_negative_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test typing with negative offset."""
@@ -258,7 +258,7 @@ class TestVisionAgentOffset:
 
     def test_type_with_point_locator_and_offset(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
     ) -> None:
         """Test typing with Point locator and offset."""

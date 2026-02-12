@@ -57,11 +57,11 @@ pdm run json:gen
 ### Core SDK Architecture
 
 ```
-VisionAgent (Main SDK Entry Point)
+ComputerAgent (Main SDK Entry Point)
     ↓
-AgentBase (Abstract base class for all agents)
-    ├── VisionAgent (Desktop automation)
-    ├── AndroidVisionAgent (Mobile Android automation)
+Agent (Abstract base class for all agents)
+    ├── ComputerAgent (Desktop automation)
+    ├── AndroidAgent (Mobile Android automation)
     ├── WebVisionAgent (Web-specific automation)
     └── WebTestingAgent (Web testing framework)
 
@@ -72,7 +72,7 @@ AgentBase (Abstract base class for all agents)
 ```
 
 **Key Flow:**
-1. User calls `agent.click("Submit button")` on `VisionAgent`
+1. User calls `agent.click("Submit button")` on `ComputerAgent`
 2. `AgentBase.locate()` routes to appropriate model via `ModelRouter`
 3. Model receives screenshot + locator → returns coordinates
 4. `AgentToolbox.os.click()` → gRPC call to Agent OS
@@ -164,8 +164,8 @@ Tools are auto-discovered and can be dynamically loaded via MCP configurations.
 ## Key Code Locations
 
 ### Core SDK
-- `src/askui/agent.py` - Main `VisionAgent` class (user-facing API)
-- `src/askui/agent_base.py` - Abstract `AgentBase` with shared agent logic
+- `src/askui/agent.py` - Main `ComputerAgent` class (user-facing API)
+- `src/askui/agent_base.py` - Abstract `Agent` (base) with shared agent logic
 - `src/askui/android_agent.py` - Android-specific agent
 - `src/askui/web_agent.py` - Web-specific agent
 
@@ -234,7 +234,7 @@ Tools are auto-discovered and can be dynamically loaded via MCP configurations.
 - All public functions, classes, and constants require docstrings.
 - Document constructor args in class docstring, omit `__init__` docstring.
 - Use backticks for code references (variables, types, functions).
-- Function references: `click()`, Class references: `VisionAgent`, Method references: `VisionAgent.click()`
+- Function references: `click()`, Class references: `ComputerAgent`, Method references: `VisionAgent.click()`
 - Include sections: `Args`, `Returns`, `Raises`, `Example`, `Notes`, `See Also` as needed.
 - Document parameter types in parentheses, add `, optional` for defaults.
 
@@ -265,7 +265,7 @@ Tools are auto-discovered and can be dynamically loaded via MCP configurations.
 
 ### Template Method Pattern
 - `Agent._step()` orchestrates tool-calling loop
-- `AgentBase` provides common structure for all agents
+- `Agent` provides common structure for all agents
 
 ## Database & Observability
 
@@ -297,7 +297,7 @@ Tools are auto-discovered and can be dynamically loaded via MCP configurations.
 4. Follow Pydantic schema validation
 
 ### Adding New Agent Types
-1. Inherit from `AgentBase`
+1. Inherit from `Agent`
 2. Implement required abstract methods
 3. Provide appropriate `AgentOs` implementation
 4. Register in agent factory if needed

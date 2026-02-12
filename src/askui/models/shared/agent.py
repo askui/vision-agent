@@ -1,3 +1,5 @@
+"""AskUIAgent — core tool-calling act loop for autonomous agents."""
+
 import logging
 
 from typing_extensions import override

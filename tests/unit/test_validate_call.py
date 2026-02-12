@@ -1,27 +1,13 @@
 import pytest
 
-from askui import VisionAgent
+from askui import ComputerAgent
 
 
-def test_validate_call_with_invalid_act_model_type_raises_value_error() -> None:
-    class InvalidActModel:
-        pass
-
+def test_validate_call_with_invalid_reporters_type_raises_value_error() -> None:
     with pytest.raises(ValueError):
-        VisionAgent(act_model=InvalidActModel())  # type: ignore
+        ComputerAgent(reporters="not_a_list")  # type: ignore[arg-type]
 
 
-def test_validate_call_with_invalid_get_model_type_raises_value_error() -> None:
-    class InvalidGetModel:
-        pass
-
+def test_validate_call_with_invalid_display_type_raises_value_error() -> None:
     with pytest.raises(ValueError):
-        VisionAgent(get_model=InvalidGetModel())  # type: ignore
-
-
-def test_validate_call_with_invalid_locate_model_type_raises_value_error() -> None:
-    class InvalidLocateModel:
-        pass
-
-    with pytest.raises(ValueError):
-        VisionAgent(locate_model=InvalidLocateModel())  # type: ignore
+        ComputerAgent(display=0)

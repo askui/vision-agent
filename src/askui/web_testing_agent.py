@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pydantic import ConfigDict, validate_call
 
+from askui.agent_settings import AgentSettings
 from askui.models.shared.settings import (
     ActSettings,
     MessageSettings,
@@ -30,7 +31,6 @@ from askui.tools.testing.scenario_tools import (
 )
 from askui.web_agent import WebVisionAgent
 
-from .models.models import ActModel, GetModel, LocateModel
 from .reporting import Reporter
 from .retry import Retry
 
@@ -40,18 +40,14 @@ class WebTestingAgent(WebVisionAgent):
     def __init__(
         self,
         reporters: list[Reporter] | None = None,
-        act_model: ActModel | None = None,
-        get_model: GetModel | None = None,
-        locate_model: LocateModel | None = None,
+        settings: AgentSettings | None = None,
         retry: Retry | None = None,
     ) -> None:
         base_dir = Path.cwd() / "chat" / "testing"
         base_dir.mkdir(parents=True, exist_ok=True)
         super().__init__(
             reporters=reporters,
-            act_model=act_model,
-            get_model=get_model,
-            locate_model=locate_model,
+            settings=settings,
             retry=retry,
             act_tools=[
                 CreateFeatureTool(base_dir),

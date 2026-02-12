@@ -152,9 +152,9 @@ import os
 os.environ["ASKUI_WORKSPACE_ID"] = "<your-workspace-id>"
 os.environ["ASKUI_TOKEN"] = "<your-token>"
 
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act("Your task here")
 ```
 
@@ -165,9 +165,9 @@ with VisionAgent() as agent:
 Test that the Python package is installed correctly:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.click(button="left", repeat=2)
 ```
 
@@ -178,9 +178,9 @@ Run this with `python test.py`. If it double-clicks at the cursor location, your
 Verify that Agent OS is running and accessible:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Take a screenshot to verify Agent OS connectivity
     agent.tools.os.screenshot()
     print("Agent OS is connected and working!")
@@ -191,9 +191,9 @@ with VisionAgent() as agent:
 Verify that authentication is configured correctly:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Open a browser, navigate to https://docs.askui.com, "
         "and click on 'Search...'"

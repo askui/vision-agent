@@ -3,7 +3,6 @@ from typing import Annotated
 from pydantic import ConfigDict, Field, validate_call
 
 from askui.container import telemetry
-from askui.model_store.defaults import default_act_model
 from askui.models.models import ActModel
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
@@ -15,7 +14,17 @@ class CustomAgent:
     """Custom agent for headless agentic tasks without OS integration."""
 
     def __init__(self, act_model: ActModel | None = None) -> None:
-        self._act_model = act_model or default_act_model()
+        from askui.agent_settings import AgentSettings
+        from askui.models.shared.agent import AskUIAgent
+
+        if act_model is not None:
+            self._act_model = act_model
+        else:
+            _settings = AgentSettings()
+            self._act_model = AskUIAgent(
+                model_id=_settings.vlm_provider.model_id,
+                messages_api=_settings.to_messages_api(),
+            )
         self.act_settings = ActSettings()
 
     @telemetry.record_call(exclude={"messages", "on_message", "settings", "tools"})

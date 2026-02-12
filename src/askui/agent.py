@@ -3,10 +3,11 @@ from typing import Annotated, Literal, Optional
 
 from pydantic import ConfigDict, Field, validate_call
 
-from askui.agent_base import AgentBase
+from askui.agent_base import Agent
+from askui.agent_settings import AgentSettings
 from askui.container import telemetry
 from askui.locators.locators import Locator
-from askui.models.models import ActModel, GetModel, LocateModel, Point
+from askui.models.models import Point
 from askui.models.shared.settings import ActSettings, LocateSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import (
@@ -39,7 +40,7 @@ from .tools.askui import AskUiControllerClient
 logger = logging.getLogger(__name__)
 
 
-class VisionAgent(AgentBase):
+class ComputerAgent(Agent):
     """
     A vision-based agent that can interact with user interfaces through computer vision and AI.
 
@@ -50,17 +51,15 @@ class VisionAgent(AgentBase):
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
-        act_model (ActModel | None, optional): Custom ActModel instance. If `None`, uses default.
-        get_model (GetModel | None, optional): Custom GetModel instance. If `None`, uses default.
-        locate_model (LocateModel | None, optional): Custom LocateModel instance. If `None`, uses default.
+        settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
 
     Example:
         ```python
-        from askui import VisionAgent
+        from askui import ComputerAgent
 
-        with VisionAgent() as agent:
+        with ComputerAgent() as agent:
             agent.click("Submit button")
             agent.type("Hello World")
             agent.act("Open settings menu")
@@ -74,9 +73,7 @@ class VisionAgent(AgentBase):
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
         tools: AgentToolbox | None = None,
-        act_model: ActModel | None = None,
-        get_model: GetModel | None = None,
-        locate_model: LocateModel | None = None,
+        settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
     ) -> None:
@@ -110,9 +107,7 @@ class VisionAgent(AgentBase):
             ]
             + (act_tools or []),
             agent_os=self.tools.os,
-            act_model=act_model,
-            get_model=get_model,
-            locate_model=locate_model,
+            settings=settings,
         )
         self.act_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
             self.tools.os
@@ -135,7 +130,6 @@ class VisionAgent(AgentBase):
         repeat: Annotated[int, Field(gt=0)] = 1,
         offset: Optional[Point] = None,
         locate_settings: LocateSettings | None = None,
-        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Simulates a mouse click on the user interface element identified by the provided locator.
@@ -146,13 +140,12 @@ class VisionAgent(AgentBase):
             repeat (int, optional): The number of times to click. Must be greater than `0`. Defaults to `1`.
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
-            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.click()              # Left click on current position
                 agent.click("Edit")        # Left click on text "Edit"
                 agent.click((100, 200))    # Left click at absolute coordinates (100, 200)
@@ -171,9 +164,9 @@ class VisionAgent(AgentBase):
             msg += f" on {locator}"
         if offset is not None:
             msg += f" with offset {offset}"
-        logger.debug("VisionAgent received instruction to %s", msg)
+        logger.debug("Agent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
-        self._click(locator, button, repeat, offset, locate_settings, locate_model)
+        self._click(locator, button, repeat, offset, locate_settings)
 
     def _click(
         self,
@@ -182,10 +175,9 @@ class VisionAgent(AgentBase):
         repeat: int,
         offset: Optional[Point],
         locate_settings: LocateSettings | None,
-        locate_model: LocateModel | None,
     ) -> None:
         if locator is not None:
-            self._mouse_move(locator, offset, locate_settings, locate_model)
+            self._mouse_move(locator, offset, locate_settings)
         self.tools.os.click(button, repeat)
 
     def _mouse_move(
@@ -193,7 +185,6 @@ class VisionAgent(AgentBase):
         locator: str | Locator | Point,
         offset: Optional[Point],
         locate_settings: LocateSettings | None,
-        locate_model: LocateModel | None,
     ) -> None:
         point: Point = (
             locator
@@ -201,7 +192,6 @@ class VisionAgent(AgentBase):
             else self._locate(
                 locator=locator,
                 locate_settings=locate_settings,
-                locate_model=locate_model,
             )[0]
         )
         if offset is not None:
@@ -215,7 +205,6 @@ class VisionAgent(AgentBase):
         locator: str | Locator | Point,
         offset: Optional[Point] = None,
         locate_settings: LocateSettings | None = None,
-        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Moves the mouse cursor to the UI element identified by the provided locator.
@@ -224,13 +213,12 @@ class VisionAgent(AgentBase):
             locator (str | Locator | Point): UI element description, structured locator, or absolute coordinates (x, y).
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
-            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.mouse_move("Submit button")  # Moves cursor to submit button
                 agent.mouse_move((300, 150))       # Moves cursor to absolute coordinates (300, 150)
                 agent.mouse_move("Close")          # Moves cursor to close element
@@ -238,8 +226,8 @@ class VisionAgent(AgentBase):
             ```
         """
         self._reporter.add_message("User", f"mouse_move: {locator}")
-        logger.debug("VisionAgent received instruction to mouse_move to %s", locator)
-        self._mouse_move(locator, offset, locate_settings, locate_model)
+        logger.debug("Agent received instruction to mouse_move to %s", locator)
+        self._mouse_move(locator, offset, locate_settings)
 
     @telemetry.record_call()
     @validate_call
@@ -264,9 +252,9 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.mouse_scroll(0, 10)  # Usually scrolls down 10 units
                 agent.mouse_scroll(0, -5)  # Usually scrolls up 5 units
                 agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
@@ -284,7 +272,6 @@ class VisionAgent(AgentBase):
         offset: Optional[Point] = None,
         clear: bool = True,
         locate_settings: LocateSettings | None = None,
-        locate_model: LocateModel | None = None,
     ) -> None:
         """
         Types the specified text as if it were entered on a keyboard.
@@ -300,13 +287,12 @@ class VisionAgent(AgentBase):
             offset (Point | None, optional): Pixel offset (x, y) from the target location. Positive x=right, negative x=left, positive y=down, negative y=up.
             clear (bool, optional): Whether to triple click on the element to give it focus and select the current text before typing. Defaults to `True`.
             locate_settings (LocateSettings | None, optional): Settings for the locate operation. If `None`, uses agent's default settings.
-            locate_model (LocateModel | None, optional): Model to use for locating the element. If `None`, uses agent's default model.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.type("Hello, world!")  # Types "Hello, world!" at current focus
                 agent.type("user@example.com", locator="Email")  # Clicks on "Email" input, then types
                 agent.type("username", locator=(200, 100))  # Clicks at coordinates (200, 100), then types
@@ -328,9 +314,8 @@ class VisionAgent(AgentBase):
                 repeat=repeat,
                 offset=offset,
                 locate_settings=locate_settings,
-                locate_model=locate_model,
             )
-        logger.debug("VisionAgent received instruction to %s", msg)
+        logger.debug("Agent received instruction to %s", msg)
         self._reporter.add_message("User", msg)
         self.tools.os.type(text)
 
@@ -348,15 +333,15 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.key_up('a')  # Release the 'a' key
                 agent.key_up('shift')  # Release the 'Shift' key
             ```
         """
         self._reporter.add_message("User", f'key_up "{key}"')
-        logger.debug("VisionAgent received in key_up '%s'", key)
+        logger.debug("ComputerAgent received in key_up '%s'", key)
         self.tools.os.keyboard_release(key)
 
     @telemetry.record_call()
@@ -373,15 +358,15 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.key_down('a')  # Press the 'a' key
                 agent.key_down('shift')  # Press the 'Shift' key
             ```
         """
         self._reporter.add_message("User", f'key_down "{key}"')
-        logger.debug("VisionAgent received in key_down '%s'", key)
+        logger.debug("ComputerAgent received in key_down '%s'", key)
         self.tools.os.keyboard_pressed(key)
 
     @telemetry.record_call()
@@ -398,16 +383,16 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.mouse_up()  # Release the left mouse button
                 agent.mouse_up('right')  # Release the right mouse button
                 agent.mouse_up('middle')  # Release the middle mouse button
             ```
         """
         self._reporter.add_message("User", f'mouse_up "{button}"')
-        logger.debug("VisionAgent received instruction to mouse_up '%s'", button)
+        logger.debug("ComputerAgent received instruction to mouse_up '%s'", button)
         self.tools.os.mouse_up(button)
 
     @telemetry.record_call()
@@ -424,16 +409,16 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.mouse_down()  # Press the left mouse button
                 agent.mouse_down('right')  # Press the right mouse button
                 agent.mouse_down('middle')  # Press the middle mouse button
             ```
         """
         self._reporter.add_message("User", f'mouse_down "{button}"')
-        logger.debug("VisionAgent received instruction to mouse_down '%s'", button)
+        logger.debug("ComputerAgent received instruction to mouse_down '%s'", button)
         self.tools.os.mouse_down(button)
 
     @telemetry.record_call()
@@ -454,9 +439,9 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.keyboard('a')  # Press 'a' key
                 agent.keyboard('enter')  # Press 'Enter' key
                 agent.keyboard('v', ['control'])  # Press Ctrl+V (paste)
@@ -471,7 +456,7 @@ class VisionAgent(AgentBase):
         if repeat > 1:
             msg += f" {repeat}x times"
         self._reporter.add_message("User", msg)
-        logger.debug("VisionAgent received instruction to press '%s'", key)
+        logger.debug("ComputerAgent received instruction to press '%s'", key)
         self.tools.os.keyboard_tap(key, modifier_keys, count=repeat)
 
     @telemetry.record_call(exclude={"command"})
@@ -491,9 +476,9 @@ class VisionAgent(AgentBase):
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 # Use for Windows
                 agent.cli(r'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
                 agent.cli(r'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
@@ -512,5 +497,7 @@ class VisionAgent(AgentBase):
 
             ```
         """
-        logger.debug("VisionAgent received instruction to execute '%s' on cli", command)
+        logger.debug(
+            "ComputerAgent received instruction to execute '%s' on cli", command
+        )
         self.tools.os.run_command(command)

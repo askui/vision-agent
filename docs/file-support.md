@@ -13,19 +13,19 @@ The AskUI Vision Agent supports the following file formats for data extraction a
 - **Processing Method**: **Depends on Usage Context**
 
 
-#### VisionAgent.get() Usage (No History)
+#### ComputerAgent.get() Usage (No History)
 
 - **Per-Query Processing**: Each `get()` command processes the PDF file directly, no history is maintained
 - **Always processes original file**: Every query runs against the original PDF file, not cached content
 - **No extraction caching**: File is processed fresh for each separate `get()` call
 - **Architecture**: PDF → Gemini (direct processing) → Return results → No storage
 - **Model Support**:
-  - ✅ **VisionAgent.get()**: AskUI Gemini models process PDF directly for each query
+  - ✅ **ComputerAgent.get()**: AskUI Gemini models process PDF directly for each query
 
 #### Processing Workflow for PDF Files
 
 
-**VisionAgent.get() Workflow (Per-query processing):**
+**ComputerAgent.get() Workflow (Per-query processing):**
 
 ```mermaid
 graph TD
@@ -42,7 +42,7 @@ graph TD
 - **Processing model restriction**: Only AskUI-hosted Gemini models can process PDFs
 - **No caching mechanism**: PDF content is re-extracted on every run 
 - **Performance impact**:
-  - VisionAgent.get(): PDF processed for each individual query
+  - ComputerAgent.get(): PDF processed for each individual query
 - **Multiple PDF overhead**: All PDF files are re-processed on every run
 - **Future enhancement**: Caching mechanism may be implemented to avoid repeated extraction
 
@@ -53,7 +53,7 @@ graph TD
   - `application/vnd.ms-excel` (.xls)
 - **Processing Method**: **Depends on Usage Context**
 
-#### VisionAgent.get() Usage (No History)
+#### ComputerAgent.get() Usage (No History)
 
 - **Per-Query Processing**: Each `get()` command converts the Excel file to markdown fresh, no history is maintained
 - **Always processes original file**: Every query runs against the original Excel file, not cached content
@@ -66,12 +66,12 @@ graph TD
   - Deterministic conversion process (same input = same output)
   - **No AI in conversion**: `markitdown` performs rule-based conversion
 - **Model Support**:
-  - ✅ **VisionAgent.get()**: Only Gemini models can process converted markdown for each query
+  - ✅ **ComputerAgent.get()**: Only Gemini models can process converted markdown for each query
 
 #### Processing Workflow for Excel Files
 
 
-**VisionAgent.get() Workflow (Per-query conversion):**
+**ComputerAgent.get() Workflow (Per-query conversion):**
 
 ```mermaid
 graph TD
@@ -90,10 +90,10 @@ graph TD
 - Complex formatting may be simplified during markdown conversion
 - Embedded objects (charts, complex tables) may not preserve all details
 - **Processing model differences**:
-  - VisionAgent.get(): Only Gemini models can process converted content
+  - ComputerAgent.get(): Only Gemini models can process converted content
 - **No AI in conversion**: Conversion is deterministic and rule-based, not AI-powered
 - **Performance impact**:
-  - VisionAgent.get(): Excel converted for each individual query
+  - ComputerAgent.get(): Excel converted for each individual query
 - **Multiple file overhead**: All Excel files are re-processed on every run
 - **Future enhancement**: Caching mechanism may be implemented to avoid repeated conversion
 
@@ -105,7 +105,7 @@ graph TD
 - **Processing Method**: **Depends on Usage Context**
 
 
-#### VisionAgent.get() Usage (No History)
+#### ComputerAgent.get() Usage (No History)
 
 - **Per-Query Processing**: Each `get()` command converts the Word file to markdown fresh, no history is maintained
 - **Always processes original file**: Every query runs against the original Word file, not cached content
@@ -118,12 +118,12 @@ graph TD
   - No AI-generated image descriptions during conversion (handled by `markitdown`)
   - **No AI in conversion**: `markitdown` performs rule-based conversion
 - **Model Support**:
-  - ✅ **VisionAgent.get()**: Only Gemini models can process converted markdown for each query
+  - ✅ **ComputerAgent.get()**: Only Gemini models can process converted markdown for each query
 
 #### Processing Workflow for Word Documents
 
 
-**VisionAgent.get() Workflow (Per-query conversion):**
+**ComputerAgent.get() Workflow (Per-query conversion):**
 
 ```mermaid
 graph TD
@@ -142,10 +142,10 @@ graph TD
 - Complex formatting may be simplified during markdown conversion
 - Embedded objects (charts, complex tables) may not preserve all details
 - **Processing model differences**:
-  - VisionAgent.get(): Only Gemini models can process converted content
+  - ComputerAgent.get(): Only Gemini models can process converted content
 - **No AI in conversion**: Conversion is deterministic and rule-based, not AI-powered
 - **Performance impact**:
-  - VisionAgent.get(): Word converted for each individual query
+  - ComputerAgent.get(): Word converted for each individual query
 - **Multiple file overhead**: All Word files are re-processed on every run
 - **Future enhancement**: Caching mechanism may be implemented to avoid repeated conversion
 
@@ -209,12 +209,12 @@ The following key dependencies enable file format support:
 
 ### Processing Excel Files
 
-#### Using VisionAgent.get() (Per-query conversion)
+#### Using ComputerAgent.get() (Per-query conversion)
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.models import ModelName
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Excel converted to markdown fresh for each get() call - no history maintained    result1 = agent.get(
         "Extract the quarterly sales data",
         source="sales_report.xlsx",  # File converted to markdown each time        model=ModelName.ASKUI__GEMINI__2_5__FLASH  # Only Gemini models support documents    )
@@ -226,12 +226,12 @@ with VisionAgent() as agent:
 
 ### Processing PDF Files
 
-#### Using VisionAgent.get() (Per-query processing)
+#### Using ComputerAgent.get() (Per-query processing)
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.models import ModelName
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # PDF processed fresh for each get() call - no history maintained    result1 = agent.get(
         "Summarize the main points",
         source="document.pdf",  # File processed directly each time        model=ModelName.ASKUI__GEMINI__2_5__FLASH  # Only Gemini models support PDFs    )
@@ -243,12 +243,12 @@ with VisionAgent() as agent:
 
 ### Processing Word Documents
 
-#### Using VisionAgent.get() (Per-query conversion)
+#### Using ComputerAgent.get() (Per-query conversion)
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.models.models import ModelName
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Word converted to markdown fresh for each get() call - no history maintained    result1 = agent.get(
         "Extract all action items",
         source="meeting_notes.docx",  # File converted to markdown each time        model=ModelName.ASKUI__GEMINI__2_5__FLASH  # Only Gemini models support documents    )
@@ -262,14 +262,14 @@ with VisionAgent() as agent:
 ## General Limitations and Considerations
 
 - **Processing Model Restriction**: Currently, only Gemini models support document processing
-- **No Caching Mechanism**: All document files (PDF, Excel, Word) are re-processed on every VisionAgent.get() call
+- **No Caching Mechanism**: All document files (PDF, Excel, Word) are re-processed on every ComputerAgent.get() call
 - **File Storage Only**: Files are stored as original files, not as extracted/converted content
 - **Runtime Conversion**: Document processing happens on runtime to create LLM-compatible messages
 - **Performance Impact**: Multiple documents mean multiple processing operations on every run
 
 ### Performance Considerations
 
-- **No caching**: All document files are re-processed on every VisionAgent.get() call
+- **No caching**: All document files are re-processed on every ComputerAgent.get() call
 - **Multiple file overhead**: Having multiple documents significantly impacts performance as all are re-processed
 - **Processing types**:
   - PDFs: Re-extracted by Gemini on every run (AI processing overhead)
@@ -294,9 +294,9 @@ with VisionAgent() as agent:
 
 1. **Understand Model Usage**:
    - **PDFs**: Only Gemini models can process PDFs 
-   - **Office docs (VisionAgent.get())**: Only Gemini models can process converted content
+   - **Office docs (ComputerAgent.get())**: Only Gemini models can process converted content
 2. **Understand Processing Flow**:
-   - Office docs (VisionAgent.get()): `markitdown` (non-AI) conversion → Gemini processes converted content
+   - Office docs (ComputerAgent.get()): `markitdown` (non-AI) conversion → Gemini processes converted content
    - PDFs: Direct binary processing by Gemini on every run/query → No caching
 3. **Optimize File Size**: Keep PDF files under 20MB (required limit); Office documents have no specific size limit
 4. **Test Document Quality**: Verify that processed documents maintain essential information

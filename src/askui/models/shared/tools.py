@@ -474,6 +474,7 @@ class ToolCollection:
                 "Tool failed",
                 extra={"tool_name": tool_use_block_param.name, "error": error_message},
             )
+            logger.warning("%s - %s", tool_use_block_param.name, error_message)
             return ToolResultBlockParam(
                 content=f"Tool raised an unexpected error: {error_message}",
                 is_error=True,

@@ -18,10 +18,10 @@ class AndroidSaveScreenshotTool(AndroidBaseTool):
 
     Example:
         ```python
-        from askui import AndroidVisionAgent
+        from askui import AndroidAgent
         from askui.tools.store.android import AndroidSaveScreenshotTool
 
-        with AndroidVisionAgent() as agent:
+        with AndroidAgent() as agent:
             agent.act(
                 "Take a screenshot and save it as demo/demo.png",
                 tools=[AndroidSaveScreenshotTool(base_dir="/path/to/screenshots")]
@@ -30,10 +30,10 @@ class AndroidSaveScreenshotTool(AndroidBaseTool):
 
     Example
     ```python
-    from askui import AndroidVisionAgent
+    from askui import AndroidAgent
     from askui.tools.store.android import AndroidSaveScreenshotTool
 
-    with AndroidVisionAgent(
+    with AndroidAgent(
         act_tools=[AndroidSaveScreenshotTool(base_dir="/path/to/screenshots")]
     ) as agent:
         agent.act("Take a screenshot and save it as demo/demo.png")

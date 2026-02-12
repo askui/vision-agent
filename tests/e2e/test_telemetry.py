@@ -2,7 +2,7 @@ import pytest
 from PIL import Image
 
 from askui import locators as loc
-from askui.agent import VisionAgent
+from askui.agent import ComputerAgent
 from askui.container import telemetry
 from askui.telemetry.processors import Segment, SegmentSettings
 from askui.tools.toolbox import AgentToolbox
@@ -23,6 +23,6 @@ def test_telemetry_with_nonexistent_domain_should_not_block(
             )
         ]
     )
-    with VisionAgent(tools=agent_toolbox_mock) as agent:
+    with ComputerAgent(tools=agent_toolbox_mock) as agent:
         agent.locate(loc.Text(), screenshot=github_login_screenshot)
     assert True

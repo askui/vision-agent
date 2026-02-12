@@ -15,7 +15,7 @@ The default prompts work well for general use cases, but customizing them for yo
 
 ## Prompt Structure
 
-System prompts for the AskUI VisionAgent consist of six distinct parts:
+System prompts for the AskUI ComputerAgent consist of six distinct parts:
 
 | Part | Default | Purpose |
 |------|---------|---------|
