@@ -13,7 +13,7 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
-_DEFAULT_MODEL_ID = "claude-sonnet-4-5-20251101"
+_DEFAULT_MODEL_ID = "claude-sonnet-4-5-20250929"
 
 
 class AskUIVlmProvider(VlmProvider):
@@ -29,7 +29,7 @@ class AskUIVlmProvider(VlmProvider):
         token (str | None, optional): AskUI API token. Reads `ASKUI_TOKEN`
             from the environment if not provided.
         model_id (str, optional): Claude model to use. Defaults to
-            `"claude-sonnet-4-5-20251101"`.
+            `"claude-sonnet-4-5-20250929"`.
 
     Example:
         ```python
