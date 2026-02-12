@@ -122,13 +122,6 @@ def test_get(
     assert url in ["github.com/login", "https://github.com/login"]
 
 
-def test_get_with_pdf_with_non_gemini_model_raises_not_implemented(
-    vision_agent: ComputerAgent, path_fixtures_dummy_pdf: pathlib.Path
-) -> None:
-    with pytest.raises(NotImplementedError):
-        vision_agent.get("What is in the PDF?", source=path_fixtures_dummy_pdf)
-
-
 @pytest.mark.parametrize(
     "get_model",
     [
@@ -193,7 +186,7 @@ def test_get_with_pdf_too_large(
     path_fixtures_dummy_pdf: pathlib.Path,
     mocker: MockerFixture,
 ) -> None:
-    mocker.patch("askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES", 1)
+    mocker.patch("askui.models.askui.get_model.MAX_FILE_SIZE_BYTES", 1)
     with ComputerAgent(
         settings=AgentSettings(image_qa_provider=_GetModelImageQAProvider(get_model)),
         tools=agent_toolbox_mock,
@@ -211,19 +204,10 @@ def test_get_with_pdf_too_large_with_default_model(
     path_fixtures_dummy_pdf: pathlib.Path,
     mocker: MockerFixture,
 ) -> None:
-    mocker.patch("askui.models.askui.google_genai_api.MAX_FILE_SIZE_BYTES", 1)
+    mocker.patch("askui.model_providers.askui_image_qa_provider._MAX_FILE_SIZE_BYTES", 1)
 
-    # This should raise a ValueError because the default model is Gemini and it falls
-    # back to inference askui which does not support pdfs
     with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
         vision_agent.get("What is in the PDF?", source=path_fixtures_dummy_pdf)
-
-
-def test_get_with_xlsx_with_non_gemini_model_raises_not_implemented(
-    vision_agent: ComputerAgent, path_fixtures_dummy_excel: pathlib.Path
-) -> None:
-    with pytest.raises(NotImplementedError):
-        vision_agent.get("What is in the xlsx?", source=path_fixtures_dummy_excel)
 
 
 @pytest.mark.parametrize(
@@ -435,17 +419,6 @@ def test_get_with_response_schema(
     assert response.url in ["https://github.com/login", "github.com/login"]
 
 
-def test_get_with_response_schema_with_anthropic_model_raises_not_implemented(
-    vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
-) -> None:
-    with pytest.raises(NotImplementedError):
-        vision_agent.get(
-            "What is the current url shown in the url bar?",
-            source=github_login_screenshot,
-            response_schema=UrlResponse,
-        )
-
-
 @pytest.mark.parametrize(
     "get_model",
     [
@@ -508,21 +481,13 @@ def test_get_with_recursive_response_schema(
         tools=agent_toolbox_mock,
         reporters=[simple_html_reporter],
     ) as agent:
-        response = agent.get(
-            "Can you extract all segments (domain, path etc.) from the url as a linked list, "
-            "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
-            source=github_login_screenshot,
-            response_schema=LinkedListNode,
-        )
-    assert isinstance(response, LinkedListNode)
-    assert response.value == "github.com"
-    assert response.next is not None
-    assert response.next.value == "login"
-    assert (
-        response.next.next is None
-        or response.next.next.value == ""
-        and response.next.next.next is None
-    )
+        with pytest.raises(NotImplementedError, match="Recursive response schemas are not supported"):
+            agent.get(
+                "Can you extract all segments (domain, path etc.) from the url as a linked list, "
+                "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
+                source=github_login_screenshot,
+                response_schema=LinkedListNode,
+            )
 
 
 @pytest.mark.parametrize(

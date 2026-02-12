@@ -54,7 +54,8 @@ class TestAgentWait:
             side_effect=[white_page_screenshot, github_login_screenshot]
         )
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since element exists
         vision_agent.wait(locator, retry_count=3, delay=0.1, until_condition="appear")
@@ -71,7 +72,8 @@ class TestAgentWait:
         # Mock screenshot to return white page where element doesn't exist
         mock_screenshot = Mock(return_value=white_page_screenshot)
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should raise WaitUntilError since element doesn't exist
         with pytest.raises(WaitUntilError) as exc_info:
@@ -100,7 +102,8 @@ class TestAgentWait:
             side_effect=[github_login_screenshot, white_page_screenshot]
         )
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since element disappears
         vision_agent.wait(
@@ -118,7 +121,8 @@ class TestAgentWait:
         # Mock screenshot to always show the element exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should raise WaitUntilError since element exists and won't disappear
         with pytest.raises(WaitUntilError) as exc_info:
@@ -141,7 +145,8 @@ class TestAgentWait:
         # Mock screenshot to return the image where textfield exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since textfield exists
         vision_agent.wait(locator, retry_count=2, delay=0.1, until_condition="appear")
@@ -157,7 +162,8 @@ class TestAgentWait:
         # Mock screenshot to return the image where element exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should use default retry_count=3, delay=1, until_condition="appear"
         vision_agent.wait(locator)
@@ -181,7 +187,8 @@ class TestAgentWait:
             ]
         )
         vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
-        vision_agent._locate_tool.run = Mock(wraps=vision_agent._locate_tool.run)
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         vision_agent.wait(
             locator, until_condition="disappear", retry_count=3, delay=0.2
