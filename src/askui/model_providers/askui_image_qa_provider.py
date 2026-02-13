@@ -1,5 +1,6 @@
 """AskUIImageQAProvider — image Q&A via AskUI's hosted Gemini proxy."""
 
+from importlib.metadata import PackageNotFoundError
 import json as json_lib
 import logging
 from functools import cached_property
@@ -67,10 +68,14 @@ class AskUIImageQAProvider(ImageQAProvider):
     @cached_property
     def _genai_client(self):  # type: ignore[no-untyped-def]
         """Lazily initialise the GenAI client via the AskUI proxy on first use."""
-        import google.genai as genai
-        from google.genai import types as genai_types
+        try:
+            import google.genai as genai
+            from google.genai import types as genai_types
+        except ImportError:
+            raise PackageNotFoundError
 
         from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
+
 
         _api_settings = AskUiInferenceApiSettings()
         return genai.Client(
