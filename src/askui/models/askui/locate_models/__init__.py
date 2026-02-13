@@ -1,6 +1,6 @@
 """AskUI locate model implementations."""
 
-from .aiElement_locate_model import AskUiAiElementLocateModel
+from .ai_element_locate_model import AskUiAiElementLocateModel
 from .anthropic_locate_model import AnthropicLocateModel
 from .combo_locate_model import AskUiComboLocateModel
 from .ocr_locate_model import AskUiOcrLocateModel
