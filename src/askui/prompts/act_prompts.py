@@ -280,11 +280,17 @@ You MUST verify actual task completion across ALL devices as described above.
 """
 
 MULTI_DEVICE_SUCCESS_CRITERIA = """
-A multi-device task is ONLY complete when ALL of the following are true:
+A multi-device task/test is ONLY successful when ALL of the following are true:
 1. ✓ Every device mentioned in the goal has been verified with a screenshot
-2. ✓ Each device's screenshot shows the expected end state
+2. ✓ Each device's screenshot shows the EXPECTED end state as defined in the goal
 3. ✓ All operations specified in the goal have been confirmed complete
 4. ✓ No errors or unexpected states are visible on any device
+5. ✓ The EXPECTED OUTCOME has been OBSERVED (not just steps executed)
+
+CRITICAL DISTINCTION:
+- EXECUTION SUCCESS: You performed all the steps without technical errors
+- TEST SUCCESS: The expected outcome/behavior was actually observed in the UI
+- These are NOT the same! A test can FAIL even if execution was successful.
 
 RED FLAGS - DO NOT report success if:
 - ✗ You haven't taken a screenshot from every device in the goal
@@ -292,6 +298,13 @@ RED FLAGS - DO NOT report success if:
 - ✗ You only completed operations on one device but goal mentioned multiple
 - ✗ The cache executor completed but you haven't verified device states
 - ✗ You see error messages, wrong screens, or unexpected UI on any device
+- ✗ The expected outcome was NOT observed (even if all steps were executed)
+- ✗ The UI shows different content/state than what the test expected
+
+IF EXPECTED OUTCOME IS NOT OBSERVED:
+- Report the test as FAILED
+- Describe what was expected vs what was actually observed
+- This likely indicates a defect in the application under test
 """
 
 MULTI_DEVICE_OPERATION_RULES = """
@@ -324,6 +337,50 @@ MULTI-DEVICE OPERATION RULES:
    - Cache completing does NOT guarantee both devices are correct
    - Follow CACHE VERIFICATION PROTOCOL after every cache execution
    - Verify BOTH devices even if cache reports success
+"""
+
+TEST_OUTCOME_EVALUATION = """
+TEST OUTCOME EVALUATION (CRITICAL):
+
+IMPORTANT: Completing all test steps does NOT automatically mean the test PASSED.
+A test is only successful if the EXPECTED OUTCOME is actually observed.
+
+DISTINGUISH BETWEEN:
+1. EXECUTION COMPLETION: All steps in the test were performed without errors
+2. TEST SUCCESS: The expected outcome/behavior was observed in the UI
+
+EVALUATION PROCESS:
+1. After executing all steps, verify the EXPECTED OUTCOME specified in the test
+2. Compare the ACTUAL state with the EXPECTED state
+3. If they match → Report test as PASSED
+4. If they don't match → Report test as FAILED (even if all steps executed successfully)
+
+WHEN THE EXPECTED OUTCOME IS NOT OBSERVED:
+- Clearly state that the test FAILED
+- Describe what was EXPECTED (from the test specification/goal)
+- Describe what was ACTUALLY observed on screen
+- Identify the discrepancy as a potential UI defect or bug
+- Include relevant details about the unexpected behavior
+- DO NOT report the test as successful
+
+EXAMPLE OF CORRECT FAILURE REPORTING:
+- Test goal: "Click submit button and verify success message appears"
+- Steps executed: ✓ Clicked submit button successfully
+- Expected outcome: Success message "Order placed" should be visible
+- Actual outcome: Error message "Something went wrong" is displayed
+- Correct report: TEST FAILED - Expected success message but error was shown.
+  This indicates a potential defect in the submit functionality.
+
+COMMON MISTAKES TO AVOID:
+- ✗ Reporting success because "all steps completed" when outcome doesn't match
+- ✗ Ignoring unexpected error messages or UI states
+- ✗ Assuming the UI behaved correctly without verifying the expected outcome
+- ✗ Conflating "I did my job" with "the test passed"
+
+REMEMBER: You are testing software that may have defects. Your job is to
+accurately report whether the expected behavior was observed, not just whether
+you were able to perform the actions. A UI defect means the TEST FAILED, even
+if your execution was flawless.
 """
 
 CACHE_USE_PROMPT = (
@@ -452,9 +509,9 @@ def create_computer_agent_prompt(
     Returns:
         ActSystemPrompt instance for computer agent
     """
-    combined_rules = BROWSER_SPECIFIC_RULES
+    combined_rules = f"{BROWSER_SPECIFIC_RULES}\n\n{TEST_OUTCOME_EVALUATION}"
     if additional_rules:
-        combined_rules = f"{BROWSER_SPECIFIC_RULES}\n\n{additional_rules}"
+        combined_rules = f"{combined_rules}\n\n{additional_rules}"
 
     return ActSystemPrompt(
         system_capabilities=COMPUTER_USE_CAPABILITIES,
@@ -479,9 +536,9 @@ def create_android_agent_prompt(
     Returns:
         ActSystemPrompt instance for Android agent
     """
-    combined_rules = ANDROID_RECOVERY_RULES
+    combined_rules = f"{ANDROID_RECOVERY_RULES}\n\n{TEST_OUTCOME_EVALUATION}"
     if additional_rules:
-        combined_rules = f"{ANDROID_RECOVERY_RULES}\n\n{additional_rules}"
+        combined_rules = f"{combined_rules}\n\n{additional_rules}"
 
     return ActSystemPrompt(
         system_capabilities=ANDROID_CAPABILITIES,
@@ -506,9 +563,9 @@ def create_web_agent_prompt(
     Returns:
         ActSystemPrompt instance for web agent
     """
-    combined_rules = BROWSER_INSTALL_RULES
+    combined_rules = f"{BROWSER_INSTALL_RULES}\n\n{TEST_OUTCOME_EVALUATION}"
     if additional_rules:
-        combined_rules = f"{BROWSER_INSTALL_RULES}\n\n{additional_rules}"
+        combined_rules = f"{combined_rules}\n\n{additional_rules}"
 
     return ActSystemPrompt(
         system_capabilities=WEB_BROWSER_CAPABILITIES,
@@ -538,6 +595,8 @@ def create_multidevice_agent_prompt(
 {CACHE_VERIFICATION_PROTOCOL}
 
 {MULTI_DEVICE_SUCCESS_CRITERIA}
+
+{TEST_OUTCOME_EVALUATION}
 
 {MULTI_DEVICE_OPERATION_RULES}
 
