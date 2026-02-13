@@ -238,6 +238,13 @@ Tools are auto-discovered and can be dynamically loaded via MCP configurations.
 - Include sections: `Args`, `Returns`, `Raises`, `Example`, `Notes`, `See Also` as needed.
 - Document parameter types in parentheses, add `, optional` for defaults.
 
+### Documentation (docs/)
+When writing or updating documentation in `docs/`:
+- **Never show setting environment variables in Python code** (e.g., `os.environ["ASKUI_WORKSPACE_ID"] = "..."`). This is bad practice. Always instruct users to set environment variables via their shell or system settings.
+- Keep examples concise and focused on the feature being documented.
+- Test all code examples before including them.
+- Use `ComputerAgent` (not `VisionAgent`) in examples.
+
 ## Important Patterns
 
 ### Composition over Inheritance
