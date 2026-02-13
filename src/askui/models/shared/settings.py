@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
@@ -7,6 +9,24 @@ from askui.models.shared.prompts import (
     GetSystemPrompt,
     LocateSystemPrompt,
 )
+
+
+class Resolution(NamedTuple):
+    """Screen resolution for image scaling operations.
+
+    Used by vision models to scale images to a standard size before processing.
+
+    Args:
+        width (int): The width in pixels.
+        height (int): The height in pixels.
+    """
+
+    width: int
+    height: int
+
+
+DEFAULT_LOCATE_RESOLUTION = Resolution(1280, 800)
+DEFAULT_GET_RESOLUTION = Resolution(1280, 800)
 
 COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
 COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
@@ -47,6 +67,7 @@ class GetSettings(BaseModel):
     temperature: float = Field(default=0.5, ge=0.0, le=1.0)
     system_prompt: GetSystemPrompt | None = None
     timeout: float | None = None
+    resolution: Resolution = DEFAULT_GET_RESOLUTION
 
 
 class LocateSettings(BaseModel):
@@ -59,6 +80,7 @@ class LocateSettings(BaseModel):
     max_detections: int = 10
     timeout: float | None = None
     system_prompt: LocateSystemPrompt | None = None
+    resolution: Resolution = DEFAULT_LOCATE_RESOLUTION
 
 
 class CachedExecutionToolSettings(BaseModel):

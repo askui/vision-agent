@@ -30,7 +30,15 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from .models.shared.settings import ActSettings, MessageSettings
+from .models.shared.settings import (
+    ActSettings,
+    DEFAULT_GET_RESOLUTION,
+    DEFAULT_LOCATE_RESOLUTION,
+    GetSettings,
+    LocateSettings,
+    MessageSettings,
+    Resolution,
+)
 from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
@@ -67,10 +75,14 @@ __all__ = [
     "CitationPageLocationParam",
     "ConfigurableRetry",
     "ContentBlockParam",
+    "DEFAULT_GET_RESOLUTION",
+    "DEFAULT_LOCATE_RESOLUTION",
+    "GetSettings",
     "ImageBlockParam",
     "ImageSource",
     "InputSource",
     "Locator",
+    "LocateSettings",
     "MessageParam",
     "MessageSettings",
     "ModifierKey",
@@ -79,6 +91,7 @@ __all__ = [
     "PcKey",
     "Point",
     "PointList",
+    "Resolution",
     "ResponseSchema",
     "ResponseSchemaBase",
     "Retry",

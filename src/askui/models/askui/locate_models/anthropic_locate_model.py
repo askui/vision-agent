@@ -36,9 +36,6 @@ class AnthropicLocateModel(LocateModel):
             Can be overridden per-call.
     """
 
-    # Provider-specific configuration
-    DEFAULT_RESOLUTION: tuple[int, int] = (1280, 800)
-
     def __init__(
         self,
         model_id: str,
@@ -79,11 +76,12 @@ class AnthropicLocateModel(LocateModel):
         )
         try:
             prompt = f"Click on {locator_serialized}"
-            screen_width = self.DEFAULT_RESOLUTION[0]
-            screen_height = self.DEFAULT_RESOLUTION[1]
+            resolution = locate_settings.resolution
+            screen_width = resolution.width
+            screen_height = resolution.height
             scaled_image = scale_image_to_fit(
                 image.root,
-                self.DEFAULT_RESOLUTION,
+                resolution,
             )
             messages = built_messages_for_get_and_locate(scaled_image, prompt)
             system = build_system_prompt_locate(str(screen_width), str(screen_height))
@@ -102,7 +100,7 @@ class AnthropicLocateModel(LocateModel):
                 scale_coordinates(
                     extract_click_coordinates(content_text.text),
                     image.root.size,
-                    self.DEFAULT_RESOLUTION,
+                    resolution,
                     inverse=True,
                 )
             ]

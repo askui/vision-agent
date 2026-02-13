@@ -1,9 +1,9 @@
 """AskUIImageQAProvider — image Q&A via AskUI's hosted Gemini proxy."""
 
-from importlib.metadata import PackageNotFoundError
 import json as json_lib
 import logging
 from functools import cached_property
+from importlib.metadata import PackageNotFoundError
 from typing import Type
 
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
@@ -71,11 +71,10 @@ class AskUIImageQAProvider(ImageQAProvider):
         try:
             import google.genai as genai
             from google.genai import types as genai_types
-        except ImportError:
-            raise PackageNotFoundError
+        except ImportError as e:
+            raise PackageNotFoundError from e
 
         from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
-
 
         _api_settings = AskUiInferenceApiSettings()
         return genai.Client(

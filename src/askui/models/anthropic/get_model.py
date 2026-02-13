@@ -36,9 +36,6 @@ class AnthropicGetModel(GetModel):
             Can be overridden per-call.
     """
 
-    # Provider-specific configuration
-    DEFAULT_RESOLUTION: tuple[int, int] = (1280, 800)
-
     def __init__(
         self,
         model_id: str,
@@ -83,7 +80,7 @@ class AnthropicGetModel(GetModel):
                 raise NotImplementedError(error_msg)
             scaled_image = scale_image_to_fit(
                 source.root,
-                self.DEFAULT_RESOLUTION,
+                get_settings.resolution,
             )
             messages = built_messages_for_get_and_locate(scaled_image, query)
             message = self._messages_api.create_message(
