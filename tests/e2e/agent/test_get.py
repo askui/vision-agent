@@ -204,7 +204,9 @@ def test_get_with_pdf_too_large_with_default_model(
     path_fixtures_dummy_pdf: pathlib.Path,
     mocker: MockerFixture,
 ) -> None:
-    mocker.patch("askui.model_providers.askui_image_qa_provider._MAX_FILE_SIZE_BYTES", 1)
+    mocker.patch(
+        "askui.model_providers.askui_image_qa_provider._MAX_FILE_SIZE_BYTES", 1
+    )
 
     with pytest.raises(ValueError, match="PDF file size exceeds the limit"):
         vision_agent.get("What is in the PDF?", source=path_fixtures_dummy_pdf)
@@ -481,7 +483,9 @@ def test_get_with_recursive_response_schema(
         tools=agent_toolbox_mock,
         reporters=[simple_html_reporter],
     ) as agent:
-        with pytest.raises(NotImplementedError, match="Recursive response schemas are not supported"):
+        with pytest.raises(
+            NotImplementedError, match="Recursive response schemas are not supported"
+        ):
             agent.get(
                 "Can you extract all segments (domain, path etc.) from the url as a linked list, "
                 "e.g. 'https://google.com/test' -> 'google.com->test->None'?",
