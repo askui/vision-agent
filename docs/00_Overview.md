@@ -25,7 +25,7 @@ with VisionAgent() as agent:
         "Search for flights from New York to London, "
         "filter by direct flights, and show me the cheapest option"
     )
-
+```
 Natural language instructions where AI agents autonomously navigate UI, make decisions, and achieve goals. Perfect for complex workflows and exploratory testing.
 
 ### Key Capabilities
@@ -42,7 +42,7 @@ This documentation is organized to take you from setup to advanced usage:
 ### 01 - Setup
 **Topics**: Installation, AgentOS setup, environment configuration, authentication
 
-Start here to get AskUI Vision Agent installed and running. Covers Python package installation and the Agent OS component that enables cross-platform device control.
+Start here to get AskUI Vision Agent installed and running. Covers Python package installation and the AgentOS component that enables cross-platform device control.
 
 ### 02 - Prompting
 **Topics**: System prompts, customizing agent behavior, prompt engineering best practices
@@ -79,29 +79,13 @@ Track agent behavior, debug issues, and monitor performance in production enviro
 
 ## Quick Start Example
 
+Before starting, need to sign up at www.askui.com to get your credentials and then set them as environment variables (ASKUI_WORKSPACE_ID, and ASKUI_TOKEN)
 Here's a complete example to get you started:
 
 ```python
 import os
 from askui import ComputerAgent
 
-# Set your credentials (sign up at https://www.askui.com)
-os.environ["ASKUI_WORKSPACE_ID"] = "<your-workspace-id>"
-os.environ["ASKUI_TOKEN"] = "<your-token>"
-
-# Programmatic approach
-with ComputerAgent() as agent:
-    agent.click("Login button")
-    agent.type("user@example.com")
-    agent.click("Password field")
-    agent.type("password123")
-    agent.click("Submit")
-
-    # Extract data
-    welcome_message = agent.get("What's the welcome message?")
-    print(welcome_message)
-
-# Agentic approach
 with ComputerAgent() as agent:
     agent.act(
         "Log in with email 'user@example.com' and password 'password123', "
@@ -111,7 +95,7 @@ with ComputerAgent() as agent:
 
 ## Next Steps
 
-1. **[01_Setup.md](./01_Setup.md)** - Install AskUI Vision Agent and Agent OS
+1. **[01_Setup.md](./01_Setup.md)** - Install AskUI Vision Agent and AgentOS
 2. **[02_Prompting.md](./02_Prompting.md)** - Learn to guide AI agents effectively
 3. **[03_Using-Models-and-BYOM.md](./03_Using-Models-and-BYOM.md)** - Choose and customize models
 

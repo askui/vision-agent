@@ -6,7 +6,7 @@ Tools extend the capabilities of your agents, allowing them to interact with the
 
 - [Part 1: Direct Tool Use](#part-1-direct-tool-use)
   - [Introduction to Agent Tools](#introduction-to-agent-tools)
-  - [Agent OS Operations](#agent-os-operations)
+  - [AgentOS Operations](#agent-os-operations)
   - [Web Browser Control](#web-browser-control)
   - [Clipboard Management](#clipboard-management)
   - [Multi-Monitor Support](#multi-monitor-support)
@@ -39,9 +39,9 @@ Direct tool use is ideal when you:
 - Are building custom automation workflows
 - Need to bypass AI model inference for performance
 
-### Agent OS Operations
+### AgentOS Operations
 
-The Agent OS (Operating System controller) provides direct access to mouse, keyboard, and screen operations:
+The AgentOS (Operating System controller) provides direct access to mouse, keyboard, and screen operations:
 
 ```python
 from askui import ComputerAgent
@@ -63,7 +63,7 @@ with ComputerAgent() as agent:
     agent.tools.os.keyboard_type("Hello, world!")
 ```
 
-**Available Agent OS operations:**
+**Available AgentOS operations:**
 - `click(button, repeat)` - Perform mouse clicks
 - `mouse_move(x, y)` - Move mouse to coordinates
 - `keyboard_tap(key, modifier_keys)` - Press keys with modifiers

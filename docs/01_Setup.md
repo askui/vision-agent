@@ -5,7 +5,7 @@ This guide will get AskUI Vision Agent installed and configured on your system.
 ## Table of Contents
 
 - [Python Package Installation](#python-package-installation)
-- [Agent OS Installation](#agent-os-installation)
+- [AgentOS Installation](#agent-os-installation)
   - [Windows](#windows)
   - [Linux](#linux)
   - [MacOS](#macos)
@@ -35,9 +35,9 @@ If you want a minimal installation without optional dependencies:
 pip install askui
 ```
 
-## Agent OS Installation
+## AgentOS Installation
 
-Agent OS is a device controller that allows agents to take screenshots, move the mouse, click, and type on the keyboard across any operating system. It's installed on a Desktop OS but can also control mobile devices and HMI devices when connected.
+AgentOS is a device controller that allows agents to take screenshots, move the mouse, click, type on the keyboard, interact with the shell, and manage user session across any operating system. It's installed on a Desktop OS but can also control mobile devices and HMI devices when connected.
 
 ### Windows
 
@@ -50,14 +50,14 @@ Agent OS is a device controller that allows agents to take screenshots, move the
 [Download AskUI Installer for ARM64](https://files.askui.com/releases/Installer/Latest/AskUI-Suite-Latest-User-Installer-Win-ARM64-Web.exe)
 
 **Installation Steps:**
-1. Download the installer
+1. Download the installer for your architecture
 2. Run the executable
 3. Follow the installation wizard
-4. Agent OS will start automatically after installation
+4. AgentOS will start automatically after installation
 
 ### Linux
 
-**⚠️ Important:** Agent OS currently does not work on Wayland. Switch to XOrg to use it.
+**⚠️ Important:** AgentOS currently does not work on Wayland. Switch to XOrg to use it.
 
 #### AMD64 (Intel/AMD Processors)
 
@@ -77,11 +77,11 @@ bash /tmp/AskUI-Suite-Latest-User-Installer-Linux-ARM64-Web.run
 1. Download the installer script
 2. Run the script with bash
 3. Follow the prompts
-4. Agent OS will start automatically after installation
+4. AgentOS will start automatically after installation
 
 ### MacOS
 
-**⚠️ Important:** Agent OS currently does not work on MacOS with Intel chips (x86_64/amd64 architecture). You need a Mac with Apple Silicon (M1, M2, M3, etc.).
+**⚠️ Important:** AgentOS currently does not work on MacOS with Intel chips (x86_64/amd64 architecture). You need a Mac with Apple Silicon (M1, M2, M3, etc.).
 
 #### ARM64 (Apple Silicon)
 
@@ -95,7 +95,7 @@ bash /tmp/AskUI-Suite-Latest-User-Installer-MacOS-ARM64-Web.run
 2. Run the script with bash
 3. Follow the prompts
 4. Grant necessary permissions when prompted (screen recording, accessibility)
-5. Agent OS will start automatically after installation
+5. AgentOS will start automatically after installation
 
 ## Authentication and Configuration
 
@@ -142,20 +142,11 @@ set ASKUI_WORKSPACE_ID=<your-workspace-id-here>
 set ASKUI_TOKEN=<your-token-here>
 ```
 
-### 3. Alternative: Configuration in Code
-
-You can also set credentials directly in your Python code (not recommended for production):
-
-```python
-import os
-
-os.environ["ASKUI_WORKSPACE_ID"] = "<your-workspace-id>"
-os.environ["ASKUI_TOKEN"] = "<your-token>"
-
-from askui import ComputerAgent
-
-with ComputerAgent() as agent:
-    agent.act("Your task here")
+#### AskUI Shell
+_Note: The AskUI Shell can be installed using the AskUI Suite_
+```powershell
+askui-shell
+AskUI-SetSetting -WorkspaceId <your-workspace-id-here> -Token <your-token-here>
 ```
 
 ## Verifying Your Installation
@@ -173,17 +164,17 @@ with ComputerAgent() as agent:
 
 Run this with `python test.py`. If it double-clicks at the cursor location, your installation is working!
 
-### Test Agent OS Connection
+### Test AgentOS Connection
 
-Verify that Agent OS is running and accessible:
+Verify that AgentOS is running and accessible:
 
 ```python
 from askui import ComputerAgent
 
 with ComputerAgent() as agent:
-    # Take a screenshot to verify Agent OS connectivity
+    # Take a screenshot to verify AgentOS connectivity
     agent.tools.os.screenshot()
-    print("Agent OS is connected and working!")
+    print("AgentOS is connected and working!")
 ```
 
 ### Test AI Agent Features
@@ -211,13 +202,12 @@ If this runs successfully and prints the first paragraph, congratulations! Your 
 
 ## Troubleshooting
 
-### Agent OS Not Running
+### AgentOS Not Running
 
-**Problem**: Error connecting to Agent OS
+**Problem**: Error connecting to AgentOS
 
 **Solutions**:
-1. Restart Agent OS
-2. Reinstall Agent OS if the problem persists
+_tbd_
 
 ### Authentication Errors
 
@@ -229,23 +219,9 @@ If this runs successfully and prints the first paragraph, congratulations! Your 
 3. Try setting credentials directly in code to isolate the issue
 4. Verify your account is active at [hub.askui.com](https://hub.askui.com)
 
-### Python Version Issues
-
-**Problem**: Import errors or compatibility issues
-
-**Solutions**:
-1. Check your Python version: `python --version` (must be 3.10 or higher)
-2. Create a virtual environment to isolate dependencies:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate     # Windows
-   pip install askui[all]
-   ```
-
 ### Linux Wayland Issues
 
-**Problem**: Agent OS not working on Linux
+**Problem**: AgentOS not working on Linux
 
 **Solution**: Switch from Wayland to XOrg:
 1. Log out of your session
@@ -255,22 +231,22 @@ If this runs successfully and prints the first paragraph, congratulations! Your 
 
 ### MacOS Intel Issues
 
-**Problem**: Agent OS not working on Intel Mac
+**Problem**: AgentOS not working on Intel Mac
 
-**Solution**: Agent OS requires Apple Silicon (M1/M2/M3). You'll need to:
+**Solution**: AgentOS requires Apple Silicon (M1/M2/M3). You'll need to:
 1. Use a Mac with Apple Silicon, or
 2. Use a different operating system (Windows/Linux)
 
 ### Permission Issues (MacOS)
 
-**Problem**: Agent OS can't control the screen or keyboard
+**Problem**: AgentOS can't control the screen or keyboard
 
 **Solution**: Grant necessary permissions:
 1. Open System Preferences → Security & Privacy → Privacy
-2. Add Agent OS to:
+2. Add AgentOS to:
    - Screen Recording
    - Accessibility
-3. Restart Agent OS after granting permissions
+3. Restart AgentOS after granting permissions
 
 ## Next Steps
 
