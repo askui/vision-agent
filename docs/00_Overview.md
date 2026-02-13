@@ -40,7 +40,7 @@ Natural language instructions where AI agents autonomously navigate UI, make dec
 This documentation is organized to take you from setup to advanced usage:
 
 ### 01 - Setup
-**Topics**: Installation, Agent OS setup, environment configuration, authentication
+**Topics**: Installation, AgentOS setup, environment configuration, authentication
 
 Start here to get AskUI Vision Agent installed and running. Covers Python package installation and the Agent OS component that enables cross-platform device control.
 
