@@ -18,26 +18,13 @@ Traditional automation frameworks require:
 
 AskUI Vision Agent offers two complementary approaches:
 
-**1. Programmatic Control**
+*1. Agentic Control (Goal-based)**
 ```python
-from askui import ComputerAgent
-
-with ComputerAgent() as agent:
-    agent.click("Submit button")
-    agent.type("test@example.com")
-    result = agent.get("What's the current page title?")
-```
-
-Direct, single-step commands for precise UI control. Like traditional automation, but powered by vision models that understand what elements look like, not just their DOM structure.
-
-**2. Agentic Control (Goal-based)**
-```python
-with ComputerAgent() as agent:
+with VisionAgent() as agent:
     agent.act(
         "Search for flights from New York to London, "
         "filter by direct flights, and show me the cheapest option"
     )
-```
 
 Natural language instructions where AI agents autonomously navigate UI, make decisions, and achieve goals. Perfect for complex workflows and exploratory testing.
 
