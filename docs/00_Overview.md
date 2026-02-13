@@ -11,6 +11,8 @@ Traditional automation frameworks require:
 - Separate tools for different platforms (web, desktop, mobile)
 - Manual scripting of every action step
 - Constant maintenance as applications evolve
+- Random application behavior
+- External issues like network, rights or installation issues
 
 ### The Solution
 
