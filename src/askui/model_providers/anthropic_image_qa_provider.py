@@ -3,9 +3,12 @@
 from functools import cached_property
 from typing import Type
 
+from anthropic import Anthropic
 from typing_extensions import override
 
 from askui.model_providers.image_qa_provider import ImageQAProvider
+from askui.models.anthropic.get_model import AnthropicGetModel
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.shared.settings import GetSettings
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.source_utils import Source
@@ -23,8 +26,14 @@ class AnthropicImageQAProvider(ImageQAProvider):
     Args:
         api_key (str | None, optional): Anthropic API key. Reads
             `ANTHROPIC_API_KEY` from the environment if not provided.
+        base_url (str | None, optional): Base URL for the Anthropic API.
+            Useful for proxies or custom endpoints.
+        auth_token (str | None, optional): Authorization token for custom
+            authentication. Added as an `Authorization` header.
         model_id (str, optional): Claude model to use. Defaults to
             `\"claude-sonnet-4-5-20251101\"`.
+        client (Anthropic | None, optional): Pre-configured Anthropic client.
+            If provided, other connection parameters are ignored.
 
     Example:
         ```python
@@ -43,26 +52,25 @@ class AnthropicImageQAProvider(ImageQAProvider):
     def __init__(
         self,
         api_key: str | None = None,
+        base_url: str | None = None,
+        auth_token: str | None = None,
         model_id: str = _DEFAULT_MODEL_ID,
+        client: Anthropic | None = None,
     ) -> None:
-        self._api_key = api_key
         self._model_id = model_id
+        if client is not None:
+            self.client = client
+        else:
+            default_headers = {"Authorization": auth_token} if auth_token else None
+            self.client = Anthropic(
+                api_key=api_key,
+                base_url=base_url,
+                default_headers=default_headers,
+            )
 
     @cached_property
-    def _get_model(self):  # type: ignore[no-untyped-def]
-        """Lazily initialise the AnthropicGetModel on first use."""
-        import os
-
-        from anthropic import Anthropic
-
-        from askui.models.anthropic.get_model import AnthropicGetModel
-        from askui.models.anthropic.messages_api import AnthropicMessagesApi
-
-        if self._api_key is not None:
-            os.environ.setdefault("ANTHROPIC_API_KEY", self._api_key)
-
-        api_client = Anthropic()
-        messages_api = AnthropicMessagesApi(client=api_client)
+    def _get_model(self) -> AnthropicGetModel:
+        messages_api = AnthropicMessagesApi(client=self.client)
         return AnthropicGetModel(model_id=self._model_id, messages_api=messages_api)
 
     @override

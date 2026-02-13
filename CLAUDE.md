@@ -340,3 +340,21 @@ Additional documentation in `docs/`:
 
 Official docs: https://docs.askui.com
 Discord: https://discord.gg/Gu35zMGxbx
+
+
+## Conding Standards
+### Anti-Patterns and Bad Examples
+1) Setting Env Variables In-Code
+```python
+os.environ.set("ANTHROPIC_API_KEY")
+````
+=> we never want to set env variables by the process itself in-code. We expect them to be set in the environment directly hence explicitly setting is not necessary, or if still necessary, please pass them directly to the Client/... that requires the value.
+
+2) Don't Use Lazy Loading
+=> we want to have imports at the top of files. Use lazy-loading only in very rare edge-cases, e.g. if you have to check with a try-except if a package is available (in this case it should be an optional dependency)
+
+3) Client Config
+All lazy initialized clients should be configurable in the init method
+
+4) Be consisted with the variable namings within one classes (and its subclasses)!
+For example, if a parameter is named client, then the member variable that is passed to it should also be named client

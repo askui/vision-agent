@@ -31,9 +31,9 @@ from .models import (
     UrlImageSourceParam,
 )
 from .models.shared.settings import (
-    ActSettings,
     DEFAULT_GET_RESOLUTION,
     DEFAULT_LOCATE_RESOLUTION,
+    ActSettings,
     GetSettings,
     LocateSettings,
     MessageSettings,

@@ -2,9 +2,12 @@
 
 from functools import cached_property
 
+from anthropic import Anthropic
 from typing_extensions import override
 
 from askui.model_providers.vlm_provider import VlmProvider
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
+from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
 from askui.models.shared.agent_message_param import (
     MessageParam,
     ThinkingConfigParam,
@@ -30,6 +33,8 @@ class AskUIVlmProvider(VlmProvider):
             from the environment if not provided.
         model_id (str, optional): Claude model to use. Defaults to
             `"claude-sonnet-4-5-20250929"`.
+        client (Anthropic | None, optional): Pre-configured Anthropic client.
+            If provided, `workspace_id` and `token` are ignored.
 
     Example:
         ```python
@@ -48,45 +53,37 @@ class AskUIVlmProvider(VlmProvider):
 
     def __init__(
         self,
-        workspace_id: str | None = None,
-        token: str | None = None,
+        askui_settings: AskUiInferenceApiSettings | None = None,
         model_id: str = _DEFAULT_MODEL_ID,
+        client: Anthropic | None = None,
     ) -> None:
-        self._workspace_id = workspace_id
-        self._token = token
-        self._model_id_value = model_id
+        self._askui_settings = askui_settings or AskUiInferenceApiSettings()
+        self._model_id = model_id
+        self._injected_client = client
 
     @property
     @override
     def model_id(self) -> str:
-        return self._model_id_value
+        return self._model_id
 
     @cached_property
-    def _messages_api(self):  # type: ignore[no-untyped-def]
+    def _messages_api(self) -> AnthropicMessagesApi:
         """Lazily initialise the AnthropicMessagesApi on first use."""
-        import os
+        if self._injected_client is not None:
+            return AnthropicMessagesApi(client=self._injected_client)
 
-        from askui.models.anthropic.factory import create_api_client
-        from askui.models.anthropic.messages_api import AnthropicMessagesApi
-        from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
-
-        if self._workspace_id is not None:
-            os.environ.setdefault("ASKUI_WORKSPACE_ID", self._workspace_id)
-        if self._token is not None:
-            os.environ.setdefault("ASKUI_TOKEN", self._token)
-
-        settings = AskUiInferenceApiSettings()
-        client = create_api_client(api_provider="askui")
-        del client  # we re-create with correct settings below
-
-        from anthropic import Anthropic
-
-        api_client = Anthropic(
+        # TODO askui_settings.verify_ssl are not considered!
+        # if self._askui_settings.verify_ssl:
+        # ...
+        # http_client = ...
+        client = Anthropic(
             api_key="DummyValueRequiredByAnthropicClient",
-            base_url=f"{settings.base_url}/proxy/anthropic",
-            default_headers={"Authorization": settings.authorization_header},
+            base_url=f"{self._askui_settings.base_url}/proxy/anthropic",
+            default_headers={
+                "Authorization": self._askui_settings.authorization_header
+            },
         )
-        return AnthropicMessagesApi(client=api_client)
+        return AnthropicMessagesApi(client=client)
 
     @override
     def create_message(
@@ -102,7 +99,7 @@ class AskUIVlmProvider(VlmProvider):
     ) -> MessageParam:
         result: MessageParam = self._messages_api.create_message(
             messages=messages,
-            model_id=self._model_id_value,
+            model_id=self._model_id,
             tools=tools,
             max_tokens=max_tokens,
             betas=betas,

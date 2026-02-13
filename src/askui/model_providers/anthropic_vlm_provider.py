@@ -2,9 +2,11 @@
 
 from functools import cached_property
 
+from anthropic import Anthropic
 from typing_extensions import override
 
 from askui.model_providers.vlm_provider import VlmProvider
+from askui.models.anthropic.messages_api import AnthropicMessagesApi
 from askui.models.shared.agent_message_param import (
     MessageParam,
     ThinkingConfigParam,
@@ -26,8 +28,14 @@ class AnthropicVlmProvider(VlmProvider):
     Args:
         api_key (str | None, optional): Anthropic API key. Reads
             `ANTHROPIC_API_KEY` from the environment if not provided.
+        base_url (str | None, optional): Base URL for the Anthropic API.
+            Useful for proxies or custom endpoints.
+        auth_token (str | None, optional): Authorization token for custom
+            authentication. Added as an `Authorization` header.
         model_id (str, optional): Claude model to use. Defaults to
             `\"claude-sonnet-4-5-20251101\"`.
+        client (Anthropic | None, optional): Pre-configured Anthropic client.
+            If provided, other connection parameters are ignored.
 
     Example:
         ```python
@@ -46,10 +54,21 @@ class AnthropicVlmProvider(VlmProvider):
     def __init__(
         self,
         api_key: str | None = None,
+        base_url: str | None = None,
+        auth_token: str | None = None,
         model_id: str = _DEFAULT_MODEL_ID,
+        client: Anthropic | None = None,
     ) -> None:
-        self._api_key = api_key
         self._model_id_value = model_id
+        if client is not None:
+            self.client = client
+        else:
+            default_headers = {"Authorization": auth_token} if auth_token else None
+            self.client = Anthropic(
+                api_key=api_key,
+                base_url=base_url,
+                default_headers=default_headers,
+            )
 
     @property
     @override
@@ -57,19 +76,9 @@ class AnthropicVlmProvider(VlmProvider):
         return self._model_id_value
 
     @cached_property
-    def _messages_api(self):  # type: ignore[no-untyped-def]
+    def _messages_api(self) -> AnthropicMessagesApi:
         """Lazily initialise the AnthropicMessagesApi on first use."""
-        import os
-
-        from anthropic import Anthropic
-
-        from askui.models.anthropic.messages_api import AnthropicMessagesApi
-
-        if self._api_key is not None:
-            os.environ.setdefault("ANTHROPIC_API_KEY", self._api_key)
-
-        api_client = Anthropic()
-        return AnthropicMessagesApi(client=api_client)
+        return AnthropicMessagesApi(client=self.client)
 
     @override
     def create_message(

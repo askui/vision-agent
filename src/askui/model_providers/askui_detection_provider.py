@@ -2,13 +2,20 @@
 
 from functools import cached_property
 
+from pydantic import SecretStr
 from typing_extensions import override
 
 from askui.locators.locators import Locator, Text
+from askui.locators.serializers import AskUiLocatorSerializer
 from askui.model_providers.detection_provider import DetectionProvider
+from askui.models.askui.ai_element_utils import AiElementCollection
+from askui.models.askui.inference_api import AskUiInferenceApi
+from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
+from askui.models.askui.locate_api import AskUiInferenceLocateApi
 from askui.models.models import DetectedElement
 from askui.models.shared.settings import LocateSettings
 from askui.models.types.geometry import PointList
+from askui.reporting import NULL_REPORTER
 from askui.utils.image_utils import ImageSource
 
 
@@ -25,6 +32,8 @@ class AskUIDetectionProvider(DetectionProvider):
             `ASKUI_WORKSPACE_ID` from the environment if not provided.
         token (str | None, optional): AskUI API token. Reads `ASKUI_TOKEN`
             from the environment if not provided.
+        locate_api (AskUiInferenceLocateApi | None, optional): Pre-configured
+            locate API. If provided, `workspace_id` and `token` are ignored.
 
     Example:
         ```python
@@ -44,28 +53,25 @@ class AskUIDetectionProvider(DetectionProvider):
         self,
         workspace_id: str | None = None,
         token: str | None = None,
+        locate_api: AskUiInferenceLocateApi | None = None,
     ) -> None:
         self._workspace_id = workspace_id
         self._token = token
+        self._injected_locate_api = locate_api
 
     @cached_property
-    def _locate_api(self):  # type: ignore[no-untyped-def]
+    def _locate_api(self) -> AskUiInferenceLocateApi:
         """Lazily initialise the AskUiInferenceLocateApi on first use."""
-        import os
+        if self._injected_locate_api is not None:
+            return self._injected_locate_api
 
-        from askui.locators.serializers import AskUiLocatorSerializer
-        from askui.models.askui.ai_element_utils import AiElementCollection
-        from askui.models.askui.inference_api import AskUiInferenceApi
-        from askui.models.askui.inference_api_settings import AskUiInferenceApiSettings
-        from askui.models.askui.locate_api import AskUiInferenceLocateApi
-        from askui.reporting import NULL_REPORTER
-
+        settings_kwargs: dict[str, str | SecretStr] = {}
         if self._workspace_id is not None:
-            os.environ.setdefault("ASKUI_WORKSPACE_ID", self._workspace_id)
+            settings_kwargs["workspace_id"] = self._workspace_id
         if self._token is not None:
-            os.environ.setdefault("ASKUI_TOKEN", self._token)
+            settings_kwargs["token"] = SecretStr(self._token)
 
-        settings = AskUiInferenceApiSettings()
+        settings = AskUiInferenceApiSettings(**settings_kwargs)  # type: ignore[arg-type]
         inference_api = AskUiInferenceApi(settings)
         locator_serializer = AskUiLocatorSerializer(
             ai_element_collection=AiElementCollection(),

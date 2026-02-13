@@ -1,0 +1,1 @@
+"""OpenAI-compatible model implementations."""
