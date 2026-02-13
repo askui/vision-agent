@@ -30,7 +30,7 @@ Natural language instructions where AI agents autonomously navigate UI, make dec
 
 ### Key Capabilities
 
-- **Multi-Platform**: Windows, MacOS, Linux, Android
+- **Multi-Platform**: Windows, MacOS, Linux, Android, Citric & KVM
 - **Vision-Powered**: Uses AI models to understand UI visually, no selectors needed
 - **Flexible Models**: Hot-swap between models, use AskUI-hosted, Anthropic, OpenRouter, or bring your own
 - **Extensible**: Custom tools via MCP, custom models, custom prompts
