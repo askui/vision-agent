@@ -16,7 +16,7 @@ class AndroidScreenshotTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_screenshot_tool",
+            name="screenshot_tool",
             description=(
                 """
                 Takes a screenshot of the currently active window.
@@ -45,7 +45,7 @@ class AndroidTapTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_tap_tool",
+            name="tap_tool",
             description=(
                 """
                 Performs a tap (touch) gesture at the given (x, y) coordinates on the
@@ -111,7 +111,7 @@ class AndroidTypeTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_type_tool",
+            name="type_tool",
             description=(
                 """
                 Types the given text on the Android device screen.
@@ -148,7 +148,7 @@ class AndroidDragAndDropTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_drag_and_drop_tool",
+            name="drag_and_drop_tool",
             description=(
                 """
                 Performs a drag and drop gesture on the Android device screen.
@@ -201,7 +201,7 @@ class AndroidDragAndDropTool(AndroidBaseTool):
 class AndroidKeyTapEventTool(AndroidBaseTool):
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_key_event_tool",
+            name="key_event_tool",
             description=(
                 """
                 Performs a key press on the android device.
@@ -238,7 +238,7 @@ class AndroidSwipeTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_swipe_tool",
+            name="swipe_tool",
             description=(
                 """
                 Performs a swipe gesture on the Android device screen, similar to
@@ -312,7 +312,7 @@ class AndroidKeyCombinationTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_key_combination_tool",
+            name="key_combination_tool",
             description=(
                 """
                 Performs a combination of key presses on the Android device, similar to
@@ -368,7 +368,7 @@ class AndroidShellTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None) -> None:
         super().__init__(
-            name="android_shell_tool",
+            name="shell_tool",
             description=(
                 """
                 Executes a shell command directly on the Android device through ADB.
@@ -411,7 +411,7 @@ class AndroidGetConnectedDevicesSerialNumbersTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_get_connected_devices_serial_numbers_tool",
+            name="get_connected_devices_serial_numbers_tool",
             description="Can be used to get all connected devices serial numbers.",
             agent_os=agent_os,
         )
@@ -429,7 +429,7 @@ class AndroidGetConnectedDisplaysInfosTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_get_connected_device_display_infos_tool",
+            name="get_connected_device_display_infos_tool",
             description="Can be used to get all connected displays infos for the "
             "current selected device.",
             agent_os=agent_os,
@@ -449,7 +449,7 @@ class AndroidGetCurrentConnectedDeviceInfosTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_get_current_connected_device_infos_tool",
+            name="get_current_connected_device_infos_tool",
             description="""
             Can be used to get the current selected device and  selected display infos.
             """,
@@ -474,7 +474,7 @@ class AndroidSelectDeviceBySerialNumberTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_select_device_by_serial_number_tool",
+            name="select_device_by_serial_number_tool",
             description="Can be used to select a device by its serial number.",
             input_schema={
                 "type": "object",
@@ -502,7 +502,7 @@ class AndroidSelectDisplayByUniqueIDTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_select_display_by_unique_id_tool",
+            name="select_display_by_unique_id_tool",
             description="Can be used to select a display by its unique ID.",
             input_schema={
                 "type": "object",
@@ -530,7 +530,7 @@ class AndroidConnectTool(AndroidBaseTool):
 
     def __init__(self, agent_os: AndroidAgentOsFacade | None = None):
         super().__init__(
-            name="android_connect_tool",
+            name="connect_tool",
             description="""Can be used to connect the adb client to the server.
             Needs to select a device after connecting the adb client.
             """,

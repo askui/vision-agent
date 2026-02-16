@@ -1,6 +1,6 @@
 # Extracting Data
 
-This guide covers how to extract information from screens using AskUI Vision Agent's `get()` method, including structured data extraction, response schemas, and working with different data sources.
+This guide covers how to extract information from screens using AskUI Python SDK's `get()` method, including structured data extraction, response schemas, and working with different data sources.
 
 ## Table of Contents
 

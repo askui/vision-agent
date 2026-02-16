@@ -11,7 +11,7 @@ class ComputerSetWindowInFocusTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_set_window_in_focus_tool",
+            name="set_window_in_focus_tool",
             description="""
             Brings a specific window to the foreground and sets it as the active
             focused window. This tool is used to switch focus to a particular

@@ -13,7 +13,7 @@ class ListFilesTool(Tool):
     directories during execution.
 
     Args:
-        base_dir (str): The base directory path where file listing will start.
+        base_dir (str | Path): The base directory path where file listing will start.
             All directory paths will be relative to this directory.
 
     Example:
@@ -29,12 +29,15 @@ class ListFilesTool(Tool):
         ```
     """
 
-    def __init__(self, base_dir: str) -> None:
+    def __init__(self, base_dir: str | Path) -> None:
+        if not isinstance(base_dir, Path):
+            base_dir = Path(base_dir)
+        absolute = base_dir.absolute()
         super().__init__(
             name="list_files_tool",
             description=(
                 "Lists files and directories in a directory on the filesystem. The "
-                f"base directory is set to '{base_dir}' during tool initialization. "
+                f"base directory is set to '{absolute}' during tool initialization. "
                 "All directory paths are relative to this base directory. Use this "
                 "tool to explore the filesystem structure, discover available files "
                 "and directories, or navigate the directory tree during execution."
@@ -46,11 +49,11 @@ class ListFilesTool(Tool):
                         "type": "string",
                         "description": (
                             "The relative path of the directory to list. The path is "
-                            f"relative to the base directory '{base_dir}' specified "
+                            f"relative to the base directory '{absolute}' specified "
                             "during tool initialization. For example, if "
                             "directory_path is 'output', the directory will be listed "
-                            f"from '{base_dir}/output'. If not specified or empty, "
-                            f"lists the base directory '{base_dir}' itself."
+                            f"from '{absolute}/output'. If not specified or empty, "
+                            f"lists the base directory '{absolute}' itself."
                         ),
                     },
                     "recursive": {
@@ -66,7 +69,7 @@ class ListFilesTool(Tool):
                 "required": [],
             },
         )
-        self._base_dir = Path(base_dir)
+        self._base_dir = base_dir
 
     def __call__(self, directory_path: str = "", recursive: bool = False) -> str:
         """

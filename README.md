@@ -1,4 +1,4 @@
-# 🤖 AskUI Vision Agent
+# 🤖 AskUI Python SDK
 
 [![Release Notes](https://img.shields.io/github/release/askui/vision-agent?style=flat-square)](https://github.com/askui/vision-agent/releases)
 [![PyPI - License](https://img.shields.io/pypi/l/langchain-core?style=flat-square)](https://opensource.org/licenses/MIT)
@@ -15,6 +15,7 @@ Traditional UI automation is fragile. Every time a button moves, a label changes
 
 1. **Vision-based automation** - Find UI elements by what they look like or say, not by brittle XPath or CSS selectors
 2. **AI-powered agents** - Give high-level instructions and let AI figure out the steps
+AskUI Python SDK is a powerful automation framework that enables you and AI agents to control your desktop, mobile, and HMI devices and automate tasks. With support for multiple AI models, multi-platform compatibility, and enterprise-ready features,
 
 Whether you're automating desktop apps, testing mobile applications, or building RPA workflows, AskUI adapts to UI changes automatically—saving you hours of maintenance work.
 
@@ -52,7 +53,42 @@ with VisionAgent() as agent:
 
 ### Agentic UI Automation
 
-Give high-level instructions and let AI handle the details:
+Run the script with `python <file path>`, e.g `python test.py` to see if it works.
+
+### 🤖 Let AI agents control your devices
+
+In order to let AI agents control your devices, you need to be able to connect to an AI model (provider). We host some models ourselves and support several other ones, e.g. Anthropic, OpenRouter, Hugging Face, etc. out of the box. If you want to use a model provider or model that is not supported, you can easily plugin your own (see [Custom Models](docs/using-models.md#using-custom-models)).
+
+For this example, we will us AskUI as the model provider to easily get started.
+
+#### 🔐 Sign up with AskUI
+
+Sign up at [hub.askui.com](https://hub.askui.com) to:
+- Activate your **free trial** by signing up (no credit card required)
+- Get your workspace ID and access token
+
+#### ⚙️ Configure environment variables
+
+<details>
+<summary>Linux & MacOS</summary>
+
+```shell
+export ASKUI_WORKSPACE_ID=<your-workspace-id-here>
+export ASKUI_TOKEN=<your-token-here>
+```
+</details>
+
+<details>
+<summary>Windows PowerShell</summary>
+
+```shell
+$env:ASKUI_WORKSPACE_ID="<your-workspace-id-here>"
+$env:ASKUI_TOKEN="<your-token-here>"
+```
+
+</details>
+
+#### 💻 Example
 
 ```python
 from askui import VisionAgent

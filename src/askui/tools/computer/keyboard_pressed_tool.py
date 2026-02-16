@@ -9,7 +9,7 @@ class ComputerKeyboardPressedTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_keyboard_pressed",
+            name="keyboard_pressed",
             description="Press and hold a keyboard key.",
             input_schema={
                 "type": "object",

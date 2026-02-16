@@ -182,7 +182,7 @@ def test_operations_before_connect() -> None:
     client = AskUiControllerClient(reporter=CompositeReporter(), display=1)
 
     with pytest.raises(
-        AssertionError, match="Stub is not initialized. Call Connect first."
+        AssertionError, match="Stub is not initialized. Call `connect()` first."
     ):
         client.screenshot()
 

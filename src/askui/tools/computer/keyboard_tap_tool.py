@@ -9,7 +9,7 @@ class ComputerKeyboardTapTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_keyboard_tap",
+            name="keyboard_tap",
             description="Tap (press and release) a keyboard key.",
             input_schema={
                 "type": "object",

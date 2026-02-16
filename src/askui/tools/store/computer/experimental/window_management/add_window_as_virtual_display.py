@@ -11,7 +11,7 @@ class ComputerAddWindowAsVirtualDisplayTool(ComputerBaseTool):
 
     def __init__(self, agent_os: AgentOs | None = None) -> None:
         super().__init__(
-            name="computer_add_window_as_virtual_display_tool",
+            name="add_window_as_virtual_display_tool",
             description="""
             Converts a specific window into a virtual display and assigns it a
             unique display ID. This tool is essential for automating windows that
