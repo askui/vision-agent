@@ -72,7 +72,7 @@ class AskUIVlmProvider(VlmProvider):
         if self._injected_client is not None:
             return AnthropicMessagesApi(client=self._injected_client)
 
-        # TODO askui_settings.verify_ssl are not considered!
+        # TODO askui_settings.verify_ssl are not considered! #noqa
         # if self._askui_settings.verify_ssl:
         # ...
         # http_client = ...

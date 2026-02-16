@@ -61,7 +61,7 @@ class TestAgentWait:
         vision_agent.wait(locator, retry_count=3, delay=0.1, until_condition="appear")
 
         # Verify locate was called
-        assert vision_agent._locate_tool.run.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_appear_failure(
         self, vision_agent: ComputerAgent, white_page_screenshot: PILImage.Image
@@ -86,7 +86,7 @@ class TestAgentWait:
             '"Forgot password?" (similarity >= 70%)\' after 2 retries with 0.1 '
             "seconds delay" == str(exc_info.value)
         )
-        assert vision_agent._locate_tool.run.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_disappear_success(
         self,
@@ -110,7 +110,7 @@ class TestAgentWait:
             locator, retry_count=2, delay=0.1, until_condition="disappear"
         )
 
-        assert vision_agent._locate_tool.run.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_disappear_failure(
         self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
@@ -134,7 +134,7 @@ class TestAgentWait:
             "Wait until condition 'disappear' not met for locator: 'Forgot password?' "
             "after 2 retries with 0.1 seconds delay" == str(exc_info.value)
         )
-        assert vision_agent._locate_tool.run.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_with_locator_object(
         self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
@@ -151,7 +151,7 @@ class TestAgentWait:
         # Should not raise an exception since textfield exists
         vision_agent.wait(locator, retry_count=2, delay=0.1, until_condition="appear")
 
-        assert vision_agent._locate_tool.run.call_count >= 1
+        assert mock_run.call_count >= 1
 
     def test_wait_with_default_parameters(
         self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
@@ -168,7 +168,7 @@ class TestAgentWait:
         # Should use default retry_count=3, delay=1, until_condition="appear"
         vision_agent.wait(locator)
 
-        assert vision_agent._locate_tool.run.call_count >= 1
+        assert mock_run.call_count >= 1
 
     def test_wait_disappear_timing(
         self,
@@ -194,7 +194,7 @@ class TestAgentWait:
             locator, until_condition="disappear", retry_count=3, delay=0.2
         )
 
-        assert vision_agent._locate_tool.run.call_count == 3
+        assert mock_run.call_count == 3
 
     def test_wait_zero_retries(self, vision_agent: ComputerAgent) -> None:
         """Test waiting with zero retry_count."""
