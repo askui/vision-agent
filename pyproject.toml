@@ -213,7 +213,7 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,bedrock,pynput,vertex,web]"]
+all = ["askui[android,bedrock,pynput,tracing,vertex,web]"]
 android = [
     "pure-python-adb>=0.3.0.dev0"
 ]
