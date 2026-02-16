@@ -10,9 +10,9 @@ class WaitWithProgressTool(Tool):
         and displays a progress bar in the console during the wait.
     """
 
-    def __init__(self, max_wait_time: float = 60 * 60) -> None:
-        if max_wait_time < 0.1:
-            msg = "Max wait time must be at least 0.1"
+    def __init__(self, max_wait_time: int = 60 * 60) -> None:
+        if max_wait_time < 1:
+            msg = "Max wait time must be at least 1 second"
             raise ValueError(msg)
         super().__init__(
             name="wait_with_progress_tool",
@@ -24,12 +24,12 @@ class WaitWithProgressTool(Tool):
                 "type": "object",
                 "properties": {
                     "wait_duration": {
-                        "type": "number",
+                        "type": "integer",
                         "description": (
                             "Duration of the wait in seconds "
-                            "(can be a decimal, e.g. 2.5 for 2.5 seconds)"
+                            "(must be an integer, e.g. 5 for 5 seconds)"
                         ),
-                        "minimum": 0.1,
+                        "minimum": 1,
                         "maximum": max_wait_time,
                     },
                     "message": {
@@ -45,9 +45,9 @@ class WaitWithProgressTool(Tool):
         )
         self._max_wait_time = max_wait_time
 
-    def __call__(self, wait_duration: float, message: str) -> str:
-        if wait_duration < 0.1:
-            msg = "Wait duration must be at least 0.1"
+    def __call__(self, wait_duration: int, message: str) -> str:
+        if wait_duration < 1:
+            msg = "Wait duration must be at least 1 second"
             raise ValueError(msg)
         if wait_duration > self._max_wait_time:
             msg = f"Wait duration must not exceed {self._max_wait_time}"

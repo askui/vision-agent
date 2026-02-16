@@ -17,7 +17,7 @@ class WaitUntilConditionTool(Tool):
           returns True when the condition is met, False otherwise.
         - description: A string describing what the condition checks for.
         - max_wait_time: The maximum time to wait for the condition to
-            be met in seconds (must be at least 10 seconds).
+            be met in seconds (must be at least 1 second).
     """
 
     def __init__(
@@ -26,8 +26,8 @@ class WaitUntilConditionTool(Tool):
         description: str,
         max_wait_time: float = 60 * 60,  # 1 hour
     ) -> None:
-        if max_wait_time < 10:
-            msg = "Max wait time must be at least 10 seconds"
+        if max_wait_time < 1:
+            msg = "Max wait time must be at least 1 second"
             raise ValueError(msg)
         super().__init__(
             name="wait_until_condition_tool",
@@ -40,36 +40,28 @@ class WaitUntilConditionTool(Tool):
                 "type": "object",
                 "properties": {
                     "max_wait_time": {
-                        "type": "number",
+                        "type": "integer",
                         "description": "Maximum time to wait in seconds.",
-                        "minimum": 10,  # 10 seconds
                         "maximum": max_wait_time,
                     },
                     "check_interval": {
-                        "type": "number",
+                        "type": "integer",
                         "description": (
                             "Interval in seconds between condition checks "
-                            "(e.g. 0.5 for every half second)."
+                            "(must be an integer, e.g. 5 for 5 seconds)."
                         ),
-                        "minimum": 1,  # 1 second
-                        "maximum": max_wait_time,
+                        "default": 1,
                     },
                 },
-                "required": ["max_wait_time", "check_interval"],
+                "required": ["max_wait_time"],
             },
         )
         self._condition_check = condition_check
         self._max_wait_time = max_wait_time
 
-    def __call__(self, max_wait_time: float, check_interval: float) -> str:
-        if max_wait_time < 10:
-            msg = "max_wait_time must be at least 10 seconds"
-            raise ValueError(msg)
+    def __call__(self, max_wait_time: int, check_interval: int = 1) -> str:
         if max_wait_time > self._max_wait_time:
             msg = f"max_wait_time must not exceed {self._max_wait_time}"
-            raise ValueError(msg)
-        if check_interval < 1:
-            msg = "check_interval must be at least 1"
             raise ValueError(msg)
         if check_interval > max_wait_time:
             msg = "check_interval must not exceed max_wait_time"

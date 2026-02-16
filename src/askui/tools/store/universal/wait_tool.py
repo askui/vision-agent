@@ -11,8 +11,8 @@ class WaitTool(Tool):
     Use when a short, silent wait is needed (e.g. brief pause between actions).
     """
 
-    def __init__(self, max_wait_time: float = 60 * 60) -> None:
-        if max_wait_time < 0.1:
+    def __init__(self, max_wait_time: int = 60 * 60) -> None:
+        if max_wait_time < 0:
             msg = "Max wait time must be at least 0.1"
             raise ValueError(msg)
         super().__init__(
@@ -25,12 +25,12 @@ class WaitTool(Tool):
                 "type": "object",
                 "properties": {
                     "wait_duration": {
-                        "type": "number",
+                        "type": "integer",
                         "description": (
                             "Duration of the wait in seconds "
-                            "(can be a decimal, e.g. 2.5 for 2.5 seconds)"
+                            "(must be an integer, e.g. 5 for 5 seconds)"
                         ),
-                        "minimum": 0.1,
+                        "minimum": 1,
                         "maximum": max_wait_time,
                     },
                 },
@@ -39,9 +39,9 @@ class WaitTool(Tool):
         )
         self._max_wait_time = max_wait_time
 
-    def __call__(self, wait_duration: float) -> str:
-        if wait_duration < 0.1:
-            msg = "Wait duration must be at least 0.1"
+    def __call__(self, wait_duration: int) -> str:
+        if wait_duration < 0:
+            msg = "Wait duration must be at least 0"
             raise ValueError(msg)
         if wait_duration > self._max_wait_time:
             msg = f"Wait duration must not exceed {self._max_wait_time}"
