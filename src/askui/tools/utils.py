@@ -1,5 +1,6 @@
 import socket
 import subprocess
+import sys
 import time
 
 
@@ -36,3 +37,38 @@ def process_exists(process_name: str) -> bool:
     last_line = output.strip().split("\r\n")[-1]
     # because Fail message could be translated
     return last_line.lower().startswith(process_name.lower())
+
+
+def wait_with_progress(
+    wait_duration: float,
+    message: str = "Waiting",
+    refresh_interval: float = 0.2,
+    progress_bar_width: int = 30,
+) -> None:
+    start = time.monotonic()
+    while True:
+        elapsed_time = time.monotonic() - start
+        progress = min(1.0, elapsed_time / wait_duration)
+        filled = int(progress_bar_width * progress)
+        bar = (
+            "=" * filled
+            + (">" if filled < progress_bar_width else "")
+            + " " * max(0, progress_bar_width - filled - 1)
+        )
+        pct = int(progress * 100)
+        line = (
+            f"\r  {message}: [{bar}] {pct}% ({elapsed_time:.1f}s"
+            f" / {wait_duration:.1f}s)"
+        )
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        if elapsed_time >= wait_duration:
+            break
+        sleep_for = min(
+            refresh_interval,
+            wait_duration - elapsed_time,
+        )
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+    sys.stdout.write("\n")
+    sys.stdout.flush()
