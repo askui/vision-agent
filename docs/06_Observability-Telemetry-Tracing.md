@@ -13,6 +13,7 @@ Understanding what your AI agents are doing, debugging issues, and monitoring pe
   - [Privacy Considerations](#privacy-considerations)
   - [Disabling Telemetry](#disabling-telemetry)
 - [OpenTelemetry Tracing](#opentelemetry-tracing)
+  - [Installation](#installation)
   - [Core Concepts](#core-concepts)
   - [Components](#components)
   - [Configuration](#configuration)
@@ -199,6 +200,22 @@ When disabled, no usage data is collected or transmitted.
 ## OpenTelemetry Tracing
 
 OpenTelemetry (OTEL) tracing provides distributed tracing for the AskUI Vision Agent Chat API and complex multi-service deployments. This is primarily relevant for enterprise deployments and developers working on the Chat API.
+
+### Installation
+
+OpenTelemetry is an **optional dependency**. Install it with the `tracing` extra:
+
+```bash
+pip install askui[tracing]
+```
+
+Or with PDM:
+
+```bash
+pdm install -G tracing
+```
+
+This installs the required OpenTelemetry packages (`opentelemetry-api`, `opentelemetry-sdk`, and instrumentors for FastAPI, HTTPX, and SQLAlchemy).
 
 ### Core Concepts
 

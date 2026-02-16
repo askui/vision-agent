@@ -224,6 +224,15 @@ pynput = [
     "mss>=10.0.0",
     "pynput>=1.8.1",
 ]
+tracing = [
+    "prometheus-fastapi-instrumentator>=7.1.0",
+    "opentelemetry-api>=1.38.0",
+    "opentelemetry-sdk>=1.38.0",
+    "opentelemetry-instrumentation-fastapi>=0.59b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.38.0",
+    "opentelemetry-instrumentation-httpx>=0.59b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.59b0",
+]
 vertex = [
     "google-cloud-aiplatform>=1.122.0",
     "anthropic[vertex]>=0.72.0",
