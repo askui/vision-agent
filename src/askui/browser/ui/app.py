@@ -1,6 +1,7 @@
 import base64
 import io
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
@@ -39,7 +40,7 @@ class KeyboardEvent(BaseModel):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa: ARG001
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     global agent
     logger.info("Starting up browser agent...")
     # Using headless=True so we can stream screenshots to the UI
@@ -55,14 +56,14 @@ app = FastAPI(title="AskUI Autonomous Browser UI", lifespan=lifespan)
 
 
 @app.get("/", response_class=HTMLResponse)
-async def get_index():
+async def get_index() -> str:
     index_path = Path(__file__).parent / "index.html"
     async with aiofiles.open(index_path, "r") as f:
         return await f.read()
 
 
 @app.post("/act")
-async def act(instruction: Instruction):
+async def act(instruction: Instruction) -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
@@ -76,7 +77,7 @@ async def act(instruction: Instruction):
 
 
 @app.get("/screenshot")
-async def get_screenshot():
+async def get_screenshot() -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
@@ -92,12 +93,17 @@ async def get_screenshot():
 
 
 @app.post("/mouse/click")
-async def mouse_click(event: MouseEvent):
+async def mouse_click(event: MouseEvent) -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
         await anyio.to_thread.run_sync(agent.tools.os.mouse_move, event.x, event.y)
-        await anyio.to_thread.run_sync(agent.tools.os.click, event.button, event.repeat)
+        button = event.button if event.button in ["left", "middle", "right"] else "left"
+        await anyio.to_thread.run_sync(
+            agent.tools.os.click,
+            button,
+            event.repeat,  # type: ignore[arg-type]
+        )
     except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
     else:
@@ -105,16 +111,22 @@ async def mouse_click(event: MouseEvent):
 
 
 @app.post("/keyboard/type")
-async def keyboard_type(event: KeyboardEvent):
+async def keyboard_type(event: KeyboardEvent) -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
         if event.type == "type":
             await anyio.to_thread.run_sync(agent.tools.os.type, event.key)
         elif event.type == "down":
-            await anyio.to_thread.run_sync(agent.tools.os.keyboard_pressed, event.key)
+            await anyio.to_thread.run_sync(
+                agent.tools.os.keyboard_pressed,
+                event.key,  # type: ignore[arg-type]
+            )
         elif event.type == "up":
-            await anyio.to_thread.run_sync(agent.tools.os.keyboard_release, event.key)
+            await anyio.to_thread.run_sync(
+                agent.tools.os.keyboard_release,
+                event.key,  # type: ignore[arg-type]
+            )
     except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
     else:

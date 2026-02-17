@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowManager:
-    def record(self, output_file: str, initial_url: str = None):
+    def record(self, output_file: str, initial_url: str | None = None) -> None:
         """
         Interactively record a sequence of instructions and save them as a Scenario.
         """
@@ -79,7 +79,7 @@ class WorkflowManager:
 
         print(f"\nSuccessfully saved {len(steps)} steps to {output_file}")
 
-    def replay(self, input_file: str, headless: bool = False):
+    def replay(self, input_file: str, headless: bool = False) -> None:
         """
         Load a Scenario from a JSON file and execute its steps using WebVisionAgent.
         """

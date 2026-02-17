@@ -4,7 +4,7 @@ import logging
 from askui.web_agent import WebVisionAgent
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="AskUI Autonomous Browser CLI")
     parser.add_argument(
         "--verbose", action="store_true", help="Show detailed agent thinking"
@@ -85,7 +85,7 @@ def main():
         parser.print_help()
 
 
-def run_agent(task, url, headed):
+def run_agent(task: str | None, url: str | None, headed: bool) -> None:
     with WebVisionAgent(headless=not headed) as agent:
         if url:
             print(f"Navigating to {url}...")
@@ -98,7 +98,7 @@ def run_agent(task, url, headed):
             interactive_loop(agent)
 
 
-def interactive_loop(agent):
+def interactive_loop(agent: WebVisionAgent) -> None:
     print("\nInteractive mode started. Type your instructions and press Enter.")
     print("Type 'exit' or 'quit' to stop.")
     while True:
@@ -115,21 +115,21 @@ def interactive_loop(agent):
             print(f"Error: {e}")
 
 
-def record_workflow(output_file, url):
+def record_workflow(output_file: str, url: str | None) -> None:
     from askui.browser.workflow_manager import WorkflowManager
 
     wm = WorkflowManager()
     wm.record(output_file, url)
 
 
-def replay_workflow(input_file, headless):
+def replay_workflow(input_file: str, headless: bool) -> None:
     from askui.browser.workflow_manager import WorkflowManager
 
     wm = WorkflowManager()
     wm.replay(input_file, headless)
 
 
-def launch_ui(host, port):
+def launch_ui(host: str, port: int) -> None:
     import uvicorn
 
     from askui.browser.ui.app import app
