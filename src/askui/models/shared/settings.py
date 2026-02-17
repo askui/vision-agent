@@ -28,9 +28,6 @@ class Resolution(NamedTuple):
 DEFAULT_LOCATE_RESOLUTION = Resolution(1280, 800)
 DEFAULT_GET_RESOLUTION = Resolution(1280, 800)
 
-COMPUTER_USE_20250124_BETA_FLAG = "computer-use-2025-01-24"
-COMPUTER_USE_20251124_BETA_FLAG = "computer-use-2025-11-24"
-
 CACHING_STRATEGY = Literal["read", "write", "both", "no"]
 
 
