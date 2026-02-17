@@ -1,6 +1,7 @@
 """VlmProvider interface for Vision Language Models with tool-calling capability."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from askui.models.shared.agent_message_param import (
     MessageParam,
@@ -48,11 +49,11 @@ class VlmProvider(ABC):
         messages: list[MessageParam],
         tools: ToolCollection | None = None,
         max_tokens: int | None = None,
-        betas: list[str] | None = None,
         system: SystemPrompt | None = None,
         thinking: ThinkingConfigParam | None = None,
         tool_choice: ToolChoiceParam | None = None,
         temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
         """Create a message using this provider's VLM.
 
@@ -62,11 +63,13 @@ class VlmProvider(ABC):
             messages (list[MessageParam]): The message history.
             tools (ToolCollection | None): Tools available to the model.
             max_tokens (int | None): Maximum tokens to generate.
-            betas (list[str] | None): Provider-specific beta features to enable.
             system (SystemPrompt | None): The system prompt.
             thinking (ThinkingConfigParam | None): Provider-specific thinking config.
             tool_choice (ToolChoiceParam | None): Provider-specific tool choice config.
             temperature (float | None): Sampling temperature (0–1).
+            provider_options (dict[str, Any] | None): Provider-specific options.
+                Each provider can define its own keys. Common options include:
+                - "betas": List of beta features to enable (e.g., for Anthropic)
 
         Returns:
             MessageParam: The model's response message.

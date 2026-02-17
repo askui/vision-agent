@@ -1,4 +1,4 @@
-from typing import Tuple, cast
+from typing import Any, Tuple, cast
 
 from anthropic import (
     APIConnectionError,
@@ -133,16 +133,21 @@ class AnthropicMessagesApi(MessagesApi):
         model_id: str,
         tools: ToolCollection | None = None,
         max_tokens: int | None = None,
-        betas: list[str] | None = None,
         system: SystemPrompt | None = None,
         thinking: ThinkingConfigParam | None = None,
         tool_choice: ToolChoiceParam | None = None,
         temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
         _messages = [
             cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
             for message in messages
         ]
+
+        # Extract betas from provider_options
+        betas: list[str] | None = None
+        if provider_options is not None:
+            betas = provider_options.get("betas")
 
         _tools, _betas, _system, _thinking, _tool_choice, _temperature = (
             _parse_to_anthropic_types(

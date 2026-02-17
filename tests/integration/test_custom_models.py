@@ -49,11 +49,11 @@ class SimpleVlmProvider(VlmProvider):
         messages: list[MessageParam],
         tools: ToolCollection | None = None,
         max_tokens: int | None = None,
-        betas: list[str] | None = None,
         system: SystemPrompt | None = None,
         thinking: ThinkingConfigParam | None = None,
         tool_choice: ToolChoiceParam | None = None,
         temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
         self.goals.append([msg.model_dump(mode="json") for msg in messages])
         return MessageParam(

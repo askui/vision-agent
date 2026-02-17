@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
@@ -38,8 +38,6 @@ class MessageSettings(BaseModel):
     during agent action execution.
 
     Args:
-        betas (list[str] | None): Anthropic API beta features to enable.
-            Example: `["computer-use-2025-01-24"]` for computer use capabilities.
         max_tokens (int): Maximum number of tokens the model can generate in
             its response. Higher values allow longer responses but increase
             cost and latency. Default: 8192.
@@ -53,16 +51,20 @@ class MessageSettings(BaseModel):
         temperature (float | None): Controls response randomness. 0.0 produces
             deterministic outputs, 1.0 produces creative/varied outputs.
             Default: None (uses model default).
+        provider_options (dict[str, Any] | None): Provider-specific options.
+            Each provider can define its own keys. Common options include:
+            - "betas": List of beta features to enable (e.g., for Anthropic)
+            Default: None.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    betas: list[str] | None = None
     max_tokens: int = 8192
     system: ActSystemPrompt | None = None
     thinking: ThinkingConfigParam | None = None
     tool_choice: ToolChoiceParam | None = None
     temperature: float | None = Field(default=None, ge=0.0, le=1.0)
+    provider_options: dict[str, Any] | None = None
 
 
 class ActSettings(BaseModel):

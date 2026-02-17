@@ -1,6 +1,7 @@
 """AskUIVlmProvider — VLM access via AskUI's hosted Anthropic proxy."""
 
 from functools import cached_property
+from typing import Any
 
 from anthropic import Anthropic
 from typing_extensions import override
@@ -91,21 +92,21 @@ class AskUIVlmProvider(VlmProvider):
         messages: list[MessageParam],
         tools: ToolCollection | None = None,
         max_tokens: int | None = None,
-        betas: list[str] | None = None,
         system: SystemPrompt | None = None,
         thinking: ThinkingConfigParam | None = None,
         tool_choice: ToolChoiceParam | None = None,
         temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
         result: MessageParam = self._messages_api.create_message(
             messages=messages,
             model_id=self._model_id,
             tools=tools,
             max_tokens=max_tokens,
-            betas=betas,
             system=system,
             thinking=thinking,
             tool_choice=tool_choice,
             temperature=temperature,
+            provider_options=provider_options,
         )
         return result
