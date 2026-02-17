@@ -45,7 +45,7 @@ class GetTool(ToolWithAgentOS):
             name="get",
             description=(
                 "Extract information from the current screen or a provided image."
-                "Do only use this tool if your are explicitly told to do so!"
+                "Do only use this tool if you are explicitly told to do so!"
             ),
             input_schema={
                 "type": "object",

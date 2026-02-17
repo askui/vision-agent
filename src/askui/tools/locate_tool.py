@@ -44,7 +44,7 @@ class LocateTool(ToolWithAgentOS):
             name="locate",
             description=(
                 "Find the coordinates of a UI element on the screen."
-                "Do only use this tool if your are explicitly told to do so!"
+                "Do only use this tool if you are explicitly told to do so!"
             ),
             input_schema={
                 "type": "object",
