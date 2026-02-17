@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AskUI Autonomous Browser UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: #f0f2f5;
+        }
+        #sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+        #browser-view {
+            max-width: 100%;
+            max-height: calc(100vh - 100px);
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: white;
+            cursor: crosshair;
+            position: relative;
+        }
+        #browser-screenshot {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        #controls {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+        #instruction-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        #log {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 12px;
+            background: #fafafa;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .log-user { color: blue; }
+        .log-agent { color: green; }
+        .log-error { color: red; }
+
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h2>AskUI Browser</h2>
+        <div id="log"></div>
+        <p><small>Click on the browser view to simulate clicks. Type instructions below.</small></p>
+        <button onclick="solveHurdles()">Solve Common Hurdles</button>
+        <button onclick="typeText()" style="margin-top: 10px;">Type Text at Current Focus</button>
+    </div>
+    <div id="main">
+        <div id="browser-view">
+            <img id="browser-screenshot" src="" alt="Browser View">
+            <div id="loading-overlay">Agent is thinking...</div>
+        </div>
+        <div id="controls">
+            <input type="text" id="instruction-input" placeholder="Type an instruction (e.g., 'Go to google.com' or 'Search for AskUI') and press Enter">
+        </div>
+    </div>
+
+    <script>
+        const screenshotImg = document.getElementById('browser-screenshot');
+        const instructionInput = document.getElementById('instruction-input');
+        const logDiv = document.getElementById('log');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const browserView = document.getElementById('browser-view');
+
+        function addLog(text, type='info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function updateScreenshot() {
+            try {
+                const response = await fetch('/screenshot');
+                const data = await response.json();
+                if (data.screenshot) {
+                    screenshotImg.src = 'data:image/png;base64,' + data.screenshot;
+                }
+            } catch (e) {
+                console.error('Failed to fetch screenshot', e);
+            }
+        }
+
+        async function sendInstruction(text) {
+            addLog(`User: ${text}`, 'user');
+            loadingOverlay.style.display = 'flex';
+            instructionInput.disabled = true;
+
+            try {
+                const response = await fetch('/act', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    addLog('Agent: Done.', 'agent');
+                } else {
+                    addLog(`Error: ${data.message}`, 'error');
+                }
+            } catch (e) {
+                addLog(`Error: ${e}`, 'error');
+            } finally {
+                loadingOverlay.style.display = 'none';
+                instructionInput.disabled = false;
+                instructionInput.value = '';
+                updateScreenshot();
+            }
+        }
+
+        async function solveHurdles() {
+            await sendInstruction("I will check for and close any popups, cookie banners or overlays.");
+        }
+
+        async function typeText() {
+            const text = prompt("Enter text to type:");
+            if (text) {
+                addLog(`Remote Type: ${text}`, 'user');
+                try {
+                    await fetch('/keyboard/type', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ key: text, type: 'type' })
+                    });
+                    setTimeout(updateScreenshot, 500);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        instructionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && instructionInput.value) {
+                sendInstruction(instructionInput.value);
+            }
+        });
+
+        browserView.addEventListener('click', async (e) => {
+            if (instructionInput.disabled) return;
+
+            const rect = screenshotImg.getBoundingClientRect();
+            const scaleX = screenshotImg.naturalWidth / rect.width;
+            const scaleY = screenshotImg.naturalHeight / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+
+            addLog(`Remote Click at (${x}, ${y})`, 'user');
+
+            try {
+                await fetch('/mouse/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x, y })
+                });
+                setTimeout(updateScreenshot, 500);
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        // Initial screenshot
+        updateScreenshot();
+        // Poll for screenshots occasionally if not busy
+        setInterval(() => {
+            if (loadingOverlay.style.display === 'none') {
+                updateScreenshot();
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import ConfigDict, validate_call
 
 from askui.agent import VisionAgent
@@ -22,7 +24,9 @@ from .models import ModelComposition
 from .models.models import ModelChoice, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
+import logging
 
+logger = logging.getLogger(__name__)
 
 class WebVisionAgent(VisionAgent):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -34,8 +38,15 @@ class WebVisionAgent(VisionAgent):
         models: ModelRegistry | None = None,
         act_tools: list[Tool] | None = None,
         model_provider: str | None = None,
+        headless: bool = False,
+        browser_type: Literal["chromium", "firefox", "webkit"] = "chromium",
+        slow_mo: int = 0,
     ) -> None:
-        agent_os = PlaywrightAgentOs()
+        agent_os = PlaywrightAgentOs(
+            headless=headless,
+            browser_type=browser_type,
+            slow_mo=slow_mo,
+        )
         tools = AgentToolbox(
             agent_os=agent_os,
         )
@@ -61,4 +72,18 @@ class WebVisionAgent(VisionAgent):
                 system=create_web_agent_prompt(),
                 thinking={"type": "enabled", "budget_tokens": 2048},
             ),
+        )
+
+    def solve_common_hurdles(self) -> None:
+        """
+        Attempts to solve common web hurdles like cookie banners, popups, and overlays
+        using heuristic reasoning. This is called automatically during complex tasks
+        or can be invoked manually to clear the workspace.
+        """
+        logger.info("Invoking heuristic recovery to clear common web hurdles...")
+        self.act(
+            "Look for any cookie banners, popups, newsletter signups, or other overlays "
+            "that might be obstructing the main content or preventing interactions. "
+            "If found, close them by clicking the 'X', 'Close', 'Accept', or 'Decline' "
+            "buttons as appropriate. If no hurdles are detected, do nothing."
         )

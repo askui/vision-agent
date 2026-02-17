@@ -20,6 +20,7 @@ from askui.chat.api.mcp_servers.android import mcp as android_mcp
 from askui.chat.api.mcp_servers.computer import mcp as computer_mcp
 from askui.chat.api.mcp_servers.testing import mcp as testing_mcp
 from askui.chat.api.mcp_servers.utility import mcp as utility_mcp
+from askui.chat.api.mcp_servers.web import mcp as web_mcp
 from askui.chat.api.messages.router import router as messages_router
 from askui.chat.api.runs.router import router as runs_router
 from askui.chat.api.scheduled_jobs.router import router as scheduled_jobs_router
@@ -56,11 +57,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     logger.info("Starting scheduled job scheduler...")
     await start_scheduler()
 
+    # Connect Web Agent OS
+    from askui.chat.api.mcp_servers.web import WEB_AGENT_OS
+    import anyio
+    logger.info("Connecting Web Agent OS...")
+    await anyio.to_thread.run_sync(WEB_AGENT_OS.connect)
+
     yield
 
     # Shutdown scheduler
     logger.info("Shutting down scheduled job scheduler...")
     await shutdown_scheduler()
+
+    # Disconnect Web Agent OS
+    logger.info("Disconnecting Web Agent OS...")
+    await anyio.to_thread.run_sync(WEB_AGENT_OS.disconnect)
 
     logger.info("Disconnecting all MCP clients...")
     await get_mcp_client_manager_manager(mcp_config_service).disconnect_all(force=True)
@@ -92,6 +103,7 @@ mcp.mount(computer_mcp)
 mcp.mount(android_mcp)
 mcp.mount(testing_mcp)
 mcp.mount(utility_mcp)
+mcp.mount(web_mcp)
 
 mcp_app = mcp.http_app("/sse", transport="sse")
 
