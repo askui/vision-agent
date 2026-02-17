@@ -4,7 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
 import aiofiles
 import anyio
@@ -81,7 +81,8 @@ async def get_screenshot() -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
-        img = await anyio.to_thread.run_sync(agent.tools.os.screenshot)
+        # We use Any to avoid complex type checking with anyio run_sync
+        img = await anyio.to_thread.run_sync(cast("Any", agent.tools.os.screenshot))
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -97,13 +98,10 @@ async def mouse_click(event: MouseEvent) -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
-        await anyio.to_thread.run_sync(agent.tools.os.mouse_move, event.x, event.y)
+        os = agent.tools.os
+        await anyio.to_thread.run_sync(os.mouse_move, event.x, event.y)
         button = event.button if event.button in ["left", "middle", "right"] else "left"
-        await anyio.to_thread.run_sync(
-            agent.tools.os.click,
-            button,
-            event.repeat,  # type: ignore[arg-type]
-        )
+        await anyio.to_thread.run_sync(cast("Any", os.click), button, event.repeat)
     except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
     else:
@@ -115,18 +113,13 @@ async def keyboard_type(event: KeyboardEvent) -> dict[str, str]:
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
+        os = agent.tools.os
         if event.type == "type":
-            await anyio.to_thread.run_sync(agent.tools.os.type, event.key)
+            await anyio.to_thread.run_sync(os.type, event.key)
         elif event.type == "down":
-            await anyio.to_thread.run_sync(
-                agent.tools.os.keyboard_pressed,
-                event.key,  # type: ignore[arg-type]
-            )
+            await anyio.to_thread.run_sync(cast("Any", os.keyboard_pressed), event.key)
         elif event.type == "up":
-            await anyio.to_thread.run_sync(
-                agent.tools.os.keyboard_release,
-                event.key,  # type: ignore[arg-type]
-            )
+            await anyio.to_thread.run_sync(cast("Any", os.keyboard_release), event.key)
     except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
     else:
