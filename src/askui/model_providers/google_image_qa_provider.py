@@ -1,10 +1,11 @@
 """GoogleImageQAProvider — image Q&A via Google Gemini API."""
 
 from functools import cached_property
-from typing import TYPE_CHECKING, Type
+from typing import Type
 
 import google.genai as genai
 import google.genai.types as genai_types
+from google.genai import Client as GenaiClient
 from typing_extensions import override
 
 from askui.model_providers.image_qa_provider import ImageQAProvider
@@ -12,9 +13,6 @@ from askui.models.google.get_model import GoogleGetModel
 from askui.models.shared.settings import GetSettings
 from askui.models.types.response_schemas import ResponseSchema
 from askui.utils.source_utils import Source
-
-if TYPE_CHECKING:
-    from google.genai import Client as GenaiClient
 
 _DEFAULT_MODEL_ID = "gemini-2.5-flash"
 
