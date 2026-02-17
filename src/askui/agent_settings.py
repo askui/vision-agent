@@ -1,5 +1,6 @@
 """AgentSettings — provider-based configuration for Agent."""
 
+from functools import cached_property
 from typing import TYPE_CHECKING, Type
 
 from typing_extensions import override
@@ -7,6 +8,9 @@ from typing_extensions import override
 if TYPE_CHECKING:
     from askui.locators.locators import Locator
 
+from askui.model_providers.askui_detection_provider import AskUIDetectionProvider
+from askui.model_providers.askui_image_qa_provider import AskUIImageQAProvider
+from askui.model_providers.askui_vlm_provider import AskUIVlmProvider
 from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
@@ -161,19 +165,30 @@ class AgentSettings:
         image_qa_provider: ImageQAProvider | None = None,
         detection_provider: DetectionProvider | None = None,
     ) -> None:
-        from askui.model_providers.askui_detection_provider import (
-            AskUIDetectionProvider,
-        )
-        from askui.model_providers.askui_image_qa_provider import AskUIImageQAProvider
-        from askui.model_providers.askui_vlm_provider import AskUIVlmProvider
+        self._vlm_provider = vlm_provider
+        self._image_qa_provider = image_qa_provider
+        self._detection_provider = detection_provider
 
-        self.vlm_provider: VlmProvider = vlm_provider or AskUIVlmProvider()
-        self.image_qa_provider: ImageQAProvider = (
-            image_qa_provider or AskUIImageQAProvider()
-        )
-        self.detection_provider: DetectionProvider = (
-            detection_provider or AskUIDetectionProvider()
-        )
+    @cached_property
+    def vlm_provider(self) -> VlmProvider:
+        """Return the VlmProvider, creating the default if not provided."""
+        if self._vlm_provider is not None:
+            return self._vlm_provider
+        return AskUIVlmProvider()
+
+    @cached_property
+    def image_qa_provider(self) -> ImageQAProvider:
+        """Return the ImageQAProvider, creating the default if not provided."""
+        if self._image_qa_provider is not None:
+            return self._image_qa_provider
+        return AskUIImageQAProvider()
+
+    @cached_property
+    def detection_provider(self) -> DetectionProvider:
+        """Return the DetectionProvider, creating the default if not provided."""
+        if self._detection_provider is not None:
+            return self._detection_provider
+        return AskUIDetectionProvider()
 
     def to_messages_api(self) -> MessagesApi:
         """Return a MessagesApi adapter backed by this settings' VlmProvider."""
