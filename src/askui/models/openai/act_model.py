@@ -34,10 +34,9 @@ class OpenAICompatibleActModel(AskUIAgent):
         reporter: Reporter = NULL_REPORTER,
         truncation_strategy_factory: TruncationStrategyFactory | None = None,
     ) -> None:
-        messages_api = OpenAICompatibleMessagesApi(client=client)
         super().__init__(
             model_id=model_id,
-            messages_api=messages_api,
+            messages_api=OpenAICompatibleMessagesApi(client=client),
             reporter=reporter,
             truncation_strategy_factory=(
                 truncation_strategy_factory or SimpleTruncationStrategyFactory()

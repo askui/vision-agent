@@ -58,7 +58,7 @@ class GoogleImageQAProvider(ImageQAProvider):
         base_url: str | None = None,
         auth_token: str | None = None,
         model_id: str = _DEFAULT_MODEL_ID,
-        client: "GenaiClient | None" = None,
+        client: GenaiClient | None = None,
     ) -> None:
         self._model_id = model_id
         if client is not None:

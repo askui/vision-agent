@@ -61,11 +61,10 @@ class AnthropicImageQAProvider(ImageQAProvider):
         if client is not None:
             self.client = client
         else:
-            default_headers = {"Authorization": auth_token} if auth_token else None
             self.client = Anthropic(
                 api_key=api_key,
                 base_url=base_url,
-                default_headers=default_headers,
+                auth_token=auth_token,
             )
 
     @cached_property

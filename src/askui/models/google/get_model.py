@@ -23,7 +23,10 @@ from askui.utils.source_utils import Source
 
 logger = logging.getLogger(__name__)
 
-_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+# Maximum File Size for Inline Data PDF
+# https://ai.google.dev/gemini-api/docs/file-input-methods
+# last checked: February 17, 2026
+_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
 
 
 class GoogleGetModel(GetModel):
