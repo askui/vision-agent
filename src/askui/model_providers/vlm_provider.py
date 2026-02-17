@@ -21,8 +21,7 @@ class VlmProvider(ABC):
     The provider owns the model selection — the `model_id` is configured on the
     provider instance, not passed per-call.
 
-    To bring your own VLM, implement this interface or use
-    `OpenAICompatibleProvider` for OpenAI-compatible endpoints.
+    To bring your own VLM, implement this interface.
 
     Example:
         ```python

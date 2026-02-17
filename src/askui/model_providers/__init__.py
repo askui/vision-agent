@@ -12,7 +12,6 @@ Built-in providers:
 - `AnthropicVlmProvider` — VLM via direct Anthropic API
 - `AnthropicImageQAProvider` — image Q&A via direct Anthropic API
 - `GoogleImageQAProvider` — image Q&A via Google Gemini API (direct, no proxy)
-- `OpenAICompatibleProvider` — VLM via any OpenAI-compatible endpoint
 """
 
 from askui.model_providers.anthropic_image_qa_provider import AnthropicImageQAProvider
@@ -23,7 +22,6 @@ from askui.model_providers.askui_vlm_provider import AskUIVlmProvider
 from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.google_image_qa_provider import GoogleImageQAProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
-from askui.model_providers.openai_compatible_provider import OpenAICompatibleProvider
 from askui.model_providers.vlm_provider import VlmProvider
 
 __all__ = [
@@ -35,6 +33,5 @@ __all__ = [
     "DetectionProvider",
     "GoogleImageQAProvider",
     "ImageQAProvider",
-    "OpenAICompatibleProvider",
     "VlmProvider",
 ]

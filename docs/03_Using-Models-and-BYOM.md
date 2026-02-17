@@ -104,41 +104,6 @@ with ComputerAgent(settings=AgentSettings(
     agent.act("Process the document")
 ```
 
-Works with `OpenAICompatibleProvider` too:
-
-```python
-from openai import OpenAI
-from askui.model_providers import OpenAICompatibleProvider
-
-client = OpenAI(base_url="http://localhost:11434/v1", api_key="none")
-provider = OpenAICompatibleProvider(
-    endpoint="",  # ignored when client is provided
-    api_key="",
-    model_id="llama3.2",
-    client=client,
-)
-```
-
----
-
-## BYOM: OpenAI-Compatible Endpoint
-
-Point `vlm_provider` at any OpenAI-compatible endpoint (vLLM, Ollama, LM Studio):
-
-```python
-from askui import AgentSettings, ComputerAgent
-from askui.model_providers import OpenAICompatibleProvider
-
-with ComputerAgent(settings=AgentSettings(
-    vlm_provider=OpenAICompatibleProvider(
-        endpoint="http://localhost:11434/v1",
-        api_key="none",
-        model_id="llama3.2",
-    ),
-)) as agent:
-    agent.act("Summarize what is on the screen")
-```
-
 ---
 
 ## BYOM: Custom Provider

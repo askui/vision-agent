@@ -1,7 +1,7 @@
 """Example demonstrating all available model providers.
 
 This example shows how to configure and use each provider type:
-- VLM providers for act() - AskUI, Anthropic, OpenAI-compatible
+- VLM providers for act() - AskUI, Anthropic
 - ImageQA providers for get() - AskUI, Anthropic, Google
 - Detection providers for locate() - AskUI
 
@@ -9,7 +9,6 @@ Required environment variables (see .env):
 - ASKUI_WORKSPACE_ID, ASKUI_TOKEN - for AskUI providers
 - ANTHROPIC_API_KEY - for Anthropic providers
 - GOOGLE_API_KEY - for Google provider
-- OPENAI_COMPATIBLE_ENDPOINT, OPENAI_COMPATIBLE_MODEL - for OpenAI-compatible
 """
 
 import logging
@@ -23,7 +22,6 @@ from askui.model_providers import (
     AskUIImageQAProvider,
     AskUIVlmProvider,
     GoogleImageQAProvider,
-    OpenAICompatibleProvider,
 )
 
 logging.basicConfig(
@@ -97,22 +95,6 @@ def create_google_providers() -> AgentSettings:
     )
 
 
-def create_openai_compatible_providers() -> AgentSettings:
-    """Create settings using an OpenAI-compatible endpoint (e.g., Ollama, vLLM)."""
-    endpoint = os.environ.get("OPENAI_COMPATIBLE_ENDPOINT", "http://localhost:11434/v1")
-    model_id = os.environ.get("OPENAI_COMPATIBLE_MODEL", "llama3.2-vision")
-    return AgentSettings(
-        vlm_provider=OpenAICompatibleProvider(
-            endpoint=endpoint,
-            api_key="none",  # Ollama doesn't require auth
-            model_id=model_id,
-        ),
-        # ImageQA and Detection fall back to AskUI
-        image_qa_provider=AskUIImageQAProvider(model_id="gemini-2.5-flash"),
-        detection_provider=AskUIDetectionProvider(),
-    )
-
-
 def create_mixed_providers() -> AgentSettings:
     """Create settings mixing different providers for optimal results."""
     return AgentSettings(
@@ -137,7 +119,6 @@ if __name__ == "__main__":
         #"AskUI (default)": create_askui_providers,
         #"Anthropic (direct)": create_anthropic_providers,
         #"Google (Gemini)": create_google_providers,
-        "OpenAI-compatible": create_openai_compatible_providers,
         "Mixed providers": create_mixed_providers,
     }
 
