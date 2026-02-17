@@ -177,7 +177,7 @@ with WebVisionAgent() as agent:
 **Important limitations:**
 - ⚠️ Using the `prompt` field will trigger a `UserWarning` on model creation
 - ⚠️ All structured prompt parts (capabilities, device info, etc.) are completely ignored
-- ✅ Other `MessageSettings` fields remain unchanged (betas, thinking, max_tokens, temperature, tool_choice)
+- ✅ Other `MessageSettings` fields remain unchanged (thinking, max_tokens, temperature, tool_choice, provider_options)
 - ✅ Only the system prompt text itself is affected - all other settings remain at their configured values
 
 **When to use this:**

@@ -158,3 +158,16 @@ with ComputerAgent() as agent:
     )
     result = agent.get("Extract the table", get_settings=GetSettings(max_tokens=4096))
 ```
+
+---
+
+## Provider-Specific Options
+
+`MessageSettings` includes a `provider_options` field for passing provider-specific configuration that doesn't fit into the standard parameters.
+
+This is a `dict[str, Any]` where keys and values depend on the provider being used. Common use cases include:
+
+- **Beta features**: Enabling experimental provider features (e.g., `{"betas": ["feature-name"]}` for Anthropic)
+- **Provider extensions**: Passing custom headers, metadata, or other provider-specific parameters
+
+Use `provider_options` when you need to access functionality that is specific to a particular provider and not abstracted by the standard `MessageSettings` fields. Most users will not need this — it is intended for advanced use cases where provider-specific behaviour is required.
