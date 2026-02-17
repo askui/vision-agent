@@ -58,8 +58,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     await start_scheduler()
 
     # Connect Web Agent OS
-    from askui.chat.api.mcp_servers.web import WEB_AGENT_OS
     import anyio
+
+    from askui.chat.api.mcp_servers.web import WEB_AGENT_OS
+
     logger.info("Connecting Web Agent OS...")
     await anyio.to_thread.run_sync(WEB_AGENT_OS.connect)
 

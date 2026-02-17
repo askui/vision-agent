@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from pydantic import ConfigDict, validate_call
@@ -24,9 +25,9 @@ from .models import ModelComposition
 from .models.models import ModelChoice, ModelRegistry
 from .reporting import Reporter
 from .retry import Retry
-import logging
 
 logger = logging.getLogger(__name__)
+
 
 class WebVisionAgent(VisionAgent):
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

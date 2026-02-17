@@ -1,11 +1,14 @@
 import base64
 import io
 import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+import aiofiles
+import anyio
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from askui.web_agent import WebVisionAgent
@@ -14,13 +17,14 @@ from askui.web_agent import WebVisionAgent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AskUI Autonomous Browser UI")
 
 # Global agent instance
 agent: Optional[WebVisionAgent] = None
 
+
 class Instruction(BaseModel):
     text: str
+
 
 class MouseEvent(BaseModel):
     x: int
@@ -28,66 +32,77 @@ class MouseEvent(BaseModel):
     button: str = "left"
     repeat: int = 1
 
+
 class KeyboardEvent(BaseModel):
     key: str
     type: str  # "type", "down", "up"
 
-@app.on_event("startup")
-async def startup_event():
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ARG001
     global agent
     logger.info("Starting up browser agent...")
     # Using headless=True so we can stream screenshots to the UI
     agent = WebVisionAgent(headless=True)
-    agent.__enter__()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global agent
+    await anyio.to_thread.run_sync(agent.__enter__)
+    yield
     if agent:
         logger.info("Shutting down browser agent...")
-        agent.__exit__(None, None, None)
+        await anyio.to_thread.run_sync(agent.__exit__, None, None, None)
+
+
+app = FastAPI(title="AskUI Autonomous Browser UI", lifespan=lifespan)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
-    with open("src/askui/browser/ui/index.html", "r") as f:
-        return f.read()
+    index_path = Path(__file__).parent / "index.html"
+    async with aiofiles.open(index_path, "r") as f:
+        return await f.read()
+
 
 @app.post("/act")
 async def act(instruction: Instruction):
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
-        logger.info(f"Executing: {instruction.text}")
-        agent.act(instruction.text)
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(f"Error executing instruction: {e}")
+        logger.info("Executing: %s", instruction.text)
+        await anyio.to_thread.run_sync(agent.act, instruction.text)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Error executing instruction")
         return {"status": "error", "message": str(e)}
+    else:
+        return {"status": "success"}
+
 
 @app.get("/screenshot")
 async def get_screenshot():
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
-        img = agent.tools.os.screenshot()
+        img = await anyio.to_thread.run_sync(agent.tools.os.screenshot)
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
-        return {"screenshot": img_str}
     except Exception as e:
-        logger.error(f"Error taking screenshot: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Error taking screenshot")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return {"screenshot": img_str}
+
 
 @app.post("/mouse/click")
 async def mouse_click(event: MouseEvent):
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
-        agent.tools.os.mouse_move(event.x, event.y)
-        agent.tools.os.click(event.button, event.repeat)
-        return {"status": "success"}
-    except Exception as e:
+        await anyio.to_thread.run_sync(agent.tools.os.mouse_move, event.x, event.y)
+        await anyio.to_thread.run_sync(agent.tools.os.click, event.button, event.repeat)
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
+    else:
+        return {"status": "success"}
+
 
 @app.post("/keyboard/type")
 async def keyboard_type(event: KeyboardEvent):
@@ -95,15 +110,18 @@ async def keyboard_type(event: KeyboardEvent):
         raise HTTPException(status_code=500, detail="Agent not initialized")
     try:
         if event.type == "type":
-            agent.tools.os.type(event.key)
+            await anyio.to_thread.run_sync(agent.tools.os.type, event.key)
         elif event.type == "down":
-            agent.tools.os.keyboard_pressed(event.key)
+            await anyio.to_thread.run_sync(agent.tools.os.keyboard_pressed, event.key)
         elif event.type == "up":
-            agent.tools.os.keyboard_release(event.key)
-        return {"status": "success"}
-    except Exception as e:
+            await anyio.to_thread.run_sync(agent.tools.os.keyboard_release, event.key)
+    except Exception as e:  # noqa: BLE001
         return {"status": "error", "message": str(e)}
+    else:
+        return {"status": "success"}
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
