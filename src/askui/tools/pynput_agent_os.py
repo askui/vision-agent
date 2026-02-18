@@ -187,13 +187,14 @@ class PynputAgentOs(AgentOs):
         return image
 
     @override
-    def mouse_move(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int, _duration: int = 500) -> None:
         """
         Move the mouse cursor to specified screen coordinates.
 
         Args:
             x (int): The horizontal coordinate (in pixels) to move to.
             y (int): The vertical coordinate (in pixels) to move to.
+            _duration (int): Unused parameter as it is not applicable here.
         """
         self._reporter.add_message(
             "AgentOS",

@@ -57,9 +57,9 @@ class ComputerAgentOsFacade(AgentOs):
         )
         return scale_image_to_fit(screenshot, self._target_resolution)
 
-    def mouse_move(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int, duration: int = 500) -> None:
         scaled_x, scaled_y = self._scale_coordinates_back(x, y)
-        self._agent_os.mouse_move(scaled_x, scaled_y)
+        self._agent_os.mouse_move(scaled_x, scaled_y, duration)
 
     def get_mouse_position(self) -> Coordinate:
         mouse_position = self._agent_os.get_mouse_position()

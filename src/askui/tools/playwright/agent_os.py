@@ -179,13 +179,14 @@ class PlaywrightAgentOs(AgentOs):
         return Image.open(io.BytesIO(screenshot_bytes))
 
     @override
-    def mouse_move(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int, _duration: int = 500) -> None:
         """
         Moves the mouse cursor to specified coordinates on the page.
 
         Args:
             x (int): The horizontal coordinate (in pixels) to move to.
             y (int): The vertical coordinate (in pixels) to move to.
+            _duration (int): Unused parameter as it is not applicable here.
         """
         if not self._page:
             error_msg = "No active page. Call connect() first."
