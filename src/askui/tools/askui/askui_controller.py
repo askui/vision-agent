@@ -378,7 +378,7 @@ class AskUiControllerClient(AgentOs):
         """
         self._reporter.add_message(
             "AgentOS",
-            f"mouse_move({x}, {y})",
+            f"mouse_move({x}, {y}, duration={duration})",
             AnnotatedImage(lambda: self.screenshot(report=False), point_list=[(x, y)]),
         )
         self._run_recorder_action(
