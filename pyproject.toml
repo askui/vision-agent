@@ -213,16 +213,12 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,bedrock,pynput,tracing,vertex,web]"]
+all = ["askui[android,bedrock,tracing,vertex,web]"]
 android = [
     "pure-python-adb>=0.3.0.dev0"
 ]
 bedrock = [
     "anthropic[bedrock]>=0.72.0"
-]
-pynput = [
-    "mss>=10.0.0",
-    "pynput>=1.8.1",
 ]
 tracing = [
     "prometheus-fastapi-instrumentator>=7.1.0",

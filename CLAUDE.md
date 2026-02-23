@@ -130,7 +130,6 @@ models.register("my-model", custom_model_instance)
 ```
 AgentOs (Abstract Interface)
     ├── AskUiControllerClient (gRPC to AskUI Agent OS - primary)
-    ├── PynputAgentOs (Python mouse/keyboard)
     ├── PlaywrightAgentOs (Web browser automation)
     └── AndroidAgentOs (Android ADB)
 ```
@@ -262,7 +261,7 @@ When writing or updating documentation in `docs/`:
 - Retry strategies with exponential backoff
 
 ### Adapter Pattern
-- `AgentOs` abstraction bridges OS implementations (gRPC, Pynput, Playwright, ADB)
+- `AgentOs` abstraction bridges OS implementations (gRPC, Playwright, ADB)
 - `ModelFacade` adapts models to `ActModel`/`GetModel`/`LocateModel` interfaces
 
 ### Dependency Injection
