@@ -1,7 +1,5 @@
 # Caching (Experimental)
 
-**CAUTION: The Caching feature is still in alpha state and subject to change! Use it at your own risk. In case you run into issues, you can disable caching by removing the caching_settings parameter or by explicitly setting the caching_strategy to `no`.**
-
 The caching mechanism allows you to record and replay agent action sequences (trajectories) for faster and more robust test execution. This feature is particularly useful for regression testing, where you want to replay known-good interaction sequences to verify that your application still behaves correctly.
 
 ## Overview
@@ -366,9 +364,3 @@ with ComputerAgent() as agent:
         )
     )
 ```
-
-## See Also
-
-- **[02_Prompting.md](./02_Prompting.md)** - System prompts and customizing agent behavior
-- **[03_Using-Models-and-BYOM.md](./03_Using-Models-and-BYOM.md)** - Choose and configure AI models
-- **[00_Overview.md](./00_Overview.md)** - AskUI Vision Agent overview and architecture

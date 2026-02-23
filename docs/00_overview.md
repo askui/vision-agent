@@ -18,9 +18,9 @@ Traditional automation frameworks require:
 
 AskUI Vision Agent offers two complementary approaches:
 
-*1. Agentic Control (Goal-based)**
+**1. Agentic Control (Goal-based)**
 ```python
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Search for flights from New York to London, "
         "filter by direct flights, and show me the cheapest option"
@@ -44,38 +44,60 @@ This documentation is organized to take you from setup to advanced usage:
 
 Start here to get AskUI Vision Agent installed and running. Covers Python package installation and the AgentOS component that enables cross-platform device control.
 
-### 02 - Prompting
+### 02 - Using Agents
+**Topics**: ComputerAgent, AndroidAgent, WebVisionAgent, platform-specific tools
+
+Learn about the three predefined agent types and their capabilities for desktop, mobile, and web automation.
+
+### 03 - Prompting
 **Topics**: System prompts, customizing agent behavior, prompt engineering best practices
 
 Learn how to guide AI agents with effective prompts. Critical for the `act()` method and achieving reliable agentic behavior.
 
-### 03 - Using Models and BYOM
-**Topics**: Model selection, available models, model composition, bringing your own model
+### 04 - Using Models
+**Topics**: Model selection, available models via AskUI API
 
-Understand the model system, how to choose models for different tasks, and how to integrate custom models or third-party providers.
+Understand how to choose and configure models for different tasks.
 
-### 04 - Caching
+### 05 - Bring Your Own Model Provider
+**Topics**: Custom model providers, Anthropic, Google, third-party integrations
+
+Integrate custom models or use your own API keys with third-party providers.
+
+### 06 - Caching
 **Topics**: Recording trajectories, replaying actions, regression testing
 
 Speed up test execution and improve reliability by recording and replaying successful action sequences.
 
-### 05 - Tools
-**Topics**: Direct tool use, Model Context Protocol (MCP), custom tools, extending agents
+### 07 - Tools
+**Topics**: Tool store, Model Context Protocol (MCP), custom tools, extending agents
 
-Access low-level tools directly, integrate external services via MCP, and extend agent capabilities with custom tools.
+Access pre-built tools, integrate external services via MCP, and extend agent capabilities with custom tools.
 
-### 06 - Observability, Telemetry, Tracing
-**Topics**: Reporting, debugging, telemetry, OpenTelemetry tracing, monitoring
+### 08 - Reporting
+**Topics**: HTML reports, custom reporters, debugging
 
-Track agent behavior, debug issues, and monitor performance in production environments.
+Generate human-readable logs of agent actions for debugging and auditing.
+
+### 09 - Observability, Telemetry, Tracing
+**Topics**: Telemetry data, privacy, disabling telemetry
+
+Understand what data is collected and how to opt out.
+
+### 10 - Extracting Data
+**Topics**: Using `get()`, structured data extraction, response schemas
+
+Extract information from screens using the `get()` method with Pydantic models.
+
+### 11 - File Support
+**Topics**: PDFs, Excel, Word documents, file processing
+
+Work with different file formats for data extraction.
 
 ## Additional Resources
-
-- **Extracting Data**: See `extracting-data.md` for detailed guide on using `get()` to extract structured data
-- **File Support**: See `file-support.md` for working with PDFs, Excel, Word documents
-- **Examples**: Check the `examples/` directory for complete working code
 - **GitHub Issues**: https://github.com/askui/vision-agent/issues
 - **Official Docs**: https://docs.askui.com
+- **Examples**: Check the `examples/` directory for complete working code
 
 ## Quick Start Example
 
@@ -93,10 +115,3 @@ with ComputerAgent() as agent:
     )
 ```
 
-## Next Steps
-
-1. **[01_Setup.md](./01_Setup.md)** - Install AskUI Vision Agent and AgentOS
-2. **[02_Prompting.md](./02_Prompting.md)** - Learn to guide AI agents effectively
-3. **[03_Using-Models-and-BYOM.md](./03_Using-Models-and-BYOM.md)** - Choose and customize models
-
-Let's get started! 🚀

@@ -8,7 +8,7 @@ The Vision Agent uses system prompts to understand:
 - What actions it can perform
 - What device/platform it's operating on
 - Specific information about your UI
-- How to format execution reports
+- How to format test reports
 - Special rules or edge cases to handle
 
 The default prompts work well for general use cases, but customizing them for your specific application can significantly improve reliability and performance.
@@ -25,7 +25,7 @@ System prompts for the AskUI ComputerAgent consist of six distinct parts:
 | Report Format | Yes | Specifies how to format execution results |
 | Cache Use | Yes | Specifices when and how the agent should use cache files |
 | Additional Rules | No | Special handling for edge cases or known issues |
-
+---
 ### 1. System Capabilities
 
 Defines the agent's core capabilities and operational guidelines.
