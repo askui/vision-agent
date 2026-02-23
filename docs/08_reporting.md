@@ -1,9 +1,12 @@
 # Reporting
 
-Reporting provides human-readable logs of agent actions, perfect for debugging, auditing, and understanding agent behavior during development and testing.
+We distinguish two types of reports: **execution reports** and **test reports**:
+- **execution reports** provide human-readable logs of agent actionsfor debugging, auditing, and understanding agent behavior
+- **test reports** provide a summary and analysis of executed test cases and identified defects
 
-## Built-in Reporters
+## Execution Reports
 
+### Html Report
 AskUI Vision Agent includes `SimpleHtmlReporter`, which generates an HTML report of all agent actions with screenshots:
 
 ```python
@@ -29,7 +32,7 @@ This generates an HTML file (typically in the current directory) showing:
 SimpleHtmlReporter(output_dir="./reports", filename="agent_run.html")
 ```
 
-## Custom Reporters
+### Custom Reporters
 
 Create custom reporters by implementing the `Reporter` interface:
 
@@ -102,3 +105,8 @@ with ComputerAgent(reporters=[
 Reporters are called in order:
 1. `add_message()` is called for each message on all reporters
 2. `generate()` is called on all reporters when the agent finishes or exits
+
+---
+
+## Test Reports
+tbd
