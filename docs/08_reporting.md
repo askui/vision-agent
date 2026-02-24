@@ -29,7 +29,7 @@ This generates an HTML file (typically in the current directory) showing:
 **Configuration:**
 ```python
 # Specify output location
-SimpleHtmlReporter(output_dir="./reports", filename="agent_run.html")
+SimpleHtmlReporter(output_dir="./execution_reports", filename="agent_run.html")
 ```
 
 ### Custom Reporters
