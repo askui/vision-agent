@@ -30,27 +30,6 @@ Whether you're automating desktop apps, testing mobile applications, or building
 
 ## Quick Examples
 
-### Programmatic UI Automation
-
-Control your devices with simple, vision-based commands:
-
-```python
-from askui import ComputerAgent
-
-with ComputerAgent() as agent:
-    # Click on a button by its text
-    agent.click("Submit")
-
-    # Type into the currently focused field
-    agent.type("hello@example.com")
-
-    # Click at specific coordinates
-    agent.click(x=100, y=200)
-
-    # Find and click an element by image
-    agent.click(image="./assets/login-button.png")
-```
-
 ### Agentic UI Automation
 
 Run the script with `python <file path>`, e.g `python test.py` to see if it works.
