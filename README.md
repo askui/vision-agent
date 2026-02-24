@@ -7,11 +7,11 @@
 
 Join the [AskUI Discord](https://discord.gg/Gu35zMGxbx).
 
-## Why AskUI Vision Agent?
+## Why AskUI?
 
 Traditional UI automation is fragile. Every time a button moves, a label changes, or a layout shifts, your scripts break. You're stuck maintaining brittle selectors, writing conditional logic for edge cases, and constantly updating tests.
 
-**AskUI Vision Agent solves this by combining two powerful approaches:**
+**AskUI Agents solve this by combining two powerful approaches:**
 
 1. **Vision-based automation** - Find UI elements by what they look like or say, not by brittle XPath or CSS selectors
 2. **AI-powered agents** - Give high-level instructions and let AI figure out the steps
@@ -35,9 +35,9 @@ Whether you're automating desktop apps, testing mobile applications, or building
 Control your devices with simple, vision-based commands:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Click on a button by its text
     agent.click("Submit")
 
@@ -91,9 +91,9 @@ $env:ASKUI_TOKEN="<your-token-here>"
 #### 💻 Example
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     # Complex multi-step instruction
     agent.act(
         "Open a browser, navigate to GitHub, search for 'askui vision-agent', "
@@ -115,11 +115,11 @@ with VisionAgent() as agent:
 Add new capabilities to your agents:
 
 ```python
-from askui import VisionAgent
+from askui import ComputerAgent
 from askui.tools.store.computer import ComputerSaveScreenshotTool
 from askui.tools.store.universal import PrintToConsoleTool
 
-with VisionAgent() as agent:
+with ComputerAgent() as agent:
     agent.act(
         "Take a screenshot of the current screen and save it, then confirm",
         tools=[
