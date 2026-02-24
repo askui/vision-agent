@@ -133,17 +133,17 @@ with ComputerAgent() as agent:
 
 Ready to build your first agent? Check out our documentation:
 
-1. **[Start Here](docs/00_Overview.md)** - Overview and core concepts
-2. **[Setup](docs/01_Setup.md)** - Installation and configuration
-3. **[System Prompts](docs/02_Prompting.md)** - How to write effective instructions
-4. **[Models](docs/03_Using-Models-and-BYOM.md)** - Using and customizing AI models
-5. **[Caching](docs/04_Caching.md)** - Optimize performance and costs
-6. **[Tools](docs/05_Tools.md)** - Extend agent capabilities
-7. **[Observability](docs/06_Observability-Telemetry-Tracing.md)** - Monitor and debug agents
-
-**Additional guides:**
-- [Extracting Data](docs/extracting-data.md) - Extract structured data from screens and documents
-- [File Support](docs/file-support.md) - Work with PDFs, images, and other file types
+1. **[Start Here](docs/00_overview.md)** - Overview and core concepts
+2. **[Setup](docs/01_setup.md)** - Installation and configuration
+3. **[System Prompts](docs/02_prompting.md)** - How to write effective instructions
+4. **[Models](docs/03_using_agents.md)** - Using the AskUI ComputerAgent and AndroidAgent
+5. **[Models](docs/04_using-models.md)** - Using different models as backbone for act, get, and locate
+6. **[Models](docs/05_bring_your_own_model_provider.md)** - use your own model cloud by plugging in your own model provider
+7. **[Caching](docs/06_caching.md)** - Optimize performance and costs
+8. **[Tools](docs/07_tools.md)** - Extend agent capabilities
+9. **[Reporting](docs/08_reporting.md)** - Obtain agent logs as execution reports and summaries as test reports
+10. **[Observability](docs/09_observability_telemetry_tracing.md)** - Monitor and debug agents
+11. **[Extracting Data](docs/10_extracting_data.md)** - Extracting structured data from screenshots and files
 
 **Official documentation:** [docs.askui.com](https://docs.askui.com)
 
