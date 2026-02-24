@@ -32,6 +32,7 @@ class RetrieveCachedTestExecutions(Tool):
         )
         self._cache_dir = Path(cache_dir)
         self._trajectories_format = trajectories_format
+        self.is_cacheable = True
 
     @override
     @validate_call
