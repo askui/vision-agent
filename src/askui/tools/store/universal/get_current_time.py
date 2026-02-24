@@ -31,7 +31,7 @@ class GetCurrentTimeTool(Tool):
             name="get_current_time_tool",
             description=(
                 "Returns the current date and time in the local timezone. "
-                "Use when you need to know the current time for scheduling, "
+                "Use this tool when you need to know the current time for scheduling, "
                 "logging, or time-dependent decisions."
             ),
             input_schema={

@@ -30,7 +30,7 @@ class WaitTool(Tool):
         ```
     """
 
-    def __init__(self, max_wait_time: int = 60 * 60) -> None:
+    def __init__(self, max_wait_time: int = 10 * 60) -> None:
         if max_wait_time < 1:
             msg = "Max wait time must be at least 1 second"
             raise ValueError(msg)
