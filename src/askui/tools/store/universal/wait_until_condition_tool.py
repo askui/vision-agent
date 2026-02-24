@@ -49,7 +49,7 @@ class WaitUntilConditionTool(Tool):
         self,
         condition_check: Callable[[], bool],
         description: str,
-        max_wait_time: float = 60 * 60,
+        max_wait_time: int = 60 * 60,
     ) -> None:
         if max_wait_time < 1:
             msg = "Max wait time must be at least 1 second"
@@ -69,6 +69,7 @@ class WaitUntilConditionTool(Tool):
                         "description": (
                             "Maximum time to wait in seconds before giving up."
                         ),
+                        "minimum": 1,
                         "maximum": int(max_wait_time),
                     },
                     "check_interval": {
@@ -78,6 +79,7 @@ class WaitUntilConditionTool(Tool):
                             "(e.g. 5 for every 5 seconds). Must be at least 1."
                         ),
                         "minimum": 1,
+                        "maximum": int(max_wait_time),
                     },
                 },
                 "required": ["max_wait_time"],
