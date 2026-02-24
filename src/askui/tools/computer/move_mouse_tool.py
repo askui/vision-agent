@@ -26,6 +26,7 @@ class ComputerMoveMouseTool(ComputerBaseTool):
             agent_os=agent_os,
             required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
+        self.is_cacheable = True
 
     def __call__(self, x: int, y: int) -> str:
         self.agent_os.mouse_move(x, y)

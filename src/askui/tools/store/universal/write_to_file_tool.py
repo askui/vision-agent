@@ -94,6 +94,7 @@ class WriteToFileTool(Tool):
         )
         self._base_dir = Path(base_dir)
         self._base_dir.mkdir(parents=True, exist_ok=True)
+        self.is_cacheable = False
 
     def __call__(self, file_path: str, content: str, append: bool) -> str:
         """

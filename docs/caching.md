@@ -222,7 +222,7 @@ with VisionAgent() as agent:
     # 4. Agent uses ExecuteCachedTrajectory with start_from_step_index to resume
 ```
 
-Tools can be marked as non-cacheable by setting `is_cacheable=False` in their definition. When trajectory execution reaches a non-cacheable tool, it pauses and returns control to the agent for manual execution.
+Tools can be marked as cacheable or non-cacheable by setting the `is_cacheable` flag in their definition. When trajectory execution reaches a non-cacheable tool, it pauses and returns control to the agent for manual execution.
 
 ### Continuing from a Specific Step
 
@@ -586,9 +586,11 @@ This visibility allows the agent to:
 - Detect when execution has diverged from expectations
 - Make informed decisions about corrections or retries
 
-### Non-Cacheable Tools
+### Cacheable and Non-Cacheable Tools
 
-Tools can be marked as non-cacheable by setting `is_cacheable=False` in their definition:
+**Evaluating if a tool is cacheable or not, is mainly determined by its parameters: _Are they dynamic or the same in a future execution?_**
+
+Tools can be marked as non-cacheable by setting `is_cacheable=False` in their definition (default):
 
 ```python
 from askui.models.shared.tools import Tool
@@ -602,6 +604,21 @@ class DebugPrintTool(Tool):
         # Tool implementation...
         pass
 ```
+
+Tools that should be executed by the CacheExecutor must be marked accordingly with `is_cacheable=True` in their definition:
+```python
+from askui.models.shared.tools import Tool
+
+class PrintCurrentTime(Tool):
+    name = "print_current_time"
+    description = "Print the current time"
+    is_cacheable = True  # this tool can be handled by the cached executor
+
+    def __call__(self) -> str:
+        # Tool implementation...
+        pass
+```
+
 
 During trajectory execution, when a non-cacheable tool is encountered:
 
@@ -1219,7 +1236,7 @@ Visual validation is implemented across three main components: `CacheWriter` enh
 
 - **Verify Results**: Always verify cached execution outcomes match expectations
 - **Use Cache Parameters**: Identify and parameterize dynamic values (dates, IDs, usernames)
-- **Mark Non-Cacheable Tools**: Properly mark tools requiring agent intervention with `is_cacheable=False`
+- **Mark Cacheable and Non-Cacheable Tools**: Properly mark tools requiring agent intervention with `is_cacheable=False` and tools that can be handled by teh CacheExecutor with `is_cacheable=True`
 - **Monitor Cache Validity**: Track execution attempts and failures to identify stale caches
 - **Version Your Caches**: Use descriptive filenames for different app versions
 - **Adjust Delays**: Tune `delay_time_between_action` based on app responsiveness

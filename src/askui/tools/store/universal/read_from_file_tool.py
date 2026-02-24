@@ -56,6 +56,7 @@ class ReadFromFileTool(Tool):
             },
         )
         self._base_dir = Path(base_dir)
+        self.is_cacheable = True
 
     def __call__(self, file_path: str) -> str:
         """

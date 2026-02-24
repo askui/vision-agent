@@ -168,12 +168,13 @@ class Tool(BaseModel, ABC):
         description="JSON schema for tool parameters",
     )
     is_cacheable: bool = Field(
-        default=True,
+        default=False,
         description=(
             "Whether this tool's execution can be cached. "
+            "Set to True if the tool can be replayed by the CacheExecutor."
             "Set to False for tools with side effects that shouldn't be repeated "
             "(e.g., print/output/notification/external API tools with state changes). "
-            "Default: True."
+            "Default: False."
         ),
     )
     required_tags: list[str] = Field(
