@@ -155,7 +155,7 @@ pip install askui[all]
 
 **Requires Python >=3.10, <3.14**
 
-You'll also need to install AskUI Agent OS for device control. See [Setup Guide](docs/01_Setup.md) for detailed instructions.
+You'll also need to install AskUI Agent OS for device control. See [Setup Guide](docs/01_setup.md) for detailed instructions.
 
 
 ## License
