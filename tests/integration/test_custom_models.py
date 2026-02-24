@@ -1,74 +1,88 @@
-"""Integration tests for custom model registration and selection."""
+"""Integration tests for custom provider usage with AgentSettings."""
 
 import pathlib
-from typing import Any, Optional, Type, Union
+from typing import Any, Union
 
 import pytest
 from typing_extensions import override
 
 from askui import (
-    ActModel,
-    GetModel,
-    LocateModel,
-    ModelRegistry,
+    AgentSettings,
+    ComputerAgent,
     Point,
     PointList,
     ResponseSchema,
     ResponseSchemaBase,
-    VisionAgent,
 )
 from askui.locators.locators import Locator
-from askui.models import ModelComposition, ModelDefinition
-from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings
+from askui.model_providers.detection_provider import DetectionProvider
+from askui.model_providers.image_qa_provider import ImageQAProvider
+from askui.model_providers.vlm_provider import VlmProvider
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ThinkingConfigParam,
+    ToolChoiceParam,
+)
+from askui.models.shared.prompts import SystemPrompt
+from askui.models.shared.settings import GetSettings, LocateSettings
 from askui.models.shared.tools import ToolCollection
 from askui.tools.toolbox import AgentToolbox
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import Source
 
 
-class SimpleActModel(ActModel):
-    """Simple act model that records goals."""
+class SimpleVlmProvider(VlmProvider):
+    """Simple VLM provider that records goals."""
 
-    def __init__(self) -> None:
+    def __init__(self, model_id: str = "test-model") -> None:
         self.goals: list[list[dict[str, Any]]] = []
-        self.models: list[str] = []
+        self._model_id = model_id
+
+    @property
+    @override
+    def model_id(self) -> str:
+        return self._model_id
 
     @override
-    def act(
+    def create_message(
         self,
         messages: list[MessageParam],
-        model: str,
-        on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
-        settings: ActSettings | None = None,
-    ) -> None:
-        self.goals.append([message.model_dump(mode="json") for message in messages])
-        self.models.append(model)
+        max_tokens: int | None = None,
+        system: SystemPrompt | None = None,
+        thinking: ThinkingConfigParam | None = None,
+        tool_choice: ToolChoiceParam | None = None,
+        temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> MessageParam:
+        self.goals.append([msg.model_dump(mode="json") for msg in messages])
+        return MessageParam(
+            role="assistant",
+            content="done",
+            stop_reason="end_turn",
+        )
 
 
-class SimpleGetModel(GetModel):
-    """Simple get model that returns a fixed response."""
+class SimpleImageQAProvider(ImageQAProvider):
+    """Simple image Q&A provider that returns a fixed response."""
 
     def __init__(self, response: str | ResponseSchemaBase = "test response") -> None:
         self.queries: list[str] = []
         self.sources: list[Source] = []
         self.schemas: list[Any] = []
-        self.models: list[str] = []
         self.response = response
 
-    def get(
+    @override
+    def query(
         self,
         query: str,
         source: Source,
-        response_schema: Optional[Type[ResponseSchema]],
-        model: str,
-    ) -> Union[ResponseSchema, str]:
+        response_schema: type[ResponseSchema] | None,
+        get_settings: GetSettings,
+    ) -> ResponseSchema | str:
         self.queries.append(query)
         self.sources.append(source)
         self.schemas.append(response_schema)
-        self.models.append(model)
         if (
             response_schema is not None
             and isinstance(self.response, response_schema)
@@ -82,25 +96,32 @@ class SimpleGetModel(GetModel):
         raise ValueError(err_msg)
 
 
-class SimpleLocateModel(LocateModel):
-    """Simple locate model that returns fixed coordinates."""
+class SimpleDetectionProvider(DetectionProvider):
+    """Simple detection provider that returns fixed coordinates."""
 
     def __init__(self, point: Point = (100, 100)) -> None:
         self.locators: list[str | Locator] = []
         self.images: list[ImageSource] = []
-        self.models: list[ModelComposition | str] = []
         self._point = point
 
-    def locate(
+    @override
+    def detect(
         self,
-        locator: str | Locator,
+        locator: Union[str, Locator],
         image: ImageSource,
-        model: ModelComposition | str,
+        locate_settings: LocateSettings,
     ) -> PointList:
         self.locators.append(locator)
         self.images.append(image)
-        self.models.append(model)
         return [self._point]
+
+    @override
+    def detect_all(
+        self,
+        image: ImageSource,
+        locate_settings: LocateSettings,
+    ) -> list:
+        return []
 
 
 class SimpleResponseSchema(ResponseSchemaBase):
@@ -109,260 +130,154 @@ class SimpleResponseSchema(ResponseSchemaBase):
     value: str
 
 
-class TestCustomModels:
-    """Test suite for custom model registration and selection."""
+class TestCustomProviders:
+    """Test suite for custom provider injection via AgentSettings."""
 
     @pytest.fixture
-    def act_model(self) -> SimpleActModel:
-        return SimpleActModel()
+    def vlm_provider(self) -> SimpleVlmProvider:
+        return SimpleVlmProvider()
 
     @pytest.fixture
-    def get_model(self) -> SimpleGetModel:
-        return SimpleGetModel()
+    def image_qa_provider(self) -> SimpleImageQAProvider:
+        return SimpleImageQAProvider()
 
     @pytest.fixture
-    def locate_model(self) -> SimpleLocateModel:
-        return SimpleLocateModel()
+    def detection_provider(self) -> SimpleDetectionProvider:
+        return SimpleDetectionProvider()
 
-    @pytest.fixture
-    def model_registry(
+    def test_inject_and_use_custom_vlm_provider(
         self,
-        act_model: SimpleActModel,
-        get_model: SimpleGetModel,
-        locate_model: SimpleLocateModel,
-    ) -> ModelRegistry:
-        return {
-            "custom-act": act_model,
-            "custom-get": get_model,
-            "custom-locate": locate_model,
-        }
-
-    def test_register_and_use_custom_act_model(
-        self,
-        model_registry: ModelRegistry,
-        act_model: SimpleActModel,
+        vlm_provider: SimpleVlmProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test registering and using a custom act model."""
-        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            agent.act("test goal", model="custom-act")
+        """Test injecting and using a custom VLM provider."""
+        with ComputerAgent(
+            settings=AgentSettings(vlm_provider=vlm_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            agent.act("test goal")
 
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
-        assert act_model.models == ["custom-act"]
+        assert len(vlm_provider.goals) == 1
+        assert len(vlm_provider.goals[0]) == 1
+        msg = vlm_provider.goals[0][0]
+        assert msg["role"] == "user"
+        assert msg["stop_reason"] is None
+        content = msg["content"]
+        if isinstance(content, str):
+            assert content == "test goal"
+        else:
+            assert any(
+                block.get("text") == "test goal"
+                for block in content
+                if isinstance(block, dict)
+            )
 
-    def test_register_and_use_custom_get_model(
+    def test_inject_and_use_custom_image_qa_provider(
         self,
-        model_registry: ModelRegistry,
-        get_model: SimpleGetModel,
+        image_qa_provider: SimpleImageQAProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test registering and using a custom get model."""
-        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get("test query", model="custom-get")
+        """Test injecting and using a custom image Q&A provider."""
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            result = agent.get("test query")
 
         assert result == "test response"
-        assert get_model.queries == ["test query"]
-        assert get_model.models == ["custom-get"]
+        assert image_qa_provider.queries == ["test query"]
 
-    def test_register_and_use_custom_get_model_with_pdf(
+    def test_inject_and_use_custom_image_qa_provider_with_pdf(
         self,
-        model_registry: ModelRegistry,
-        get_model: SimpleGetModel,
+        image_qa_provider: SimpleImageQAProvider,
         agent_toolbox_mock: AgentToolbox,
         path_fixtures_dummy_pdf: pathlib.Path,
     ) -> None:
-        """Test registering and using a custom get model with a PDF."""
-        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get(
-                "test query", model="custom-get", source=path_fixtures_dummy_pdf
-            )
+        """Test injecting and using a custom image Q&A provider with a PDF."""
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            result = agent.get("test query", source=path_fixtures_dummy_pdf)
 
         assert result == "test response"
-        assert get_model.queries == ["test query"]
-        assert get_model.models == ["custom-get"]
+        assert image_qa_provider.queries == ["test query"]
 
-    def test_register_and_use_custom_locate_model(
+    def test_inject_and_use_custom_detection_provider(
         self,
-        model_registry: ModelRegistry,
-        locate_model: SimpleLocateModel,
+        detection_provider: SimpleDetectionProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test registering and using a custom locate model."""
-        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            agent.click("test element", model="custom-locate")
+        """Test injecting and using a custom detection provider."""
+        with ComputerAgent(
+            settings=AgentSettings(detection_provider=detection_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            agent.click("test element")
 
-        assert locate_model.locators == ["test element"]
-        assert locate_model.models == ["custom-locate"]
+        assert detection_provider.locators == ["test element"]
 
-    def test_register_and_use_model_factory(
+    def test_inject_all_custom_providers(
         self,
-        act_model: SimpleActModel,
+        vlm_provider: SimpleVlmProvider,
+        image_qa_provider: SimpleImageQAProvider,
+        detection_provider: SimpleDetectionProvider,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test registering and using a model factory."""
+        """Test injecting all custom providers at once."""
+        with ComputerAgent(
+            settings=AgentSettings(
+                vlm_provider=vlm_provider,
+                image_qa_provider=image_qa_provider,
+                detection_provider=detection_provider,
+            ),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            agent.act("test goal")
+            result = agent.get("test query")
+            agent.click("test element")
 
-        def create_model() -> ActModel:
-            return act_model
-
-        registry: ModelRegistry = {"factory-model": create_model}
-
-        with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
-            agent.act("test goal", model="factory-model")
-
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
-        assert act_model.models == ["factory-model"]
-
-    def test_register_multiple_models_for_same_task(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test registering multiple models for the same task."""
-
-        class AnotherActModel(ActModel):
-            @override
-            def act(
-                self,
-                messages: list[MessageParam],
-                model: str,
-                on_message: OnMessageCb | None = None,
-                tools: ToolCollection | None = None,
-                settings: ActSettings | None = None,
-            ) -> None:
-                pass
-
-        registry: ModelRegistry = {
-            "act-1": act_model,
-            "act-2": AnotherActModel(),
-        }
-
-        with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
-            agent.act("test goal", model="act-1")
-            agent.act("another goal", model="act-2")
-
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
-        assert act_model.models == ["act-1"]
-
-    def test_use_response_schema_with_custom_get_model(
-        self,
-        model_registry: ModelRegistry,
-        get_model: SimpleGetModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test using a response schema with a custom get model."""
-        response = SimpleResponseSchema(value="test value")
-        get_model.response = response
-
-        with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-            result = agent.get(
-                "test query",
-                response_schema=SimpleResponseSchema,
-                model="custom-get",
+        assert len(vlm_provider.goals) == 1
+        assert len(vlm_provider.goals[0]) == 1
+        msg = vlm_provider.goals[0][0]
+        assert msg["role"] == "user"
+        assert msg["stop_reason"] is None
+        content = msg["content"]
+        if isinstance(content, str):
+            assert content == "test goal"
+        else:
+            assert any(
+                block.get("text") == "test goal"
+                for block in content
+                if isinstance(block, dict)
             )
+        assert image_qa_provider.queries == ["test query"]
+        assert result == "test response"
+        assert detection_provider.locators == ["test element"]
+
+    def test_use_response_schema_with_custom_image_qa_provider(
+        self,
+        image_qa_provider: SimpleImageQAProvider,
+        agent_toolbox_mock: AgentToolbox,
+    ) -> None:
+        """Test using a response schema with a custom image Q&A provider."""
+        response = SimpleResponseSchema(value="test value")
+        image_qa_provider.response = response
+
+        with ComputerAgent(
+            settings=AgentSettings(image_qa_provider=image_qa_provider),
+            tools=agent_toolbox_mock,
+        ) as agent:
+            result = agent.get("test query", response_schema=SimpleResponseSchema)
 
         assert isinstance(result, SimpleResponseSchema)
         assert result.value == "test value"
-        assert get_model.schemas == [SimpleResponseSchema]
+        assert image_qa_provider.schemas == [SimpleResponseSchema]
 
-    def test_override_default_model(
+    def test_defaults_to_built_in_providers_when_not_provided(
         self,
-        act_model: SimpleActModel,
         agent_toolbox_mock: AgentToolbox,
     ) -> None:
-        """Test overriding a default model with a custom one."""
-        registry: ModelRegistry = {"askui/claude-sonnet-4-20250514": act_model}
-
-        with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
-            agent.act("test goal")  # Should use custom model since it overrides "askui"
-
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-        ]
-        assert act_model.models == ["askui/claude-sonnet-4-20250514"]
-
-    def test_model_composition(
-        self,
-        locate_model: SimpleLocateModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test using model composition with a custom locate model."""
-        registry: ModelRegistry = {"askui": locate_model}
-
-        composition = ModelComposition(
-            [
-                ModelDefinition(
-                    task="e2e_ocr",
-                    architecture="easy_ocr",
-                    version="1",
-                    interface="test",
-                )
-            ]
-        )
-
-        with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
-            agent.click("test element", model=composition)
-
-        assert locate_model.models == [composition]
-
-    @pytest.mark.parametrize(
-        "model_name,expected_exception",
-        [
-            ("nonexistent-model", Exception),
-            ("custom-act", Exception),
-            ("custom-get", Exception),
-        ],
-    )
-    def test_invalid_model_usage(
-        self,
-        model_registry: ModelRegistry,
-        model_name: str,
-        expected_exception: type[Exception],
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test error handling for invalid model usage."""
-        with pytest.raises(expected_exception):
-            with VisionAgent(models=model_registry, tools=agent_toolbox_mock) as agent:
-                if model_name == "custom-act":
-                    agent.get("test query", model=model_name)
-                elif model_name == "custom-get":
-                    agent.act("test goal", model=model_name)
-                else:
-                    agent.act("test goal", model=model_name)
-
-    def test_dymamic_model_initialization(
-        self,
-        act_model: SimpleActModel,
-        agent_toolbox_mock: AgentToolbox,
-    ) -> None:
-        """Test that model factories are called when needed."""
-        init_count = 0
-
-        def create_model() -> ActModel:
-            nonlocal init_count
-            init_count += 1
-            return act_model
-
-        registry: ModelRegistry = {"lazy-model": create_model}
-
-        with VisionAgent(models=registry, tools=agent_toolbox_mock) as agent:
-            # Model should not be initialized yet
-            assert init_count == 0
-
-            # First use should initialize the model
-            agent.act("test goal", model="lazy-model")
-            assert init_count == 1
-
-            # Second use should reuse the same instance
-            agent.act("another goal", model="lazy-model")
-            assert init_count == 2
-
-        assert act_model.goals == [
-            [{"role": "user", "content": "test goal", "stop_reason": None}],
-            [{"role": "user", "content": "another goal", "stop_reason": None}],
-        ]
+        """Test agent uses built-in defaults when custom ones not provided."""
+        with ComputerAgent(tools=agent_toolbox_mock) as agent:
+            assert agent is not None

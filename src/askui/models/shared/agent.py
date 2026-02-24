@@ -1,3 +1,5 @@
+"""AskUIAgent — core tool-calling act loop for autonomous agents."""
+
 import logging
 
 from typing_extensions import override
@@ -23,13 +25,14 @@ from askui.reporting import NULL_REPORTER, Reporter
 logger = logging.getLogger(__name__)
 
 
-class Agent(ActModel):
+class AskUIAgent(ActModel):
     """Base class for agents that can execute autonomous actions.
 
     This class provides common functionality for both AskUI and Anthropic agents,
     including tool handling, message processing, and image filtering.
 
     Args:
+        model_id (str): The identifier of the LLM to use.
         messages_api (MessagesApi): Messages API for creating messages.
         reporter (Reporter, optional): The reporter for logging messages and actions.
             Defaults to `NULL_REPORTER`.
@@ -41,10 +44,12 @@ class Agent(ActModel):
 
     def __init__(
         self,
+        model_id: str,
         messages_api: MessagesApi,
         reporter: Reporter = NULL_REPORTER,
         truncation_strategy_factory: TruncationStrategyFactory | None = None,
     ) -> None:
+        self._model_id = model_id
         self._messages_api = messages_api
         self._reporter = reporter
         self._truncation_strategy_factory = (
@@ -53,7 +58,6 @@ class Agent(ActModel):
 
     def _step(
         self,
-        model: str,
         on_message: OnMessageCb,
         settings: ActSettings,
         tool_collection: ToolCollection,
@@ -66,9 +70,8 @@ class Agent(ActModel):
         upon.
 
         Args:
-            model (str): The model to use for message creation.
             on_message (OnMessageCb): Callback on new messages
-            settings (AgentSettings): The settings for the step.
+            settings (ActSettings): The settings for the step.
             tool_collection (ToolCollection): The tools to use for the step.
             truncation_strategy (TruncationStrategy): The truncation strategy to use
                 for the step.
@@ -79,14 +82,14 @@ class Agent(ActModel):
         if truncation_strategy.messages[-1].role == "user":
             response_message = self._messages_api.create_message(
                 messages=truncation_strategy.messages,
-                model=model,
+                model_id=self._model_id,
                 tools=tool_collection,
                 max_tokens=settings.messages.max_tokens,
-                betas=settings.messages.betas,
                 system=settings.messages.system,
                 thinking=settings.messages.thinking,
                 tool_choice=settings.messages.tool_choice,
                 temperature=settings.messages.temperature,
+                provider_options=settings.messages.provider_options,
             )
             message_by_assistant = self._call_on_message(
                 on_message, response_message, truncation_strategy.messages
@@ -112,7 +115,6 @@ class Agent(ActModel):
                 logger.debug(tool_result_message_dict)
                 truncation_strategy.append_message(tool_result_message)
                 self._step(
-                    model=model,
                     tool_collection=tool_collection,
                     on_message=on_message,
                     settings=settings,
@@ -133,26 +135,23 @@ class Agent(ActModel):
     def act(
         self,
         messages: list[MessageParam],
-        model: str,
+        act_settings: ActSettings,
         on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
-        settings: ActSettings | None = None,
     ) -> None:
-        _settings = settings or ActSettings()
         _tool_collection = tools or ToolCollection()
 
         truncation_strategy = (
             self._truncation_strategy_factory.create_truncation_strategy(
                 tools=_tool_collection.to_params(),
-                system=_settings.messages.system,
+                system=act_settings.messages.system,
                 messages=messages,
-                model=model,
+                model=self._model_id,
             )
         )
         self._step(
-            model=model,
             on_message=on_message or NULL_ON_MESSAGE_CB,
-            settings=_settings,
+            settings=act_settings,
             tool_collection=_tool_collection,
             truncation_strategy=truncation_strategy,
         )

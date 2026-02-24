@@ -183,7 +183,7 @@ class Display(BaseModel):
     )
 
     id: int = Field(validation_alias="displayID")
-    name: str = Field(validation_alias="name")
+    name: str | None = Field(default=None, validation_alias="name")
     size: DisplaySize = Field(validation_alias="sizeInPixels")
 
 

@@ -5,7 +5,7 @@ import pytest
 from PIL import Image as PILImage
 from pytest_mock import MockerFixture
 
-from askui.models.openrouter.model import OpenRouterModel
+from askui.models.openrouter.get_model import OpenRouterModel
 from askui.models.openrouter.settings import OpenRouterSettings
 from askui.utils.image_utils import ImageSource
 
@@ -31,7 +31,9 @@ def mock_openai_client(mocker: MockerFixture) -> MagicMock:
 def openrouter_model(
     settings: OpenRouterSettings, mock_openai_client: MagicMock
 ) -> OpenRouterModel:
-    return OpenRouterModel(settings=settings, client=mock_openai_client)
+    return OpenRouterModel(
+        model_id="test-model", settings=settings, client=mock_openai_client
+    )
 
 
 @pytest.fixture

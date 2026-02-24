@@ -159,3 +159,23 @@ class ModelRefusalError(AutomationError):
         super().__init__(
             "Model refused to process the request" if message is None else message
         )
+
+
+class IncompatibleApiError(AutomationError):
+    """Exception raised when an incompatible API is used with a model.
+
+    Args:
+        model_name (str): The name of the model.
+        expected_api (str): The expected API type.
+        actual_api (str): The actual API type that was provided.
+    """
+
+    def __init__(self, model_name: str, expected_api: str, actual_api: str):
+        self.model_name = model_name
+        self.expected_api = expected_api
+        self.actual_api = actual_api
+        error_msg = (
+            f"Model '{model_name}' is only compatible with {expected_api}, "
+            f"but received {actual_api}"
+        )
+        super().__init__(error_msg)

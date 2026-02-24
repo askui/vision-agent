@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from askui.agent import VisionAgent
+from askui.agent import ComputerAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import CachedExecutionToolSettings, CachingSettings
 
 
-def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
+def test_act_with_caching_strategy_read(vision_agent: ComputerAgent) -> None:
     """Test that caching_strategy='read' adds retrieve and execute tools."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a dummy cache file
@@ -31,7 +31,7 @@ def test_act_with_caching_strategy_read(vision_agent: VisionAgent) -> None:
         assert True
 
 
-def test_act_with_caching_strategy_write(vision_agent: VisionAgent) -> None:
+def test_act_with_caching_strategy_write(vision_agent: ComputerAgent) -> None:
     """Test that caching_strategy='write' writes cache file."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
@@ -52,7 +52,7 @@ def test_act_with_caching_strategy_write(vision_agent: VisionAgent) -> None:
         assert cache_file.exists()
 
 
-def test_act_with_caching_strategy_both(vision_agent: VisionAgent) -> None:
+def test_act_with_caching_strategy_both(vision_agent: ComputerAgent) -> None:
     """Test that caching_strategy='both' enables both read and write."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
@@ -77,7 +77,7 @@ def test_act_with_caching_strategy_both(vision_agent: VisionAgent) -> None:
         assert output_file.exists()
 
 
-def test_act_with_caching_strategy_no(vision_agent: VisionAgent) -> None:
+def test_act_with_caching_strategy_no(vision_agent: ComputerAgent) -> None:
     """Test that caching_strategy='no' doesn't create cache files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
@@ -96,7 +96,7 @@ def test_act_with_caching_strategy_no(vision_agent: VisionAgent) -> None:
         assert len(cache_files) == 0
 
 
-def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> None:
+def test_act_with_custom_cache_dir_and_filename(vision_agent: ComputerAgent) -> None:
     """Test that custom cache_dir and cache_filename are used."""
     with tempfile.TemporaryDirectory() as temp_dir:
         custom_cache_dir = Path(temp_dir) / "custom_cache"
@@ -119,7 +119,7 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: VisionAgent) -> No
 
 
 def test_act_with_on_message_and_write_caching_raises_error(
-    vision_agent: VisionAgent,
+    vision_agent: ComputerAgent,
 ) -> None:
     """Test that providing on_message callback with write caching raises ValueError."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -140,7 +140,7 @@ def test_act_with_on_message_and_write_caching_raises_error(
 
 
 def test_act_with_on_message_and_both_caching_raises_error(
-    vision_agent: VisionAgent,
+    vision_agent: ComputerAgent,
 ) -> None:
     """Test that providing on_message callback with both caching raises ValueError."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -160,7 +160,7 @@ def test_act_with_on_message_and_both_caching_raises_error(
             )
 
 
-def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
+def test_cache_file_contains_tool_use_blocks(vision_agent: ComputerAgent) -> None:
     """Test that cache file contains ToolUseBlockParam entries."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
@@ -194,7 +194,7 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: VisionAgent) -> None:
 
 
 def test_act_with_custom_cached_execution_tool_settings(
-    vision_agent: VisionAgent,
+    vision_agent: ComputerAgent,
 ) -> None:
     """Test that custom CachedExecutionToolSettings are applied."""
     with tempfile.TemporaryDirectory() as temp_dir:

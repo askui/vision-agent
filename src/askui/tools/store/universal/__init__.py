@@ -1,7 +1,7 @@
 """Universal tools that work with any agent type.
 
 These tools don't require agent_os and can be used with VisionAgent,
-AndroidVisionAgent, or any other agent type.
+AndroidAgent, or any other agent type.
 """
 
 from .list_files_tool import ListFilesTool

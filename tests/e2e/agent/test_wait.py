@@ -1,5 +1,5 @@
 # mypy: disable-error-code="method-assign"
-"""Tests for VisionAgent wait functionality."""
+"""Tests for Agent wait functionality."""
 
 import time
 from unittest.mock import Mock
@@ -8,15 +8,15 @@ import pytest
 from PIL import Image as PILImage
 from pydantic import ValidationError
 
-from askui.agent import VisionAgent
+from askui.agent import ComputerAgent
 from askui.locators import Element
 from askui.models.exceptions import WaitUntilError
 
 
-class TestVisionAgentWait:
-    """Test class for VisionAgent wait functionality."""
+class TestAgentWait:
+    """Test class for Agent wait functionality."""
 
-    def test_wait_duration_float(self, vision_agent: VisionAgent) -> None:
+    def test_wait_duration_float(self, vision_agent: ComputerAgent) -> None:
         """Test waiting for a specific duration (float)."""
         start_time = time.time()
         wait_duration = 0.5
@@ -28,7 +28,7 @@ class TestVisionAgentWait:
         assert elapsed_time >= wait_duration - 0.1
         assert elapsed_time <= wait_duration + 0.2
 
-    def test_wait_duration_int(self, vision_agent: VisionAgent) -> None:
+    def test_wait_duration_int(self, vision_agent: ComputerAgent) -> None:
         """Test waiting for a specific duration (int)."""
         start_time = time.time()
         wait_duration = 1
@@ -42,7 +42,7 @@ class TestVisionAgentWait:
 
     def test_wait_for_element_appear_success(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         white_page_screenshot: PILImage.Image,
     ) -> None:
@@ -53,29 +53,27 @@ class TestVisionAgentWait:
         mock_screenshot = Mock(
             side_effect=[white_page_screenshot, github_login_screenshot]
         )
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since element exists
         vision_agent.wait(locator, retry_count=3, delay=0.1, until_condition="appear")
 
         # Verify locate was called
-        assert vision_agent._model_router.locate.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_appear_failure(
-        self, vision_agent: VisionAgent, white_page_screenshot: PILImage.Image
+        self, vision_agent: ComputerAgent, white_page_screenshot: PILImage.Image
     ) -> None:
         """Test waiting for an element to appear (failure case)."""
         locator = "Forgot password?"
 
         # Mock screenshot to return white page where element doesn't exist
         mock_screenshot = Mock(return_value=white_page_screenshot)
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should raise WaitUntilError since element doesn't exist
         with pytest.raises(WaitUntilError) as exc_info:
@@ -88,11 +86,11 @@ class TestVisionAgentWait:
             '"Forgot password?" (similarity >= 70%)\' after 2 retries with 0.1 '
             "seconds delay" == str(exc_info.value)
         )
-        assert vision_agent._model_router.locate.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_disappear_success(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         white_page_screenshot: PILImage.Image,
     ) -> None:
@@ -103,30 +101,28 @@ class TestVisionAgentWait:
         mock_screenshot = Mock(
             side_effect=[github_login_screenshot, white_page_screenshot]
         )
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since element disappears
         vision_agent.wait(
             locator, retry_count=2, delay=0.1, until_condition="disappear"
         )
 
-        assert vision_agent._model_router.locate.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_for_element_disappear_failure(
-        self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
+        self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
     ) -> None:
         """Test waiting for an element to disappear (failure case)."""
         locator = "Forgot password?"
 
         # Mock screenshot to always show the element exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should raise WaitUntilError since element exists and won't disappear
         with pytest.raises(WaitUntilError) as exc_info:
@@ -138,47 +134,45 @@ class TestVisionAgentWait:
             "Wait until condition 'disappear' not met for locator: 'Forgot password?' "
             "after 2 retries with 0.1 seconds delay" == str(exc_info.value)
         )
-        assert vision_agent._model_router.locate.call_count == 2
+        assert mock_run.call_count == 2
 
     def test_wait_with_locator_object(
-        self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
+        self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
     ) -> None:
         """Test waiting with a Locator object."""
         locator = Element("textfield")
 
         # Mock screenshot to return the image where textfield exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should not raise an exception since textfield exists
         vision_agent.wait(locator, retry_count=2, delay=0.1, until_condition="appear")
 
-        assert vision_agent._model_router.locate.call_count >= 1
+        assert mock_run.call_count >= 1
 
     def test_wait_with_default_parameters(
-        self, vision_agent: VisionAgent, github_login_screenshot: PILImage.Image
+        self, vision_agent: ComputerAgent, github_login_screenshot: PILImage.Image
     ) -> None:
         """Test waiting with default parameters."""
         locator = "Forgot password?"
 
         # Mock screenshot to return the image where element exists
         mock_screenshot = Mock(return_value=github_login_screenshot)
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         # Should use default retry_count=3, delay=1, until_condition="appear"
         vision_agent.wait(locator)
 
-        assert vision_agent._model_router.locate.call_count >= 1
+        assert mock_run.call_count >= 1
 
     def test_wait_disappear_timing(
         self,
-        vision_agent: VisionAgent,
+        vision_agent: ComputerAgent,
         github_login_screenshot: PILImage.Image,
         white_page_screenshot: PILImage.Image,
     ) -> None:
@@ -192,18 +186,17 @@ class TestVisionAgentWait:
                 white_page_screenshot,
             ]
         )
-        vision_agent._agent_os.screenshot = mock_screenshot
-        vision_agent._model_router.locate = Mock(
-            wraps=vision_agent._model_router.locate
-        )
+        vision_agent._agent_os.screenshot = mock_screenshot  # type: ignore[union-attr]
+        mock_run = Mock(wraps=vision_agent._locate_tool.run)
+        object.__setattr__(vision_agent._locate_tool, "run", mock_run)
 
         vision_agent.wait(
             locator, until_condition="disappear", retry_count=3, delay=0.2
         )
 
-        assert vision_agent._model_router.locate.call_count == 3
+        assert mock_run.call_count == 3
 
-    def test_wait_zero_retries(self, vision_agent: VisionAgent) -> None:
+    def test_wait_zero_retries(self, vision_agent: ComputerAgent) -> None:
         """Test waiting with zero retry_count."""
         # Should fail immediately with 0 retry_count
         with pytest.raises(ValidationError):
