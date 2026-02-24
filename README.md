@@ -135,8 +135,8 @@ Ready to build your first agent? Check out our documentation:
 
 1. **[Start Here](docs/00_overview.md)** - Overview and core concepts
 2. **[Setup](docs/01_setup.md)** - Installation and configuration
-3. **[System Prompts](docs/02_prompting.md)** - How to write effective instructions
-4. **[Using Agents](docs/03_using_agents.md)** - Using the AskUI ComputerAgent and AndroidAgent
+3. **[Using Agents](docs/02_using_agents.md)** - Using the AskUI ComputerAgent and AndroidAgent
+4. **[System Prompts](docs/03_prompting.md)** - How to write effective instructions
 5. **[Using Models](docs/04_using-models.md)** - Using different models as backbone for act, get, and locate
 6. **[BYOM](docs/05_bring_your_own_model_provider.md)** - use your own model cloud by plugging in your own model provider
 7. **[Caching](docs/06_caching.md)** - Optimize performance and costs
