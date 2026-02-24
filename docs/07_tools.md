@@ -166,6 +166,8 @@ For personalized functionalities you can add customly tailored tools to your age
 
 ### 1. Tool Class Definition
 ```python
+from askui.models.shared.tools import Tool
+
 class MyCustomTool(Tool):
     """Brief description of what this tool does."""
 ```
