@@ -204,25 +204,24 @@ class Telemetry:
                 )
                 if exclude_first_arg:
                     processed_args = processed_args[1:] if processed_args else ()
-                processed_args = tuple(
-                    arg.model_dump()
-                    if isinstance(arg, BaseModel)
-                    else str(arg)
-                    if inspect.isclass(arg)
-                    else arg
-                    for arg in processed_args
-                )
+
+                def _serialize_arg(arg: Any) -> Any:
+                    if to_telemetry := getattr(arg, "to_telemetry_dict", None):
+                        if callable(to_telemetry):
+                            return to_telemetry()
+                    if isinstance(arg, BaseModel):
+                        return arg.model_dump()
+                    if inspect.isclass(arg):
+                        return str(arg)
+                    return arg
+
+                processed_args = tuple(_serialize_arg(arg) for arg in processed_args)
                 processed_kwargs = {
                     k: v if k not in _exclude else self._EXCLUDE_MASK
                     for k, v in kwargs.items()
                 }
                 processed_kwargs = {
-                    k: v.model_dump()
-                    if isinstance(v, BaseModel)
-                    else str(v)
-                    if inspect.isclass(v)
-                    else v
-                    for k, v in processed_kwargs.items()
+                    k: _serialize_arg(v) for k, v in processed_kwargs.items()
                 }
                 attributes: dict[str, Any] = {
                     "module": module,

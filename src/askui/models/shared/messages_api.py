@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
-from anthropic import Omit, omit
-from anthropic.types import AnthropicBetaParam
-from anthropic.types.beta import (
-    BetaThinkingConfigParam,
-    BetaToolChoiceParam,
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ThinkingConfigParam,
+    ToolChoiceParam,
 )
-
-from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
@@ -19,29 +17,37 @@ class MessagesApi(ABC):
     def create_message(
         self,
         messages: list[MessageParam],
-        model: str,
-        tools: ToolCollection | Omit = omit,
-        max_tokens: int | Omit = omit,
-        betas: list[AnthropicBetaParam] | Omit = omit,
+        model_id: str,
+        tools: ToolCollection | None = None,
+        max_tokens: int | None = None,
         system: SystemPrompt | None = None,
-        thinking: BetaThinkingConfigParam | Omit = omit,
-        tool_choice: BetaToolChoiceParam | Omit = omit,
-        temperature: float | Omit = omit,
+        thinking: ThinkingConfigParam | None = None,
+        tool_choice: ToolChoiceParam | None = None,
+        temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
-        """Create a message using the Anthropic API.
+        """Create a message using a Messages API (provider-agnostic).
 
         Args:
-            messages (list[MessageParam]): The messages to create a message.
-            model (str): The model to use.
-            tools (ToolCollection | Omit): The tools to use.
-            max_tokens (int | Omit): The maximum number of tokens to generate.
-            betas (list[AnthropicBetaParam] | Omit): The betas to use.
-            system (str | list[BetaTextBlockParam] | Omit): The system to use.
-            thinking (BetaThinkingConfigParam | Omit): The thinking to use.
-            tool_choice (BetaToolChoiceParam | Omit): The tool choice to use.
-            temperature (float | Omit): The temperature to use.
+            messages (list[MessageParam]): The message history.
+            model_id (str): The model identifier to use.
+            tools (ToolCollection | None): The tools available to the model.
+            max_tokens (int | None): The maximum number of tokens to generate.
+            system (SystemPrompt | None): The system prompt.
+            thinking (ThinkingConfigParam | None): Thinking configuration
+                (provider-specific).
+            tool_choice (ToolChoiceParam | None): Tool choice configuration
+                (provider-specific).
+            temperature (float | None): The sampling temperature (0-1).
+            provider_options (dict[str, Any] | None): Provider-specific options.
+                Each provider can define its own keys. Common options include:
+                - "betas": List of beta features to enable (e.g., for Anthropic)
 
         Returns:
-            MessageParam: The created message.
+            MessageParam: The created message from the model.
+
+        Note:
+            The `thinking` and `tool_choice` parameters are provider-specific
+            dictionaries. See the specific MessagesApi implementation for details.
         """
         raise NotImplementedError

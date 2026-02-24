@@ -1,20 +1,25 @@
 import logging
 import time
 import types
-from abc import ABC
-from typing import Annotated, Literal, Optional, Type, overload
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Literal, Optional, Type, overload
 
 from dotenv import load_dotenv
-from pydantic import ConfigDict, Field, field_validator, validate_call
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from PIL import Image as PILImage
+from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import Self
 
+from askui.agent_settings import AgentSettings
 from askui.container import telemetry
-from askui.data_extractor import DataExtractor
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
-from askui.models.shared.settings import ActSettings, CachingSettings
+from askui.models.shared.settings import (
+    ActSettings,
+    CachingSettings,
+    GetSettings,
+    LocateSettings,
+)
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.prompts.act_prompts import create_default_prompt
 from askui.prompts.caching import CACHE_USE_PROMPT
@@ -24,174 +29,85 @@ from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
     RetrieveCachedTestExecutions,
 )
+from askui.tools.get_tool import GetTool
+from askui.tools.locate_tool import LocateTool
 from askui.utils.annotation_writer import AnnotationWriter
 from askui.utils.cache_writer import CacheWriter
 from askui.utils.image_utils import ImageSource
-from askui.utils.source_utils import InputSource, load_image_source
+from askui.utils.source_utils import InputSource, load_image_source, load_source
 
-from .models import ModelComposition
 from .models.exceptions import ElementNotFoundError, WaitUntilError
-from .models.model_router import ModelRouter, initialize_default_model_registry
-from .models.models import (
-    DetectedElement,
-    ModelChoice,
-    ModelName,
-    ModelRegistry,
-    TotalModelChoice,
-)
+from .models.models import DetectedElement
 from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
-from .reporting import Reporter
+from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
+
+if TYPE_CHECKING:
+    from askui.models.models import ActModel
 
 logger = logging.getLogger(__name__)
 
 
-class AgentBaseSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="ASKUI__VA__",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        env_nested_delimiter="__",
-        extra="ignore",
-    )
-    model: ModelChoice | ModelComposition | str | None = Field(default=None)
-    model_provider: str | None = Field(default=None)
-
-    @field_validator("model_provider")
-    @classmethod
-    def validate_model_provider(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return v if v.endswith("/") else f"{v}/"
-
-
-class AgentBase(ABC):  # noqa: B024
+class Agent:
     def __init__(
         self,
-        reporter: Reporter,
-        model: ModelChoice | ModelComposition | str | None,
-        retry: Retry | None,
-        models: ModelRegistry | None,
-        tools: list[Tool] | None,
-        agent_os: AgentOs | AndroidAgentOs,
-        model_provider: str | None,
+        reporter: Reporter | None = None,
+        retry: Retry | None = None,
+        tools: list[Tool] | None = None,
+        agent_os: AgentOs | AndroidAgentOs | None = None,
+        settings: AgentSettings | None = None,
     ) -> None:
         load_dotenv()
-        self._reporter = reporter
+        self._reporter: Reporter = reporter or CompositeReporter(reporters=None)
         self._agent_os = agent_os
 
         self._tools = tools or []
-        settings = AgentBaseSettings()
-        _model_provider = model_provider or settings.model_provider or ""
-        self.model_name_selected_by_user: str | None = None
-        model = model or settings.model
-        if model and isinstance(model, str):
-            self.model_name_selected_by_user = f"{_model_provider}{model}"
 
-        self._model_router = self._init_model_router(
-            reporter=self._reporter,
-            models=models or {},
+        # Build models: use provided settings or fall back to AskUI defaults
+        from askui.models.shared.agent import AskUIAgent
+
+        _settings = settings or AgentSettings()
+        self._act_model: ActModel = AskUIAgent(
+            model_id=_settings.vlm_provider.model_id,
+            messages_api=_settings.to_messages_api(),
         )
+
+        # Provider-based tools
+        self._get_tool: GetTool = GetTool(provider=_settings.image_qa_provider)
+        self._locate_tool: LocateTool = LocateTool(
+            provider=_settings.detection_provider
+        )
+
         self._retry = retry or ConfigurableRetry(
             strategy="Exponential",
             base_delay=1000,
             retry_count=3,
             on_exception_types=(ElementNotFoundError,),
         )
-        self._model = self._init_model(model)
-        self._data_extractor = DataExtractor(
-            reporter=self._reporter, models=models or {}
-        )
 
         self.act_tool_collection = ToolCollection(tools=tools)
-        self.act_tool_collection.add_agent_os(agent_os)
+        if agent_os is not None:
+            self.act_tool_collection.add_agent_os(agent_os)
 
+        # Add provider-based tools to the act loop
+        self.act_tool_collection.append_tool(self._get_tool)
+        self.act_tool_collection.append_tool(self._locate_tool)
+
+        # Settings stored at agent level (mutable)
         self.act_settings = ActSettings()
+        self.get_settings = GetSettings()
+        self.locate_settings = LocateSettings()
         self.caching_settings = CachingSettings()
 
-    def _init_model_router(
-        self,
-        reporter: Reporter,
-        models: ModelRegistry,
-    ) -> ModelRouter:
-        _models = initialize_default_model_registry(
-            reporter=reporter,
-        )
-        _models.update(models)
-        return ModelRouter(
-            reporter=reporter,
-            models=_models,
-        )
-
-    def _init_model(
-        self,
-        model: ModelComposition | ModelChoice | str | None,
-    ) -> TotalModelChoice:
-        """Initialize the model choice based on the provided model parameter.
-
-        Args:
-            model: ModelComposition | ModelChoice | str | None: The model to
-                initialize from. Can be a `ModelComposition`, `ModelChoice` dict, `str`,
-                or `None`.
-
-        Returns:
-            TotalModelChoice: A dict with keys "act", "get", and "locate" mapping to
-                model names (or a ModelComposition for "locate").
-        """
-        default_act_model = f"askui/{ModelName.CLAUDE__SONNET__4__20250514}"
-        default_get_model = ModelName.ASKUI
-        default_locate_model = ModelName.ASKUI
-        if isinstance(model, ModelComposition):
-            return {
-                "act": default_act_model,
-                "get": default_get_model,
-                "locate": model,
-            }
-        if isinstance(model, str) or model is None:
-            return {
-                "act": model or default_act_model,
-                "get": model or default_get_model,
-                "locate": model or default_locate_model,
-            }
-        return {
-            "act": model.get(
-                "act",
-                default_act_model,
-            ),
-            "get": model.get("get", default_get_model),
-            "locate": model.get("locate", default_locate_model),
-        }
-
-    @overload
-    def _get_model(self, model: str | None, type_: Literal["act", "get"]) -> str: ...
-    @overload
-    def _get_model(
-        self, model: ModelComposition | str | None, type_: Literal["locate"]
-    ) -> str | ModelComposition: ...
-    def _get_model(
-        self,
-        model: ModelComposition | str | None,
-        type_: Literal["act", "get", "locate"],
-    ) -> str | ModelComposition:
-        if model is None and self.model_name_selected_by_user:
-            return self.model_name_selected_by_user
-
-        if isinstance(model, ModelComposition):
-            return model
-
-        return self._model[type_]
-
-    @telemetry.record_call(exclude={"goal", "on_message", "settings", "tools"})
+    @telemetry.record_call(exclude={"goal", "on_message", "act_settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
-        model: str | None = None,
+        act_settings: ActSettings | None = None,
         on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
-        settings: ActSettings | None = None,
         caching_settings: CachingSettings | None = None,
     ) -> None:
         """
@@ -204,15 +120,16 @@ class AgentBase(ABC):  # noqa: B024
         Args:
             goal (str | list[MessageParam]): A description of what the agent should
                 achieve.
-            model (str | None, optional): The composition or name of the model(s) to
-                be used for achieving the `goal`.
+            act_settings (ActSettings | None, optional): Settings for this act
+                execution. Overrides the agent's default settings if provided.
+            act_model (ActModel | None, optional): Model to use for this act
+                execution.
+                Overrides the agent's default model if provided.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message. Cannot be used
                 with caching_settings strategy "write" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
-            settings (AgentSettings | None, optional): The settings for the agent.
-                Defaults to a default settings depending on the selected model.
             caching_settings (CachingSettings | None, optional): The caching settings
                 for the act execution. Controls recording and replaying of action
                 sequences (trajectories). Available strategies: "no" (default, no
@@ -232,9 +149,9 @@ class AgentBase(ABC):  # noqa: B024
         Example:
             Basic usage without caching:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.act("Open the settings menu")
                 agent.act("Search for 'printer' in the search box")
                 agent.act("Log in with username 'admin' and password '1234'")
@@ -242,10 +159,10 @@ class AgentBase(ABC):  # noqa: B024
 
             Recording actions to a cache file:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.act(
                     goal=(
                         "Fill out the login form with "
@@ -261,10 +178,10 @@ class AgentBase(ABC):  # noqa: B024
 
             Replaying cached actions:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.act(
                     goal="Log in to the application",
                     caching_settings=CachingSettings(
@@ -277,10 +194,10 @@ class AgentBase(ABC):  # noqa: B024
 
             Using both read and write modes:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.act(
                     goal="Complete the checkout process",
                     caching_settings=CachingSettings(
@@ -299,35 +216,31 @@ class AgentBase(ABC):  # noqa: B024
         )
         self._reporter.add_message("User", f'act: "{goal_str}"')
         logger.debug(
-            "VisionAgent received instruction to act towards the goal '%s'", goal_str
+            "Agent received instruction to act towards the goal '%s'", goal_str
         )
         messages: list[MessageParam] = (
             [MessageParam(role="user", content=goal)] if isinstance(goal, str) else goal
         )
-        _model = self._get_model(model, "act")
-        _settings = settings or self.act_settings
+        _act_settings = act_settings or self.act_settings
 
         _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
         tools, on_message, cached_execution_tool = self._patch_act_with_cache(
-            _caching_settings, _settings, tools, on_message
+            _caching_settings, _act_settings, tools, on_message
         )
-        _tools = self._build_tools(tools, _model)
+        _tools = self._build_tools(tools)
 
         if cached_execution_tool:
             cached_execution_tool.set_toolbox(_tools)
 
-        self._model_router.act(
+        self._act_model.act(
             messages=messages,
-            model=_model,
+            act_settings=_act_settings,
             on_message=on_message,
-            settings=_settings,
             tools=_tools,
         )
 
-    def _build_tools(
-        self, tools: list[Tool] | ToolCollection | None, _model: str
-    ) -> ToolCollection:
+    def _build_tools(self, tools: list[Tool] | ToolCollection | None) -> ToolCollection:
         tool_collection = self.act_tool_collection
         if isinstance(tools, list):
             tool_collection.append_tool(*tools)
@@ -399,26 +312,28 @@ class AgentBase(ABC):  # noqa: B024
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: None = None,
-        model: str | None = None,
         source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
     ) -> str: ...
     @overload
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema],
-        model: str | None = None,
         source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
     ) -> ResponseSchema: ...
 
-    @telemetry.record_call(exclude={"query", "source", "response_schema"})
+    @telemetry.record_call(
+        exclude={"query", "source", "response_schema", "get_settings"}
+    )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def get(
         self,
         query: Annotated[str, Field(min_length=1)],
         response_schema: Type[ResponseSchema] | None = None,
-        model: str | None = None,
         source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
     ) -> ResponseSchema | str:
         """
         Retrieves information from an image or PDF based on the provided `query`.
@@ -434,10 +349,6 @@ class AgentBase(ABC):  # noqa: B024
             response_schema (Type[ResponseSchema] | None, optional): A Pydantic model
                 class that defines the response schema. If not provided, returns a
                 string.
-            model (str | None, optional): The composition or name of the model(s) to
-                be used for retrieving information from the screen or image using the
-                `query`. Note: `response_schema` is not supported by all models.
-                PDF processing is only supported for Gemini models hosted on AskUI.
 
         Returns:
             ResponseSchema | str: The extracted information, `str` if no
@@ -450,7 +361,7 @@ class AgentBase(ABC):  # noqa: B024
 
         Example:
             ```python
-            from askui import ResponseSchemaBase, VisionAgent
+            from askui import ComputerAgent, ResponseSchemaBase
             from PIL import Image
             import json
 
@@ -464,7 +375,7 @@ class AgentBase(ABC):  # noqa: B024
                 value: str
                 next: "LinkedListNode | None"
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 # Get URL as string
                 url = agent.get("What is the current url shown in the url bar?")
 
@@ -530,14 +441,45 @@ class AgentBase(ABC):  # noqa: B024
                 print(text)
             ```
         """
-        _source = source or ImageSource(self._agent_os.screenshot())
-        _model = self._get_model(model, "get")
-        return self._data_extractor.get(
-            query=query,
-            source=_source,
-            model=_model,
-            response_schema=response_schema,
+        _get_settings = get_settings or self.get_settings
+
+        if source is None and self._agent_os is None:
+            error_msg = "A 'source' must be provided when the agent has no agent_os."
+            raise RuntimeError(error_msg)
+        _source = source or ImageSource(self._agent_os.screenshot())  # type: ignore[union-attr]
+
+        # Load the source
+        _loaded_source = (
+            load_source(_source)
+            if isinstance(_source, (str, Path, PILImage.Image))
+            else _source
         )
+        user_message_content = f'get: "{query}"' + (
+            f" from '{_source}'" if isinstance(_source, (str, Path)) else ""
+        )
+        self._reporter.add_message(
+            "User",
+            user_message_content,
+            image=_loaded_source.root
+            if isinstance(_loaded_source, ImageSource)
+            else None,
+        )
+
+        response = self._get_tool.run(
+            query=query,
+            source=_loaded_source,
+            response_schema=response_schema,
+            get_settings=_get_settings,
+        )
+
+        # Log the response
+        message_content = (
+            str(response)
+            if isinstance(response, (str, bool, int, float))
+            else response.model_dump()
+        )
+        self._reporter.add_message("Agent", message_content)
+        return response
 
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def _locate(
@@ -545,31 +487,38 @@ class AgentBase(ABC):  # noqa: B024
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
         retry: Optional[Retry] = None,
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None = None,
     ) -> PointList:
+        _locate_settings = locate_settings or self.locate_settings
+
         def locate_with_screenshot() -> PointList:
+            if screenshot is None and self._agent_os is None:
+                error_msg = (
+                    "A 'screenshot' must be provided when the agent has no agent_os."
+                )
+                raise RuntimeError(error_msg)
             _screenshot = load_image_source(
-                self._agent_os.screenshot() if screenshot is None else screenshot
+                self._agent_os.screenshot() if screenshot is None else screenshot  # type: ignore[union-attr]
             )
-            return self._model_router.locate(
-                screenshot=_screenshot,
+            return self._locate_tool.run(
                 locator=locator,
-                model=self._get_model(model, "locate"),
+                image=_screenshot,
+                locate_settings=_locate_settings,
             )
 
         retry = retry or self._retry
         points = retry.attempt(locate_with_screenshot)
-        self._reporter.add_message("ModelRouter", f"locate {len(points)} elements")
-        logger.debug("ModelRouter locate: %d elements", len(points))
+        self._reporter.add_message("LocateModel", f"locate {len(points)} elements")
+        logger.debug("LocateModel locate: %d elements", len(points))
         return points
 
-    @telemetry.record_call(exclude={"locator", "screenshot"})
+    @telemetry.record_call(exclude={"locator", "screenshot", "locate_settings"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate(
         self,
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None = None,
     ) -> Point:
         """
         Locates the first matching UI element identified by the provided locator.
@@ -581,35 +530,41 @@ class AgentBase(ABC):  # noqa: B024
                 locating the element. Can be a path to an image file, a PIL Image object
                 or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the `locator`.
+            locate_settings (LocateSettings | None, optional): Settings for this
+                locate operation. If `None`, uses the agent's default locate settings.
+            locate_model (LocateModel | None, optional): Model to use for this
+                locate operation. If `None`, uses the agent's default locate model.
 
         Returns:
             Point: The coordinates of the element as a tuple (x, y).
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 point = agent.locate("Submit button")
                 print(f"Element found at coordinates: {point}")
             ```
         """
         self._reporter.add_message("User", f"locate first matching element {locator}")
         logger.debug(
-            "VisionAgent received instruction to locate first matching element %s",
+            "Agent received instruction to locate first matching element %s",
             locator,
         )
-        return self._locate(locator=locator, screenshot=screenshot, model=model)[0]
+        return self._locate(
+            locator=locator,
+            screenshot=screenshot,
+            locate_settings=locate_settings,
+        )[0]
 
-    @telemetry.record_call(exclude={"locator", "screenshot"})
+    @telemetry.record_call(exclude={"locator", "screenshot", "locate_settings"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate_all(
         self,
         locator: str | Locator,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | str | None = None,
+        locate_settings: LocateSettings | None = None,
     ) -> PointList:
         """
         Locates all matching UI elements identified by the provided locator.
@@ -624,34 +579,39 @@ class AgentBase(ABC):  # noqa: B024
                 locating the element. Can be a path to an image file, a PIL Image object
                 or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the `locator`.
+            locate_settings (LocateSettings | None, optional): Settings for this
+                locate operation. If `None`, uses the agent's default locate settings.
+            locate_model (LocateModel | None, optional): Model to use for this
+                locate operation. If `None`, uses the agent's default locate model.
 
         Returns:
             PointList: The coordinates of the elements as a list of tuples (x, y).
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 points = agent.locate_all("Submit button")
                 print(f"Found {len(points)} elements at coordinates: {points}")
             ```
         """
         self._reporter.add_message("User", f"locate all matching UI elements {locator}")
         logger.debug(
-            "VisionAgent received instruction to locate all matching UI elements %s",
+            "Agent received instruction to locate all matching UI elements %s",
             locator,
         )
-        return self._locate(locator=locator, screenshot=screenshot, model=model)
+        return self._locate(
+            locator=locator,
+            screenshot=screenshot,
+            locate_settings=locate_settings,
+        )
 
     @telemetry.record_call(exclude={"screenshot"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def locate_all_elements(
         self,
         screenshot: Optional[InputSource] = None,
-        model: ModelComposition | None = None,
     ) -> list[DetectedElement]:
         """Locate all elements in the current screen using AskUI Models.
 
@@ -660,26 +620,30 @@ class AgentBase(ABC):  # noqa: B024
                 locating the elements. Can be a path to an image file, a PIL Image
                 object or a data URL. If `None`, takes a screenshot of the currently
                 selected display.
-            model (ModelComposition | None, optional): The model composition
-                 to be used for locating the elements.
 
         Returns:
             list[DetectedElement]: A list of detected elements
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 detected_elements = agent.locate_all_elements()
                 print(f"Found {len(detected_elements)} elements: {detected_elements}")
             ```
         """
+        if screenshot is None and self._agent_os is None:
+            error_msg = (
+                "A 'screenshot' must be provided when the agent has no agent_os."
+            )
+            raise RuntimeError(error_msg)
         _screenshot = load_image_source(
-            self._agent_os.screenshot() if screenshot is None else screenshot
+            self._agent_os.screenshot() if screenshot is None else screenshot  # type: ignore[union-attr]
         )
-        return self._model_router.locate_all_elements(
-            image=_screenshot, model=model or ModelName.ASKUI
+        return self._locate_tool.run_all(
+            image=_screenshot,
+            locate_settings=self.locate_settings,
         )
 
     @telemetry.record_call(exclude={"screenshot", "annotation_dir"})
@@ -688,7 +652,6 @@ class AgentBase(ABC):  # noqa: B024
         self,
         screenshot: InputSource | None = None,
         annotation_dir: str = "annotations",
-        model: ModelComposition | None = None,
     ) -> None:
         """Annotate the screenshot with the detected elements.
         Creates an interactive HTML file with the detected elements
@@ -702,41 +665,42 @@ class AgentBase(ABC):  # noqa: B024
                 If `None`, takes a screenshot of the currently selected display.
             annotation_dir (str): The directory to save the annotated
                 image. Defaults to "annotations".
-            model (ModelComposition | None, optional): The composition
-                of the model(s) to be used for annotating the image.
-                If `None`, uses the default model.
 
-        Example Using VisionAgent:
+        Example Using ComputerAgent:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.annotate()
             ```
 
-        Example Using AndroidVisionAgent:
+        Example Using AndroidAgent:
             ```python
-            from askui import AndroidVisionAgent
+            from askui import AndroidAgent
 
-            with AndroidVisionAgent() as agent:
+            with AndroidAgent() as agent:
                 agent.annotate()
             ```
 
-        Example Using VisionAgent with custom screenshot and annotation directory:
+        Example Using ComputerAgent with custom screenshot and annotation directory:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 agent.annotate(screenshot="screenshot.png", annotation_dir="htmls")
             ```
         """
         if screenshot is None:
+            if self._agent_os is None:
+                error_msg = (
+                    "A 'screenshot' must be provided when the agent has no agent_os."
+                )
+                raise RuntimeError(error_msg)
             screenshot = self._agent_os.screenshot()
 
         self._reporter.add_message("User", "annotate screenshot with detected elements")
         detected_elements = self.locate_all_elements(
             screenshot=screenshot,
-            model=model,
         )
         annotated_html = AnnotationWriter(
             image=screenshot,
@@ -754,7 +718,6 @@ class AgentBase(ABC):  # noqa: B024
         retry_count: Optional[Annotated[int, Field(gt=0)]] = None,
         delay: Optional[Annotated[float, Field(gt=0.0)]] = None,
         until_condition: Literal["appear", "disappear"] = "appear",
-        model: ModelComposition | str | None = None,
     ) -> None:
         """
         Pauses execution or waits until a UI element appears or disappears.
@@ -770,19 +733,16 @@ class AgentBase(ABC):  # noqa: B024
                 waiting for a UI element. Defaults to 1 second if None.
             until_condition (Literal["appear", "disappear"]): The condition to wait
                 until the element satisfies. Defaults to "appear".
-            model (ModelComposition | str | None, optional): The composition or name
-                of the model(s) to be used for locating the element using the
-                `until` locator.
 
         Raises:
             WaitUntilError: If the UI element is not found after all retries.
 
         Example:
             ```python
-            from askui import VisionAgent
+            from askui import ComputerAgent
             from askui.locators import loc
 
-            with VisionAgent() as agent:
+            with ComputerAgent() as agent:
                 # Wait for a specific duration
                 agent.wait(5)  # Pauses execution for 5 seconds
                 agent.wait(0.5)  # Pauses execution for 500 milliseconds
@@ -794,9 +754,6 @@ class AgentBase(ABC):  # noqa: B024
 
                 # Wait for a UI element to disappear
                 agent.wait("Loading spinner", until_condition="disappear")
-
-                # Wait using a specific model
-                agent.wait("Submit button", model="custom_model")
             ```
         """
         if isinstance(until, float) or isinstance(until, int):
@@ -811,14 +768,13 @@ class AgentBase(ABC):  # noqa: B024
         delay = delay if delay is not None else 1
 
         if until_condition == "appear":
-            self._wait_for_appear(until, model, retry_count, delay)
+            self._wait_for_appear(until, retry_count, delay)
         else:
-            self._wait_for_disappear(until, model, retry_count, delay)
+            self._wait_for_disappear(until, retry_count, delay)
 
     def _wait_for_appear(
         self,
         locator: str | Locator,
-        model: ModelComposition | str | None,
         retry_count: int,
         delay: float,
     ) -> None:
@@ -826,7 +782,6 @@ class AgentBase(ABC):  # noqa: B024
         try:
             self._locate(
                 locator,
-                model=model,
                 retry=ConfigurableRetry(
                     strategy="Fixed",
                     base_delay=int(delay * 1000),
@@ -835,11 +790,11 @@ class AgentBase(ABC):  # noqa: B024
                 ),
             )
             self._reporter.add_message(
-                "VisionAgent", f"element '{locator}' appeared successfully"
+                "Agent", f"element '{locator}' appeared successfully"
             )
         except ElementNotFoundError as e:
             self._reporter.add_message(
-                "VisionAgent",
+                "Agent",
                 f"element '{locator}' failed to appear after {retry_count} retries",
             )
             raise WaitUntilError(
@@ -849,7 +804,6 @@ class AgentBase(ABC):  # noqa: B024
     def _wait_for_disappear(
         self,
         locator: str | Locator,
-        model: ModelComposition | str | None,
         retry_count: int,
         delay: float,
     ) -> None:
@@ -858,7 +812,6 @@ class AgentBase(ABC):  # noqa: B024
             try:
                 self._locate(
                     locator,
-                    model=model,
                     retry=ConfigurableRetry(
                         strategy="Fixed",
                         base_delay=int(delay * 1000),
@@ -872,24 +825,26 @@ class AgentBase(ABC):  # noqa: B024
                 time.sleep(delay)
             except ElementNotFoundError:  # noqa: PERF203
                 self._reporter.add_message(
-                    "VisionAgent", f"element '{locator}' disappeared successfully"
+                    "Agent", f"element '{locator}' disappeared successfully"
                 )
                 return
 
         self._reporter.add_message(
-            "VisionAgent",
+            "Agent",
             f"element '{locator}' failed to disappear after {retry_count} retries",
         )
         raise WaitUntilError(locator, str(locator), retry_count, delay, "disappear")
 
     @telemetry.record_call()
     def close(self) -> None:
-        self._agent_os.disconnect()
+        if self._agent_os is not None:
+            self._agent_os.disconnect()
         self._reporter.generate()
 
     @telemetry.record_call()
     def open(self) -> None:
-        self._agent_os.connect()
+        if self._agent_os is not None:
+            self._agent_os.connect()
 
     @telemetry.record_call()
     def __enter__(self) -> Self:

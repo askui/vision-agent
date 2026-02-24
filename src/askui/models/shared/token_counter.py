@@ -3,7 +3,6 @@ import json
 from abc import ABC, abstractmethod
 
 import httpx
-from anthropic.types.beta import BetaToolUnionParam
 from typing_extensions import override
 
 from askui.models.shared.agent_message_param import (
@@ -11,6 +10,7 @@ from askui.models.shared.agent_message_param import (
     ContentBlockParam,
     ImageBlockParam,
     MessageParam,
+    ToolParam,
     ToolResultBlockParam,
 )
 from askui.models.shared.prompts import SystemPrompt
@@ -57,14 +57,14 @@ class TokenCounter(ABC):
     @abstractmethod
     def count_tokens(
         self,
-        tools: list[BetaToolUnionParam] | None = None,
+        tools: list[ToolParam] | None = None,
         system: ActSystemPrompt | None = None,
         messages: list[MessageParam] | None = None,
     ) -> TokenCounts:
         """Count total tokens (estimated) using simple string length estimation.
 
         Args:
-            tools (list[BetaToolUnionParam] | None, optional): The tools to count
+            tools (list[ToolParam] | None, optional): The tools to count
                 tokens for. Defaults to `None`.
             system (ActSystemPrompt | None, optional): The system
                 prompt or system blocks to count tokens for. Defaults to `None`.
@@ -137,7 +137,7 @@ class SimpleTokenCounter(TokenCounter):
     @override
     def count_tokens(
         self,
-        tools: list[BetaToolUnionParam] | None = None,
+        tools: list[ToolParam] | None = None,
         system: SystemPrompt | None = None,
         messages: list[MessageParam] | None = None,
         model: str | None = None,  # noqa: ARG002

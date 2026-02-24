@@ -1,46 +1,69 @@
 """Shared pytest fixtures for e2e tests."""
 
-import functools
 import pathlib
-from typing import Any, Generator, Optional, Union
+from typing import Generator
 
 import pytest
-from PIL import Image as PILImage
 from typing_extensions import override
 
-from askui.agent import VisionAgent
-from askui.locators.serializers import AskUiLocatorSerializer, VlmLocatorSerializer
-from askui.models.anthropic.factory import AnthropicApiProvider, create_api_client
-from askui.models.anthropic.messages_api import AnthropicMessagesApi
-from askui.models.anthropic.models import AnthropicModel, AnthropicModelSettings
+from askui import AgentSettings
+from askui.agent import ComputerAgent
+from askui.locators.locators import Locator
+from askui.locators.serializers import AskUiLocatorSerializer
+from askui.model_providers.detection_provider import DetectionProvider
 from askui.models.askui.ai_element_utils import AiElementCollection
-from askui.models.askui.google_genai_api import AskUiGoogleGenAiApi
 from askui.models.askui.inference_api import (
     AskUiInferenceApi,
     AskUiInferenceApiSettings,
 )
-from askui.models.askui.models import AskUiGetModel, AskUiLocateModel
-from askui.models.models import ModelName
-from askui.models.shared.agent import Agent
-from askui.models.shared.facade import ModelFacade
-from askui.reporting import NULL_REPORTER, Reporter, SimpleHtmlReporter
+from askui.models.askui.locate_api import AskUiInferenceLocateApi
+from askui.models.askui.locate_models import (
+    AskUiAiElementLocateModel,
+    AskUiComboLocateModel,
+    AskUiLocateModel,
+    AskUiOcrLocateModel,
+    AskUiPtaLocateModel,
+)
+from askui.models.models import LocateModel
+from askui.models.shared.settings import LocateSettings
+from askui.models.types.geometry import PointList
+from askui.reporting import Reporter, SimpleHtmlReporter
 from askui.tools.toolbox import AgentToolbox
-from askui.utils.annotated_image import AnnotatedImage
+from askui.utils.image_utils import ImageSource
 
 
-class ReporterMock(Reporter):
+class _LocateModelDetectionProvider(DetectionProvider):
+    """Adapter wrapping a `LocateModel` as a `DetectionProvider` for e2e tests."""
+
+    def __init__(self, locate_model: LocateModel) -> None:
+        self._locate_model = locate_model
+
     @override
-    def add_message(
+    def detect(
         self,
-        role: str,
-        content: Union[str, dict[str, Any], list[Any]],
-        image: Optional[PILImage.Image | list[PILImage.Image] | AnnotatedImage] = None,
-    ) -> None:
-        pass
+        locator: str | Locator,
+        image: ImageSource,
+        locate_settings: LocateSettings,
+    ) -> PointList:
+        result: PointList = self._locate_model.locate(
+            locator=locator,
+            image=image,
+            locate_settings=locate_settings,
+        )
+        return result
 
-    @override
-    def generate(self) -> None:
-        pass
+
+def _make_locate_api(path_fixtures: pathlib.Path) -> AskUiInferenceLocateApi:
+    locator_serializer = AskUiLocatorSerializer(
+        ai_element_collection=AiElementCollection(
+            additional_ai_element_locations=[path_fixtures / "images"]
+        ),
+        reporter=SimpleHtmlReporter(),
+    )
+    return AskUiInferenceLocateApi(
+        locator_serializer=locator_serializer,
+        inference_api=AskUiInferenceApi(settings=AskUiInferenceApiSettings()),
+    )
 
 
 @pytest.fixture
@@ -49,93 +72,102 @@ def simple_html_reporter() -> Reporter:
 
 
 @pytest.fixture
-def askui_facade(
-    path_fixtures: pathlib.Path,
-) -> ModelFacade:
-    reporter = SimpleHtmlReporter()
-    locator_serializer = AskUiLocatorSerializer(
-        ai_element_collection=AiElementCollection(
-            additional_ai_element_locations=[path_fixtures / "images"]
+def askui_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    return AskUiLocateModel(locate_api=_make_locate_api(path_fixtures))
+
+
+@pytest.fixture
+def pta_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    return AskUiPtaLocateModel(locate_api=_make_locate_api(path_fixtures))
+
+
+@pytest.fixture
+def ocr_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    return AskUiOcrLocateModel(locate_api=_make_locate_api(path_fixtures))
+
+
+@pytest.fixture
+def ai_element_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    return AskUiAiElementLocateModel(locate_api=_make_locate_api(path_fixtures))
+
+
+@pytest.fixture
+def combo_locate_model(path_fixtures: pathlib.Path) -> LocateModel:
+    return AskUiComboLocateModel(locate_api=_make_locate_api(path_fixtures))
+
+
+@pytest.fixture
+def agent_with_pta_model(
+    pta_locate_model: LocateModel,
+    agent_toolbox_mock: AgentToolbox,
+    simple_html_reporter: Reporter,
+) -> Generator[ComputerAgent, None, None]:
+    with ComputerAgent(
+        settings=AgentSettings(
+            detection_provider=_LocateModelDetectionProvider(pta_locate_model)
         ),
-        reporter=reporter,
-    )
-    askui_inference_api = AskUiInferenceApi(
-        settings=AskUiInferenceApiSettings(),
-    )
-    act_model = Agent(
-        messages_api=AnthropicMessagesApi(
-            client=create_api_client(api_provider="askui"),
-            locator_serializer=VlmLocatorSerializer(),
+        reporters=[simple_html_reporter],
+        tools=agent_toolbox_mock,
+    ) as agent:
+        yield agent
+
+
+@pytest.fixture
+def agent_with_ocr_model(
+    ocr_locate_model: LocateModel,
+    agent_toolbox_mock: AgentToolbox,
+    simple_html_reporter: Reporter,
+) -> Generator[ComputerAgent, None, None]:
+    with ComputerAgent(
+        settings=AgentSettings(
+            detection_provider=_LocateModelDetectionProvider(ocr_locate_model)
         ),
-        reporter=reporter,
-    )
-    return ModelFacade(
-        act_model=act_model,
-        get_model=AskUiGetModel(
-            google_genai_api=AskUiGoogleGenAiApi(),
-            inference_api=askui_inference_api,
+        reporters=[simple_html_reporter],
+        tools=agent_toolbox_mock,
+    ) as agent:
+        yield agent
+
+
+@pytest.fixture
+def agent_with_ai_element_model(
+    ai_element_locate_model: LocateModel,
+    agent_toolbox_mock: AgentToolbox,
+    simple_html_reporter: Reporter,
+) -> Generator[ComputerAgent, None, None]:
+    with ComputerAgent(
+        settings=AgentSettings(
+            detection_provider=_LocateModelDetectionProvider(ai_element_locate_model)
         ),
-        locate_model=AskUiLocateModel(
-            locator_serializer=locator_serializer,
-            inference_api=askui_inference_api,
+        reporters=[simple_html_reporter],
+        tools=agent_toolbox_mock,
+    ) as agent:
+        yield agent
+
+
+@pytest.fixture
+def agent_with_combo_model(
+    combo_locate_model: LocateModel,
+    agent_toolbox_mock: AgentToolbox,
+    simple_html_reporter: Reporter,
+) -> Generator[ComputerAgent, None, None]:
+    with ComputerAgent(
+        settings=AgentSettings(
+            detection_provider=_LocateModelDetectionProvider(combo_locate_model)
         ),
-    )
-
-
-@functools.cache
-def vlm_locator_serializer() -> VlmLocatorSerializer:
-    return VlmLocatorSerializer()
-
-
-@functools.cache
-def anthropic_messages_api(
-    api_provider: AnthropicApiProvider,
-) -> AnthropicMessagesApi:
-    return AnthropicMessagesApi(
-        client=create_api_client(api_provider=api_provider),
-        locator_serializer=vlm_locator_serializer(),
-    )
-
-
-@functools.cache
-def anthropic_facade(api_provider: AnthropicApiProvider) -> ModelFacade:
-    messages_api = anthropic_messages_api(api_provider)
-    act_model = Agent(
-        messages_api=messages_api,
-        reporter=NULL_REPORTER,
-    )
-    model = AnthropicModel(
-        settings=AnthropicModelSettings(),
-        messages_api=messages_api,
-        locator_serializer=vlm_locator_serializer(),
-    )
-    return ModelFacade(
-        act_model=act_model,
-        get_model=model,
-        locate_model=model,
-    )
+        reporters=[simple_html_reporter],
+        tools=agent_toolbox_mock,
+    ) as agent:
+        yield agent
 
 
 @pytest.fixture
 def vision_agent(
     agent_toolbox_mock: AgentToolbox,
     simple_html_reporter: Reporter,
-    askui_facade: ModelFacade,
-) -> Generator[VisionAgent, None, None]:
-    """Fixture providing a VisionAgent instance."""
-    with VisionAgent(
+) -> Generator[ComputerAgent, None, None]:
+    """Fixture providing a ComputerAgent instance."""
+    with ComputerAgent(
         reporters=[simple_html_reporter],
-        models={
-            ModelName.ASKUI: askui_facade,
-            ModelName.ASKUI__AI_ELEMENT: askui_facade,
-            ModelName.ASKUI__COMBO: askui_facade,
-            ModelName.ASKUI__OCR: askui_facade,
-            ModelName.ASKUI__PTA: askui_facade,
-            ModelName.CLAUDE__SONNET__4__20250514: lambda: anthropic_facade(
-                "anthropic"
-            ),
-            "askui/": askui_facade,
-        },
         tools=agent_toolbox_mock,
     ) as agent:
         yield agent

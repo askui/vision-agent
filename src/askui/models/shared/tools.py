@@ -9,12 +9,6 @@ from typing import Any, Literal, Protocol, Type
 
 import jsonref
 import mcp
-from anthropic.types.beta import (
-    BetaCacheControlEphemeralParam,
-    BetaToolParam,
-    BetaToolUnionParam,
-)
-from anthropic.types.beta.beta_tool_param import InputSchema
 from asyncer import syncify
 from fastmcp.client.client import CallToolResult, ProgressHandler
 from fastmcp.tools import Tool as FastMcpTool
@@ -26,9 +20,11 @@ from typing_extensions import Self
 
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
+    CacheControlEphemeralParam,
     ContentBlockParam,
     ImageBlockParam,
     TextBlockParam,
+    ToolParam,
     ToolResultBlockParam,
     ToolUseBlockParam,
 )
@@ -111,7 +107,7 @@ def _convert_to_content(
     ]
 
 
-def _default_input_schema() -> InputSchema:
+def _default_input_schema() -> dict[str, Any]:
     return {"type": "object", "properties": {}, "required": []}
 
 
@@ -169,7 +165,7 @@ class Tool(BaseModel, ABC):
 
     base_name: str = Field(alias="name", description="Name of the tool")
     description: str = Field(description="Description of what the tool does")
-    input_schema: InputSchema = Field(
+    input_schema: dict[str, Any] = Field(
         default_factory=_default_input_schema,
         description="JSON schema for tool parameters",
     )
@@ -205,8 +201,8 @@ class Tool(BaseModel, ABC):
 
     def to_params(
         self,
-    ) -> BetaToolUnionParam:
-        return BetaToolParam(
+    ) -> ToolParam:
+        return ToolParam(
             name=self.name,
             description=self.description,
             input_schema=self.input_schema,
@@ -303,7 +299,7 @@ class McpClientProtocol(Protocol):
     ) -> None: ...
 
 
-def _replace_refs(tool_name: str, input_schema: InputSchema) -> InputSchema:
+def _replace_refs(tool_name: str, input_schema: dict[str, Any]) -> dict[str, Any]:
     try:
         return jsonref.replace_refs(  # type: ignore[no-any-return]
             input_schema,
@@ -378,7 +374,7 @@ class ToolCollection:
                 result.add(beta_flag)
         return list(result)
 
-    def to_params(self) -> list[BetaToolUnionParam]:
+    def to_params(self) -> list[ToolParam]:
         tool_map = {
             **self._get_mcp_tool_params(),
             **{
@@ -392,22 +388,22 @@ class ToolCollection:
         }
         result = list(filtered_tool_map.values())
         if result:
-            result[-1]["cache_control"] = BetaCacheControlEphemeralParam(
+            result[-1]["cache_control"] = CacheControlEphemeralParam(
                 type="ephemeral",
             )
         return result
 
-    def _get_mcp_tool_params(self) -> dict[str, BetaToolUnionParam]:
+    def _get_mcp_tool_params(self) -> dict[str, ToolParam]:
         if not self._mcp_client:
             return {}
         mcp_tools = self._get_mcp_tools()
-        result: dict[str, BetaToolUnionParam] = {}
+        result: dict[str, ToolParam] = {}
         for tool_name, tool in mcp_tools.items():
             if params := (tool.meta or {}).get("params"):
                 # validation missing
                 result[tool_name] = params
                 continue
-            result[tool_name] = BetaToolParam(
+            result[tool_name] = ToolParam(
                 name=tool_name,
                 description=tool.description or "",
                 input_schema=_replace_refs(tool_name, tool.inputSchema),
@@ -504,6 +500,7 @@ class ToolCollection:
                 "Tool failed",
                 extra={"tool_name": tool_use_block_param.name, "error": error_message},
             )
+            logger.warning("%s - %s", tool_use_block_param.name, error_message)
             return ToolResultBlockParam(
                 content=f"Tool raised an unexpected error: {error_message}",
                 is_error=True,

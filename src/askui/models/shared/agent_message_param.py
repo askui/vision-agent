@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 from typing_extensions import Literal
 
@@ -104,6 +106,13 @@ StopReason = Literal[
     "end_turn", "max_tokens", "stop_sequence", "tool_use", "pause_turn", "refusal"
 ]
 
+# Generic type aliases for provider-agnostic API
+# Different providers (Anthropic, OpenAI, etc.) have different structures
+# Using dict[str, Any] allows flexibility for different provider requirements
+ThinkingConfigParam = dict[str, Any]
+ToolChoiceParam = dict[str, Any]
+ToolParam = dict[str, Any]
+
 
 class MessageParam(BaseModel):
     role: Literal["user", "assistant"]
@@ -125,4 +134,6 @@ __all__ = [
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
+    "ThinkingConfigParam",
+    "ToolChoiceParam",
 ]

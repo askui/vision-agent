@@ -7,26 +7,19 @@ import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
-from .agent import VisionAgent
+from .agent import ComputerAgent
+from .agent_base import Agent
+from .agent_settings import AgentSettings
 from .locators import Locator
 from .models import (
-    ActModel,
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
     CitationCharLocationParam,
     CitationContentBlockLocationParam,
     CitationPageLocationParam,
     ContentBlockParam,
-    GetModel,
     ImageBlockParam,
-    LocateModel,
     MessageParam,
-    Model,
-    ModelChoice,
-    ModelComposition,
-    ModelDefinition,
-    ModelName,
-    ModelRegistry,
     OnMessageCb,
     OnMessageCbParam,
     Point,
@@ -37,7 +30,15 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from .models.shared.settings import ActSettings, MessageSettings
+from .models.shared.settings import (
+    DEFAULT_GET_RESOLUTION,
+    DEFAULT_LOCATE_RESOLUTION,
+    ActSettings,
+    GetSettings,
+    LocateSettings,
+    MessageSettings,
+    Resolution,
+)
 from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
@@ -46,7 +47,7 @@ from .utils.image_utils import ImageSource
 from .utils.source_utils import InputSource
 
 try:
-    from .android_agent import AndroidVisionAgent
+    from .android_agent import AndroidAgent
 
     _ANDROID_AGENT_AVAILABLE = True
 except ImportError:
@@ -63,7 +64,9 @@ except ImportError:
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
-    "ActModel",
+    "Agent",
+    "ComputerAgent",
+    "AgentSettings",
     "ActSettings",
     "Base64ImageSourceParam",
     "CacheControlEphemeralParam",
@@ -72,26 +75,23 @@ __all__ = [
     "CitationPageLocationParam",
     "ConfigurableRetry",
     "ContentBlockParam",
-    "GetModel",
+    "DEFAULT_GET_RESOLUTION",
+    "DEFAULT_LOCATE_RESOLUTION",
+    "GetSettings",
     "ImageBlockParam",
     "ImageSource",
     "InputSource",
-    "LocateModel",
     "Locator",
+    "LocateSettings",
     "MessageParam",
     "MessageSettings",
-    "Model",
-    "ModelChoice",
-    "ModelComposition",
-    "ModelDefinition",
-    "ModelName",
-    "ModelRegistry",
     "ModifierKey",
     "OnMessageCb",
     "OnMessageCbParam",
     "PcKey",
     "Point",
     "PointList",
+    "Resolution",
     "ResponseSchema",
     "ResponseSchemaBase",
     "Retry",
@@ -101,11 +101,10 @@ __all__ = [
     "ToolResultBlockParam",
     "ToolUseBlockParam",
     "UrlImageSourceParam",
-    "VisionAgent",
 ]
 
 if _ANDROID_AGENT_AVAILABLE:
-    __all__ += ["AndroidVisionAgent"]
+    __all__ += ["AndroidAgent"]
 
 if _WEB_AGENTS_AVAILABLE:
     __all__ += ["WebVisionAgent", "WebTestingAgent"]

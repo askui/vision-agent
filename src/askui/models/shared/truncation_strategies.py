@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from anthropic.types.beta import BetaToolUnionParam
 from pydantic import Field
 from typing_extensions import override
 
@@ -9,6 +8,7 @@ from askui.models.shared.agent_message_param import (
     CacheControlEphemeralParam,
     MessageParam,
     TextBlockParam,
+    ToolParam,
 )
 from askui.models.shared.prompts import ActSystemPrompt
 from askui.models.shared.token_counter import SimpleTokenCounter, TokenCounter
@@ -25,7 +25,7 @@ class TruncationStrategy:
 
     def __init__(
         self,
-        tools: list[BetaToolUnionParam] | None,
+        tools: list[ToolParam] | None,
         system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
@@ -104,7 +104,7 @@ class SimpleTruncationStrategy(TruncationStrategy):
     in that time.
 
     Args:
-        tools (list[BetaToolUnionParam] | None): Available tools for the conversation
+        tools (list[ToolParam] | None): Available tools for the conversation
         system (str | list[BetaTextBlockParam] | None): System prompt or blocks
         messages (list[MessageParam]): Initial conversation messages
         model (str): Model name for token counting
@@ -124,7 +124,7 @@ class SimpleTruncationStrategy(TruncationStrategy):
 
     def __init__(
         self,
-        tools: list[BetaToolUnionParam] | None,
+        tools: list[ToolParam] | None,
         system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
@@ -327,7 +327,7 @@ class SimpleTruncationStrategy(TruncationStrategy):
 class TruncationStrategyFactory:
     def create_truncation_strategy(
         self,
-        tools: list[BetaToolUnionParam] | None,
+        tools: list[ToolParam] | None,
         system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,
@@ -359,7 +359,7 @@ class SimpleTruncationStrategyFactory(TruncationStrategyFactory):
 
     def create_truncation_strategy(
         self,
-        tools: list[BetaToolUnionParam] | None,
+        tools: list[ToolParam] | None,
         system: ActSystemPrompt | None,
         messages: list[MessageParam],
         model: str,

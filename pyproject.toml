@@ -51,7 +51,6 @@ path = "src/askui/__init__.py"
 distribution = true
 
 [tool.pdm.scripts]
-alembic = "alembic -c src/askui/chat/migrations/alembic.ini"
 test = "pytest -n auto"
 "test:cov" = "pytest -n auto --cov=src/askui --cov-report=html"
 "test:cov:view" = "python -m http.server --directory htmlcov"
@@ -66,7 +65,6 @@ lint = "ruff check src tests"
 "lint:fix" = "ruff check --fix src tests"
 typecheck = "mypy"
 "typecheck:all" = "mypy ."
-"chat:api" = "python -m askui.chat"
 "generate:SBOM" = "cyclonedx-py environment --pyproject ./pyproject.toml  --output-format JSON --output-file bom.json --spec-version 1.6 --gather-license-texts "
 "qa:fix" = { composite = [
     "typecheck:all",
@@ -184,7 +182,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.per-file-ignores]
 "src/askui/agent.py" = ["E501"]
 "src/askui/android_agent.py" = ["E501"]
-"src/askui/chat/*" = ["E501", "F401", "F403"]
 "src/askui/locators/locators.py" = ["E501"]
 "src/askui/locators/relatable.py" = ["E501", "SLF001"]
 "src/askui/locators/serializers.py" = ["E501", "SLF001"]
@@ -192,7 +189,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "src/askui/models/askui/ai_element_utils.py" = ["E501"]
 "src/askui/models/huggingface/spaces_api.py" = ["E501"]
 "src/askui/models/shared/android_agent.py" = ["E501"]
-"src/askui/models/ui_tars_ep/ui_tars_api.py" = ["E501"]
 "src/askui/prompts/system.py" = ["E501"]
 "src/askui/reporting.py" = ["E501"]
 "src/askui/telemetry/telemetry.py" = ["E501"]
@@ -217,33 +213,21 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,bedrock,chat,pynput,vertex,web]"]
+all = ["askui[android,bedrock,vertex,web]"]
 android = [
     "pure-python-adb>=0.3.0.dev0"
 ]
 bedrock = [
     "anthropic[bedrock]>=0.72.0"
 ]
-chat = [
-    "askui[android,web]",
-    "uvicorn>=0.34.3",
-    "anyio>=4.10.0",
-    "structlog>=25.4.0",
-    "asgi-correlation-id>=4.3.4",
+otel = [
     "prometheus-fastapi-instrumentator>=7.1.0",
-    "starlette-context>=0.4.0",
-    "sqlalchemy>=2.0.43",
-    "alembic>=1.16.5",
     "opentelemetry-api>=1.38.0",
     "opentelemetry-sdk>=1.38.0",
     "opentelemetry-instrumentation-fastapi>=0.59b0",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
     "opentelemetry-instrumentation-httpx>=0.59b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.59b0",
-]
-pynput = [
-    "mss>=10.0.0",
-    "pynput>=1.8.1",
 ]
 vertex = [
     "google-cloud-aiplatform>=1.122.0",
