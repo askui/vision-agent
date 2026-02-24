@@ -367,17 +367,18 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def mouse_move(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int, duration: int = 500) -> None:
         """
         Moves the mouse cursor to specified screen coordinates.
 
         Args:
             x (int): The horizontal coordinate (in pixels) to move to.
             y (int): The vertical coordinate (in pixels) to move to.
+            duration (int): The duration (in ms) the movement should take.
         """
         self._reporter.add_message(
             "AgentOS",
-            f"mouse_move({x}, {y})",
+            f"mouse_move({x}, {y}, duration={duration})",
             AnnotatedImage(lambda: self.screenshot(report=False), point_list=[(x, y)]),
         )
         self._run_recorder_action(
@@ -385,7 +386,7 @@ class AskUiControllerClient(AgentOs):
             action_parameters=controller_v1_pbs.ActionParameters(
                 mouseMove=controller_v1_pbs.ActionParameters_MouseMove(
                     position=controller_v1_pbs.Coordinate2(x=x, y=y),
-                    milliseconds=500,
+                    milliseconds=duration,
                 )
             ),
         )

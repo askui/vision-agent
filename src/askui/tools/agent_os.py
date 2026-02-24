@@ -261,13 +261,14 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mouse_move(self, x: int, y: int) -> None:
+    def mouse_move(self, x: int, y: int, duration: int = 500) -> None:
         """
         Moves the mouse cursor to specified screen coordinates.
 
         Args:
             x (int): The horizontal coordinate (in pixels) to move to.
             y (int): The vertical coordinate (in pixels) to move to.
+            duration (int): The duration (in ms) the movement should take.
         """
         raise NotImplementedError
 
