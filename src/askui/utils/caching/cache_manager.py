@@ -354,9 +354,7 @@ class CacheManager:
         # Blank non-cacheable tool inputs BEFORE parameterization
         # (so they don't get sent to LLM for parameter identification)
         if self._toolbox is not None:
-            self._tool_blocks = self._blank_non_cacheable_tool_inputs(
-                self._tool_blocks
-            )
+            self._tool_blocks = self._blank_non_cacheable_tool_inputs(self._tool_blocks)
         else:
             logger.info("No toolbox set, skipping non-cacheable tool input blanking")
 

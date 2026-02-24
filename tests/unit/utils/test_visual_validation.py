@@ -136,9 +136,7 @@ class TestComputeHammingDistance:
 class TestExtractRegion:
     """Test region extraction from images."""
 
-    def test_extract_region_center(
-        self, github_login_screenshot: Image.Image
-    ) -> None:
+    def test_extract_region_center(self, github_login_screenshot: Image.Image) -> None:
         """Test extracting a region from the center of an image."""
         width, height = github_login_screenshot.size
         center_x, center_y = width // 2, height // 2

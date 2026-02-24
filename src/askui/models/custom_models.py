@@ -51,7 +51,9 @@ class CustomGetModel(GetModel):
     def __init__(
         self,
         model_name: str,
-        get_fn: Callable[[str, Source, Type[ResponseSchema] | None], ResponseSchema | str],
+        get_fn: Callable[
+            [str, Source, Type[ResponseSchema] | None], ResponseSchema | str
+        ],
     ):
         self.model_name = model_name
         self._get_fn = get_fn

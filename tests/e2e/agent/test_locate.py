@@ -39,7 +39,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = "Forgot password?"
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -83,7 +85,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Element("textfield")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 50 <= x <= 860 or 350 <= x <= 570
         assert 0 <= y <= 80 or 160 <= y <= 280
 
@@ -104,7 +108,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Element()
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 0 <= x <= github_login_screenshot.width
         assert 0 <= y <= github_login_screenshot.height
 
@@ -125,7 +131,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Prompt("Username textfield")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 350 <= x <= 570
         assert 160 <= y <= 230
 
@@ -146,7 +154,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot password?")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -167,7 +177,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot pasword", similarity_threshold=90)
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -188,7 +200,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot password?", match_type="exact")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -209,7 +223,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Text(r"F.*?", match_type="regex")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -230,7 +246,9 @@ class TestVisionAgentLocate:
         else:
             locate_model = askui_locate_model_factory(model_name)
         locator = Text("Forgot", match_type="contains")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 450 <= x <= 570
         assert 190 <= y <= 260
 
@@ -258,7 +276,9 @@ class TestVisionAgentLocate:
         image_path = path_fixtures / "images" / "github_com__signin__button.png"
         image = PILImage.open(image_path)
         locator = Image(image=image)
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
@@ -293,7 +313,9 @@ class TestVisionAgentLocate:
             image_compare_format="RGB",
             name="Sign in button",
         )
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 350 <= x <= 570
         assert 240 <= y <= 320
 
@@ -322,7 +344,9 @@ class TestVisionAgentLocate:
         image = PILImage.open(image_path)
         locator = Image(image=image, threshold=1.0, stop_threshold=1.0)
         with pytest.raises(ElementNotFoundError):
-            vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+            vision_agent.locate(
+                locator, github_login_screenshot, locate_model=locate_model
+            )
 
     def test_locate_with_ai_element_locator(
         self,
@@ -345,7 +369,9 @@ class TestVisionAgentLocate:
         ]:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon")
-        x, y = vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+        x, y = vision_agent.locate(
+            locator, github_login_screenshot, locate_model=locate_model
+        )
         assert 350 <= x <= 570
         assert 50 <= y <= 130
 
@@ -371,4 +397,6 @@ class TestVisionAgentLocate:
             pytest.skip("Skipping test for Anthropic model because not supported yet")
         locator = AiElement("github_com__icon", threshold=1.0)
         with pytest.raises(ElementNotFoundError):
-            vision_agent.locate(locator, github_login_screenshot, locate_model=locate_model)
+            vision_agent.locate(
+                locator, github_login_screenshot, locate_model=locate_model
+            )

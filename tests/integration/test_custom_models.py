@@ -147,4 +147,3 @@ class TestCustomModels:
         assert isinstance(result, SimpleResponseSchema)
         assert result.value == "test value"
         assert get_model.schemas == [SimpleResponseSchema]
-

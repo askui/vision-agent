@@ -256,7 +256,9 @@ class TestVisionAgentOffset:
         )
 
         # Type with offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, locate_model=locate_model)
+        vision_agent.type(
+            text, locator=locator, offset=offset, locate_model=locate_model
+        )
 
         # Verify calls
         mock_screenshot.assert_called()
@@ -288,7 +290,9 @@ class TestVisionAgentOffset:
         )
 
         # Type with negative offset should work without error
-        vision_agent.type(text, locator=locator, offset=offset, locate_model=locate_model)
+        vision_agent.type(
+            text, locator=locator, offset=offset, locate_model=locate_model
+        )
 
         # Verify calls
         mock_screenshot.assert_called()
