@@ -85,14 +85,9 @@ Generate human-readable logs of agent actions for debugging and auditing.
 Understand what data is collected and how to opt out.
 
 ### 10 - Extracting Data
-**Topics**: Using `get()`, structured data extraction, response schemas
+**Topics**: Using `get()`, file support (PDF. Excel, Word, CSV), structured data extraction, response schemas
 
-Extract information from screens using the `get()` method with Pydantic models.
-
-### 11 - File Support
-**Topics**: PDFs, Excel, Word documents, file processing
-
-Work with different file formats for data extraction.
+Extract information from screens and files using the `get()` method with Pydantic models.
 
 ## Additional Resources
 - **GitHub Issues**: https://github.com/askui/vision-agent/issues
