@@ -7,7 +7,7 @@ import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
-from .agent import ComputerAgent
+from .agent import ComputerAgent, VisionAgent
 from .agent_base import Agent
 from .agent_settings import AgentSettings
 from .locators import Locator
@@ -47,7 +47,7 @@ from .utils.image_utils import ImageSource
 from .utils.source_utils import InputSource
 
 try:
-    from .android_agent import AndroidAgent
+    from .android_agent import AndroidAgent, AndroidVisionAgent
 
     _ANDROID_AGENT_AVAILABLE = True
 except ImportError:
@@ -66,6 +66,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 __all__ = [
     "Agent",
     "ComputerAgent",
+    "VisionAgent",
     "AgentSettings",
     "ActSettings",
     "Base64ImageSourceParam",
@@ -104,7 +105,7 @@ __all__ = [
 ]
 
 if _ANDROID_AGENT_AVAILABLE:
-    __all__ += ["AndroidAgent"]
+    __all__ += ["AndroidAgent", "AndroidVisionAgent"]
 
 if _WEB_AGENTS_AVAILABLE:
     __all__ += ["WebVisionAgent", "WebTestingAgent"]

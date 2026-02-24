@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import Annotated, overload
 
 from pydantic import ConfigDict, Field, validate_call
@@ -352,3 +353,13 @@ class AndroidAgent(Agent):
             f"set_device_by_serial_number(device_sn='{device_sn}')",
         )
         self.os.set_device_by_serial_number(device_sn)
+
+
+class AndroidVisionAgent(AndroidAgent):
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore
+        warnings.warn(
+            "AndroidVisionAgent is deprecated, use AndroidAgent instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

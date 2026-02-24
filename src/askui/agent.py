@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import Annotated, Literal, Optional
 
 from pydantic import ConfigDict, Field, validate_call
@@ -501,3 +502,13 @@ class ComputerAgent(Agent):
             "ComputerAgent received instruction to execute '%s' on cli", command
         )
         self.tools.os.run_command(command)
+
+
+class VisionAgent(ComputerAgent):
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore
+        warnings.warn(
+            "VisionAgent is deprecated, use ComputerAgent instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
