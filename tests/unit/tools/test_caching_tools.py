@@ -131,6 +131,9 @@ def test_execute_cached_execution_executes_trajectory() -> None:
         # Execute the trajectory
         tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
+        # Mock successful tool execution (return result without is_error attribute)
+        mock_result = MagicMock(spec=[])  # Empty spec means no attributes
+        mock_toolbox.run.return_value = [mock_result]
         tool.set_toolbox(mock_toolbox)
 
         result = tool(trajectory_file=str(cache_file))
@@ -174,6 +177,9 @@ def test_execute_cached_execution_skips_screenshot_tools() -> None:
         # Execute the trajectory
         tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
+        # Mock successful tool execution (return result without is_error attribute)
+        mock_result = MagicMock(spec=[])  # Empty spec means no attributes
+        mock_toolbox.run.return_value = [mock_result]
         tool.set_toolbox(mock_toolbox)
 
         result = tool(trajectory_file=str(cache_file))
@@ -210,7 +216,7 @@ def test_execute_cached_execution_handles_errors_gracefully() -> None:
         result = tool(trajectory_file=str(cache_file))
 
         # Verify error message
-        assert "error occured" in result.lower()
+        assert "error occurred" in result.lower()
         assert "verify the UI state" in result
 
 
@@ -277,6 +283,9 @@ def test_execute_cached_execution_uses_delay_time_between_actions() -> None:
         custom_settings = CacheExecutionSettings(delay_time_between_action=0.1)
         tool = ExecuteCachedTrajectory(settings=custom_settings)
         mock_toolbox = MagicMock(spec=ToolCollection)
+        # Mock successful tool execution (return result without is_error attribute)
+        mock_result = MagicMock(spec=[])  # Empty spec means no attributes
+        mock_toolbox.run.return_value = [mock_result]
         tool.set_toolbox(mock_toolbox)
 
         # Mock time.sleep to verify it's called with correct delay
@@ -319,6 +328,9 @@ def test_execute_cached_execution_default_delay_time() -> None:
         # Execute with default settings
         tool = ExecuteCachedTrajectory()
         mock_toolbox = MagicMock(spec=ToolCollection)
+        # Mock successful tool execution (return result without is_error attribute)
+        mock_result = MagicMock(spec=[])  # Empty spec means no attributes
+        mock_toolbox.run.return_value = [mock_result]
         tool.set_toolbox(mock_toolbox)
 
         # Mock time.sleep to verify default delay is used
