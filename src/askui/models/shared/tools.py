@@ -465,11 +465,46 @@ class ToolCollection:
         mcp_tool = self._get_mcp_tools().get(tool_use_block_param.name)
         if mcp_tool:
             return self._run_mcp_tool(tool_use_block_param)
+        # Fallback: try prefix matching (for cached trajectories with different UUIDs)
+        tool = self._find_tool_by_prefix(tool_use_block_param.name)
+        if tool:
+            return self._run_regular_tool(tool_use_block_param, tool)
+        msg = f"no matching tool found with name {tool_use_block_param.name}"
+        logger.error(msg)
         return ToolResultBlockParam(
             content=f"Tool not found: {tool_use_block_param.name}",
             is_error=True,
             tool_use_id=tool_use_block_param.id,
         )
+
+    def _find_tool_by_prefix(self, cached_name: str) -> Tool | None:
+        """Find a tool by matching name prefix (without UUID suffix).
+
+        Tool names have format: {base_name}_tags_{tags}_{uuid} or {base_name}_{uuid}
+        This method strips the UUID suffix and matches by the remaining prefix.
+
+        Args:
+            cached_name: Tool name from cached trajectory (may have different UUID)
+
+        Returns:
+            Matching Tool if found, None otherwise
+        """
+        # Extract prefix by removing trailing UUID (pattern: _xxxxxxxx-xxxx-...)
+        # UUIDs start with 8 hex chars after an underscore
+        uuid_pattern = re.compile(r"_[0-9a-f]{8}-[0-9a-f]{4}.*$", re.IGNORECASE)
+        cached_prefix = uuid_pattern.sub("", cached_name)
+
+        if not cached_prefix or cached_prefix == cached_name:
+            # No UUID found or name unchanged, can't match by prefix
+            return None
+
+        # Find a tool whose name starts with the same prefix
+        for tool_name, tool in self.tool_map.items():
+            tool_prefix = uuid_pattern.sub("", tool_name)
+            if tool_prefix == cached_prefix:
+                return tool
+
+        return None
 
     async def _list_mcp_tools(self, mcp_client: McpClientProtocol) -> list[McpTool]:
         async with mcp_client:

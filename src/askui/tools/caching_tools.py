@@ -122,18 +122,30 @@ class ExecuteCachedTrajectory(Tool):
         info_msg = f"Executing cached trajectory from {trajectory_file}"
         logger.info(info_msg)
         for step in trajectory:
+            # Skip non-action tools (screenshots, cache management tools)
             if (
                 "screenshot" in step.name
-                or step.name == "retrieve_available_trajectories_tool"
+                or step.name.startswith("retrieve_available_trajectories_tool")
+                or step.name.startswith("execute_cached_executions_tool")
             ):
                 continue
             try:
-                self._toolbox.run([step])
+                results = self._toolbox.run([step])
+                # Check for tool execution errors
+                if results and hasattr(results[0], "is_error") and results[0].is_error:
+                    error_content = getattr(results[0], "content", "Unknown error")
+                    error_msg = f"Tool error during cached execution: {error_content}"
+                    logger.error(error_msg)
+                    return (
+                        f"An error occurred while executing the trajectory from "
+                        f"{trajectory_file}: {error_content}. Please verify the UI "
+                        "state and continue without cache."
+                    )
             except Exception as e:
-                error_msg = f"An error occured during the cached execution: {e}"
+                error_msg = f"An error occurred during the cached execution: {e}"
                 logger.exception(error_msg)
                 return (
-                    f"An error occured while executing the trajectory from "
+                    f"An error occurred while executing the trajectory from "
                     f"{trajectory_file}. Please verify the UI state and "
                     "continue without cache."
                 )
