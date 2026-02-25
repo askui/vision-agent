@@ -4,7 +4,6 @@ from typing import Any, NamedTuple
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Literal
 
-from askui.models.anthropic.factory import AnthropicApiProvider
 from askui.models.shared.agent_message_param import (
     ThinkingConfigParam,
     ToolChoiceParam,
@@ -235,7 +234,6 @@ class CacheWritingSettings(BaseModel):
 
     filename: str = ""
     parameter_identification_strategy: CACHE_PARAMETER_IDENTIFICATION_STRATEGY = "llm"
-    llm_parameter_id_api_provider: AnthropicApiProvider = "askui"
     visual_verification_method: CACHING_VISUAL_VERIFICATION_METHOD = "phash"
     visual_validation_region_size: int = 100
 
