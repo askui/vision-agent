@@ -49,8 +49,8 @@ class RetrieveCachedTestExecutions(Tool):
         ]
 
         if not available:
-            warning_msg = f"Warning: No trajectory files found in {self._cache_dir}"
-            logger.warning(warning_msg)
+            msg = f"No trajectory files found in {self._cache_dir}"
+            logger.info(msg)
 
         return available
 

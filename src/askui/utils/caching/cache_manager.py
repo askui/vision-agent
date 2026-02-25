@@ -494,7 +494,7 @@ class CacheManager:
             messages: Complete message history from the conversation
         """
         if self._cache_writer_settings.visual_verification_method == "none":
-            logger.debug("Visual validation disabled, skipping hash computation")
+            logger.info("Visual validation disabled, skipping hash computation")
             return
 
         # Build a mapping from tool_use_id to tool_block in the trajectory
