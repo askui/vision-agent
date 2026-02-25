@@ -7,7 +7,7 @@ from typing_extensions import override
 
 from ..models.shared.settings import CacheExecutionSettings
 from ..models.shared.tools import Tool, ToolCollection
-from ..utils.cache_writer import CacheWriter
+from ..utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger()
 
@@ -117,7 +117,8 @@ class ExecuteCachedTrajectory(Tool):
             raise FileNotFoundError(error_msg)
 
         # Load and execute trajectory
-        trajectory = CacheWriter.read_cache_file(Path(trajectory_file))
+        cache_file = CacheManager.read_cache_file(Path(trajectory_file))
+        trajectory = cache_file.trajectory
         info_msg = f"Executing cached trajectory from {trajectory_file}"
         logger.info(info_msg)
         for step in trajectory:

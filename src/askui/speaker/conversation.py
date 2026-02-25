@@ -93,7 +93,7 @@ class Conversation:
 
         # Infrastructure
         self._reporter = reporter
-        self._cache_manager = cache_manager
+        self.cache_manager = cache_manager
         self._truncation_strategy_factory = (
             truncation_strategy_factory or SimpleTruncationStrategyFactory()
         )
@@ -158,8 +158,8 @@ class Conversation:
             continue_execution = self._execute_loop()
 
         # Finish recording if cache_manager is active
-        if self._cache_manager is not None:
-            self._cache_manager.finish_recording(self.get_messages())
+        if self.cache_manager is not None:
+            self.cache_manager.finish_recording(self.get_messages())
 
         # Report final usage
         self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
@@ -192,7 +192,7 @@ class Conversation:
 
         # Execute one step with current speaker to get next message(s)
         logger.debug("Executing step with speaker: %s", speaker.get_name())
-        result: SpeakerResult = speaker.handle_step(self, self._cache_manager)
+        result: SpeakerResult = speaker.handle_step(self, self.cache_manager)
 
         # Accumulate usage
         if result.usage:

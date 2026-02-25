@@ -16,6 +16,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.settings import (
     ActSettings,
+    CacheWritingSettings,
     CachingSettings,
     GetSettings,
     LocateSettings,
@@ -32,7 +33,7 @@ from askui.tools.caching_tools import (
 from askui.tools.get_tool import GetTool
 from askui.tools.locate_tool import LocateTool
 from askui.utils.annotation_writer import AnnotationWriter
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source, load_source
 
@@ -235,13 +236,20 @@ class Agent:
 
         _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
-        tools, on_message, cached_execution_tool = self._patch_act_with_cache(
-            _caching_settings, _act_settings, tools, on_message
+        tools, cached_execution_tool, cache_manager = self._patch_act_with_cache(
+            _caching_settings, _act_settings, tools, goal_str
         )
         _tools = self._build_tools(tools)
 
         if cached_execution_tool:
             cached_execution_tool.set_toolbox(_tools)
+
+        # Set toolbox on cache_manager for non-cacheable tool detection
+        if cache_manager:
+            cache_manager.set_toolbox(_tools)
+
+        # Set cache_manager on conversation for recording
+        self._conversation.cache_manager = cache_manager
 
         # Use conversation-based architecture for execution
         self._conversation.start(
@@ -264,9 +272,11 @@ class Agent:
         caching_settings: CachingSettings,
         settings: ActSettings,
         tools: list[Tool] | ToolCollection | None,
-        on_message: OnMessageCb | None,
+        goal: str,
     ) -> tuple[
-        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedTrajectory | None
+        list[Tool] | ToolCollection,
+        ExecuteCachedTrajectory | None,
+        CacheManager | None,
     ]:
         """Patch act settings and tools with caching functionality.
 
@@ -274,13 +284,14 @@ class Agent:
             caching_settings: The caching settings to apply
             settings: The act settings to modify
             tools: The tools list to extend with caching tools
-            on_message: The message callback (may be replaced for write mode)
+            goal: The goal string for cache recording
 
         Returns:
-            A tuple of (modified_tools, modified_on_message, cached_execution_tool)
+            A tuple of (modified_tools, cached_execution_tool, cache_manager)
         """
         caching_tools: list[Tool] = []
         cached_execution_tool: ExecuteCachedTrajectory | None = None
+        cache_manager: CacheManager | None = None
 
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:
@@ -305,21 +316,23 @@ class Agent:
         else:
             tools = caching_tools
 
-        # Setup write mode: create cache writer and set message callback
+        # Setup write mode: create cache manager for recording
         if caching_settings.strategy in ["write", "both"]:
-            filename = (
-                caching_settings.writing_settings.filename
-                if caching_settings.writing_settings
-                else ""
+            cache_writer_settings = (
+                caching_settings.writing_settings or CacheWritingSettings()
             )
-            cache_writer = CacheWriter(caching_settings.cache_dir, filename)
-            if on_message is None:
-                on_message = cache_writer.add_message_cb
-            else:
-                error_message = "Cannot use on_message callback when writing Cache"
-                raise ValueError(error_message)
+            filename = cache_writer_settings.filename or ""
 
-        return tools, on_message, cached_execution_tool
+            cache_manager = CacheManager()
+            cache_manager.start_recording(
+                cache_dir=caching_settings.cache_dir,
+                file_name=filename,
+                goal=goal,
+                cache_writer_settings=cache_writer_settings,
+                vlm_provider=self._vlm_provider,
+            )
+
+        return tools, cached_execution_tool, cache_manager
 
     @overload
     def get(

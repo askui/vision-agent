@@ -33,6 +33,7 @@ from askui.utils.visual_validation import (
     compute_phash,
     extract_region,
     find_recent_screenshot,
+    get_validation_coordinate,
 )
 
 if TYPE_CHECKING:
@@ -85,6 +86,14 @@ class CacheManager:
         self._was_cached_execution = False
         self._cache_writer_settings = CacheWritingSettings()
         self._vlm_provider: "VlmProvider | None" = None
+
+    def set_toolbox(self, toolbox: ToolCollection) -> None:
+        """Set the toolbox for checking which tools are cacheable.
+
+        Args:
+            toolbox: ToolCollection to use for cacheable tool detection
+        """
+        self._toolbox = toolbox
 
     def record_execution_attempt(
         self,
@@ -266,22 +275,36 @@ class CacheManager:
 
     @staticmethod
     def read_cache_file(cache_file_path: Path) -> CacheFile:
-        """Read cache file with backward compatibility for v0.0 format.
+        """Read cache file with backward compatibility for legacy format.
+
+        Supports two formats:
+        1. Legacy format: Just a list of ToolUseBlockParam dicts
+        2. New format: CacheFile with metadata and trajectory
 
         Args:
             cache_file_path: Path to the cache file
 
         Returns:
             CacheFile object with metadata and trajectory
-
-        Raises:
-            ValueError: If cache file format is unknown
         """
         logger.debug("Reading cache file: %s", cache_file_path)
         with cache_file_path.open("r", encoding="utf-8") as f:
             raw_data = json.load(f)
 
-        cache_file = CacheFile(**raw_data)
+        # Handle legacy format (just a list of tool blocks)
+        if isinstance(raw_data, list):
+            logger.info("Detected legacy cache format, converting to CacheFile")
+            trajectory = [ToolUseBlockParam(**step) for step in raw_data]
+            cache_file = CacheFile(
+                metadata=CacheMetadata(
+                    version="0.0",
+                    created_at=datetime.now(tz=timezone.utc),
+                ),
+                trajectory=trajectory,
+            )
+        else:
+            cache_file = CacheFile(**raw_data)
+
         logger.info(
             "Successfully loaded cache: %s steps, %s parameters",
             len(cache_file.trajectory),
@@ -514,7 +537,7 @@ class CacheManager:
 
             # Process tool use blocks in this message
             for block in message.content:
-                if block.type != "tool_use" or block.name != "computer":
+                if block.type != "tool_use":
                     continue
 
                 # Find the corresponding block in the trajectory
@@ -523,12 +546,13 @@ class CacheManager:
                     # This tool use is not in the trajectory (might be non-cacheable)
                     continue
 
-                # Check if this action requires visual validation
-                action = (
-                    block.input.get("action") if isinstance(block.input, dict) else None
+                # Check if this tool has coordinates for visual validation
+                tool_input: dict[str, Any] = (
+                    block.input if isinstance(block.input, dict) else {}
                 )
-                if action not in {"left_click", "right_click", "type", "key"}:
-                    # Non-validated actions don't need visual hash
+                coordinate = get_validation_coordinate(tool_input)
+                if coordinate is None:
+                    # Tools without coordinates don't need visual validation
                     trajectory_block.visual_representation = None
                     continue
 
@@ -545,9 +569,10 @@ class CacheManager:
 
                 # Extract region and compute hash
                 try:
+                    # Pass coordinate in the format extract_region expects
                     region = extract_region(
                         screenshot,
-                        block.input,  # type: ignore[arg-type]
+                        {"coordinate": list(coordinate)},
                         region_size=self._cache_writer_settings.visual_validation_region_size,
                     )
                     visual_hash = self._compute_visual_hash(
@@ -556,9 +581,8 @@ class CacheManager:
                     trajectory_block.visual_representation = visual_hash
                     validated_count += 1
                     logger.debug(
-                        "Added visual validation hash for tool_id=%s (action=%s)",
+                        "Added visual validation hash for tool_id=%s",
                         block.id,
-                        action,
                     )
                 except Exception:
                     logger.exception(
