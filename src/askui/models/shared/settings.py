@@ -227,7 +227,7 @@ class CacheWritingSettings(BaseModel):
 
     Args:
         filename: Name for the cache file (auto-generated if empty)
-        parameter_identification_strategy: How to identify parameters ("llm" or "preset")
+        parameter_identification_strategy: How to identify parameters("llm" or "preset")
         llm_parameter_id_api_provider: API provider for LLM parameter identification
         visual_verification_method: Visual hash method ("phash", "ahash", or "none")
         visual_validation_region_size: Size of region to hash around coordinates

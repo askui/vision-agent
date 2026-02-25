@@ -147,9 +147,7 @@ class TotalFailureRateValidator(CacheValidator):
     number of attempts.
     """
 
-    def __init__(
-        self, min_attempts: int = 10, max_failure_rate: float = 0.5
-    ) -> None:
+    def __init__(self, min_attempts: int = 10, max_failure_rate: float = 0.5) -> None:
         """Initialize validator.
 
         Args:
@@ -160,7 +158,9 @@ class TotalFailureRateValidator(CacheValidator):
         self.max_failure_rate = max_failure_rate
 
     def should_invalidate(
-        self, cache_file: CacheFile, step_index: int | None = None  # noqa: ARG002
+        self,
+        cache_file: CacheFile,
+        step_index: int | None = None,  # noqa: ARG002
     ) -> tuple[bool, str | None]:
         """Check if overall failure rate is too high.
 
@@ -208,7 +208,9 @@ class StaleCacheValidator(CacheValidator):
         self.max_age_days = max_age_days
 
     def should_invalidate(
-        self, cache_file: CacheFile, step_index: int | None = None  # noqa: ARG002
+        self,
+        cache_file: CacheFile,
+        step_index: int | None = None,  # noqa: ARG002
     ) -> tuple[bool, str | None]:
         """Check if cache is stale (old + has failures).
 

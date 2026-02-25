@@ -98,9 +98,7 @@ class Speakers:
         # Lazy import to avoid circular dependency
         from .agent_speaker import AgentSpeaker
 
-        self.speakers: dict[str, Speaker] = speakers or {
-            "AgentSpeaker": AgentSpeaker()
-        }
+        self.speakers: dict[str, Speaker] = speakers or {"AgentSpeaker": AgentSpeaker()}
         self.default_speaker: str = (
             "AgentSpeaker"
             if "AgentSpeaker" in self.speakers

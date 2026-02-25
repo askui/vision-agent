@@ -479,7 +479,7 @@ class CacheManager:
 
         return result
 
-    def _add_visual_validation_to_trajectory(
+    def _add_visual_validation_to_trajectory(  # noqa: C901
         self, trajectory: list[ToolUseBlockParam], messages: list[MessageParam]
     ) -> None:
         """Add visual validation hashes to tool use blocks in the trajectory.
@@ -525,9 +525,7 @@ class CacheManager:
 
                 # Check if this action requires visual validation
                 action = (
-                    block.input.get("action")
-                    if isinstance(block.input, dict)
-                    else None
+                    block.input.get("action") if isinstance(block.input, dict) else None
                 )
                 if action not in {"left_click", "right_click", "type", "key"}:
                     # Non-validated actions don't need visual hash
@@ -617,7 +615,9 @@ class CacheManager:
             visual_validation_metadata = {
                 "enabled": True,
                 "method": self._cache_writer_settings.visual_verification_method,
-                "region_size": self._cache_writer_settings.visual_validation_region_size,
+                "region_size": (
+                    self._cache_writer_settings.visual_validation_region_size
+                ),
             }
 
         cache_file = CacheFile(

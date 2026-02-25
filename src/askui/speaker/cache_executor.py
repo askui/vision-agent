@@ -14,10 +14,9 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
     ToolUseBlockParam,
 )
+from askui.models.shared.settings import CacheExecutionSettings
 
 from .speaker import Speaker, SpeakerResult
-
-from askui.models.shared.settings import CacheExecutionSettings
 
 if TYPE_CHECKING:
     from askui.models.shared.settings import CacheFile
@@ -266,7 +265,8 @@ class CacheExecutor(Speaker):
         )
 
     def _handle_completed(
-        self, result: ExecutionResult  # noqa: ARG002
+        self,
+        result: ExecutionResult,  # noqa: ARG002
     ) -> SpeakerResult:
         """Handle cache execution completion."""
         logger.info(
@@ -610,7 +610,7 @@ class CacheExecutor(Speaker):
                 distance,
                 self._visual_validation_threshold,
             )
-            return True, None
+            return True, None  # noqa: TRY300
 
         except Exception as e:
             logger.exception("Failed to perform visual validation")

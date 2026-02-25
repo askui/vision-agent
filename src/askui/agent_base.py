@@ -2,7 +2,7 @@ import logging
 import time
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Optional, Type, overload
+from typing import Annotated, Literal, Optional, Type, overload
 
 from dotenv import load_dotenv
 from PIL import Image as PILImage

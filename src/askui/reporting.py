@@ -845,7 +845,6 @@ class AllureReporter(Reporter):
     @override
     def add_usage_summary(self, usage: dict[str, int | None]) -> None:
         """No-op for AllureReporter - usage is not tracked."""
-        pass
 
     @override
     def generate(self) -> None:

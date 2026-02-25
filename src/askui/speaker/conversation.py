@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 from opentelemetry import trace
 
-tracer = trace.get_tracer(__name__)
-
 from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
@@ -36,6 +34,7 @@ if TYPE_CHECKING:
     from askui.utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class ConversationException(Exception):
