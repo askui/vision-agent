@@ -1,6 +1,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 from pydantic import validate_call
 from typing_extensions import override
@@ -8,6 +9,7 @@ from typing_extensions import override
 from ..models.shared.settings import CacheExecutionSettings
 from ..models.shared.tools import Tool, ToolCollection
 from ..utils.caching.cache_manager import CacheManager
+from ..utils.caching.cache_parameter_handler import CacheParameterHandler
 
 logger = logging.getLogger()
 
@@ -72,7 +74,12 @@ class ExecuteCachedTrajectory(Tool):
                 "trajectory files are available\n"
                 "2. Select the appropriate trajectory file path from the "
                 "returned list\n"
-                "3. Pass the full file path to this tool\n\n"
+                "3. If the trajectory contains parameters (e.g., {{target_url}}), "
+                "provide values for them in the parameter_values parameter\n"
+                "4. Pass the full file path to this tool\n\n"
+                "Cache parameters allow dynamic values to be injected during "
+                "execution. For example, if a trajectory types '{{target_url}}', "
+                "you must provide parameter_values={'target_url': 'https://...'}.\n\n"
                 "The trajectory will be executed step-by-step, and you should "
                 "verify the results afterward. Note: Trajectories may fail if "
                 "the UI state has changed since they were recorded."
@@ -88,6 +95,16 @@ class ExecuteCachedTrajectory(Tool):
                             "available files)"
                         ),
                     },
+                    "parameter_values": {
+                        "type": "object",
+                        "description": (
+                            "Optional dictionary mapping parameter names to "
+                            "their values. Required if the trajectory contains "
+                            "parameters like {{variable}}. Example: "
+                            "{'target_url': 'https://example.com'}"
+                        ),
+                        "additionalProperties": {"type": "string"},
+                    },
                 },
                 "required": ["trajectory_file"],
             },
@@ -102,7 +119,11 @@ class ExecuteCachedTrajectory(Tool):
 
     @override
     @validate_call
-    def __call__(self, trajectory_file: str) -> str:
+    def __call__(
+        self,
+        trajectory_file: str,
+        parameter_values: dict[str, Any] | None = None,
+    ) -> str:
         if not hasattr(self, "_toolbox"):
             error_msg = "Toolbox not set. Call set_toolbox() first."
             logger.error(error_msg)
@@ -116,9 +137,24 @@ class ExecuteCachedTrajectory(Tool):
             logger.error(error_msg)
             raise FileNotFoundError(error_msg)
 
-        # Load and execute trajectory
+        # Load trajectory
         cache_file = CacheManager.read_cache_file(Path(trajectory_file))
         trajectory = cache_file.trajectory
+        parameter_values = parameter_values or {}
+
+        # Validate parameters
+        is_valid, missing_params = CacheParameterHandler.validate_parameters(
+            trajectory, parameter_values
+        )
+        if not is_valid:
+            error_msg = (
+                f"Missing required parameter values: {missing_params}. "
+                f"The cache file expects these parameters. "
+                f"Available parameters in cache: {cache_file.cache_parameters}"
+            )
+            logger.error(error_msg)
+            return error_msg
+
         info_msg = f"Executing cached trajectory from {trajectory_file}"
         logger.info(info_msg)
         for step in trajectory:
@@ -129,8 +165,14 @@ class ExecuteCachedTrajectory(Tool):
                 or step.name.startswith("execute_cached_executions_tool")
             ):
                 continue
+
+            # Substitute parameters in the step before execution
+            substituted_step = CacheParameterHandler.substitute_parameters(
+                step, parameter_values
+            )
+
             try:
-                results = self._toolbox.run([step])
+                results = self._toolbox.run([substituted_step])
                 # Check for tool execution errors
                 if results and hasattr(results[0], "is_error") and results[0].is_error:
                     error_content = getattr(results[0], "content", "Unknown error")
