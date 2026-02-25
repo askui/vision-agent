@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import validate_call
 from typing_extensions import override
 
-from ..models.shared.settings import CachedExecutionToolSettings
+from ..models.shared.settings import CacheExecutionSettings
 from ..models.shared.tools import Tool, ToolCollection
 from ..utils.cache_writer import CacheWriter
 
@@ -59,7 +59,7 @@ class ExecuteCachedTrajectory(Tool):
     Execute a predefined trajectory to fast-forward through UI interactions
     """
 
-    def __init__(self, settings: CachedExecutionToolSettings | None = None) -> None:
+    def __init__(self, settings: CacheExecutionSettings | None = None) -> None:
         super().__init__(
             name="execute_cached_executions_tool",
             description=(
@@ -92,7 +92,7 @@ class ExecuteCachedTrajectory(Tool):
             },
         )
         if not settings:
-            settings = CachedExecutionToolSettings()
+            settings = CacheExecutionSettings()
         self._settings = settings
 
     def set_toolbox(self, toolbox: ToolCollection) -> None:

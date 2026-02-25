@@ -57,6 +57,21 @@ class Reporter(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Add usage statistics summary to the report.
+
+        Called at the end of an act() execution with accumulated token usage.
+
+        Args:
+            usage (dict[str, int | None]): Accumulated usage statistics containing:
+                - input_tokens: Total input tokens sent to API
+                - output_tokens: Total output tokens generated
+                - cache_creation_input_tokens: Tokens written to prompt cache
+                - cache_read_input_tokens: Tokens read from prompt cache
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def generate(self) -> None:
         """Generates the final report.
 
@@ -79,6 +94,10 @@ class NullReporter(Reporter):
         content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
+        pass
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
         pass
 
     @override
@@ -115,6 +134,12 @@ class CompositeReporter(Reporter):
             reporter.add_message(role, content, image)
 
     @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Add usage summary to all reporters."""
+        for reporter in self._reporters:
+            reporter.add_usage_summary(usage)
+
+    @override
     def generate(self) -> None:
         """Generates the final report."""
         for report in self._reporters:
@@ -139,6 +164,7 @@ class SimpleHtmlReporter(Reporter):
         self.report_dir = Path(report_dir)
         self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
+        self.usage_summary: dict[str, int | None] | None = None
 
     def _collect_system_info(self) -> SystemInfo:
         """Collect system and Python information"""
@@ -178,6 +204,11 @@ class SimpleHtmlReporter(Reporter):
             "images": [self._image_to_base64(img) for img in _images],
         }
         self.messages.append(message)
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """Store usage summary for inclusion in the report."""
+        self.usage_summary = usage
 
     @override
     def generate(self) -> None:
@@ -810,6 +841,11 @@ class AllureReporter(Reporter):
                         name="screenshot",
                         attachment_type=self.allure.attachment_type.PNG,
                     )
+
+    @override
+    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        """No-op for AllureReporter - usage is not tracked."""
+        pass
 
     @override
     def generate(self) -> None:

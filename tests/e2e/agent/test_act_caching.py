@@ -9,7 +9,7 @@ import pytest
 from askui.agent import ComputerAgent
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCbParam
-from askui.models.shared.settings import CachedExecutionToolSettings, CachingSettings
+from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
 
 
 def test_act_with_caching_strategy_read(vision_agent: ComputerAgent) -> None:
@@ -196,7 +196,7 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: ComputerAgent) -> Non
 def test_act_with_custom_cached_execution_tool_settings(
     vision_agent: ComputerAgent,
 ) -> None:
-    """Test that custom CachedExecutionToolSettings are applied."""
+    """Test that custom CacheExecutionSettings are applied."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
 
@@ -204,14 +204,14 @@ def test_act_with_custom_cached_execution_tool_settings(
         cache_file = cache_dir / "test_cache.json"
         cache_file.write_text("[]", encoding="utf-8")
 
-        # Act with custom execution tool settings
-        custom_settings = CachedExecutionToolSettings(delay_time_between_action=2.0)
+        # Act with custom execution settings
+        custom_settings = CacheExecutionSettings(delay_time_between_action=2.0)
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
                 strategy="read",
                 cache_dir=str(cache_dir),
-                execute_cached_trajectory_tool_settings=custom_settings,
+                execution_settings=custom_settings,
             ),
         )
 

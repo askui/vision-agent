@@ -199,6 +199,16 @@ class Tool(BaseModel, ABC):
         """Sets the base name of the tool."""
         self.base_name = value
 
+    @property
+    def is_cacheable(self) -> bool:
+        """Whether this tool's actions can be cached and replayed.
+
+        Returns False by default. Override in subclasses for tools
+        that produce deterministic results and where side-effects during
+        replay are unlikely or tolerable.
+        """
+        return False
+
     def to_params(
         self,
     ) -> ToolParam:

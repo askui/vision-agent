@@ -42,9 +42,7 @@ from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
-
-if TYPE_CHECKING:
-    from askui.models.models import ActModel
+from .speaker import CacheExecutor, Conversation, Speakers
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +62,25 @@ class Agent:
 
         self._tools = tools or []
 
-        # Build models: use provided settings or fall back to AskUI defaults
-        from askui.models.shared.agent import AskUIAgent
-
+        # Store settings and model providers
         _settings = settings or AgentSettings()
-        self._act_model: ActModel = AskUIAgent(
-            model_id=_settings.vlm_provider.model_id,
-            messages_api=_settings.to_messages_api(),
+        self._vlm_provider = _settings.vlm_provider
+        self._image_qa_provider = _settings.image_qa_provider
+        self._detection_provider = _settings.detection_provider
+
+        # Create default speakers
+        speakers = Speakers()
+
+        # Add CacheExecutor speaker for cache playback
+        speakers.add_speaker(CacheExecutor())
+
+        # Create conversation with speakers and model providers
+        self._conversation = Conversation(
+            speakers=speakers,
+            vlm_provider=self._vlm_provider,
+            image_qa_provider=self._image_qa_provider,
+            detection_provider=self._detection_provider,
+            reporter=self._reporter,
         )
 
         # Provider-based tools
@@ -233,11 +243,12 @@ class Agent:
         if cached_execution_tool:
             cached_execution_tool.set_toolbox(_tools)
 
-        self._act_model.act(
+        # Use conversation-based architecture for execution
+        self._conversation.start(
             messages=messages,
-            act_settings=_act_settings,
             on_message=on_message,
             tools=_tools,
+            settings=_act_settings,
         )
 
     def _build_tools(self, tools: list[Tool] | ToolCollection | None) -> ToolCollection:
@@ -274,7 +285,7 @@ class Agent:
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:
             cached_execution_tool = ExecuteCachedTrajectory(
-                caching_settings.execute_cached_trajectory_tool_settings
+                caching_settings.execution_settings
             )
             caching_tools.extend(
                 [
@@ -296,9 +307,12 @@ class Agent:
 
         # Setup write mode: create cache writer and set message callback
         if caching_settings.strategy in ["write", "both"]:
-            cache_writer = CacheWriter(
-                caching_settings.cache_dir, caching_settings.filename
+            filename = (
+                caching_settings.writing_settings.filename
+                if caching_settings.writing_settings
+                else ""
             )
+            cache_writer = CacheWriter(caching_settings.cache_dir, filename)
             if on_message is None:
                 on_message = cache_writer.add_message_cb
             else:
