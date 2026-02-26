@@ -31,6 +31,7 @@ from .speaker import Speaker, SpeakerResult
 if TYPE_CHECKING:
     from askui.models.shared.settings import CacheFile
     from askui.models.shared.tools import ToolCollection
+    from askui.reporting import Reporter
 
     from .conversation import Conversation
 
@@ -432,6 +433,13 @@ class CacheExecutor(Speaker):
             len(self._cache_file.trajectory),
             start_from_step_index,
         )
+
+        # Report cache execution statistics to the reporter
+        reporter: Reporter | None = context.get("reporter")
+        if reporter and self._cache_file.metadata.token_usage:
+            reporter.add_cache_execution_statistics(
+                self._cache_file.metadata.token_usage.model_dump()
+            )
 
     def reset_state(self) -> None:
         """Reset cache execution state."""

@@ -89,8 +89,22 @@ class Reporter(ABC):
             usage (dict[str, int | None]): Accumulated usage statistics containing:
                 - input_tokens: Total input tokens sent to API
                 - output_tokens: Total output tokens generated
-                - cache_creation_input_tokens: Tokens written to prompt cache
-                - cache_read_input_tokens: Tokens read from prompt cache
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
+        """Add cache execution statistics showing token savings.
+
+        Called when a cached trajectory is executed. The original_usage contains
+        the token usage from when the cache was originally recorded.
+
+        Args:
+            original_usage (dict[str, int | None]): Token usage from cache recording:
+                - input_tokens: Input tokens used during original recording
+                - output_tokens: Output tokens used during original recording
         """
         raise NotImplementedError
 
@@ -121,6 +135,12 @@ class NullReporter(Reporter):
 
     @override
     def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+        pass
+
+    @override
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
         pass
 
     @override
@@ -163,6 +183,14 @@ class CompositeReporter(Reporter):
             reporter.add_usage_summary(usage)
 
     @override
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
+        """Add cache execution statistics to all reporters."""
+        for reporter in self._reporters:
+            reporter.add_cache_execution_statistics(original_usage)
+
+    @override
     def generate(self) -> None:
         """Generates the final report."""
         for report in self._reporters:
@@ -188,6 +216,8 @@ class SimpleHtmlReporter(Reporter):
         self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
         self.usage_summary: dict[str, int | None] | None = None
+        self.cache_original_usage: dict[str, int | None] | None = None
+        self._start_time: datetime | None = None
 
     def _collect_system_info(self) -> SystemInfo:
         """Collect system and Python information"""
@@ -217,6 +247,10 @@ class SimpleHtmlReporter(Reporter):
         image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
         """Add a message to the report."""
+        # Track start time from first message
+        if self._start_time is None:
+            self._start_time = datetime.now(tz=timezone.utc)
+
         _images = normalize_to_pil_images(image)
         _content = truncate_content(content)
 
@@ -233,6 +267,13 @@ class SimpleHtmlReporter(Reporter):
     def add_usage_summary(self, usage: dict[str, int | None]) -> None:
         """Store usage summary for inclusion in the report."""
         self.usage_summary = usage
+
+    @override
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
+        """Store original cache usage for calculating savings."""
+        self.cache_original_usage = original_usage
 
     @override
     def generate(self) -> None:
@@ -740,6 +781,64 @@ class SimpleHtmlReporter(Reporter):
                     </div>
 
                     <div class="section">
+                        <h2>Execution Statistics</h2>
+                        <table class="system-info">
+                            {% if execution_time_seconds is not none %}
+                            <tr>
+                                <th>Execution Time</th>
+                                <td>{{ "%.2f"|format(execution_time_seconds) }} seconds</td>
+                            </tr>
+                            {% endif %}
+                            {% if usage_summary.get('input_tokens') is not none %}
+                            <tr>
+                                <th>Input Tokens</th>
+                                <td>
+                                    {{ "{:,}".format(usage_summary.get('input_tokens')) }}
+                                    {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
+                                        {% set original = cache_original_usage.get('input_tokens') %}
+                                        {% set current = usage_summary.get('input_tokens') %}
+                                        {% set saved = original - current %}
+                                        {% if saved > 0 and original > 0 %}
+                                            {% set savings_pct = (saved / original * 100) %}
+                                            <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if usage_summary.get('output_tokens') is not none %}
+                            <tr>
+                                <th>Output Tokens</th>
+                                <td>
+                                    {{ "{:,}".format(usage_summary.get('output_tokens')) }}
+                                    {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
+                                        {% set original = cache_original_usage.get('output_tokens') %}
+                                        {% set current = usage_summary.get('output_tokens') %}
+                                        {% set saved = original - current %}
+                                        {% if saved > 0 and original > 0 %}
+                                            {% set savings_pct = (saved / original * 100) %}
+                                            <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% if cache_original_usage.get('input_tokens') is not none %}
+                            <tr>
+                                <th>Original Input Tokens</th>
+                                <td>{{ "{:,}".format(cache_original_usage.get('input_tokens')) }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if cache_original_usage.get('output_tokens') is not none %}
+                            <tr>
+                                <th>Original Output Tokens</th>
+                                <td>{{ "{:,}".format(cache_original_usage.get('output_tokens')) }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+
+                    <div class="section">
                         <h2>Conversation Log</h2>
                         <table>
                             <tr>
@@ -780,10 +879,20 @@ class SimpleHtmlReporter(Reporter):
         """
 
         template = Template(template_str)
+
+        # Calculate execution time
+        end_time = datetime.now(tz=timezone.utc)
+        execution_time_seconds: float | None = None
+        if self._start_time is not None:
+            execution_time_seconds = (end_time - self._start_time).total_seconds()
+
         html = template.render(
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=end_time,
             messages=self.messages,
             system_info=self.system_info,
+            usage_summary=self.usage_summary,
+            cache_original_usage=self.cache_original_usage,
+            execution_time_seconds=execution_time_seconds,
         )
 
         report_path = (
@@ -869,6 +978,12 @@ class AllureReporter(Reporter):
     @override
     def add_usage_summary(self, usage: dict[str, int | None]) -> None:
         """No-op for AllureReporter - usage is not tracked."""
+
+    @override
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
+        """No-op for AllureReporter - cache statistics are not tracked."""
 
     @override
     def generate(self) -> None:

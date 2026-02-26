@@ -319,6 +319,7 @@ class Conversation:
                     "start_from_step_index": start_from_step_index,
                     "parameter_values": parameter_values,
                     "toolbox": self.tools,
+                    "reporter": self._reporter,
                 }
 
     def _add_message(self, message: MessageParam) -> None:
