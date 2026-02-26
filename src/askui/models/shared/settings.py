@@ -247,7 +247,7 @@ class CacheExecutionSettings(BaseModel):
         visual_validation_threshold: Max Hamming distance for validation
     """
 
-    delay_time_between_actions: float = 0.5
+    delay_time_between_actions: float = 1.0  # keep >1s to give UI time to materialize
     skip_visual_validation: bool = False
     visual_validation_threshold: int = 10
 
