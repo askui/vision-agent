@@ -16,6 +16,15 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.settings import CacheExecutionSettings
 from askui.utils.caching.cache_manager import CacheManager
+from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
+from askui.utils.visual_validation import (
+    compute_ahash,
+    compute_hamming_distance,
+    compute_phash,
+    extract_region,
+    find_recent_screenshot,
+    get_validation_coordinate,
+)
 
 from .speaker import Speaker, SpeakerResult
 
@@ -81,12 +90,11 @@ class CacheExecutor(Speaker):
         # Cache Execution Settings
         self._skip_visual_validation: bool = _settings.skip_visual_validation
         self._visual_validation_threshold: int = _settings.visual_validation_threshold
-        self._delay_time_between_actions: float = _settings.delay_time_between_action
+        self._delay_time_between_actions: float = _settings.delay_time_between_actions
 
         self._trajectory: list[ToolUseBlockParam] = []
         self._toolbox: "ToolCollection | None" = None
         self._parameter_values: dict[str, str] = {}
-        self._delay_time: float = 0.5
         self._visual_validation_enabled: bool = False
         self._visual_validation_method: str = "phash"
         self._visual_validation_region_size: int = 100
@@ -165,7 +173,7 @@ class CacheExecutor(Speaker):
                 self._current_step_index += 1
                 # Add delay between actions
                 if self._current_step_index < len(self._trajectory):
-                    time.sleep(self._delay_time)
+                    time.sleep(self._delay_time_between_actions)
 
         # Check if we have a trajectory
         if not self._trajectory or not self._toolbox:
@@ -338,8 +346,6 @@ class CacheExecutor(Speaker):
             FileNotFoundError: If cache file doesn't exist
             ValueError: If validation fails
         """
-        from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
-
         # Extract parameters
         trajectory_file: str = context["trajectory_file"]
         start_from_step_index: int = context.get("start_from_step_index", 0)
@@ -393,7 +399,6 @@ class CacheExecutor(Speaker):
         self._trajectory = self._cache_file.trajectory
         self._toolbox = toolbox
         self._parameter_values = parameter_values
-        self._delay_time = context.get("delay_time", 0.5)
         self._current_step_index = start_from_step_index
         self._message_history = []
         self._executing_from_cache = True
@@ -454,9 +459,6 @@ class CacheExecutor(Speaker):
         Returns:
             ExecutionResult with status and the prepared message
         """
-        from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
-        from askui.utils.visual_validation import find_recent_screenshot
-
         # Check if we've completed all steps
         if self._current_step_index >= len(self._trajectory):
             return ExecutionResult(
@@ -540,10 +542,14 @@ class CacheExecutor(Speaker):
         if not self._toolbox:
             return False
 
+        # Try exact match first, then prefix match (for tools with UUID suffixes)
         tool = self._toolbox.tool_map.get(step.name)
+        if tool is None:
+            tool = self._toolbox.find_tool_by_prefix(step.name)
 
         if tool is None:
-            return False
+            # Tool not found - should pause for agent to handle
+            return True
 
         return not tool.is_cacheable
 
@@ -557,15 +563,6 @@ class CacheExecutor(Speaker):
         self, step: ToolUseBlockParam, current_screenshot: Image.Image | None = None
     ) -> tuple[bool, str | None]:
         """Validate cached step using visual hash comparison."""
-        from askui.utils.visual_validation import (
-            compute_ahash,
-            compute_hamming_distance,
-            compute_phash,
-            extract_region,
-            find_recent_screenshot,
-            get_validation_coordinate,
-        )
-
         if not self._visual_validation_enabled:
             return True, None
 
@@ -587,7 +584,7 @@ class CacheExecutor(Speaker):
 
             if coordinate is None:
                 # No coordinate found - skip visual validation for this step
-                logger.debug(
+                logger.info(
                     "No coordinate found in step input, skipping visual validation"
                 )
                 return True, None

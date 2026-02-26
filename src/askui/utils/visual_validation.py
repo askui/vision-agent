@@ -110,7 +110,7 @@ def extract_region(
     coordinate = action_input.get("coordinate")
     if not coordinate:
         msg = f"No coordinate found in action_input: {action_input}"
-        logger.info(msg)
+        logger.warning(msg)
         return image
 
     x, y = coordinate

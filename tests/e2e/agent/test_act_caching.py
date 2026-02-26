@@ -205,7 +205,7 @@ def test_act_with_custom_cached_execution_tool_settings(
         cache_file.write_text("[]", encoding="utf-8")
 
         # Act with custom execution settings
-        custom_settings = CacheExecutionSettings(delay_time_between_action=2.0)
+        custom_settings = CacheExecutionSettings(delay_time_between_actions=2.0)
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(

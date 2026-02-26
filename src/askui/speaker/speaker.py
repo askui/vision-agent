@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -134,3 +134,17 @@ class Speakers:
     def __contains__(self, name: str) -> bool:
         """Check if a speaker exists in the collection."""
         return name in self.speakers
+
+    def __iter__(self) -> "Iterator[Speaker]":
+        """Iterate over all speakers in the collection."""
+        return iter(self.speakers.values())
+
+    def reset_state(self) -> None:
+        """Reset state for all speakers that have a reset_state method.
+
+        This allows stateful speakers (e.g., CacheExecutor) to be reset
+        between conversation runs.
+        """
+        for speaker in self.speakers.values():
+            if hasattr(speaker, "reset_state") and callable(speaker.reset_state):
+                speaker.reset_state()

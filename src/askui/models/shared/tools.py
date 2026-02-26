@@ -466,7 +466,7 @@ class ToolCollection:
         if mcp_tool:
             return self._run_mcp_tool(tool_use_block_param)
         # Fallback: try prefix matching (for cached trajectories with different UUIDs)
-        tool = self._find_tool_by_prefix(tool_use_block_param.name)
+        tool = self.find_tool_by_prefix(tool_use_block_param.name)
         if tool:
             return self._run_regular_tool(tool_use_block_param, tool)
         msg = f"no matching tool found with name {tool_use_block_param.name}"
@@ -477,11 +477,14 @@ class ToolCollection:
             tool_use_id=tool_use_block_param.id,
         )
 
-    def _find_tool_by_prefix(self, cached_name: str) -> Tool | None:
+    def find_tool_by_prefix(self, cached_name: str) -> Tool | None:
         """Find a tool by matching name prefix (without UUID suffix).
 
         Tool names have format: {base_name}_tags_{tags}_{uuid} or {base_name}_{uuid}
         This method strips the UUID suffix and matches by the remaining prefix.
+
+        This is useful for cached trajectories where tool names may have different
+        UUIDs than the current session.
 
         Args:
             cached_name: Tool name from cached trajectory (may have different UUID)

@@ -179,7 +179,7 @@ def test_execute_cached_trajectory_returns_success_when_file_exists() -> None:
     """Test that ExecuteCachedTrajectory returns success when file exists."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
-        cache_file.write_text("{}", encoding="utf-8")
+        _create_valid_cache_file(cache_file)
 
         tool = ExecuteCachedTrajectory()
         result = tool(trajectory_file=str(cache_file))
@@ -192,7 +192,7 @@ def test_execute_cached_trajectory_accepts_start_from_step_index() -> None:
     """Test that ExecuteCachedTrajectory accepts start_from_step_index parameter."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
-        cache_file.write_text("{}", encoding="utf-8")
+        _create_valid_cache_file(cache_file)
 
         tool = ExecuteCachedTrajectory()
         result = tool(trajectory_file=str(cache_file), start_from_step_index=5)
@@ -204,7 +204,7 @@ def test_execute_cached_trajectory_accepts_parameter_values() -> None:
     """Test that ExecuteCachedTrajectory accepts parameter_values parameter."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
-        cache_file.write_text("{}", encoding="utf-8")
+        _create_valid_cache_file(cache_file)
 
         tool = ExecuteCachedTrajectory()
         result = tool(
@@ -223,7 +223,7 @@ def test_execute_cached_trajectory_does_not_execute_directly() -> None:
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_file = Path(temp_dir) / "test_trajectory.json"
-        cache_file.write_text("{}", encoding="utf-8")
+        _create_valid_cache_file(cache_file)
 
         tool = ExecuteCachedTrajectory()
 

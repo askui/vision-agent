@@ -27,7 +27,7 @@ caching_settings = CachingSettings(
     cache_dir=".cache",      # Directory to store cache files
     filename="my_test.json", # Filename for the cache file (optional for write mode)
     execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-        delay_time_between_action=0.5  # Delay in seconds between each cached action
+        delay_time_between_actions=0.5  # Delay in seconds between each cached action
     )
 )
 ```
@@ -47,13 +47,13 @@ The `CachedExecutionToolSettings` class allows you to configure how cached traje
 from askui.models.shared.settings import CachedExecutionToolSettings
 
 execution_settings = CachedExecutionToolSettings(
-    delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
+    delay_time_between_actions=0.5  # Delay in seconds between each action (default: 0.5)
 )
 ```
 
 #### Parameters
 
-- **`delay_time_between_action`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements can materialize before the next action is executed. Defaults to `0.5` seconds.
+- **`delay_time_between_actions`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements can materialize before the next action is executed. Defaults to `0.5` seconds.
 
 You can adjust this value based on your application's responsiveness:
 - For faster applications or quick interactions, you might use a smaller delay (e.g., `0.1` or `0.2` seconds)
@@ -222,7 +222,7 @@ with ComputerAgent() as agent:
             strategy="read",
             cache_dir=".cache",
             execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-                delay_time_between_action=1.0  # Wait 1 second between each action
+                delay_time_between_actions=1.0  # Wait 1 second between each action
             )
         )
     )
@@ -359,7 +359,7 @@ with ComputerAgent() as agent:
             strategy="read",
             cache_dir="test_cache",
             execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-                delay_time_between_action=1.0
+                delay_time_between_actions=1.0
             )
         )
     )

@@ -134,6 +134,9 @@ class Conversation:
         """
         # Reset state
         self.accumulated_usage = UsageParam()
+        self.cache_execution_context = {}
+        self._executed_from_cache = False
+        self.speakers.reset_state()
 
         # Store execution parameters
         self.settings = settings or ActSettings()

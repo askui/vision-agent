@@ -242,12 +242,12 @@ class CacheExecutionSettings(BaseModel):
     """Settings for executing/replaying cached trajectories.
 
     Args:
-        delay_time_between_action: Delay in seconds between actions
+        delay_time_between_actions: Delay in seconds between actions
         skip_visual_validation: Override to disable visual validation
         visual_validation_threshold: Max Hamming distance for validation
     """
 
-    delay_time_between_action: float = 0.5
+    delay_time_between_actions: float = 0.5
     skip_visual_validation: bool = False
     visual_validation_threshold: int = 10
 

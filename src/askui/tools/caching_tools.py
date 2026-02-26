@@ -1,7 +1,8 @@
+import json
 import logging
 from pathlib import Path
 
-from pydantic import validate_call
+from pydantic import ValidationError, validate_call
 from typing_extensions import override
 
 from ..models.shared.tools import Tool
@@ -232,7 +233,7 @@ class ExecuteCachedTrajectory(Tool):
             start_from_step_index,
         )
 
-        # Minimal validation - just check file exists
+        # Validate file exists
         if not Path(trajectory_file).is_file():
             error_msg = (
                 f"Trajectory file not found: {trajectory_file}\n"
@@ -241,7 +242,19 @@ class ExecuteCachedTrajectory(Tool):
             logger.error(error_msg)
             return error_msg
 
-        # Return success - CacheExecutor will handle full validation and execution
+        # Validate file structure using CacheFile pydantic model
+        try:
+            CacheManager.read_cache_file(Path(trajectory_file))
+        except (json.JSONDecodeError, ValidationError) as e:
+            error_msg = (
+                f"Invalid cache file format: {trajectory_file}\n"
+                f"Error: {e}\n"
+                "The cache file may be corrupted or in an old format."
+            )
+            logger.exception(error_msg)
+            return error_msg
+
+        # Return success - CacheExecutor will handle full execution
         return f"Requesting cache execution for {Path(trajectory_file).name}"
 
 
