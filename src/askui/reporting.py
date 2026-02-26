@@ -31,6 +31,29 @@ def normalize_to_pil_images(
     return [image]
 
 
+def truncate_content(
+    content: Any,
+    max_string_length: int = 100000,
+) -> Any:
+    """Filter out long strings (i.e. the base64 image data) to keep reports readable."""
+    if isinstance(content, str):
+        if len(content) > max_string_length:
+            return f"[truncated: {len(content)} characters]"
+        return content
+
+    if isinstance(content, dict):
+        return {
+            key: truncate_content(value, max_string_length)
+            for key, value in content.items()
+        }
+
+    if isinstance(content, list):
+        return [truncate_content(item, max_string_length) for item in content]
+
+    # For other types (int, float, bool, None), return as-is
+    return content
+
+
 class Reporter(ABC):
     """Abstract base class for reporters. Cannot be instantiated directly.
 
@@ -195,12 +218,13 @@ class SimpleHtmlReporter(Reporter):
     ) -> None:
         """Add a message to the report."""
         _images = normalize_to_pil_images(image)
+        _content = truncate_content(content)
 
         message = {
             "timestamp": datetime.now(tz=timezone.utc),
             "role": role,
-            "content": self._format_content(content),
-            "is_json": isinstance(content, (dict, list)),
+            "content": self._format_content(_content),
+            "is_json": isinstance(_content, (dict, list)),
             "images": [self._image_to_base64(img) for img in _images],
         }
         self.messages.append(message)
