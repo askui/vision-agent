@@ -329,9 +329,30 @@ class CacheExecutor(Speaker):
                 error_message=result.error_message or "Unknown error",
             )
 
+        # Add failure message to inform the agent about what happened
+        failure_message = MessageParam(
+            role="user",
+            content=[
+                TextBlockParam(
+                    type="text",
+                    text=(
+                        "[CACHE EXECUTION FAILED]\n\n"
+                        f"The CacheExecutor failed to execute the cached trajectory "
+                        f"'{self._cache_file_path}' at step {result.step_index}.\n\n"
+                        f"Error: {result.error_message}\n\n"
+                        "The cache file is potentially invalid. "
+                        "Please complete the remaining steps manually. After that, use "
+                        "the verify_cache_execution tool with success=False to "
+                        "potentially invalidate the cache file."
+                    ),
+                )
+            ],
+        )
+
         return SpeakerResult(
             status="switch_speaker",
             next_speaker="AgentSpeaker",
+            messages_to_add=[failure_message],
         )
 
     def _activate_from_context(
