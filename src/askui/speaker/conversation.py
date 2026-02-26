@@ -108,6 +108,9 @@ class Conversation:
         # Cache execution context (for communication between tools and CacheExecutor)
         self.cache_execution_context: dict[str, Any] = {}
 
+        # Track if cache execution was used (to prevent recording during playback)
+        self._executed_from_cache: bool = False
+
     @tracer.start_as_current_span("conversation")
     def start(
         self,
@@ -157,8 +160,8 @@ class Conversation:
         while continue_execution:
             continue_execution = self._execute_loop()
 
-        # Finish recording if cache_manager is active
-        if self.cache_manager is not None:
+        # Finish recording if cache_manager is active and not executing from cache
+        if self.cache_manager is not None and not self._executed_from_cache:
             self.cache_manager.finish_recording(self.get_messages())
 
         # Report final usage
@@ -214,6 +217,7 @@ class Conversation:
 
                 # Check if cache execution was requested (set by _handle_tool_results)
                 if self.cache_execution_context:
+                    self._executed_from_cache = True
                     self.switch_speaker("CacheExecutor")
 
                 return True
@@ -293,7 +297,7 @@ class Conversation:
         ):
             # Check if ExecuteCachedTrajectory was called successfully
             if (
-                tool_use_block.name == "execute_cached_executions_tool"
+                tool_use_block.name.startswith("execute_cached_executions_tool")
                 and not tool_result.is_error
             ):
                 # Extract parameters from tool call (input is dict at runtime)

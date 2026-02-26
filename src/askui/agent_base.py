@@ -28,7 +28,9 @@ from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
     ExecuteCachedTrajectory,
+    InspectCacheMetadata,
     RetrieveCachedTestExecutions,
+    VerifyCacheExecution,
 )
 from askui.tools.get_tool import GetTool
 from askui.tools.locate_tool import LocateTool
@@ -69,13 +71,8 @@ class Agent:
         self._image_qa_provider = _settings.image_qa_provider
         self._detection_provider = _settings.detection_provider
 
-        # Create default speakers
-        speakers = Speakers()
-
-        # Add CacheExecutor speaker for cache playback
-        speakers.add_speaker(CacheExecutor())
-
         # Create conversation with speakers and model providers
+        speakers = Speakers()
         self._conversation = Conversation(
             speakers=speakers,
             vlm_provider=self._vlm_provider,
@@ -241,9 +238,6 @@ class Agent:
         )
         _tools = self._build_tools(tools)
 
-        if cached_execution_tool:
-            cached_execution_tool.set_toolbox(_tools)
-
         # Set toolbox on cache_manager for non-cacheable tool detection
         if cache_manager:
             cache_manager.set_toolbox(_tools)
@@ -295,13 +289,18 @@ class Agent:
 
         # Setup read mode: add caching tools and modify system prompt
         if caching_settings.strategy in ["read", "both"]:
-            cached_execution_tool = ExecuteCachedTrajectory(
-                caching_settings.execution_settings
-            )
+            # Create CacheExecutor with execution settings and add to speakers
+            cache_executor = CacheExecutor(caching_settings.execution_settings)
+            self._conversation.speakers.add_speaker(cache_executor)
+
+            # Add caching tools
+            cached_execution_tool = ExecuteCachedTrajectory()
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
                     cached_execution_tool,
+                    VerifyCacheExecution(),
+                    InspectCacheMetadata(),
                 ]
             )
             if settings.messages.system is None:
