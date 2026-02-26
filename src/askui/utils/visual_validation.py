@@ -116,22 +116,12 @@ def extract_region(
     x, y = coordinate
     width, height = image.size
 
-    # Calculate region bounds (centered on coordinate)
+    # Calculate region bounds (centered on coordinate) and clip to valid bounds
     half_size = region_size // 2
     left = max(0, x - half_size)
     top = max(0, y - half_size)
     right = min(width, x + half_size)
     bottom = min(height, y + half_size)
-
-    # Clip coordinates to valid bounds
-    if left < 0:
-        left = 0
-    if top < 0:
-        top = 0
-    if right > width:
-        right = width
-    if bottom > height:
-        bottom = height
 
     # Handle edge case where coordinates are completely out of bounds
     # In this case, return an empty or minimal region
