@@ -249,7 +249,7 @@ class CacheExecutionSettings(BaseModel):
 
     delay_time_between_action: float = 0.5
     skip_visual_validation: bool = False
-    visual_validation_threshold: int = 20
+    visual_validation_threshold: int = 10
 
 
 class CachingSettings(BaseModel):
