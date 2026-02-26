@@ -15,13 +15,13 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.settings import CacheExecutionSettings
+from askui.utils.caching.cache_manager import CacheManager
 
 from .speaker import Speaker, SpeakerResult
 
 if TYPE_CHECKING:
     from askui.models.shared.settings import CacheFile
     from askui.models.shared.tools import ToolCollection
-    from askui.utils.caching.cache_manager import CacheManager
 
     from .conversation import Conversation
 
@@ -301,7 +301,7 @@ class CacheExecutor(Speaker):
         )
 
     def _handle_failed(
-        self, cache_manager: "CacheManager", result: ExecutionResult
+        self, cache_manager: CacheManager, result: ExecutionResult
     ) -> SpeakerResult:
         """Handle cache execution failure."""
         logger.error(
@@ -498,11 +498,6 @@ class CacheExecutor(Speaker):
                 step, current_screenshot=current_screenshot
             )
             if not is_valid:
-                logger.warning(
-                    "Visual validation failed at step %d: %s",
-                    step_index,
-                    error_msg,
-                )
                 return ExecutionResult(
                     status="FAILED",
                     step_index=step_index,
@@ -554,8 +549,9 @@ class CacheExecutor(Speaker):
 
     def _should_skip_step(self, step: ToolUseBlockParam) -> bool:
         """Check if a step should be skipped during execution."""
+        # Use startswith() to handle tool names with UUID suffixes
         tools_to_skip: list[str] = ["retrieve_available_trajectories_tool"]
-        return step.name in tools_to_skip
+        return any(step.name.startswith(prefix) for prefix in tools_to_skip)
 
     def _validate_step_visually(
         self, step: ToolUseBlockParam, current_screenshot: Image.Image | None = None
@@ -567,6 +563,7 @@ class CacheExecutor(Speaker):
             compute_phash,
             extract_region,
             find_recent_screenshot,
+            get_validation_coordinate,
         )
 
         if not self._visual_validation_enabled:
@@ -582,9 +579,23 @@ class CacheExecutor(Speaker):
                 return True, None
 
         try:
+            # Extract coordinate using the same logic as cache_manager
+            tool_input: dict[str, Any] = (
+                step.input if isinstance(step.input, dict) else {}
+            )
+            coordinate = get_validation_coordinate(tool_input)
+
+            if coordinate is None:
+                # No coordinate found - skip visual validation for this step
+                logger.debug(
+                    "No coordinate found in step input, skipping visual validation"
+                )
+                return True, None
+
+            # Pass coordinate in the format extract_region expects
             region = extract_region(
                 current_screenshot,
-                step.input,  # type: ignore[arg-type]
+                {"coordinate": list(coordinate)},
                 region_size=self._visual_validation_region_size,
             )
 
