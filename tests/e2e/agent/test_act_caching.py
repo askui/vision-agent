@@ -12,36 +12,36 @@ from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
 
 
-def test_act_with_caching_strategy_read(vision_agent: ComputerAgent) -> None:
-    """Test that caching_strategy='read' adds retrieve and execute tools."""
+def test_act_with_caching_strategy_execute(vision_agent: ComputerAgent) -> None:
+    """Test that caching_strategy='execute' adds retrieve and execute tools."""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a dummy cache file
         cache_dir = Path(temp_dir)
         cache_file = cache_dir / "test_cache.json"
         cache_file.write_text("[]", encoding="utf-8")
 
-        # Act with read caching strategy
+        # Act with execute caching strategy
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="execute",
                 cache_dir=str(cache_dir),
             ),
         )
         assert True
 
 
-def test_act_with_caching_strategy_write(vision_agent: ComputerAgent) -> None:
-    """Test that caching_strategy='write' writes cache file."""
+def test_act_with_caching_strategy_record(vision_agent: ComputerAgent) -> None:
+    """Test that caching_strategy='record' writes cache file."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_filename = "test_output.json"
 
-        # Act with write caching strategy
+        # Act with record caching strategy
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
                 filename=cache_filename,
             ),
@@ -53,12 +53,12 @@ def test_act_with_caching_strategy_write(vision_agent: ComputerAgent) -> None:
 
 
 def test_act_with_caching_strategy_both(vision_agent: ComputerAgent) -> None:
-    """Test that caching_strategy='both' enables both read and write."""
+    """Test that caching_strategy='both' enables both execute and record."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
         cache_filename = "test_both.json"
 
-        # Create a dummy cache file for reading
+        # Create a dummy cache file for executing
         cache_file = cache_dir / "existing_cache.json"
         cache_file.write_text("[]", encoding="utf-8")
 
@@ -77,8 +77,8 @@ def test_act_with_caching_strategy_both(vision_agent: ComputerAgent) -> None:
         assert output_file.exists()
 
 
-def test_act_with_caching_strategy_no(vision_agent: ComputerAgent) -> None:
-    """Test that caching_strategy='no' doesn't create cache files."""
+def test_act_with_caching_strategy_none(vision_agent: ComputerAgent) -> None:
+    """Test that caching_strategy=None doesn't create cache files."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
 
@@ -86,7 +86,7 @@ def test_act_with_caching_strategy_no(vision_agent: ComputerAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="no",
+                strategy=None,
                 cache_dir=str(cache_dir),
             ),
         )
@@ -106,7 +106,7 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: ComputerAgent) -> 
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(custom_cache_dir),
                 filename=custom_filename,
             ),
@@ -118,21 +118,21 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: ComputerAgent) -> 
         assert cache_file.exists()
 
 
-def test_act_with_on_message_and_write_caching_raises_error(
+def test_act_with_on_message_and_record_caching_raises_error(
     vision_agent: ComputerAgent,
 ) -> None:
-    """Test that providing on_message callback with write caching raises ValueError."""
+    """Test that providing on_message callback with record caching raises ValueError."""
     with tempfile.TemporaryDirectory() as temp_dir:
 
         def dummy_callback(param: OnMessageCbParam) -> MessageParam:
             return param.message
 
-        # Should raise ValueError when on_message is provided with write strategy
+        # Should raise ValueError when on_message is provided with record strategy
         with pytest.raises(ValueError, match="Cannot use on_message callback"):
             vision_agent.act(
                 goal="Tell me a joke",
                 caching_settings=CachingSettings(
-                    strategy="write",
+                    strategy="record",
                     cache_dir=str(temp_dir),
                 ),
                 on_message=dummy_callback,
@@ -170,7 +170,7 @@ def test_cache_file_contains_tool_use_blocks(vision_agent: ComputerAgent) -> Non
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="write",
+                strategy="record",
                 cache_dir=str(cache_dir),
                 filename=cache_filename,
             ),
@@ -200,7 +200,7 @@ def test_act_with_custom_cached_execution_tool_settings(
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = Path(temp_dir)
 
-        # Create a dummy cache file for reading
+        # Create a dummy cache file for executing
         cache_file = cache_dir / "test_cache.json"
         cache_file.write_text("[]", encoding="utf-8")
 
@@ -209,7 +209,7 @@ def test_act_with_custom_cached_execution_tool_settings(
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="read",
+                strategy="execute",
                 cache_dir=str(cache_dir),
                 execution_settings=custom_settings,
             ),

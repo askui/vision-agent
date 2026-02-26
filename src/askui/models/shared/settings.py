@@ -34,7 +34,7 @@ class Resolution(NamedTuple):
 DEFAULT_LOCATE_RESOLUTION = Resolution(1280, 800)
 DEFAULT_GET_RESOLUTION = Resolution(1280, 800)
 
-CACHING_STRATEGY = Literal["read", "write", "both", "no"]
+CACHING_STRATEGY = Literal["execute", "record", "both"]
 CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
 CACHING_VISUAL_VERIFICATION_METHOD = Literal["phash", "ahash", "none"]
 
@@ -259,18 +259,18 @@ class CachingSettings(BaseModel):
     performance optimization.
 
     Args:
-        strategy (CACHING_STRATEGY): Caching mode. Options:
-            - "no": Caching disabled (default)
-            - "read": Replay actions from cache
-            - "write": Record actions to cache
-            - "both": Read from cache if available, otherwise record
+        strategy (CACHING_STRATEGY | None): Caching mode. Options:
+            - None: Caching disabled (default)
+            - "execute": Replay actions from cache
+            - "record": Record actions to cache
+            - "both": Execute from cache if available, otherwise record
         cache_dir (str): Directory path for storing cache files.
             Default: ".askui_cache".
-        writing_settings: Settings for cache recording (used in "write"/"both" modes)
-        execution_settings: Settings for cache playback (used in "read"/"both" modes)
+        writing_settings: Settings for cache recording (used in "record"/"both" modes)
+        execution_settings: Settings for cache playback (used in "execute"/"both" modes)
     """
 
-    strategy: CACHING_STRATEGY = "no"
+    strategy: CACHING_STRATEGY | None = None
     cache_dir: str = ".askui_cache"
     writing_settings: CacheWritingSettings | None = None
     execution_settings: CacheExecutionSettings | None = None

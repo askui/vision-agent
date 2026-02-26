@@ -135,14 +135,15 @@ class Agent:
                 Overrides the agent's default model if provided.
             on_message (OnMessageCb | None, optional): Callback for new messages. If
                 it returns `None`, stops and does not add the message. Cannot be used
-                with caching_settings strategy "write" or "both".
+                with caching_settings strategy "record" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
             caching_settings (CachingSettings | None, optional): The caching settings
                 for the act execution. Controls recording and replaying of action
-                sequences (trajectories). Available strategies: "no" (default, no
-                caching), "write" (record actions to cache file), "read" (replay from
-                cached trajectories), "both" (read and write). Defaults to no caching.
+                sequences (trajectories). Available strategies: None (default, no
+                caching), "record" (record actions to cache file), "execute" (replay
+                from cached trajectories), "both" (execute and record). Defaults to
+                no caching.
 
         Returns:
             None
@@ -152,7 +153,7 @@ class Agent:
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
             ValueError: If on_message callback is provided with caching strategy
-                "write" or "both".
+                "record" or "both".
 
         Example:
             Basic usage without caching:
@@ -177,14 +178,14 @@ class Agent:
                         "username 'admin' and password 'secret123'"
                     ),
                     caching_settings=CachingSettings(
-                        strategy="write",
+                        strategy="record",
                         cache_dir=".cache",
                         filename="login_flow.json"
                     )
                 )
             ```
 
-            Replaying cached actions:
+            Executing cached actions:
             ```python
             from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
@@ -193,14 +194,14 @@ class Agent:
                 agent.act(
                     goal="Log in to the application",
                     caching_settings=CachingSettings(
-                        strategy="read",
+                        strategy="execute",
                         cache_dir=".cache"
                     )
                 )
                 # Agent will automatically find and use "login_flow.json"
             ```
 
-            Using both read and write modes:
+            Using both execute and record modes:
             ```python
             from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
@@ -287,8 +288,8 @@ class Agent:
         cached_execution_tool: ExecuteCachedTrajectory | None = None
         cache_manager: CacheManager | None = None
 
-        # Setup read mode: add caching tools and modify system prompt
-        if caching_settings.strategy in ["read", "both"]:
+        # Setup execute mode: add caching tools and modify system prompt
+        if caching_settings.strategy in ["execute", "both"]:
             # Create CacheExecutor with execution settings and add to speakers
             cache_executor = CacheExecutor(caching_settings.execution_settings)
             self._conversation.speakers.add_speaker(cache_executor)
@@ -315,8 +316,8 @@ class Agent:
         else:
             tools = caching_tools
 
-        # Setup write mode: create cache manager for recording
-        if caching_settings.strategy in ["write", "both"]:
+        # Setup record mode: create cache manager for recording
+        if caching_settings.strategy in ["record", "both"]:
             cache_writer_settings = (
                 caching_settings.writing_settings or CacheWritingSettings()
             )
