@@ -431,14 +431,10 @@ class CacheExecutor(Speaker):
         if self._skip_visual_validation:
             self._visual_validation_enabled = False
             logger.info("Visual validation disabled by execution settings")
-        elif visual_validation_config and visual_validation_config.get("enabled"):
+        elif visual_validation_config and visual_validation_config.enabled:
             self._visual_validation_enabled = True
-            self._visual_validation_method = visual_validation_config.get(
-                "method", "phash"
-            )
-            self._visual_validation_region_size = visual_validation_config.get(
-                "region_size", 100
-            )
+            self._visual_validation_method = visual_validation_config.method
+            self._visual_validation_region_size = visual_validation_config.region_size
             logger.info(
                 "Visual validation enabled (method=%s, threshold=%d)",
                 self._visual_validation_method,

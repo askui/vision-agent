@@ -179,6 +179,12 @@ class CacheFailure(BaseModel):
     failure_count_at_step: int
 
 
+class VisualValidationMetadata(BaseModel):
+    enabled: bool
+    method: CACHING_VISUAL_VERIFICATION_METHOD
+    region_size: int
+
+
 class CacheMetadata(BaseModel):
     """Metadata for a cache file including execution history and validation state.
 
@@ -204,7 +210,7 @@ class CacheMetadata(BaseModel):
     failures: list[CacheFailure] = Field(default_factory=list)
     is_valid: bool = True
     invalidation_reason: str | None = None
-    visual_validation: dict[str, Any] | None = None
+    visual_validation: VisualValidationMetadata | None = None
 
 
 class CacheFile(BaseModel):

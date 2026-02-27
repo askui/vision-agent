@@ -18,6 +18,7 @@ from askui.models.shared.settings import (
     CacheFile,
     CacheMetadata,
     CacheWritingSettings,
+    VisualValidationMetadata,
 )
 from askui.models.shared.tools import ToolCollection
 from askui.utils.caching.cache_parameter_handler import CacheParameterHandler
@@ -634,15 +635,13 @@ class CacheManager:
             cache_file_path: Path to write cache file
         """
         # Prepare visual validation metadata
-        visual_validation_metadata: dict[str, Any] | None = None
+        visual_validation_metadata: VisualValidationMetadata | None = None
         if self._cache_writer_settings.visual_verification_method != "none":
-            visual_validation_metadata = {
-                "enabled": True,
-                "method": self._cache_writer_settings.visual_verification_method,
-                "region_size": (
-                    self._cache_writer_settings.visual_validation_region_size
-                ),
-            }
+            visual_validation_metadata = VisualValidationMetadata(
+                enabled=True,
+                method=self._cache_writer_settings.visual_verification_method,
+                region_size=self._cache_writer_settings.visual_validation_region_size,
+            )
 
         cache_file = CacheFile(
             metadata=CacheMetadata(
