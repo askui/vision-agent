@@ -10,9 +10,8 @@ from typing_extensions import Literal
 from askui.models.shared.agent_message_param import MessageParam, UsageParam
 
 if TYPE_CHECKING:
+    from askui.models.shared.conversation import Conversation
     from askui.utils.caching.cache_manager import CacheManager
-
-    from .conversation import Conversation
 
 logger = logging.getLogger(__name__)
 

@@ -29,11 +29,10 @@ from askui.utils.visual_validation import (
 from .speaker import Speaker, SpeakerResult
 
 if TYPE_CHECKING:
+    from askui.models.shared.conversation import Conversation
     from askui.models.shared.settings import CacheFile
     from askui.models.shared.tools import ToolCollection
     from askui.reporting import Reporter
-
-    from .conversation import Conversation
 
 logger = logging.getLogger(__name__)
 

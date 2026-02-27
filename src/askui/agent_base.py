@@ -14,6 +14,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.conversation import Conversation, Speakers
 from askui.models.shared.settings import (
     ActSettings,
     CacheWritingSettings,
@@ -45,7 +46,7 @@ from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
-from .speaker import CacheExecutor, Conversation, Speakers
+from .speaker import CacheExecutor
 
 logger = logging.getLogger(__name__)
 

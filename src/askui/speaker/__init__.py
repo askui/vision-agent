@@ -11,14 +11,11 @@ This module provides the speaker pattern for managing conversation flow:
 
 from .agent_speaker import AgentSpeaker
 from .cache_executor import CacheExecutor
-from .conversation import Conversation, ConversationException
 from .speaker import Speaker, SpeakerResult, Speakers
 
 __all__ = [
     "AgentSpeaker",
     "CacheExecutor",
-    "Conversation",
-    "ConversationException",
     "Speaker",
     "SpeakerResult",
     "Speakers",

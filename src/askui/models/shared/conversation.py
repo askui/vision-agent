@@ -27,8 +27,7 @@ from askui.models.shared.truncation_strategies import (
     TruncationStrategyFactory,
 )
 from askui.reporting import NULL_REPORTER, Reporter
-
-from .speaker import SpeakerResult, Speakers
+from askui.speaker.speaker import SpeakerResult, Speakers
 
 if TYPE_CHECKING:
     from askui.utils.caching.cache_manager import CacheManager

@@ -11,9 +11,8 @@ from askui.models.shared.agent_message_param import MessageParam
 from .speaker import Speaker, SpeakerResult
 
 if TYPE_CHECKING:
+    from askui.models.shared.conversation import Conversation
     from askui.utils.caching.cache_manager import CacheManager
-
-    from .conversation import Conversation
 
 logger = logging.getLogger(__name__)
 
