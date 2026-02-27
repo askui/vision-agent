@@ -1,5 +1,8 @@
 # Overview
 
+This documentation is intended for **developers** that want build custom implementation with this SDK.
+For tutorials, how-to-guides, and more ressources please visit our user documentation [here](https://docs.askui.com/).
+
 ## Why AskUI Vision Agent?
 
 AskUI Vision Agent is a powerful automation framework that bridges the gap between human intent and computer control. Whether you need precise UI automation for testing, want AI agents to handle complex workflows, or need to automate tasks across desktop, mobile, and HMI devices, AskUI Vision Agent provides a unified solution.
