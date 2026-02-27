@@ -14,6 +14,7 @@ from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.conversation import Conversation, Speakers
+from askui.models.shared.conversation_callback import ConversationCallback
 from askui.models.shared.settings import (
     ActSettings,
     CacheWritingSettings,
@@ -58,6 +59,7 @@ class Agent:
         tools: list[Tool] | None = None,
         agent_os: AgentOs | AndroidAgentOs | None = None,
         settings: AgentSettings | None = None,
+        callbacks: list[ConversationCallback] | None = None,
     ) -> None:
         load_dotenv()
         self._reporter: Reporter = reporter or CompositeReporter(reporters=None)
@@ -79,6 +81,7 @@ class Agent:
             image_qa_provider=self._image_qa_provider,
             detection_provider=self._detection_provider,
             reporter=self._reporter,
+            callbacks=callbacks,
         )
 
         # Provider-based tools

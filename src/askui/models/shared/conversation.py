@@ -25,6 +25,7 @@ from askui.reporting import NULL_REPORTER, Reporter
 from askui.speaker.speaker import SpeakerResult, Speakers
 
 if TYPE_CHECKING:
+    from askui.models.shared.conversation_callback import ConversationCallback
     from askui.utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class Conversation:
         reporter: Reporter for logging messages and actions
         cache_manager: Cache manager for recording/playback (optional)
         truncation_strategy_factory: Factory for creating truncation strategies
+        callbacks: List of callbacks for conversation lifecycle hooks (optional)
     """
 
     def __init__(
@@ -69,6 +71,7 @@ class Conversation:
         reporter: Reporter = NULL_REPORTER,
         cache_manager: "CacheManager | None" = None,
         truncation_strategy_factory: TruncationStrategyFactory | None = None,
+        callbacks: "list[ConversationCallback] | None" = None,
     ) -> None:
         """Initialize conversation with speakers and model providers."""
         if not speakers:
@@ -92,17 +95,32 @@ class Conversation:
             truncation_strategy_factory or SimpleTruncationStrategyFactory()
         )
         self._truncation_strategy: TruncationStrategy | None = None
+        self._callbacks: "list[ConversationCallback]" = callbacks or []
 
         # State for current execution (set in start())
         self.settings: ActSettings = ActSettings()
         self.tools: ToolCollection = ToolCollection()
         self._reporters: list[Reporter] = []
+        self._step_index: int = 0
 
         # Cache execution context (for communication between tools and CacheExecutor)
         self.cache_execution_context: dict[str, Any] = {}
 
         # Track if cache execution was used (to prevent recording during playback)
         self._executed_from_cache: bool = False
+
+    def _call_callbacks(self, method_name: str, *args: Any, **kwargs: Any) -> None:
+        """Call a method on all registered callbacks.
+
+        Args:
+            method_name: Name of the callback method to call
+            *args: Positional arguments to pass to the callback
+            **kwargs: Keyword arguments to pass to the callback
+        """
+        for callback in self._callbacks:
+            method = getattr(callback, method_name, None)
+            if method and callable(method):
+                method(self, *args, **kwargs)
 
     @tracer.start_as_current_span("conversation")
     def execute_conversation(
@@ -119,7 +137,6 @@ class Conversation:
 
         Args:
             messages: Initial message history
-            on_message: Optional callback for each message
             tools: Available tools
             settings: Agent settings
             reporters: Optional list of additional reporters for this conversation
@@ -128,7 +145,11 @@ class Conversation:
         logger.info(msg)
 
         self._setup_control_loop(messages, tools, settings, reporters)
+
+        self._call_callbacks("on_conversation_start")
         self._execute_control_loop()
+        self._call_callbacks("on_conversation_end")
+
         self._conclude_control_loop()
 
     @tracer.start_as_current_span("setup_control_loop")
@@ -162,9 +183,12 @@ class Conversation:
 
     @tracer.start_as_current_span("control_loop")
     def _execute_control_loop(self) -> None:
+        self._call_callbacks("on_control_loop_start")
+        self._step_index = 0
         continue_execution = True
         while continue_execution:
             continue_execution = self._execute_step()
+        self._call_callbacks("on_control_loop_end")
 
     @tracer.start_as_current_span("finish_control_loop")
     def _conclude_control_loop(self) -> None:
@@ -189,6 +213,7 @@ class Conversation:
         Returns:
             True if loop should continue, False if done
         """
+        self._call_callbacks("on_step_start", self._step_index)
 
         # 1. Infer next speaker
         speaker = self.current_speaker
@@ -226,6 +251,9 @@ class Conversation:
         if result.usage:
             self._accumulate_usage(result.usage)
 
+        self._call_callbacks("on_step_end", self._step_index, result)
+        self._step_index += 1
+
         return continue_loop
 
     @tracer.start_as_current_span("execute_tool_call")
@@ -255,8 +283,11 @@ class Conversation:
             return None
 
         # Execute tools
+        tool_names = [block.name for block in tool_use_blocks]
         logger.debug("Executing %d tool(s)", len(tool_use_blocks))
+        self._call_callbacks("on_tool_execution_start", tool_names)
         tool_results = self.tools.run(tool_use_blocks)
+        self._call_callbacks("on_tool_execution_end", tool_names)
 
         if not tool_results:
             return None
