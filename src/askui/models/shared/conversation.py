@@ -14,11 +14,6 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
     UsageParam,
 )
-from askui.models.shared.agent_on_message_cb import (
-    NULL_ON_MESSAGE_CB,
-    OnMessageCb,
-    OnMessageCbParam,
-)
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -101,7 +96,6 @@ class Conversation:
         # State for current execution (set in start())
         self.settings: ActSettings = ActSettings()
         self.tools: ToolCollection = ToolCollection()
-        self._on_message: OnMessageCb = NULL_ON_MESSAGE_CB
         self._reporters: list[Reporter] = []
 
         # Cache execution context (for communication between tools and CacheExecutor)
@@ -111,15 +105,14 @@ class Conversation:
         self._executed_from_cache: bool = False
 
     @tracer.start_as_current_span("conversation")
-    def start(
+    def execute_conversation(
         self,
         messages: list[MessageParam],
-        on_message: OnMessageCb | None = None,
         tools: ToolCollection | None = None,
         settings: ActSettings | None = None,
         reporters: list[Reporter] | None = None,
     ) -> None:
-        """Initialize conversation state and start execution loop.
+        """Setup conversation state and start control loop.
 
         Model providers are accessed via self.vlm_provider, etc.
         Speakers can access them via conversation.vlm_provider.
@@ -131,6 +124,21 @@ class Conversation:
             settings: Agent settings
             reporters: Optional list of additional reporters for this conversation
         """
+        msg = f"Starting conversation with speaker: {self.current_speaker.get_name()}"
+        logger.info(msg)
+
+        self._setup_control_loop(messages, tools, settings, reporters)
+        self._execute_control_loop()
+        self._conclude_control_loop()
+
+    @tracer.start_as_current_span("setup_control_loop")
+    def _setup_control_loop(
+        self,
+        messages: list[MessageParam],
+        tools: ToolCollection | None = None,
+        settings: ActSettings | None = None,
+        reporters: list[Reporter] | None = None,
+    ) -> None:
         # Reset state
         self.accumulated_usage = UsageParam()
         self.cache_execution_context = {}
@@ -141,7 +149,6 @@ class Conversation:
         self.settings = settings or ActSettings()
         self.tools = tools or ToolCollection()
         self._reporters = reporters or []
-        self._on_message = on_message or NULL_ON_MESSAGE_CB
 
         # Initialize truncation strategy
         self._truncation_strategy = (
@@ -153,15 +160,14 @@ class Conversation:
             )
         )
 
-        logger.info(
-            "Starting conversation with speaker: %s", self.current_speaker.get_name()
-        )
-
-        # Execute conversation loop
+    @tracer.start_as_current_span("control_loop")
+    def _execute_control_loop(self) -> None:
         continue_execution = True
         while continue_execution:
-            continue_execution = self._execute_loop()
+            continue_execution = self._execute_step()
 
+    @tracer.start_as_current_span("finish_control_loop")
+    def _conclude_control_loop(self) -> None:
         # Finish recording if cache_manager is active and not executing from cache
         if self.cache_manager is not None and not self._executed_from_cache:
             self.cache_manager.finish_recording(self.get_messages())
@@ -170,23 +176,22 @@ class Conversation:
         self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
 
     @tracer.start_as_current_span("step")
-    def _execute_loop(self) -> bool:
+    def _execute_step(self) -> bool:
         """Execute one step of the conversation loop with speakers.
 
         Each step includes:
-        1. Get message(s) from active speaker
-        2. Add messages to history (with on_message callback and reporting)
-        3. Check if last message contains tool calls
-        4. If yes, execute tools and create tool result message
-        5. Add tool results to history
-        6. Check if conversation should continue and switch current speaker if necessary
+        1. Infer next speaker
+        2. Get message(s) from active speaker and add to history
+        3. Execute tool calls if applicable and add result to history
+        4. Check if conversation should continue and switch speaker if necessary
+        5. Collect Statistics
 
         Returns:
             True if loop should continue, False if done
         """
-        speaker = self.current_speaker
 
-        # Check if speaker can handle current state
+        # 1. Infer next speaker
+        speaker = self.current_speaker
         if not speaker.can_handle(self):
             logger.debug(
                 "Speaker %s cannot handle current state, switching to default",
@@ -195,19 +200,14 @@ class Conversation:
             self.switch_speaker(self.speakers.default_speaker)
             speaker = self.speakers[self.current_speaker.get_name()]
 
-        # Execute one step with current speaker to get next message(s)
+        # 2. Get next message(s) from speaker and add to history
         logger.debug("Executing step with speaker: %s", speaker.get_name())
         result: SpeakerResult = speaker.handle_step(self, self.cache_manager)
-
-        # Accumulate usage
-        if result.usage:
-            self._accumulate_usage(result.usage)
-
-        # Add messages from speaker to conversation
         for message in result.messages_to_add:
             self._add_message(message)
 
-        # Check if we need to execute tools from the last message
+        # 3. Execute tool calls if applicable
+        continue_loop = False
         if result.messages_to_add:
             last_message = result.messages_to_add[-1]
             tool_result_message = self._execute_tools_if_present(last_message)
@@ -217,16 +217,18 @@ class Conversation:
                 # Handle side effects of tool execution (e.g., speaker switches)
                 self._handle_tool_results(last_message, tool_result_message)
 
-                # Check if cache execution was requested (set by _handle_tool_results)
-                if self.cache_execution_context:
-                    self._executed_from_cache = True
-                    self.switch_speaker("CacheExecutor")
+                continue_loop = True  # we always continue after a tool was called
 
-                return True
+        # 4. Check if conversation should continue and switch speaker if necessary
+        continue_loop = continue_loop or self._handle_result_status(result)
 
-        return self._handle_result_status(result)
+        # 5. Collect Statistics
+        if result.usage:
+            self._accumulate_usage(result.usage)
 
-    @tracer.start_as_current_span("execute_tool")
+        return continue_loop
+
+    @tracer.start_as_current_span("execute_tool_call")
     def _execute_tools_if_present(self, message: MessageParam) -> MessageParam | None:
         """Execute tools if the message contains tool use blocks.
 
@@ -320,6 +322,8 @@ class Conversation:
                     "toolbox": self.tools,
                     "reporter": self._reporter,
                 }
+                self._executed_from_cache = True
+                self.switch_speaker("CacheExecutor")
 
     def _add_message(self, message: MessageParam) -> None:
         """Add message to conversation history.
@@ -328,36 +332,16 @@ class Conversation:
             message: Message to add
         """
         if not self._truncation_strategy:
-            logger.warning("No truncation strategy, cannot add message")
-            return
-
-        # Call on_message callback
-        processed = self._call_on_message(message)
-        if not processed:
+            logger.error("No truncation strategy, cannot add message")
             return
 
         # Add to truncation strategy
-        self._truncation_strategy.append_message(processed)
+        self._truncation_strategy.append_message(message)
 
         # Report to reporter
         self._reporter.add_message(
-            self.current_speaker.get_name(), processed.model_dump(mode="json")
+            self.current_speaker.get_name(), message.model_dump(mode="json")
         )
-
-    @tracer.start_as_current_span("message_callback")
-    def _call_on_message(self, message: MessageParam) -> MessageParam | None:
-        """Call on_message callback.
-
-        Args:
-            message: Message to pass to callback
-
-        Returns:
-            Processed message or None if cancelled by callback
-        """
-        messages = (
-            self._truncation_strategy.messages if self._truncation_strategy else []
-        )
-        return self._on_message(OnMessageCbParam(message=message, messages=messages))
 
     @tracer.start_as_current_span("handle_result_status")
     def _handle_result_status(self, result: SpeakerResult) -> bool:

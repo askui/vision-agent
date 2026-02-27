@@ -13,7 +13,6 @@ from askui.agent_settings import AgentSettings
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
 from askui.models.shared.conversation import Conversation, Speakers
 from askui.models.shared.settings import (
     ActSettings,
@@ -109,13 +108,12 @@ class Agent:
         self.locate_settings = LocateSettings()
         self.caching_settings = CachingSettings()
 
-    @telemetry.record_call(exclude={"goal", "on_message", "act_settings", "tools"})
+    @telemetry.record_call(exclude={"goal", "act_settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         act_settings: ActSettings | None = None,
-        on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
         caching_settings: CachingSettings | None = None,
     ) -> None:
@@ -134,9 +132,6 @@ class Agent:
             act_model (ActModel | None, optional): Model to use for this act
                 execution.
                 Overrides the agent's default model if provided.
-            on_message (OnMessageCb | None, optional): Callback for new messages. If
-                it returns `None`, stops and does not add the message. Cannot be used
-                with caching_settings strategy "record" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
             caching_settings (CachingSettings | None, optional): The caching settings
@@ -153,8 +148,6 @@ class Agent:
             MaxTokensExceededError: If the model reaches the maximum token limit
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
-            ValueError: If on_message callback is provided with caching strategy
-                "record" or "both".
 
         Example:
             Basic usage without caching:
@@ -248,9 +241,8 @@ class Agent:
         self._conversation.cache_manager = cache_manager
 
         # Use conversation-based architecture for execution
-        self._conversation.start(
+        self._conversation.execute_conversation(
             messages=messages,
-            on_message=on_message,
             tools=_tools,
             settings=_act_settings,
         )

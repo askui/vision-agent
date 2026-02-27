@@ -4,11 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from askui.agent import ComputerAgent
-from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
 
 
@@ -116,48 +112,6 @@ def test_act_with_custom_cache_dir_and_filename(vision_agent: ComputerAgent) -> 
         assert custom_cache_dir.exists()
         cache_file = custom_cache_dir / custom_filename
         assert cache_file.exists()
-
-
-def test_act_with_on_message_and_record_caching_raises_error(
-    vision_agent: ComputerAgent,
-) -> None:
-    """Test that providing on_message callback with record caching raises ValueError."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-
-        def dummy_callback(param: OnMessageCbParam) -> MessageParam:
-            return param.message
-
-        # Should raise ValueError when on_message is provided with record strategy
-        with pytest.raises(ValueError, match="Cannot use on_message callback"):
-            vision_agent.act(
-                goal="Tell me a joke",
-                caching_settings=CachingSettings(
-                    strategy="record",
-                    cache_dir=str(temp_dir),
-                ),
-                on_message=dummy_callback,
-            )
-
-
-def test_act_with_on_message_and_both_caching_raises_error(
-    vision_agent: ComputerAgent,
-) -> None:
-    """Test that providing on_message callback with both caching raises ValueError."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-
-        def dummy_callback(param: OnMessageCbParam) -> MessageParam:
-            return param.message
-
-        # Should raise ValueError when on_message is provided with both strategy
-        with pytest.raises(ValueError, match="Cannot use on_message callback"):
-            vision_agent.act(
-                goal="Tell me a joke",
-                caching_settings=CachingSettings(
-                    strategy="both",
-                    cache_dir=str(temp_dir),
-                ),
-                on_message=dummy_callback,
-            )
 
 
 def test_cache_file_contains_tool_use_blocks(vision_agent: ComputerAgent) -> None:
