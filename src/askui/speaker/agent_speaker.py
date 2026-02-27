@@ -73,12 +73,9 @@ class AgentSpeaker(Speaker):
             logger.debug("Last message not from user, nothing to do")
             return SpeakerResult(status="done")
 
-        # Access VlmProvider from conversation
-        vlm_provider = conversation.vlm_provider
-
         # Make API call to get agent response using VlmProvider
         try:
-            response = vlm_provider.create_message(
+            response = conversation.vlm_provider.create_message(
                 messages=truncation_strategy.messages,
                 tools=conversation.tools,
                 max_tokens=conversation.settings.messages.max_tokens,
