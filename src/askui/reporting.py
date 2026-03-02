@@ -789,51 +789,55 @@ class SimpleHtmlReporter(Reporter):
                                 <td>{{ "%.2f"|format(execution_time_seconds) }} seconds</td>
                             </tr>
                             {% endif %}
-                            {% if usage_summary.get('input_tokens') is not none %}
-                            <tr>
-                                <th>Input Tokens</th>
-                                <td>
-                                    {{ "{:,}".format(usage_summary.get('input_tokens')) }}
-                                    {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
-                                        {% set original = cache_original_usage.get('input_tokens') %}
-                                        {% set current = usage_summary.get('input_tokens') %}
-                                        {% set saved = original - current %}
-                                        {% if saved > 0 and original > 0 %}
-                                            {% set savings_pct = (saved / original * 100) %}
-                                            <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                            {% if usage_summary is not none %}
+                                {% if usage_summary.get('input_tokens') is not none %}
+                                <tr>
+                                    <th>Input Tokens</th>
+                                    <td>
+                                        {{ "{:,}".format(usage_summary.get('input_tokens')) }}
+                                        {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
+                                            {% set original = cache_original_usage.get('input_tokens') %}
+                                            {% set current = usage_summary.get('input_tokens') %}
+                                            {% set saved = original - current %}
+                                            {% if saved > 0 and original > 0 %}
+                                                {% set savings_pct = (saved / original * 100) %}
+                                                <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endif %}
-                            {% if usage_summary.get('output_tokens') is not none %}
-                            <tr>
-                                <th>Output Tokens</th>
-                                <td>
-                                    {{ "{:,}".format(usage_summary.get('output_tokens')) }}
-                                    {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
-                                        {% set original = cache_original_usage.get('output_tokens') %}
-                                        {% set current = usage_summary.get('output_tokens') %}
-                                        {% set saved = original - current %}
-                                        {% if saved > 0 and original > 0 %}
-                                            {% set savings_pct = (saved / original * 100) %}
-                                            <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if usage_summary.get('output_tokens') is not none %}
+                                <tr>
+                                    <th>Output Tokens</th>
+                                    <td>
+                                        {{ "{:,}".format(usage_summary.get('output_tokens')) }}
+                                        {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
+                                            {% set original = cache_original_usage.get('output_tokens') %}
+                                            {% set current = usage_summary.get('output_tokens') %}
+                                            {% set saved = original - current %}
+                                            {% if saved > 0 and original > 0 %}
+                                                {% set savings_pct = (saved / original * 100) %}
+                                                <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endif %}
-                            {% if cache_original_usage.get('input_tokens') is not none %}
-                            <tr>
-                                <th>Original Input Tokens</th>
-                                <td>{{ "{:,}".format(cache_original_usage.get('input_tokens')) }}</td>
-                            </tr>
-                            {% endif %}
-                            {% if cache_original_usage.get('output_tokens') is not none %}
-                            <tr>
-                                <th>Original Output Tokens</th>
-                                <td>{{ "{:,}".format(cache_original_usage.get('output_tokens')) }}</td>
-                            </tr>
+                            {% if cache_original_usage is not none %}
+                                {% if cache_original_usage.get('input_tokens') is not none %}
+                                <tr>
+                                    <th>Original Input Tokens</th>
+                                    <td>{{ "{:,}".format(cache_original_usage.get('input_tokens')) }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if cache_original_usage.get('output_tokens') is not none %}
+                                <tr>
+                                    <th>Original Output Tokens</th>
+                                    <td>{{ "{:,}".format(cache_original_usage.get('output_tokens')) }}</td>
+                                </tr>
+                                {% endif %}
                             {% endif %}
                         </table>
                     </div>
