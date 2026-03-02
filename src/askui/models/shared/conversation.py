@@ -9,10 +9,7 @@ from opentelemetry import trace
 from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
-from askui.models.shared.agent_message_param import (
-    MessageParam,
-    UsageParam,
-)
+from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -84,7 +81,6 @@ class Conversation:
         # Speakers and current state
         self.speakers = speakers
         self.current_speaker = speakers[speakers.default_speaker]
-        self.accumulated_usage = UsageParam()
 
         # Model providers - accessible by speakers via conversation instance
         self.vlm_provider = vlm_provider
@@ -184,7 +180,6 @@ class Conversation:
         reporters: list[Reporter] | None = None,
     ) -> None:
         # Reset state
-        self.accumulated_usage = UsageParam()
         self._executed_from_cache = False
         self.speakers.reset_state()
 
@@ -220,9 +215,6 @@ class Conversation:
         # Finish recording if cache_manager is active and not executing from cache
         if self.cache_manager is not None and not self._executed_from_cache:
             self.cache_manager.finish_recording(self.get_messages())
-
-        # Report final usage
-        self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
 
     def _setup_speaker_handoff(self) -> None:
         """Set up speaker handoff infrastructure.
@@ -315,10 +307,6 @@ class Conversation:
         # because it has side effects (e.g., triggering speaker switches).
         status_continue = self._handle_result_status(result)
         continue_loop = continue_loop or status_continue
-
-        # 5. Collect Statistics
-        if result.usage:
-            self._accumulate_usage(result.usage)
 
         self._on_step_end(self._step_index, result)
         self._step_index += 1
@@ -450,34 +438,3 @@ class Conversation:
             Current truncation strategy or None if not initialized
         """
         return self._truncation_strategy
-
-    def _accumulate_usage(self, step_usage: UsageParam) -> None:
-        """Accumulate token usage statistics.
-
-        Args:
-            step_usage: Usage from a single step
-        """
-        self.accumulated_usage.input_tokens = (
-            self.accumulated_usage.input_tokens or 0
-        ) + (step_usage.input_tokens or 0)
-        self.accumulated_usage.output_tokens = (
-            self.accumulated_usage.output_tokens or 0
-        ) + (step_usage.output_tokens or 0)
-        self.accumulated_usage.cache_creation_input_tokens = (
-            self.accumulated_usage.cache_creation_input_tokens or 0
-        ) + (step_usage.cache_creation_input_tokens or 0)
-        self.accumulated_usage.cache_read_input_tokens = (
-            self.accumulated_usage.cache_read_input_tokens or 0
-        ) + (step_usage.cache_read_input_tokens or 0)
-
-        current_span = trace.get_current_span()
-        current_span.set_attributes(
-            {
-                "input_tokens": step_usage.input_tokens or 0,
-                "output_tokens": step_usage.output_tokens or 0,
-                "cache_creation_input_tokens": (
-                    step_usage.cache_creation_input_tokens or 0
-                ),
-                "cache_read_input_tokens": step_usage.cache_read_input_tokens or 0,
-            }
-        )

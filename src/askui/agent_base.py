@@ -23,6 +23,7 @@ from askui.models.shared.settings import (
     LocateSettings,
 )
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.usage_tracking_callback import UsageTrackingCallback
 from askui.prompts.act_prompts import CACHE_USE_PROMPT, create_default_prompt
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
@@ -73,13 +74,15 @@ class Agent:
 
         # Create conversation with speakers and model providers
         speakers = Speakers()
+        _callbacks = list(callbacks or [])
+        _callbacks.append(UsageTrackingCallback(reporter=self._reporter))
         self._conversation = Conversation(
             speakers=speakers,
             vlm_provider=self._vlm_provider,
             image_qa_provider=self._image_qa_provider,
             detection_provider=self._detection_provider,
             reporter=self._reporter,
-            callbacks=callbacks,
+            callbacks=_callbacks,
         )
 
         # Provider-based tools
