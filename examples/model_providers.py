@@ -35,9 +35,7 @@ def try_act(agent: ComputerAgent, provider_name: str) -> None:
     """Test the act() method with a simple goal."""
     logger.info(f"Testing act() with {provider_name}")
     agent.act(
-        goal=(
-            "Open a new Chrome window and navigate to askui.com. "
-        ),
+        goal=("Open a new Chrome window and navigate to askui.com. "),
     )
 
 
@@ -116,9 +114,9 @@ def create_mixed_providers() -> AgentSettings:
 if __name__ == "__main__":
     # Define which provider configurations to test
     provider_configs = {
-        #"AskUI (default)": create_askui_providers,
-        #"Anthropic (direct)": create_anthropic_providers,
-        #"Google (Gemini)": create_google_providers,
+        # "AskUI (default)": create_askui_providers,
+        # "Anthropic (direct)": create_anthropic_providers,
+        # "Google (Gemini)": create_google_providers,
         "Mixed providers": create_mixed_providers,
     }
 
@@ -126,9 +124,9 @@ if __name__ == "__main__":
     selected_config = "AskUI (default)"
 
     for selected_config in provider_configs.keys():
-        logger.info("#"*60)
+        logger.info("#" * 60)
         logger.info(f"Running with provider configuration: {selected_config}")
-        logger.info("#"*60)
+        logger.info("#" * 60)
         settings = provider_configs[selected_config]()
 
         with ComputerAgent(settings=settings, display=1) as agent:

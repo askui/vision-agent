@@ -7,6 +7,7 @@ from pydantic import (
     SerializerFunctionWrapHandler,
     model_serializer,
 )
+from typing_extensions import Self
 
 
 class NotGiven(BaseModel):
@@ -19,7 +20,7 @@ class NotGiven(BaseModel):
     _uuid: ClassVar[str] = str(uuid4())
     _instance: ClassVar["NotGiven | None"] = None
 
-    def __new__(cls) -> "NotGiven":
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
