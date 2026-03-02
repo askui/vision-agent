@@ -2,7 +2,7 @@ import logging
 import time
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Optional, Type, overload
+from typing import Annotated, Literal, Optional, Type, overload
 
 from dotenv import load_dotenv
 from PIL import Image as PILImage
@@ -13,26 +13,28 @@ from askui.agent_settings import AgentSettings
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCb
+from askui.models.shared.conversation import Conversation, Speakers
+from askui.models.shared.conversation_callback import ConversationCallback
 from askui.models.shared.settings import (
     ActSettings,
+    CacheWritingSettings,
     CachingSettings,
     GetSettings,
     LocateSettings,
 )
 from askui.models.shared.tools import Tool, ToolCollection
-from askui.prompts.act_prompts import create_default_prompt
-from askui.prompts.caching import CACHE_USE_PROMPT
+from askui.prompts.act_prompts import CACHE_USE_PROMPT, create_default_prompt
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
-    ExecuteCachedTrajectory,
+    InspectCacheMetadata,
     RetrieveCachedTestExecutions,
+    VerifyCacheExecution,
 )
 from askui.tools.get_tool import GetTool
 from askui.tools.locate_tool import LocateTool
 from askui.utils.annotation_writer import AnnotationWriter
-from askui.utils.cache_writer import CacheWriter
+from askui.utils.caching.cache_manager import CacheManager
 from askui.utils.image_utils import ImageSource
 from askui.utils.source_utils import InputSource, load_image_source, load_source
 
@@ -42,9 +44,7 @@ from .models.types.geometry import Point, PointList
 from .models.types.response_schemas import ResponseSchema
 from .reporting import CompositeReporter, Reporter
 from .retry import ConfigurableRetry, Retry
-
-if TYPE_CHECKING:
-    from askui.models.models import ActModel
+from .speaker import CacheExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,7 @@ class Agent:
         tools: list[Tool] | None = None,
         agent_os: AgentOs | AndroidAgentOs | None = None,
         settings: AgentSettings | None = None,
+        callbacks: list[ConversationCallback] | None = None,
     ) -> None:
         load_dotenv()
         self._reporter: Reporter = reporter or CompositeReporter(reporters=None)
@@ -64,13 +65,21 @@ class Agent:
 
         self._tools = tools or []
 
-        # Build models: use provided settings or fall back to AskUI defaults
-        from askui.models.shared.agent import AskUIAgent
-
+        # Store settings and model providers
         _settings = settings or AgentSettings()
-        self._act_model: ActModel = AskUIAgent(
-            model_id=_settings.vlm_provider.model_id,
-            messages_api=_settings.to_messages_api(),
+        self._vlm_provider = _settings.vlm_provider
+        self._image_qa_provider = _settings.image_qa_provider
+        self._detection_provider = _settings.detection_provider
+
+        # Create conversation with speakers and model providers
+        speakers = Speakers()
+        self._conversation = Conversation(
+            speakers=speakers,
+            vlm_provider=self._vlm_provider,
+            image_qa_provider=self._image_qa_provider,
+            detection_provider=self._detection_provider,
+            reporter=self._reporter,
+            callbacks=callbacks,
         )
 
         # Provider-based tools
@@ -100,13 +109,12 @@ class Agent:
         self.locate_settings = LocateSettings()
         self.caching_settings = CachingSettings()
 
-    @telemetry.record_call(exclude={"goal", "on_message", "act_settings", "tools"})
+    @telemetry.record_call(exclude={"goal", "act_settings", "tools"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
         goal: Annotated[str | list[MessageParam], Field(min_length=1)],
         act_settings: ActSettings | None = None,
-        on_message: OnMessageCb | None = None,
         tools: list[Tool] | ToolCollection | None = None,
         caching_settings: CachingSettings | None = None,
     ) -> None:
@@ -125,16 +133,14 @@ class Agent:
             act_model (ActModel | None, optional): Model to use for this act
                 execution.
                 Overrides the agent's default model if provided.
-            on_message (OnMessageCb | None, optional): Callback for new messages. If
-                it returns `None`, stops and does not add the message. Cannot be used
-                with caching_settings strategy "write" or "both".
             tools (list[Tool] | ToolCollection | None, optional): The tools for the
                 agent. Defaults to default tools depending on the selected model.
             caching_settings (CachingSettings | None, optional): The caching settings
                 for the act execution. Controls recording and replaying of action
-                sequences (trajectories). Available strategies: "no" (default, no
-                caching), "write" (record actions to cache file), "read" (replay from
-                cached trajectories), "both" (read and write). Defaults to no caching.
+                sequences (trajectories). Available strategies: None (default, no
+                caching), "record" (record actions to cache file), "execute" (replay
+                from cached trajectories), "both" (execute and record). Defaults to
+                no caching.
 
         Returns:
             None
@@ -143,8 +149,6 @@ class Agent:
             MaxTokensExceededError: If the model reaches the maximum token limit
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
-            ValueError: If on_message callback is provided with caching strategy
-                "write" or "both".
 
         Example:
             Basic usage without caching:
@@ -169,14 +173,14 @@ class Agent:
                         "username 'admin' and password 'secret123'"
                     ),
                     caching_settings=CachingSettings(
-                        strategy="write",
+                        strategy="record",
                         cache_dir=".cache",
                         filename="login_flow.json"
                     )
                 )
             ```
 
-            Replaying cached actions:
+            Executing cached actions:
             ```python
             from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
@@ -185,14 +189,14 @@ class Agent:
                 agent.act(
                     goal="Log in to the application",
                     caching_settings=CachingSettings(
-                        strategy="read",
+                        strategy="execute",
                         cache_dir=".cache"
                     )
                 )
                 # Agent will automatically find and use "login_flow.json"
             ```
 
-            Using both read and write modes:
+            Using both execute and record modes:
             ```python
             from askui import ComputerAgent
             from askui.models.shared.settings import CachingSettings
@@ -225,19 +229,23 @@ class Agent:
 
         _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
-        tools, on_message, cached_execution_tool = self._patch_act_with_cache(
-            _caching_settings, _act_settings, tools, on_message
+        tools, cache_manager = self._patch_act_with_cache(
+            _caching_settings, _act_settings, tools, goal_str
         )
         _tools = self._build_tools(tools)
 
-        if cached_execution_tool:
-            cached_execution_tool.set_toolbox(_tools)
+        # Set toolbox on cache_manager for non-cacheable tool detection
+        if cache_manager:
+            cache_manager.set_toolbox(_tools)
 
-        self._act_model.act(
+        # Set cache_manager on conversation for recording
+        self._conversation.cache_manager = cache_manager
+
+        # Use conversation-based architecture for execution
+        self._conversation.execute_conversation(
             messages=messages,
-            act_settings=_act_settings,
-            on_message=on_message,
             tools=_tools,
+            settings=_act_settings,
         )
 
     def _build_tools(self, tools: list[Tool] | ToolCollection | None) -> ToolCollection:
@@ -253,33 +261,35 @@ class Agent:
         caching_settings: CachingSettings,
         settings: ActSettings,
         tools: list[Tool] | ToolCollection | None,
-        on_message: OnMessageCb | None,
-    ) -> tuple[
-        list[Tool] | ToolCollection, OnMessageCb | None, ExecuteCachedTrajectory | None
-    ]:
+        goal: str,
+    ) -> tuple[list[Tool] | ToolCollection, CacheManager | None]:
         """Patch act settings and tools with caching functionality.
 
         Args:
             caching_settings: The caching settings to apply
             settings: The act settings to modify
             tools: The tools list to extend with caching tools
-            on_message: The message callback (may be replaced for write mode)
+            goal: The goal string for cache recording
 
         Returns:
-            A tuple of (modified_tools, modified_on_message, cached_execution_tool)
+            A tuple of (modified_tools, cache_manager)
         """
         caching_tools: list[Tool] = []
-        cached_execution_tool: ExecuteCachedTrajectory | None = None
+        cache_manager: CacheManager | None = None
 
-        # Setup read mode: add caching tools and modify system prompt
-        if caching_settings.strategy in ["read", "both"]:
-            cached_execution_tool = ExecuteCachedTrajectory(
-                caching_settings.execute_cached_trajectory_tool_settings
-            )
+        # Setup execute mode: add caching tools and modify system prompt
+        if caching_settings.strategy in ["execute", "both"]:
+            # Create CacheExecutor with execution settings and add to speakers
+            cache_executor = CacheExecutor(caching_settings.execution_settings)
+            self._conversation.speakers.add_speaker(cache_executor)
+
+            # Add caching tools (switch_speaker tool is added automatically
+            # by Conversation._setup_speaker_handoff)
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
-                    cached_execution_tool,
+                    VerifyCacheExecution(),
+                    InspectCacheMetadata(),
                 ]
             )
             if settings.messages.system is None:
@@ -294,18 +304,23 @@ class Agent:
         else:
             tools = caching_tools
 
-        # Setup write mode: create cache writer and set message callback
-        if caching_settings.strategy in ["write", "both"]:
-            cache_writer = CacheWriter(
-                caching_settings.cache_dir, caching_settings.filename
+        # Setup record mode: create cache manager for recording
+        if caching_settings.strategy in ["record", "both"]:
+            cache_writer_settings = (
+                caching_settings.writing_settings or CacheWritingSettings()
             )
-            if on_message is None:
-                on_message = cache_writer.add_message_cb
-            else:
-                error_message = "Cannot use on_message callback when writing Cache"
-                raise ValueError(error_message)
+            filename = cache_writer_settings.filename or ""
 
-        return tools, on_message, cached_execution_tool
+            cache_manager = CacheManager()
+            cache_manager.start_recording(
+                cache_dir=caching_settings.cache_dir,
+                file_name=filename,
+                goal=goal,
+                cache_writer_settings=cache_writer_settings,
+                vlm_provider=self._vlm_provider,
+            )
+
+        return tools, cache_manager
 
     @overload
     def get(
