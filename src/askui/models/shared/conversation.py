@@ -1,6 +1,7 @@
 """Conversation class for managing speaker-based agent interactions."""
 
 import logging
+import uuid
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry import trace
@@ -76,6 +77,9 @@ class Conversation:
         if not speakers:
             msg = "At least one speaker must be provided"
             raise ValueError(msg)
+
+        # Identity
+        self.conversation_id: str = str(uuid.uuid4())
 
         # Speakers and current state
         self.speakers = speakers
