@@ -405,6 +405,11 @@ class Conversation:
             old_speaker.get_name(),
             self.current_speaker.get_name(),
         )
+        self._call_callbacks(
+            "on_speaker_switch",
+            old_speaker.get_name(),
+            self.current_speaker.get_name(),
+        )
         if speaker_context is not None:
             self.current_speaker.on_activate(speaker_context)
 

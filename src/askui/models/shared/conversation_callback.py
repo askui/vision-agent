@@ -22,7 +22,8 @@ class ConversationCallback(ABC):
        a. `on_step_start` - Before step execution
        b. `on_tool_execution_start` - Before tools are executed (if any)
        c. `on_tool_execution_end` - After tools are executed (if any)
-       d. `on_step_end` - After step execution
+       d. `on_speaker_switch` - When a speaker switch occurs (if any)
+       e. `on_step_end` - After step execution
     4. `on_control_loop_end` - After the while loop ends
     5. `on_conversation_end` - Before cleanup
 
@@ -95,6 +96,21 @@ class ConversationCallback(ABC):
             conversation: The conversation instance
             step_index: Zero-based index of the completed step
             result: The result from the speaker
+        """
+
+    @abstractmethod
+    def on_speaker_switch(
+        self,
+        conversation: "Conversation",
+        from_speaker: str,
+        to_speaker: str,
+    ) -> None:
+        """Called when a speaker switch occurs.
+
+        Args:
+            conversation: The conversation instance
+            from_speaker: Name of the speaker being switched from
+            to_speaker: Name of the speaker being switched to
         """
 
     @abstractmethod
