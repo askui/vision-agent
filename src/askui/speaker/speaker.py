@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -37,6 +37,7 @@ class SpeakerResult(BaseModel):
     next_speaker: str | None = None
     messages_to_add: list[MessageParam] = Field(default_factory=list)
     usage: UsageParam | None = None
+    speaker_context: dict[str, Any] | None = None
 
 
 class Speaker(ABC):
@@ -84,6 +85,30 @@ class Speaker(ABC):
             Speaker name (e.g., "AgentSpeaker", "CacheExecutor")
         """
         ...
+
+    @abstractmethod
+    def get_description(self) -> str:
+        """Return a description of what this speaker does.
+
+        This description is auto-populated into the system prompt so the
+        coordinating speaker knows which speakers are available and when
+        to hand off to them. Return an empty string for speakers that
+        should not be handoff targets (e.g., the default coordinator).
+
+        Returns:
+            Human-readable description including expected context keys.
+        """
+        ...
+
+    def on_activate(self, context: dict[str, Any]) -> None:  # noqa: B027
+        """Called when this speaker is activated via a speaker switch with context.
+
+        Override in subclasses that need activation context.
+        The default implementation does nothing.
+
+        Args:
+            context: Activation context passed from the switch_speaker tool.
+        """
 
 
 class Speakers:

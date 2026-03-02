@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 
 from askui.tools.caching_tools import (
-    ExecuteCachedTrajectory,
     InspectCacheMetadata,
     RetrieveCachedTestExecutions,
     VerifyCacheExecution,
@@ -154,85 +153,6 @@ def test_retrieve_cached_test_executions_returns_parameter_info() -> None:
         assert len(result) == 1
         assert "parameters:" in result[0]
         assert "target_url" in result[0]
-
-
-def test_execute_cached_trajectory_initializes_correctly() -> None:
-    """Test that ExecuteCachedTrajectory initializes correctly."""
-    tool = ExecuteCachedTrajectory()
-    assert tool.name.startswith("execute_cached_executions_tool")
-    assert "trajectory_file" in tool.input_schema["properties"]
-    assert "start_from_step_index" in tool.input_schema["properties"]
-    assert "parameter_values" in tool.input_schema["properties"]
-
-
-def test_execute_cached_trajectory_returns_error_when_file_not_found() -> None:
-    """Test that ExecuteCachedTrajectory returns error if file doesn't exist."""
-    tool = ExecuteCachedTrajectory()
-
-    result = tool(trajectory_file="/non/existent/file.json")
-
-    assert "Trajectory file not found" in result
-    assert "retrieve_available_trajectories_tool" in result
-
-
-def test_execute_cached_trajectory_returns_success_when_file_exists() -> None:
-    """Test that ExecuteCachedTrajectory returns success when file exists."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-        _create_valid_cache_file(cache_file)
-
-        tool = ExecuteCachedTrajectory()
-        result = tool(trajectory_file=str(cache_file))
-
-        assert "Requesting cache execution" in result
-        assert "test_trajectory.json" in result
-
-
-def test_execute_cached_trajectory_accepts_start_from_step_index() -> None:
-    """Test that ExecuteCachedTrajectory accepts start_from_step_index parameter."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-        _create_valid_cache_file(cache_file)
-
-        tool = ExecuteCachedTrajectory()
-        result = tool(trajectory_file=str(cache_file), start_from_step_index=5)
-
-        assert "Requesting cache execution" in result
-
-
-def test_execute_cached_trajectory_accepts_parameter_values() -> None:
-    """Test that ExecuteCachedTrajectory accepts parameter_values parameter."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-        _create_valid_cache_file(cache_file)
-
-        tool = ExecuteCachedTrajectory()
-        result = tool(
-            trajectory_file=str(cache_file),
-            parameter_values={"target_url": "https://example.com"},
-        )
-
-        assert "Requesting cache execution" in result
-
-
-def test_execute_cached_trajectory_does_not_execute_directly() -> None:
-    """Test that ExecuteCachedTrajectory does NOT directly execute the trajectory.
-
-    The tool should only validate the file exists and return a success message.
-    Actual execution is handled by the CacheExecutor speaker.
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_file = Path(temp_dir) / "test_trajectory.json"
-        _create_valid_cache_file(cache_file)
-
-        tool = ExecuteCachedTrajectory()
-
-        # Should succeed without any toolbox being set
-        result = tool(trajectory_file=str(cache_file))
-
-        # Should return a "requesting" message, not "successfully executed"
-        assert "Requesting cache execution" in result
-        assert "Successfully executed" not in result
 
 
 def test_verify_cache_execution_initializes_correctly() -> None:

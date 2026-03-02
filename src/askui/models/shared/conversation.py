@@ -10,8 +10,6 @@ from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
 from askui.models.shared.agent_message_param import (
     MessageParam,
-    ToolResultBlockParam,
-    ToolUseBlockParam,
     UsageParam,
 )
 from askui.models.shared.settings import ActSettings
@@ -23,6 +21,7 @@ from askui.models.shared.truncation_strategies import (
 )
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.speaker.speaker import SpeakerResult, Speakers
+from askui.tools.switch_speaker_tool import SwitchSpeakerTool
 
 if TYPE_CHECKING:
     from askui.models.shared.conversation_callback import ConversationCallback
@@ -103,9 +102,6 @@ class Conversation:
         self._reporters: list[Reporter] = []
         self._step_index: int = 0
 
-        # Cache execution context (for communication between tools and CacheExecutor)
-        self.cache_execution_context: dict[str, Any] = {}
-
         # Track if cache execution was used (to prevent recording during playback)
         self._executed_from_cache: bool = False
 
@@ -162,7 +158,6 @@ class Conversation:
     ) -> None:
         # Reset state
         self.accumulated_usage = UsageParam()
-        self.cache_execution_context = {}
         self._executed_from_cache = False
         self.speakers.reset_state()
 
@@ -170,6 +165,9 @@ class Conversation:
         self.settings = settings or ActSettings()
         self.tools = tools or ToolCollection()
         self._reporters = reporters or []
+
+        # Auto-populate speaker descriptions and switch_speaker tool
+        self._setup_speaker_handoff()
 
         # Initialize truncation strategy
         self._truncation_strategy = (
@@ -198,6 +196,51 @@ class Conversation:
 
         # Report final usage
         self._reporter.add_usage_summary(self.accumulated_usage.model_dump())
+
+    def _setup_speaker_handoff(self) -> None:
+        """Set up speaker handoff infrastructure.
+
+        If there are speakers with descriptions (handoff targets), this method:
+        1. Appends an ``<AVAILABLE_SPEAKERS>`` section to ``system_capabilities``
+        2. Adds a ``SwitchSpeakerTool`` to the tool collection
+        """
+        speaker_descriptions = self._build_speaker_descriptions()
+        if not speaker_descriptions:
+            return
+
+        # Append speaker descriptions to system_capabilities
+        if self.settings.messages.system is not None:
+            has_capabilities = self.settings.messages.system.system_capabilities
+            separator = "\n\n" if has_capabilities else ""
+            self.settings.messages.system.system_capabilities += (
+                f"{separator}<AVAILABLE_SPEAKERS>\n"
+                "The following specialized speakers are available in this "
+                "conversation. Use the switch_speaker tool to hand off to "
+                "them when appropriate.\n\n"
+                f"{speaker_descriptions}\n"
+                "</AVAILABLE_SPEAKERS>"
+            )
+
+        # Create switch_speaker tool with valid speaker names
+        handoff_speakers = [
+            speaker.get_name() for speaker in self.speakers if speaker.get_description()
+        ]
+        switch_tool = SwitchSpeakerTool(speaker_names=handoff_speakers)
+        self.tools.append_tool(switch_tool)
+
+    def _build_speaker_descriptions(self) -> str:
+        """Build formatted speaker descriptions for the system prompt.
+
+        Returns:
+            Formatted string with speaker names and descriptions,
+            or empty string if no speakers have descriptions.
+        """
+        descriptions: list[str] = []
+        for speaker in self.speakers:
+            description = speaker.get_description()
+            if description:
+                descriptions.append(f"### {speaker.get_name()}\n{description}")
+        return "\n\n".join(descriptions)
 
     @tracer.start_as_current_span("step")
     def _execute_step(self) -> bool:
@@ -238,14 +281,13 @@ class Conversation:
             tool_result_message = self._execute_tools_if_present(last_message)
             if tool_result_message:
                 self._add_message(tool_result_message)
-
-                # Handle side effects of tool execution (e.g., speaker switches)
-                self._handle_tool_results(last_message, tool_result_message)
-
                 continue_loop = True  # we always continue after a tool was called
 
         # 4. Check if conversation should continue and switch speaker if necessary
-        continue_loop = continue_loop or self._handle_result_status(result)
+        # Note: _handle_result_status must always be called (not short-circuited)
+        # because it has side effects (e.g., triggering speaker switches).
+        status_continue = self._handle_result_status(result)
+        continue_loop = continue_loop or status_continue
 
         # 5. Collect Statistics
         if result.usage:
@@ -295,67 +337,6 @@ class Conversation:
         # Return tool results as a user message
         return MessageParam(content=tool_results, role="user")
 
-    @tracer.start_as_current_span("handle_tool_result")
-    def _handle_tool_results(
-        self,
-        assistant_message: MessageParam,
-        tool_result_message: MessageParam,
-    ) -> None:
-        """Handle side effects of tool execution.
-
-        Extracts tool use blocks and tool results from messages, then checks
-        if specific tools require speaker switches or other actions.
-
-        Currently handles:
-        - ExecuteCachedTrajectory: Switches to CacheExecutor if successful
-
-        Args:
-            assistant_message: The assistant message containing tool use blocks
-            tool_result_message: The user message containing tool results
-        """
-        # Extract tool use blocks from assistant message
-        if isinstance(assistant_message.content, str):
-            return
-
-        tool_use_blocks: list[ToolUseBlockParam] = [
-            block for block in assistant_message.content if block.type == "tool_use"
-        ]
-
-        if isinstance(tool_result_message.content, str):
-            return
-
-        tool_results: list[ToolResultBlockParam] = tool_result_message.content  # type: ignore[assignment]
-
-        # Handle side effects for each tool
-        for tool_use_block, tool_result in zip(
-            tool_use_blocks, tool_results, strict=False
-        ):
-            # Check if ExecuteCachedTrajectory was called successfully
-            if (
-                tool_use_block.name.startswith("execute_cached_executions_tool")
-                and not tool_result.is_error
-            ):
-                # Extract parameters from tool call (input is dict at runtime)
-                trajectory_file: str = tool_use_block.input["trajectory_file"]  # type: ignore[index]
-                start_from_step_index: int = tool_use_block.input.get(  # type: ignore[attr-defined]
-                    "start_from_step_index", 0
-                )
-                parameter_values: dict[str, str] = tool_use_block.input.get(  # type: ignore[attr-defined]
-                    "parameter_values", {}
-                )
-
-                # Prepare cache execution context for CacheExecutor
-                # CacheExecutor will validate and load the cache file
-                self.cache_execution_context = {
-                    "trajectory_file": trajectory_file,
-                    "start_from_step_index": start_from_step_index,
-                    "parameter_values": parameter_values,
-                    "toolbox": self.tools,
-                    "reporter": self._reporter,
-                }
-                self._executed_from_cache = True
-                self.switch_speaker("CacheExecutor")
-
     def _add_message(self, message: MessageParam) -> None:
         """Add message to conversation history.
 
@@ -392,17 +373,26 @@ class Conversation:
             return False
         if result.status == "switch_speaker":
             if result.next_speaker:
-                self.switch_speaker(result.next_speaker)
+                self.switch_speaker(
+                    result.next_speaker,
+                    speaker_context=result.speaker_context,
+                )
             return True
         # status == "continue"
         return True
 
     @tracer.start_as_current_span("switch_speaker")
-    def switch_speaker(self, speaker_name: str) -> None:
-        """Switch to a different speaker.
+    def switch_speaker(
+        self,
+        speaker_name: str,
+        speaker_context: dict[str, Any] | None = None,
+    ) -> None:
+        """Switch to a different speaker, optionally passing activation context.
 
         Args:
-            speaker_name: Name of the speaker to switch to
+            speaker_name: Name of the speaker to switch to.
+            speaker_context: Optional activation context to pass to the
+                target speaker via ``on_activate()``.
         """
         old_speaker = self.current_speaker
         self.current_speaker = self.speakers[speaker_name]
@@ -411,6 +401,8 @@ class Conversation:
             old_speaker.get_name(),
             self.current_speaker.get_name(),
         )
+        if speaker_context is not None:
+            self.current_speaker.on_activate(speaker_context)
 
     def get_messages(self) -> list[MessageParam]:
         """Get current message history from truncation strategy.

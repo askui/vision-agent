@@ -1,8 +1,7 @@
-import json
 import logging
 from pathlib import Path
 
-from pydantic import ValidationError, validate_call
+from pydantic import validate_call
 from typing_extensions import override
 
 from ..models.shared.tools import Tool
@@ -127,135 +126,6 @@ class RetrieveCachedTestExecutions(Tool):
             logger.warning(warning_msg)
 
         return available
-
-
-class ExecuteCachedTrajectory(Tool):
-    """
-    Activate cache execution mode to replay a pre-recorded trajectory.
-
-    This tool performs minimal validation (file exists) and signals that cache
-    execution should start. The actual execution with visual validation is
-    handled by the CacheExecutor speaker.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="execute_cached_executions_tool",
-            description=(
-                "Activate cache execution mode to replay a pre-recorded "
-                "trajectory. This tool sets up the agent to execute cached UI "
-                "interactions step-by-step.\n\n"
-                "Before using this tool:\n"
-                "1. Use retrieve_available_trajectories_tool to see which "
-                "trajectory files are available\n"
-                "2. Select the appropriate trajectory file path from the "
-                "returned list\n"
-                "3. If the trajectory contains parameters (e.g., {{target_url}}), "
-                "provide values for them in the parameter_values parameter\n"
-                "4. Pass the full file path to this tool\n\n"
-                "Cache parameters allow dynamic values to be injected during "
-                "execution. For example, if a trajectory types '{{target_url}}', "
-                "you must provide parameter_values={'target_url': 'https://...'}.\n\n"
-                "To continue from a specific step (e.g., after manually "
-                "handling a non-cacheable step), use the start_from_step_index "
-                "parameter. By default, execution starts from the beginning "
-                "(step 0).\n\n"
-                "Once activated, the agent will execute cached steps "
-                "automatically. If a non-cacheable step is encountered, the "
-                "agent will be asked to handle it manually before resuming "
-                "cache execution."
-            ),
-            input_schema={
-                "type": "object",
-                "properties": {
-                    "trajectory_file": {
-                        "type": "string",
-                        "description": (
-                            "Full path to the trajectory file (use "
-                            "retrieve_available_trajectories_tool to find "
-                            "available files)"
-                        ),
-                    },
-                    "start_from_step_index": {
-                        "type": "integer",
-                        "description": (
-                            "Optional: The step index to start or resume "
-                            "execution from (0-based). Use 0 (default) to start "
-                            "from the beginning. Use a higher index to continue "
-                            "from a specific step, e.g., after manually handling "
-                            "a non-cacheable step."
-                        ),
-                        "default": 0,
-                    },
-                    "parameter_values": {
-                        "type": "object",
-                        "description": (
-                            "Optional dictionary mapping parameter names to "
-                            "their values. Required if the trajectory contains "
-                            "parameters like {{variable}}. Example: "
-                            "{'target_url': 'https://example.com'}"
-                        ),
-                        "additionalProperties": {"type": "string"},
-                        "default": {},
-                    },
-                },
-                "required": ["trajectory_file"],
-            },
-        )
-
-    @override
-    @validate_call
-    def __call__(
-        self,
-        trajectory_file: str,
-        start_from_step_index: int = 0,
-        parameter_values: dict[str, str] | None = None,
-    ) -> str:
-        """Request cache execution.
-
-        This tool performs minimal validation (file exists) and requests
-        cache execution. Full validation and execution happens in CacheExecutor.
-
-        Args:
-            trajectory_file: Path to the trajectory file
-            start_from_step_index: Step index to start from (default: 0)
-            parameter_values: Parameter values for the trajectory
-
-        Returns:
-            Success message if file exists, error message otherwise
-        """
-        if parameter_values is None:
-            parameter_values = {}
-
-        logger.info(
-            "Requesting cache execution: %s (start_from_step=%d)",
-            Path(trajectory_file).name,
-            start_from_step_index,
-        )
-
-        # Validate file exists
-        if not Path(trajectory_file).is_file():
-            error_msg = (
-                f"Trajectory file not found: {trajectory_file}\n"
-                "Use retrieve_available_trajectories_tool to see available files."
-            )
-            logger.error(error_msg)
-            return error_msg
-
-        # Validate file structure using CacheFile pydantic model
-        try:
-            CacheManager.read_cache_file(Path(trajectory_file))
-        except (json.JSONDecodeError, ValidationError) as e:
-            error_msg = (
-                f"Invalid cache file format: {trajectory_file}\n"
-                f"Error: {e}\n"
-                "The cache file may be corrupted or in an old format."
-            )
-            logger.exception(error_msg)
-            return error_msg
-
-        # Return success - CacheExecutor will handle full execution
-        return f"Requesting cache execution for {Path(trajectory_file).name}"
 
 
 class VerifyCacheExecution(Tool):

@@ -34,30 +34,3 @@ Return your analysis as a JSON object with this structure:
 }
 
 If no parameters are found, return an empty parameters array."""
-
-
-CACHE_USE_PROMPT = (
-    "<TRAJECTORY USE>\n"
-    "    You can use precomputed trajectories to make the execution of the "
-    "task more robust and faster!\n"
-    "    To do so, first use the RetrieveCachedTestExecutions tool to check "
-    "which trajectories are available for you.\n"
-    "    The details what each trajectory that is available for you does are "
-    "at the end of this prompt.\n"
-    "    A trajectory contains all necessary mouse movements, clicks, and "
-    "typing actions from a previously successful execution.\n"
-    "    If there is a trajectory available for a step you need to take, "
-    "always use it!\n"
-    "    You can execute a trajectory with the ExecuteCachedExecution tool.\n"
-    "    After a trajectory was executed, make sure to verify the results! "
-    "While it works most of the time, occasionally, the execution can be "
-    "(partly) incorrect. So make sure to verify if everything is filled out "
-    "as expected, and make corrections where necessary!\n"
-    "    </TRAJECTORY USE>\n"
-    "    <TRAJECTORY DETAILS>\n"
-    "    There are several trajectories available to you.\n"
-    "    Their filename is a unique testID.\n"
-    "    If executed using the ExecuteCachedExecution tool, a trajectory will "
-    "automatically execute all necessary steps for the test with that id.\n"
-    "    </TRAJECTORY DETAILS>\n"
-)

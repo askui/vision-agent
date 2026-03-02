@@ -23,12 +23,10 @@ from askui.models.shared.settings import (
     LocateSettings,
 )
 from askui.models.shared.tools import Tool, ToolCollection
-from askui.prompts.act_prompts import create_default_prompt
-from askui.prompts.caching import CACHE_USE_PROMPT
+from askui.prompts.act_prompts import CACHE_USE_PROMPT, create_default_prompt
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
-    ExecuteCachedTrajectory,
     InspectCacheMetadata,
     RetrieveCachedTestExecutions,
     VerifyCacheExecution,
@@ -231,7 +229,7 @@ class Agent:
 
         _caching_settings: CachingSettings = caching_settings or self.caching_settings
 
-        tools, cached_execution_tool, cache_manager = self._patch_act_with_cache(
+        tools, cache_manager = self._patch_act_with_cache(
             _caching_settings, _act_settings, tools, goal_str
         )
         _tools = self._build_tools(tools)
@@ -264,11 +262,7 @@ class Agent:
         settings: ActSettings,
         tools: list[Tool] | ToolCollection | None,
         goal: str,
-    ) -> tuple[
-        list[Tool] | ToolCollection,
-        ExecuteCachedTrajectory | None,
-        CacheManager | None,
-    ]:
+    ) -> tuple[list[Tool] | ToolCollection, CacheManager | None]:
         """Patch act settings and tools with caching functionality.
 
         Args:
@@ -278,10 +272,9 @@ class Agent:
             goal: The goal string for cache recording
 
         Returns:
-            A tuple of (modified_tools, cached_execution_tool, cache_manager)
+            A tuple of (modified_tools, cache_manager)
         """
         caching_tools: list[Tool] = []
-        cached_execution_tool: ExecuteCachedTrajectory | None = None
         cache_manager: CacheManager | None = None
 
         # Setup execute mode: add caching tools and modify system prompt
@@ -290,12 +283,11 @@ class Agent:
             cache_executor = CacheExecutor(caching_settings.execution_settings)
             self._conversation.speakers.add_speaker(cache_executor)
 
-            # Add caching tools
-            cached_execution_tool = ExecuteCachedTrajectory()
+            # Add caching tools (switch_speaker tool is added automatically
+            # by Conversation._setup_speaker_handoff)
             caching_tools.extend(
                 [
                     RetrieveCachedTestExecutions(caching_settings.cache_dir),
-                    cached_execution_tool,
                     VerifyCacheExecution(),
                     InspectCacheMetadata(),
                 ]
@@ -328,7 +320,7 @@ class Agent:
                 vlm_provider=self._vlm_provider,
             )
 
-        return tools, cached_execution_tool, cache_manager
+        return tools, cache_manager
 
     @overload
     def get(

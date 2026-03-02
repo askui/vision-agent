@@ -102,17 +102,23 @@ class CacheExecutor(Speaker):
         self._current_step_index: int = 0
         self._message_history: list[MessageParam] = []
 
+        # Activation context received via on_activate()
+        self._activation_context: dict[str, Any] = {}
+
     @override
-    def can_handle(self, conversation: "Conversation") -> bool:
+    def can_handle(self, conversation: "Conversation") -> bool:  # noqa: ARG002
         """Check if cache execution is active or should be activated.
 
         Args:
-            conversation: The conversation instance
+            conversation: The conversation instance.
 
         Returns:
-            True if in cache execution mode or if context has cache execution data
+            True if in cache execution mode or if activation context is set.
         """
-        return self._executing_from_cache or bool(conversation.cache_execution_context)
+        can_handle_step = self._executing_from_cache or bool(self._activation_context)
+        if not can_handle_step:
+            logger.warning("CacheExecutor can't handle the next step")
+        return can_handle_step
 
     @override
     def handle_step(
@@ -134,18 +140,22 @@ class CacheExecutor(Speaker):
             error_msg = "CacheManager must be provided if executing from Cache"
             raise RuntimeError(error_msg)
 
-        # Check if we need to activate cache execution from context
-        if not self._executing_from_cache and conversation.cache_execution_context:
+        # Check if we need to activate cache execution from internal context
+        if not self._executing_from_cache and self._activation_context:
             try:
-                self._activate_from_context(
-                    conversation.cache_execution_context, cache_manager
-                )
-                # Clear the context after successful activation
-                conversation.cache_execution_context = {}
+                # Augment context with toolbox and reporter from conversation
+                activation_context = {
+                    **self._activation_context,
+                    "toolbox": conversation.tools,
+                    "reporter": conversation._reporter,  # noqa: SLF001
+                }
+                self._activate_from_context(activation_context, cache_manager)
+                self._activation_context = {}
+                conversation._executed_from_cache = True  # noqa: SLF001
             except Exception as e:
-                # Validation or loading failed - report error and switch back to agent
+                # Validation or loading failed - report error and switch back
                 logger.exception("Failed to activate cache execution")
-                conversation.cache_execution_context = {}  # Clear context
+                self._activation_context = {}
 
                 error_message = MessageParam(
                     role="user",
@@ -198,6 +208,37 @@ class CacheExecutor(Speaker):
             "CacheExecutor"
         """
         return "CacheExecutor"
+
+    @override
+    def get_description(self) -> str:
+        """Return description of CacheExecutor and expected context keys.
+
+        Returns:
+            Description with expected context keys for activation.
+        """
+        return (
+            "Replays a pre-recorded UI interaction trajectory from a cache "
+            "file. Use this speaker to fast-forward through previously "
+            "recorded action sequences instead of executing each step from "
+            "scratch.\n"
+            "Expected context keys:\n"
+            "  - trajectory_file (str, required): Full path to the "
+            "trajectory file\n"
+            "  - start_from_step_index (int, optional, default=0): Step "
+            "index to start from\n"
+            "  - parameter_values (dict[str, str], optional, default={}): "
+            "Dynamic parameter values for the trajectory"
+        )
+
+    @override
+    def on_activate(self, context: dict[str, Any]) -> None:
+        """Store activation context for use in the next `handle_step()` call.
+
+        Args:
+            context: Dict with trajectory_file, start_from_step_index,
+                parameter_values.
+        """
+        self._activation_context = context
 
     def _handle_result(
         self, result: ExecutionResult, cache_manager: "CacheManager"
@@ -468,6 +509,7 @@ class CacheExecutor(Speaker):
         self._parameter_values = {}
         self._current_step_index = 0
         self._message_history = []
+        self._activation_context = {}
 
     def _get_next_step(
         self, conversation_messages: list[MessageParam] | None = None
@@ -580,7 +622,11 @@ class CacheExecutor(Speaker):
     def _should_skip_step(self, step: ToolUseBlockParam) -> bool:
         """Check if a step should be skipped during execution."""
         # Use startswith() to handle tool names with UUID suffixes
-        tools_to_skip: list[str] = ["retrieve_available_trajectories_tool"]
+        tools_to_skip: list[str] = [
+            "retrieve_available_trajectories_tool",
+            "switch_speaker",
+            "execute_cached_executions_tool",  # backward compat for old caches
+        ]
         return any(step.name.startswith(prefix) for prefix in tools_to_skip)
 
     def _validate_step_visually(

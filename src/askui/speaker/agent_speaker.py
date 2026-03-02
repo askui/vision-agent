@@ -1,7 +1,7 @@
 """Agent speaker for normal LLM API interactions."""
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
@@ -101,6 +101,18 @@ class AgentSpeaker(Speaker):
             logger.exception("Agent stopped with error")
             return SpeakerResult(status="failed", messages_to_add=[response])
 
+        # Check for switch_speaker tool call
+        switch_info = self._extract_switch_speaker(response)
+        if switch_info:
+            speaker_name, speaker_context = switch_info
+            return SpeakerResult(
+                status="switch_speaker",
+                next_speaker=speaker_name,
+                speaker_context=speaker_context,
+                messages_to_add=[response],
+                usage=response.usage,
+            )
+
         # Determine status based on whether there are tool calls
         # If there are tool calls, conversation will execute them and loop back
         # If no tool calls, conversation is done
@@ -122,6 +134,15 @@ class AgentSpeaker(Speaker):
         """
         return "AgentSpeaker"
 
+    @override
+    def get_description(self) -> str:
+        """AgentSpeaker is the default coordinator and not a handoff target.
+
+        Returns:
+            Empty string.
+        """
+        return ""
+
     def _has_tool_calls(self, message: MessageParam) -> bool:
         """Check if message contains tool use blocks.
 
@@ -135,6 +156,33 @@ class AgentSpeaker(Speaker):
             return False
 
         return any(block.type == "tool_use" for block in message.content)
+
+    def _extract_switch_speaker(
+        self, message: MessageParam
+    ) -> tuple[str, dict[str, Any]] | None:
+        """Extract switch_speaker tool call from message if present.
+
+        Args:
+            message: The assistant message to inspect.
+
+        Returns:
+            Tuple of (speaker_name, speaker_context) if found, None otherwise.
+        """
+        if isinstance(message.content, str):
+            return None
+
+        for block in message.content:
+            if block.type == "tool_use" and block.name.startswith("switch_speaker"):
+                input_data: dict[str, Any] = (
+                    dict(block.input) if isinstance(block.input, dict) else {}
+                )
+                speaker_name = str(input_data.get("speaker_name", ""))
+                speaker_context: dict[str, Any] = (
+                    input_data.get("speaker_context", {}) or {}
+                )
+                return speaker_name, speaker_context
+
+        return None
 
     def _handle_stop_reason(self, message: MessageParam, max_tokens: int) -> None:
         """Handle agent stop reasons.
