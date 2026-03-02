@@ -1,6 +1,5 @@
 """Callback system for conversation execution hooks."""
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -8,12 +7,11 @@ if TYPE_CHECKING:
     from askui.speaker.speaker import SpeakerResult
 
 
-class ConversationCallback(ABC):
+class ConversationCallback:
     """Base class for conversation callbacks.
 
-    Subclass this and override the methods you need. All methods have
-    empty default implementations, so you only need to override the
-    hooks you're interested in.
+    Subclass this and override only the methods you need. All methods
+    have empty default implementations.
 
     The callback methods are called in the following order:
     1. `on_conversation_start` - After setup, before control loop
@@ -42,48 +40,42 @@ class ConversationCallback(ABC):
         ```
     """
 
-    @abstractmethod
     def on_conversation_start(self, conversation: "Conversation") -> None:
         """Called when conversation begins (after setup, before control loop).
 
         Args:
-            conversation: The conversation instance with initialized state
+            conversation: The conversation instance with initialized state.
         """
 
-    @abstractmethod
     def on_conversation_end(self, conversation: "Conversation") -> None:
         """Called when conversation ends (after control loop, before cleanup).
 
         Args:
-            conversation: The conversation instance
+            conversation: The conversation instance.
         """
 
-    @abstractmethod
     def on_control_loop_start(self, conversation: "Conversation") -> None:
         """Called before the control loop starts iterating.
 
         Args:
-            conversation: The conversation instance
+            conversation: The conversation instance.
         """
 
-    @abstractmethod
     def on_control_loop_end(self, conversation: "Conversation") -> None:
         """Called after the control loop finishes (success or failure).
 
         Args:
-            conversation: The conversation instance
+            conversation: The conversation instance.
         """
 
-    @abstractmethod
     def on_step_start(self, conversation: "Conversation", step_index: int) -> None:
         """Called before each step execution.
 
         Args:
-            conversation: The conversation instance
-            step_index: Zero-based index of the current step
+            conversation: The conversation instance.
+            step_index: Zero-based index of the current step.
         """
 
-    @abstractmethod
     def on_step_end(
         self,
         conversation: "Conversation",
@@ -93,12 +85,11 @@ class ConversationCallback(ABC):
         """Called after each step execution.
 
         Args:
-            conversation: The conversation instance
-            step_index: Zero-based index of the completed step
-            result: The result from the speaker
+            conversation: The conversation instance.
+            step_index: Zero-based index of the completed step.
+            result: The result from the speaker.
         """
 
-    @abstractmethod
     def on_speaker_switch(
         self,
         conversation: "Conversation",
@@ -108,29 +99,27 @@ class ConversationCallback(ABC):
         """Called when a speaker switch occurs.
 
         Args:
-            conversation: The conversation instance
-            from_speaker: Name of the speaker being switched from
-            to_speaker: Name of the speaker being switched to
+            conversation: The conversation instance.
+            from_speaker: Name of the speaker being switched from.
+            to_speaker: Name of the speaker being switched to.
         """
 
-    @abstractmethod
     def on_tool_execution_start(
         self, conversation: "Conversation", tool_names: list[str]
     ) -> None:
         """Called before tools are executed.
 
         Args:
-            conversation: The conversation instance
-            tool_names: Names of tools about to be executed
+            conversation: The conversation instance.
+            tool_names: Names of tools about to be executed.
         """
 
-    @abstractmethod
     def on_tool_execution_end(
         self, conversation: "Conversation", tool_names: list[str]
     ) -> None:
         """Called after tools are executed.
 
         Args:
-            conversation: The conversation instance
-            tool_names: Names of tools that were executed
+            conversation: The conversation instance.
+            tool_names: Names of tools that were executed.
         """

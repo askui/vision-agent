@@ -109,18 +109,41 @@ class Conversation:
         # Track if cache execution was used (to prevent recording during playback)
         self._executed_from_cache: bool = False
 
-    def _call_callbacks(self, method_name: str, *args: Any, **kwargs: Any) -> None:
-        """Call a method on all registered callbacks.
-
-        Args:
-            method_name: Name of the callback method to call
-            *args: Positional arguments to pass to the callback
-            **kwargs: Keyword arguments to pass to the callback
-        """
+    def _on_conversation_start(self) -> None:
         for callback in self._callbacks:
-            method = getattr(callback, method_name, None)
-            if method and callable(method):
-                method(self, *args, **kwargs)
+            callback.on_conversation_start(self)
+
+    def _on_conversation_end(self) -> None:
+        for callback in self._callbacks:
+            callback.on_conversation_end(self)
+
+    def _on_control_loop_start(self) -> None:
+        for callback in self._callbacks:
+            callback.on_control_loop_start(self)
+
+    def _on_control_loop_end(self) -> None:
+        for callback in self._callbacks:
+            callback.on_control_loop_end(self)
+
+    def _on_step_start(self, step_index: int) -> None:
+        for callback in self._callbacks:
+            callback.on_step_start(self, step_index)
+
+    def _on_step_end(self, step_index: int, result: SpeakerResult) -> None:
+        for callback in self._callbacks:
+            callback.on_step_end(self, step_index, result)
+
+    def _on_speaker_switch(self, from_speaker: str, to_speaker: str) -> None:
+        for callback in self._callbacks:
+            callback.on_speaker_switch(self, from_speaker, to_speaker)
+
+    def _on_tool_execution_start(self, tool_names: list[str]) -> None:
+        for callback in self._callbacks:
+            callback.on_tool_execution_start(self, tool_names)
+
+    def _on_tool_execution_end(self, tool_names: list[str]) -> None:
+        for callback in self._callbacks:
+            callback.on_tool_execution_end(self, tool_names)
 
     @tracer.start_as_current_span("conversation")
     def execute_conversation(
@@ -146,9 +169,9 @@ class Conversation:
 
         self._setup_control_loop(messages, tools, settings, reporters)
 
-        self._call_callbacks("on_conversation_start")
+        self._on_conversation_start()
         self._execute_control_loop()
-        self._call_callbacks("on_conversation_end")
+        self._on_conversation_end()
 
         self._conclude_control_loop()
 
@@ -185,12 +208,12 @@ class Conversation:
 
     @tracer.start_as_current_span("control_loop")
     def _execute_control_loop(self) -> None:
-        self._call_callbacks("on_control_loop_start")
+        self._on_control_loop_start()
         self._step_index = 0
         continue_execution = True
         while continue_execution:
             continue_execution = self._execute_step()
-        self._call_callbacks("on_control_loop_end")
+        self._on_control_loop_end()
 
     @tracer.start_as_current_span("finish_control_loop")
     def _conclude_control_loop(self) -> None:
@@ -260,7 +283,7 @@ class Conversation:
         Returns:
             True if loop should continue, False if done
         """
-        self._call_callbacks("on_step_start", self._step_index)
+        self._on_step_start(self._step_index)
 
         # 1. Infer next speaker
         speaker = self.current_speaker
@@ -297,7 +320,7 @@ class Conversation:
         if result.usage:
             self._accumulate_usage(result.usage)
 
-        self._call_callbacks("on_step_end", self._step_index, result)
+        self._on_step_end(self._step_index, result)
         self._step_index += 1
 
         return continue_loop
@@ -331,9 +354,9 @@ class Conversation:
         # Execute tools
         tool_names = [block.name for block in tool_use_blocks]
         logger.debug("Executing %d tool(s)", len(tool_use_blocks))
-        self._call_callbacks("on_tool_execution_start", tool_names)
+        self._on_tool_execution_start(tool_names)
         tool_results = self.tools.run(tool_use_blocks)
-        self._call_callbacks("on_tool_execution_end", tool_names)
+        self._on_tool_execution_end(tool_names)
 
         if not tool_results:
             return None
@@ -405,8 +428,7 @@ class Conversation:
             old_speaker.get_name(),
             self.current_speaker.get_name(),
         )
-        self._call_callbacks(
-            "on_speaker_switch",
+        self._on_speaker_switch(
             old_speaker.get_name(),
             self.current_speaker.get_name(),
         )
