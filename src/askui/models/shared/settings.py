@@ -34,7 +34,7 @@ class Resolution(NamedTuple):
 DEFAULT_LOCATE_RESOLUTION = Resolution(1280, 800)
 DEFAULT_GET_RESOLUTION = Resolution(1280, 800)
 
-CACHING_STRATEGY = Literal["execute", "record", "both"]
+CACHING_STRATEGY = Literal["execute", "record", "auto"]
 CACHE_PARAMETER_IDENTIFICATION_STRATEGY = Literal["llm", "preset"]
 CACHING_VISUAL_VERIFICATION_METHOD = Literal["phash", "ahash", "none"]
 
@@ -269,11 +269,11 @@ class CachingSettings(BaseModel):
             - None: Caching disabled (default)
             - "execute": Replay actions from cache
             - "record": Record actions to cache
-            - "both": Execute from cache if available, otherwise record
+            - "auto": Execute from cache if available, otherwise record
         cache_dir (str): Directory path for storing cache files.
             Default: ".askui_cache".
-        writing_settings: Settings for cache recording (used in "record"/"both" modes)
-        execution_settings: Settings for cache playback (used in "execute"/"both" modes)
+        writing_settings: Settings for cache recording (used in "record"/"auto" modes)
+        execution_settings: Settings for cache playback (used in "execute"/"auto" modes)
     """
 
     strategy: CACHING_STRATEGY | None = None

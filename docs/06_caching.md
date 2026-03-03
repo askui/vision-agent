@@ -13,7 +13,7 @@ The caching mechanism supports three strategies, configured via the `caching_set
 - **`None`** (default): No caching is used. The agent executes normally without recording or replaying actions.
 - **`"record"`**: Records all agent actions to a cache file for future replay.
 - **`"execute"`**: Provides tools to the agent to list and execute previously cached trajectories.
-- **`"both"`**: Combines execute and record modes - the agent can use existing cached trajectories and will also record new ones.
+- **`"auto"`**: Combines execute and record modes - the agent can use existing cached trajectories and will also record new ones.
 
 ## Configuration
 
@@ -23,7 +23,7 @@ Caching is configured using the `CachingSettings` class:
 from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
 
 caching_settings = CachingSettings(
-    strategy="record",       # One of: "execute", "record", "both", or None
+    strategy="record",       # One of: "execute", "record", "auto", or None
     cache_dir=".cache",      # Directory to store cache files
     filename="my_test.json", # Filename for the cache file (optional for record mode)
     execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
@@ -34,7 +34,7 @@ caching_settings = CachingSettings(
 
 ### Parameters
 
-- **`strategy`**: The caching strategy to use (`"execute"`, `"record"`, `"both"`, or `None`).
+- **`strategy`**: The caching strategy to use (`"execute"`, `"record"`, `"auto"`, or `None`).
 - **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
 - **`filename`**: Name of the cache file to write to or read from. If not specified in record mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
 - **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
@@ -73,7 +73,7 @@ with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
-            strategy="record", # you could also use "both" here
+            strategy="record", # you could also use "auto" here
             cache_dir=".cache",
             filename="login_test.json"
         )
@@ -94,7 +94,7 @@ with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="execute", # you could also use "both" here
+            strategy="execute", # you could also use "auto" here
             cache_dir=".cache"
         )
     )
@@ -109,7 +109,7 @@ The agent will automatically check if a relevant cached trajectory exists and us
 
 ### Referencing Cache Files in Goal Prompts
 
-When using `strategy="execute"` or `strategy="both"`, **you need to inform the agent about which cache files are available and when to use them**. This is done by including cache file information directly in your goal prompt.
+When using `strategy="execute"` or `strategy="auto"`, **you need to inform the agent about which cache files are available and when to use them**. This is done by including cache file information directly in your goal prompt.
 
 #### Explicit Cache File References
 
@@ -233,7 +233,7 @@ This is particularly useful when:
 - UI elements take time to become interactive after appearing
 - You're testing on slower hardware or environments
 
-### Using Both Strategies
+### Using Auto Strategy
 
 Enable both reading and writing simultaneously:
 
@@ -245,7 +245,7 @@ with ComputerAgent() as agent:
     agent.act(
         goal="Complete the checkout process",
         caching_settings=CachingSettings(
-            strategy="both",
+            strategy="auto",
             cache_dir=".cache",
             filename="checkout_test.json"
         )
@@ -323,7 +323,7 @@ The delay between actions can be customized using `CachedExecutionToolSettings` 
 ## Limitations
 
 - **UI State Sensitivity**: Cached trajectories assume the UI is in the same state as when they were recorded. If the UI has changed, the replay may fail or produce incorrect results.
-- **No on_message Callback**: When using `strategy="record"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
+- **No on_message Callback**: When using `strategy="record"` or `strategy="auto"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
 - **Verification Required**: After executing a cached trajectory, the agent should verify that the results are correct, as UI changes may cause partial failures.
 
 ## Example: Complete Test Workflow

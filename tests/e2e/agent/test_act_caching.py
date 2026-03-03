@@ -62,7 +62,7 @@ def test_act_with_caching_strategy_both(vision_agent: ComputerAgent) -> None:
         vision_agent.act(
             goal="Tell me a joke",
             caching_settings=CachingSettings(
-                strategy="both",
+                strategy="auto",
                 cache_dir=str(cache_dir),
                 filename=cache_filename,
             ),

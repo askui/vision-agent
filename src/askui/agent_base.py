@@ -142,7 +142,7 @@ class Agent:
                 for the act execution. Controls recording and replaying of action
                 sequences (trajectories). Available strategies: None (default, no
                 caching), "record" (record actions to cache file), "execute" (replay
-                from cached trajectories), "both" (execute and record). Defaults to
+                from cached trajectories), "auto" (execute and record). Defaults to
                 no caching.
 
         Returns:
@@ -208,7 +208,7 @@ class Agent:
                 agent.act(
                     goal="Complete the checkout process",
                     caching_settings=CachingSettings(
-                        strategy="both",
+                        strategy="auto",
                         cache_dir=".cache",
                         filename="checkout.json"
                     )
@@ -281,7 +281,7 @@ class Agent:
         cache_manager: CacheManager | None = None
 
         # Setup execute mode: add caching tools and modify system prompt
-        if caching_settings.strategy in ["execute", "both"]:
+        if caching_settings.strategy in ["execute", "auto"]:
             # Create CacheExecutor with execution settings and add to speakers
             cache_executor = CacheExecutor(caching_settings.execution_settings)
             self._conversation.speakers.add_speaker(cache_executor)
@@ -308,7 +308,7 @@ class Agent:
             tools = caching_tools
 
         # Setup record mode: create cache manager for recording
-        if caching_settings.strategy in ["record", "both"]:
+        if caching_settings.strategy in ["record", "auto"]:
             cache_writer_settings = (
                 caching_settings.writing_settings or CacheWritingSettings()
             )
