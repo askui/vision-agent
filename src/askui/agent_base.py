@@ -71,6 +71,7 @@ class Agent:
         self._act_model: ActModel = AskUIAgent(
             model_id=_settings.vlm_provider.model_id,
             messages_api=_settings.to_messages_api(),
+            reporter=self._reporter,
         )
 
         # Provider-based tools
