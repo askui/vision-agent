@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from pydantic import BaseModel, Field, SecretStr, model_validator
 from typing_extensions import Self
 
@@ -56,15 +59,6 @@ def setup_opentelemetry_tracing(app: FastAPI, settings: OtelSettings) -> None:
         )
         from opentelemetry.instrumentation.sqlalchemy import (  # type: ignore[import-not-found]
             SQLAlchemyInstrumentor,
-        )
-        from opentelemetry.sdk.resources import (  # type: ignore[import-not-found]
-            Resource,
-        )
-        from opentelemetry.sdk.trace import (  # type: ignore[import-not-found]
-            TracerProvider,
-        )
-        from opentelemetry.sdk.trace.export import (  # type: ignore[import-not-found]
-            BatchSpanProcessor,
         )
     except ImportError:
         return
