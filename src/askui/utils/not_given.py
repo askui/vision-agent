@@ -1,4 +1,4 @@
-from typing import Any, ClassVar
+from typing import Any, ClassVar, final
 from uuid import uuid4
 
 from pydantic import (
@@ -10,6 +10,7 @@ from pydantic import (
 from typing_extensions import Self
 
 
+@final  # Ensures Self resolves to NotGiven in __new__, fixing mypy return-type check
 class NotGiven(BaseModel):
     """
     A sentinel value that represents a value that is not given.
