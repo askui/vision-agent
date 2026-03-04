@@ -31,10 +31,10 @@ class AgentSpeaker(Speaker):
     """
 
     def __init__(self) -> None:
-        super().__init__(
-            name="AgentSpeaker",
-            description="Default speaker that handles LLM API calls and "
-            "coordinates conversation flow.",
+        self.name = "AgentSpeaker"
+        self.description = (
+            "Default speaker that handles LLM API calls and "
+            "coordinates conversation flow."
         )
 
     @override
@@ -80,24 +80,20 @@ class AgentSpeaker(Speaker):
             return SpeakerResult(status="done")
 
         # Make API call to get agent response using VlmProvider
-        try:
-            response = conversation.vlm_provider.create_message(
-                messages=truncation_strategy.messages,
-                tools=conversation.tools,
-                max_tokens=conversation.settings.messages.max_tokens,
-                system=conversation.settings.messages.system,
-                thinking=conversation.settings.messages.thinking,
-                tool_choice=conversation.settings.messages.tool_choice,
-                temperature=conversation.settings.messages.temperature,
-                provider_options=conversation.settings.messages.provider_options,
-            )
+        response = conversation.vlm_provider.create_message(
+            messages=truncation_strategy.messages,
+            tools=conversation.tools,
+            max_tokens=conversation.settings.messages.max_tokens,
+            system=conversation.settings.messages.system,
+            thinking=conversation.settings.messages.thinking,
+            tool_choice=conversation.settings.messages.tool_choice,
+            temperature=conversation.settings.messages.temperature,
+            provider_options=conversation.settings.messages.provider_options,
+        )
 
-            # Log response
+        # Log response
+        if logger.isEnabledFor(logging.DEBUG):  # avoid costly model_dump if possible
             logger.debug("Agent response: %s", response.model_dump(mode="json"))
-
-        except Exception:
-            logger.exception("Error calling agent API")
-            return SpeakerResult(status="failed")
 
         # Handle stop reason
         try:
