@@ -113,14 +113,8 @@ class AgentSpeaker(Speaker):
                 usage=response.usage,
             )
 
-        # Determine status based on whether there are tool calls
-        # If there are tool calls, conversation will execute them and loop back
-        # If no tool calls, conversation is done
-        has_tool_calls = self._has_tool_calls(response)
-        status = "continue" if has_tool_calls else "done"
-
         return SpeakerResult(
-            status=status,
+            status="done",
             messages_to_add=[response],
             usage=response.usage,
         )
@@ -142,20 +136,6 @@ class AgentSpeaker(Speaker):
             Empty string.
         """
         return ""
-
-    def _has_tool_calls(self, message: MessageParam) -> bool:
-        """Check if message contains tool use blocks.
-
-        Args:
-            message: The message to check
-
-        Returns:
-            True if message contains tool calls, False otherwise
-        """
-        if isinstance(message.content, str):
-            return False
-
-        return any(block.type == "tool_use" for block in message.content)
 
     def _extract_switch_speaker(
         self, message: MessageParam
