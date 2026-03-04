@@ -169,7 +169,7 @@ class Conversation:
         self._execute_control_loop()
         self._on_conversation_end()
 
-        self._conclude_control_loop()
+        self._teardown_control_loop()
 
     @tracer.start_as_current_span("_setup_control_loop")
     def _setup_control_loop(
@@ -210,8 +210,8 @@ class Conversation:
             continue_execution = self._execute_step()
         self._on_control_loop_end()
 
-    @tracer.start_as_current_span("_conclude_control_loop")
-    def _conclude_control_loop(self) -> None:
+    @tracer.start_as_current_span("_teardown_control_loop")
+    def _teardown_control_loop(self) -> None:
         # Finish recording if cache_manager is active and not executing from cache
         if self.cache_manager is not None and not self._executed_from_cache:
             self.cache_manager.finish_recording(self.get_messages())
