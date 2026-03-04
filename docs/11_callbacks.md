@@ -30,6 +30,7 @@ with ComputerAgent(callbacks=[MetricsCallback()]) as agent:
 | `on_control_loop_end` | After the iteration loop ends | `conversation` |
 | `on_step_start` | Before each step execution | `conversation`, `step_index` |
 | `on_step_end` | After each step execution | `conversation`, `step_index`, `result` |
+| `_on_speaker_switch` | After a speaker switch | `from_speaker`, `to_speaker` |
 | `on_tool_execution_start` | Before tools are executed | `conversation`, `tool_names` |
 | `on_tool_execution_end` | After tools are executed | `conversation`, `tool_names` |
 
