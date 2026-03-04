@@ -278,14 +278,8 @@ class Conversation:
         self._on_step_start(self._step_index)
 
         # 1. Infer next speaker
+        self._switch_speaker_if_needed()
         speaker = self.current_speaker
-        if not speaker.can_handle(self):
-            logger.debug(
-                "Speaker %s cannot handle current state, switching to default",
-                self.current_speaker.get_name(),
-            )
-            self.switch_speaker(self.speakers.default_speaker)
-            speaker = self.speakers[self.current_speaker.get_name()]
 
         # 2. Get next message(s) from speaker and add to history
         logger.debug("Executing step with speaker: %s", speaker.get_name())
@@ -303,9 +297,9 @@ class Conversation:
                 continue_loop = True  # we always continue after a tool was called
 
         # 4. Check if conversation should continue and switch speaker if necessary
-        # Note: _handle_result_status must always be called (not short-circuited)
+        # Note: _handle_continue_conversation must always be called (not short-circuited)
         # because it has side effects (e.g., triggering speaker switches).
-        status_continue = self._handle_result_status(result)
+        status_continue = self._handle_continue_conversation(result)
         continue_loop = continue_loop or status_continue
 
         self._on_step_end(self._step_index, result)
@@ -395,6 +389,15 @@ class Conversation:
             return True
         # status == "continue"
         return True
+
+    def _switch_speaker_if_needed(self) -> None:
+        """Switch to default speaker if current one cannot handle."""
+        if not self.current_speaker.can_handle(self):
+            logger.debug(
+                "Speaker %s cannot handle current state, switching to default",
+                self.current_speaker.get_name(),
+            )
+            self.switch_speaker(self.speakers.default_speaker)
 
     @tracer.start_as_current_span("switch_speaker")
     def switch_speaker(
