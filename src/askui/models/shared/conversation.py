@@ -279,11 +279,12 @@ class Conversation:
 
         # 1. Infer next speaker
         self._switch_speaker_if_needed()
-        speaker = self.current_speaker
 
         # 2. Get next message(s) from speaker and add to history
-        logger.debug("Executing step with speaker: %s", speaker.get_name())
-        result: SpeakerResult = speaker.handle_step(self, self.cache_manager)
+        logger.debug("Executing step with speaker: %s", self.current_speaker.get_name())
+        result: SpeakerResult = self.current_speaker.handle_step(
+            self, self.cache_manager
+        )
         for message in result.messages_to_add:
             self._add_message(message)
 
