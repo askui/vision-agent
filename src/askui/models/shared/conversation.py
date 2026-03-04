@@ -370,8 +370,8 @@ class Conversation:
             self.current_speaker.get_name(), message.model_dump(mode="json")
         )
 
-    @tracer.start_as_current_span("_handle_result_status")
-    def _handle_result_status(self, result: SpeakerResult) -> bool:
+    @tracer.start_as_current_span("_handle_continue_conversation")
+    def _handle_continue_conversation(self, result: SpeakerResult) -> bool:
         """Handle speaker result status and determine if loop should continue.
 
         Args:
