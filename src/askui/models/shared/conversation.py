@@ -297,7 +297,7 @@ class Conversation:
                 continue_loop = True  # we always continue after a tool was called
 
         # 4. Check if conversation should continue and switch speaker if necessary
-        # Note: _handle_continue_conversation must always be called (not short-circuited)
+        # Note:_handle_continue_conversation must always be called (not short-circuited)
         # because it has side effects (e.g., triggering speaker switches).
         status_continue = self._handle_continue_conversation(result)
         continue_loop = continue_loop or status_continue
