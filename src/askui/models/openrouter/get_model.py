@@ -178,11 +178,7 @@ class OpenRouterModel(GetModel):
             raise NotImplementedError(err_msg)
 
         # Use system prompt from settings if provided, otherwise use default
-        system_prompt = (
-            get_settings.system_prompt
-            if get_settings.system_prompt
-            else SYSTEM_PROMPT_GET
-        )
+        system_prompt = get_settings.system_prompt or SYSTEM_PROMPT_GET
 
         response = self._predict(
             image_url=source.to_data_url(),

@@ -1,4 +1,4 @@
-from typing import Any, ClassVar
+from typing import Any, ClassVar, final
 from uuid import uuid4
 
 from pydantic import (
@@ -7,8 +7,10 @@ from pydantic import (
     SerializerFunctionWrapHandler,
     model_serializer,
 )
+from typing_extensions import Self
 
 
+@final  # Ensures Self resolves to NotGiven in __new__, fixing mypy return-type check
 class NotGiven(BaseModel):
     """
     A sentinel value that represents a value that is not given.
@@ -19,7 +21,7 @@ class NotGiven(BaseModel):
     _uuid: ClassVar[str] = str(uuid4())
     _instance: ClassVar["NotGiven | None"] = None
 
-    def __new__(cls) -> "NotGiven":
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance

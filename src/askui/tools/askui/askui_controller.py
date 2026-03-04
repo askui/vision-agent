@@ -1052,7 +1052,7 @@ class AskUiControllerClient(AgentOs):
             )
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.INVALID_ARGUMENT:
-                details = e.details() if e.details() else None
+                details = e.details() or None
                 raise AskUiControllerInvalidCommandError(details) from e
             raise
 
