@@ -30,6 +30,13 @@ class AgentSpeaker(Speaker):
     The VlmProvider is accessed from the Conversation instance.
     """
 
+    def __init__(self) -> None:
+        super().__init__(
+            name="AgentSpeaker",
+            description="Default speaker that handles LLM API calls and "
+            "coordinates conversation flow.",
+        )
+
     @override
     def can_handle(self, conversation: "Conversation") -> bool:  # noqa: ARG002
         """AgentSpeaker can always handle normal conversation flow.
@@ -118,24 +125,6 @@ class AgentSpeaker(Speaker):
             messages_to_add=[response],
             usage=response.usage,
         )
-
-    @override
-    def get_name(self) -> str:
-        """Return speaker name.
-
-        Returns:
-            "AgentSpeaker"
-        """
-        return "AgentSpeaker"
-
-    @override
-    def get_description(self) -> str:
-        """AgentSpeaker is the default coordinator and not a handoff target.
-
-        Returns:
-            Empty string.
-        """
-        return ""
 
     def _extract_switch_speaker(
         self, message: MessageParam

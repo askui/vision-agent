@@ -70,15 +70,36 @@ class CacheExecutor(Speaker):
     Tool execution is handled by the Conversation class, not by this speaker.
     """
 
+    _DEFAULT_DESCRIPTION: str = (
+        "Replays a pre-recorded UI interaction trajectory from a cache "
+        "file. Use this speaker to fast-forward through previously "
+        "recorded action sequences instead of executing each step from "
+        "scratch.\n"
+        "Expected context keys:\n"
+        "  - trajectory_file (str, required): Full path to the "
+        "trajectory file\n"
+        "  - start_from_step_index (int, optional, default=0): Step "
+        "index to start from\n"
+        "  - parameter_values (dict[str, str], optional, default={}): "
+        "Dynamic parameter values for the trajectory"
+    )
+
     def __init__(
-        self, execution_settings: CacheExecutionSettings | None = None
+        self,
+        execution_settings: CacheExecutionSettings | None = None,
+        *,
+        name: str = "CacheExecutor",
+        description: str = _DEFAULT_DESCRIPTION,
     ) -> None:
         """Initialize Cache Executor speaker.
 
         Args:
             execution_settings: Settings for cache execution including delay time,
                 visual validation threshold, etc. If None, default settings are used.
+            name: Speaker name for identification.
+            description: Human-readable description of this speaker.
         """
+        super().__init__(name=name, description=description)
         _settings = execution_settings or CacheExecutionSettings()
 
         # Cache execution state
@@ -199,36 +220,6 @@ class CacheExecutor(Speaker):
 
         # Handle result based on status
         return self._handle_result(result, cache_manager)
-
-    @override
-    def get_name(self) -> str:
-        """Return speaker name.
-
-        Returns:
-            "CacheExecutor"
-        """
-        return "CacheExecutor"
-
-    @override
-    def get_description(self) -> str:
-        """Return description of CacheExecutor and expected context keys.
-
-        Returns:
-            Description with expected context keys for activation.
-        """
-        return (
-            "Replays a pre-recorded UI interaction trajectory from a cache "
-            "file. Use this speaker to fast-forward through previously "
-            "recorded action sequences instead of executing each step from "
-            "scratch.\n"
-            "Expected context keys:\n"
-            "  - trajectory_file (str, required): Full path to the "
-            "trajectory file\n"
-            "  - start_from_step_index (int, optional, default=0): Step "
-            "index to start from\n"
-            "  - parameter_values (dict[str, str], optional, default={}): "
-            "Dynamic parameter values for the trajectory"
-        )
 
     @override
     def on_activate(self, context: dict[str, Any]) -> None:

@@ -160,7 +160,7 @@ class Conversation:
             settings: Agent settings
             reporters: Optional list of additional reporters for this conversation
         """
-        msg = f"Starting conversation with speaker: {self.current_speaker.get_name()}"
+        msg = f"Starting conversation with speaker: {self.current_speaker.name}"
         logger.info(msg)
 
         self._setup_control_loop(messages, tools, settings, reporters)
@@ -241,9 +241,7 @@ class Conversation:
             )
 
         # Create switch_speaker tool with valid speaker names
-        handoff_speakers = [
-            speaker.get_name() for speaker in self.speakers if speaker.get_description()
-        ]
+        handoff_speakers = [speaker.name for speaker in self.speakers]
         switch_tool = SwitchSpeakerTool(speaker_names=handoff_speakers)
         self.tools.append_tool(switch_tool)
 
@@ -254,12 +252,11 @@ class Conversation:
             Formatted string with speaker names and descriptions,
             or empty string if no speakers have descriptions.
         """
-        descriptions: list[str] = []
-        for speaker in self.speakers:
-            description = speaker.get_description()
-            if description:
-                descriptions.append(f"### {speaker.get_name()}\n{description}")
-        return "\n\n".join(descriptions)
+        return "\n\n".join(
+            f"### {s.name}\n{s.description}"
+            for s in self.speakers
+            if s.name != self.speakers.default_speaker
+        )
 
     @tracer.start_as_current_span("_execute_step")
     def _execute_step(self) -> bool:
@@ -281,7 +278,7 @@ class Conversation:
         self._switch_speaker_if_needed()
 
         # 2. Get next message(s) from speaker and add to history
-        logger.debug("Executing step with speaker: %s", self.current_speaker.get_name())
+        logger.debug("Executing step with speaker: %s", self.current_speaker.name)
         result: SpeakerResult = self.current_speaker.handle_step(
             self, self.cache_manager
         )
@@ -362,7 +359,7 @@ class Conversation:
 
         # Report to reporter
         self._reporter.add_message(
-            self.current_speaker.get_name(), message.model_dump(mode="json")
+            self.current_speaker.name, message.model_dump(mode="json")
         )
 
     @tracer.start_as_current_span("_handle_continue_conversation")
@@ -396,7 +393,7 @@ class Conversation:
         if not self.current_speaker.can_handle(self):
             logger.debug(
                 "Speaker %s cannot handle current state, switching to default",
-                self.current_speaker.get_name(),
+                self.current_speaker.name,
             )
             self.switch_speaker(self.speakers.default_speaker)
 
@@ -417,12 +414,12 @@ class Conversation:
         self.current_speaker = self.speakers[speaker_name]
         logger.info(
             "Switched speaker: %s => %s",
-            old_speaker.get_name(),
-            self.current_speaker.get_name(),
+            old_speaker.name,
+            self.current_speaker.name,
         )
         self._on_speaker_switch(
-            old_speaker.get_name(),
-            self.current_speaker.get_name(),
+            old_speaker.name,
+            self.current_speaker.name,
         )
         if speaker_context is not None:
             self.current_speaker.on_activate(speaker_context)

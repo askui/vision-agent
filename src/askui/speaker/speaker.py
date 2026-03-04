@@ -48,7 +48,24 @@ class Speaker(ABC):
 
     Each speaker determines whether it can handle the current conversation state
     and executes one step when activated.
+
+    Args:
+        name: Unique identifier for logging and speaker lookup.
+        description: Human-readable description of what this speaker does.
+            Used in the system prompt so the coordinating speaker knows
+            which speakers are available and when to hand off to them.
+            Must not be empty.
     """
+
+    def __init__(self, *, name: str, description: str) -> None:
+        if not name:
+            msg = "Speaker name must not be empty"
+            raise ValueError(msg)
+        if not description:
+            msg = "Speaker description must not be empty"
+            raise ValueError(msg)
+        self.name = name
+        self.description = description
 
     @abstractmethod
     def can_handle(self, conversation: "Conversation") -> bool:
@@ -74,29 +91,6 @@ class Speaker(ABC):
 
         Returns:
             SpeakerResult indicating what to do next
-        """
-        ...
-
-    @abstractmethod
-    def get_name(self) -> str:
-        """Return the speaker's name for logging and identification.
-
-        Returns:
-            Speaker name (e.g., "AgentSpeaker", "CacheExecutor")
-        """
-        ...
-
-    @abstractmethod
-    def get_description(self) -> str:
-        """Return a description of what this speaker does.
-
-        This description is auto-populated into the system prompt so the
-        coordinating speaker knows which speakers are available and when
-        to hand off to them. Return an empty string for speakers that
-        should not be handoff targets (e.g., the default coordinator).
-
-        Returns:
-            Human-readable description including expected context keys.
         """
         ...
 
@@ -131,7 +125,7 @@ class Speakers:
 
     def add_speaker(self, speaker: Speaker) -> None:
         """Add a speaker to the collection."""
-        self.speakers[speaker.get_name()] = speaker
+        self.speakers[speaker.name] = speaker
 
     def get_names(self) -> list[str]:
         """Get list of all speaker names."""
