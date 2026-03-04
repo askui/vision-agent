@@ -141,7 +141,7 @@ class Conversation:
         for callback in self._callbacks:
             callback.on_tool_execution_end(self, tool_names)
 
-    @tracer.start_as_current_span("conversation")
+    @tracer.start_as_current_span("execute_conversation")
     def execute_conversation(
         self,
         messages: list[MessageParam],
@@ -171,7 +171,7 @@ class Conversation:
 
         self._conclude_control_loop()
 
-    @tracer.start_as_current_span("setup_control_loop")
+    @tracer.start_as_current_span("_setup_control_loop")
     def _setup_control_loop(
         self,
         messages: list[MessageParam],
@@ -201,7 +201,7 @@ class Conversation:
             )
         )
 
-    @tracer.start_as_current_span("control_loop")
+    @tracer.start_as_current_span("_execute_control_loop")
     def _execute_control_loop(self) -> None:
         self._on_control_loop_start()
         self._step_index = 0
@@ -210,7 +210,7 @@ class Conversation:
             continue_execution = self._execute_step()
         self._on_control_loop_end()
 
-    @tracer.start_as_current_span("finish_control_loop")
+    @tracer.start_as_current_span("_conclude_control_loop")
     def _conclude_control_loop(self) -> None:
         # Finish recording if cache_manager is active and not executing from cache
         if self.cache_manager is not None and not self._executed_from_cache:
@@ -261,7 +261,7 @@ class Conversation:
                 descriptions.append(f"### {speaker.get_name()}\n{description}")
         return "\n\n".join(descriptions)
 
-    @tracer.start_as_current_span("step")
+    @tracer.start_as_current_span("_execute_step")
     def _execute_step(self) -> bool:
         """Execute one step of the conversation loop with speakers.
 
@@ -313,7 +313,7 @@ class Conversation:
 
         return continue_loop
 
-    @tracer.start_as_current_span("execute_tool_call")
+    @tracer.start_as_current_span("_execute_tools_if_present")
     def _execute_tools_if_present(self, message: MessageParam) -> MessageParam | None:
         """Execute tools if the message contains tool use blocks.
 
@@ -370,7 +370,7 @@ class Conversation:
             self.current_speaker.get_name(), message.model_dump(mode="json")
         )
 
-    @tracer.start_as_current_span("handle_result_status")
+    @tracer.start_as_current_span("_handle_result_status")
     def _handle_result_status(self, result: SpeakerResult) -> bool:
         """Handle speaker result status and determine if loop should continue.
 
