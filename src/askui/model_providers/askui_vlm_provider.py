@@ -1,5 +1,6 @@
 """AskUIVlmProvider — VLM access via AskUI's hosted Anthropic proxy."""
 
+import os
 from functools import cached_property
 from typing import Any
 
@@ -33,7 +34,7 @@ class AskUIVlmProvider(VlmProvider):
         token (str | None, optional): AskUI API token. Reads `ASKUI_TOKEN`
             from the environment if not provided.
         model_id (str, optional): Claude model to use. Defaults to
-            `"claude-sonnet-4-5-20250929"`.
+            `"claude-sonnet-4-6"`.
         client (Anthropic | None, optional): Pre-configured Anthropic client.
             If provided, `workspace_id` and `token` are ignored.
 
@@ -55,17 +56,19 @@ class AskUIVlmProvider(VlmProvider):
     def __init__(
         self,
         askui_settings: AskUiInferenceApiSettings | None = None,
-        model_id: str = _DEFAULT_MODEL_ID,
+        model_id: str | None = None,
         client: Anthropic | None = None,
     ) -> None:
         self._askui_settings = askui_settings or AskUiInferenceApiSettings()
-        self._model_id = model_id
+        self._model_id_value = (
+            model_id or os.environ.get("VLM_PROVIDER_MODEL_ID") or _DEFAULT_MODEL_ID
+        )
         self._injected_client = client
 
     @property
     @override
     def model_id(self) -> str:
-        return self._model_id
+        return self._model_id_value
 
     @cached_property
     def _messages_api(self) -> AnthropicMessagesApi:
@@ -100,7 +103,7 @@ class AskUIVlmProvider(VlmProvider):
     ) -> MessageParam:
         result: MessageParam = self._messages_api.create_message(
             messages=messages,
-            model_id=self._model_id,
+            model_id=self._model_id_value,
             tools=tools,
             max_tokens=max_tokens,
             system=system,

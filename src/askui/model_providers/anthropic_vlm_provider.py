@@ -1,5 +1,6 @@
 """AnthropicVlmProvider — VLM access via direct Anthropic API."""
 
+import os
 from functools import cached_property
 from typing import Any
 
@@ -34,7 +35,7 @@ class AnthropicVlmProvider(VlmProvider):
         auth_token (str | None, optional): Authorization token for custom
             authentication. Added as an `Authorization` header.
         model_id (str, optional): Claude model to use. Defaults to
-            `\"claude-sonnet-4-5-20251101\"`.
+            `\"claude-sonnet-4-6\"`.
         client (Anthropic | None, optional): Pre-configured Anthropic client.
             If provided, other connection parameters are ignored.
 
@@ -57,10 +58,12 @@ class AnthropicVlmProvider(VlmProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         auth_token: str | None = None,
-        model_id: str = _DEFAULT_MODEL_ID,
+        model_id: str | None = None,
         client: Anthropic | None = None,
     ) -> None:
-        self._model_id_value = model_id
+        self._model_id_value = (
+            model_id or os.environ.get("VLM_PROVIDER_MODEL_ID") or _DEFAULT_MODEL_ID
+        )
         if client is not None:
             self.client = client
         else:
