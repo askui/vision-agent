@@ -7,7 +7,7 @@ from typing_extensions import override
 from ..models.shared.tools import Tool
 from ..utils.caching.cache_manager import CacheManager
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class RetrieveCachedTestExecutions(Tool):

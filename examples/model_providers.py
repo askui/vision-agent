@@ -28,7 +28,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(levelname)s] %(asctime)s %(pathname)s:%(lineno)d | %(message)s",
 )
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def try_act(agent: ComputerAgent, provider_name: str) -> None:
