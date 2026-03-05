@@ -10,6 +10,7 @@ from anthropic import (
 )
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
+    BetaContentBlockParam,
     BetaMessageParam,
     BetaThinkingConfigParam,
     BetaToolChoiceParam,
@@ -32,6 +33,7 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
     ThinkingConfigParam,
     ToolChoiceParam,
+    ToolUseBlockParam,
 )
 from askui.models.shared.messages_api import MessagesApi
 from askui.models.shared.prompts import SystemPrompt
@@ -44,6 +46,39 @@ def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, APIStatusError):
         return exception.status_code in RETRYABLE_HTTP_STATUS_CODES
     return isinstance(exception, (APIConnectionError, APITimeoutError, APIError))
+
+
+def from_content_block(block: ContentBlockParam) -> BetaContentBlockParam:
+    """Convert an internal content block to an Anthropic API-compatible dict.
+
+    Uses `model_dump()` to produce plain dicts compatible with Anthropic's
+    TypedDicts. Strips ``visual_representation`` from `ToolUseBlockParam`
+    as it is not accepted by the API.
+    """
+    if isinstance(block, ToolUseBlockParam):
+        # visual_representation is an internal field (perceptual hash for cache
+        # validation) that does not exist in the Anthropic API schema. Sending
+        # it would cause the API to reject the request with an unknown-field error.
+        return cast(
+            "BetaContentBlockParam",
+            block.model_dump(exclude={"visual_representation"}),
+        )
+    return cast("BetaContentBlockParam", block.model_dump())
+
+
+def from_message_param(message: MessageParam) -> BetaMessageParam:
+    """Convert an internal `MessageParam` to an Anthropic `BetaMessageParam`.
+
+    Strips internal-only fields (`stop_reason`, `usage`,
+    `visual_representation`) that are not accepted by the Anthropic API.
+    """
+    if isinstance(message.content, str):
+        return BetaMessageParam(role=message.role, content=message.content)
+
+    return BetaMessageParam(
+        role=message.role,
+        content=[from_content_block(block) for block in message.content],
+    )
 
 
 def built_messages_for_get_and_locate(
@@ -139,10 +174,8 @@ class AnthropicMessagesApi(MessagesApi):
         temperature: float | None = None,
         provider_options: dict[str, Any] | None = None,
     ) -> MessageParam:
-        _messages = [
-            cast("BetaMessageParam", message.model_dump(exclude={"stop_reason"}))
-            for message in messages
-        ]
+        # convert each message to anthropic BetaMessageParam type
+        _messages = [from_message_param(message) for message in messages]
 
         # Extract betas from provider_options
         betas: list[str] | None = None

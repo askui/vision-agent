@@ -16,7 +16,7 @@ from askui.models.shared.agent_message_param import (
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
 
-_DEFAULT_MODEL_ID = "claude-sonnet-4-5-20251101"
+_DEFAULT_MODEL_ID = "claude-sonnet-4-6"
 
 
 class AnthropicVlmProvider(VlmProvider):

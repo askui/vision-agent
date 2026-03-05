@@ -111,8 +111,6 @@ from fastmcp import Client
 from fastmcp.mcp_config import MCPConfig, RemoteMCPServer
 
 from askui import ComputerAgent
-from askui.models.shared.agent_message_param import MessageParam
-from askui.models.shared.agent_on_message_cb import OnMessageCbParam
 from askui.models.shared.tools import ToolCollection
 from askui.tools.mcp.config import StdioMCPServer
 
@@ -133,18 +131,11 @@ mcp_client = Client(mcp_config)
 # Create tool collection with MCP tools
 tools = ToolCollection(mcp_client=mcp_client)
 
-
-def on_message(param: OnMessageCbParam) -> MessageParam | None:
-    print(param.message.model_dump_json())
-    return param.message
-
-
 # Use with ComputerAgent
 with ComputerAgent() as agent:
     agent.act(
         "Use the `test_stdio_server_test_stdio_tool`",
         tools=tools,
-        on_message=on_message,
     )
 ```
 

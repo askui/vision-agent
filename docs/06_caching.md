@@ -8,81 +8,104 @@ The caching system works by recording all tool use actions (mouse movements, cli
 
 ## Caching Strategies
 
-The caching mechanism supports four strategies, configured via the `caching_settings` parameter in the `act()` method:
+The caching mechanism supports three strategies, configured via the `caching_settings` parameter in the `act()` method:
 
-- **`"no"`** (default): No caching is used. The agent executes normally without recording or replaying actions.
-- **`"write"`**: Records all agent actions to a cache file for future replay.
-- **`"read"`**: Provides tools to the agent to list and execute previously cached trajectories.
-- **`"both"`**: Combines read and write modes - the agent can use existing cached trajectories and will also record new ones.
+- **`None`** (default): No caching is used. The agent executes normally without recording or replaying actions.
+- **`"record"`**: Records all agent actions to a cache file for future replay.
+- **`"execute"`**: Provides tools to the agent to list and execute previously cached trajectories.
+- **`"auto"`**: Combines execute and record modes - the agent can use existing cached trajectories and will also record new ones.
 
 ## Configuration
 
 Caching is configured using the `CachingSettings` class:
 
 ```python
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import (
+    CachingSettings,
+    CacheExecutionSettings,
+    CacheWritingSettings,
+)
 
 caching_settings = CachingSettings(
-    strategy="write",        # One of: "read", "write", "both", "no"
-    cache_dir=".cache",      # Directory to store cache files
-    filename="my_test.json", # Filename for the cache file (optional for write mode)
-    execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-        delay_time_between_action=0.5  # Delay in seconds between each cached action
-    )
+    strategy="record",       # One of: "execute", "record", "auto", or None
+    cache_dir=".askui_cache", # Directory to store cache files
+    writing_settings=CacheWritingSettings(
+        filename="my_test.json"  # Filename for the cache file (optional)
+    ),
+    execution_settings=CacheExecutionSettings(
+        delay_time_between_actions=1.0  # Delay in seconds between each cached action
+    ),
 )
 ```
 
 ### Parameters
 
-- **`strategy`**: The caching strategy to use (`"read"`, `"write"`, `"both"`, or `"no"`).
-- **`cache_dir`**: Directory where cache files are stored. Defaults to `".cache"`.
-- **`filename`**: Name of the cache file to write to or read from. If not specified in write mode, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
-- **`execute_cached_trajectory_tool_settings`**: Configuration for the trajectory execution tool (optional). See [Execution Settings](#execution-settings) below.
+- **`strategy`**: The caching strategy to use (`"execute"`, `"record"`, `"auto"`, or `None`).
+- **`cache_dir`**: Directory where cache files are stored. Defaults to `".askui_cache"`.
+- **`writing_settings`**: Configuration for cache recording (optional). See [Writing Settings](#writing-settings) below.
+- **`execution_settings`**: Configuration for cache playback (optional). See [Execution Settings](#execution-settings) below.
 
-### Execution Settings
+### Writing Settings
 
-The `CachedExecutionToolSettings` class allows you to configure how cached trajectories are executed:
+The `CacheWritingSettings` class allows you to configure how cache files are recorded:
 
 ```python
-from askui.models.shared.settings import CachedExecutionToolSettings
+from askui.models.shared.settings import CacheWritingSettings
 
-execution_settings = CachedExecutionToolSettings(
-    delay_time_between_action=0.5  # Delay in seconds between each action (default: 0.5)
+writing_settings = CacheWritingSettings(
+    filename="my_test.json"  # Name for the cache file (auto-generated if empty)
 )
 ```
 
 #### Parameters
 
-- **`delay_time_between_action`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements can materialize before the next action is executed. Defaults to `0.5` seconds.
+- **`filename`**: Name of the cache file to write. If not specified, a timestamped filename will be generated automatically (format: `cached_trajectory_YYYYMMDDHHMMSSffffff.json`).
+
+### Execution Settings
+
+The `CacheExecutionSettings` class allows you to configure how cached trajectories are executed:
+
+```python
+from askui.models.shared.settings import CacheExecutionSettings
+
+execution_settings = CacheExecutionSettings(
+    delay_time_between_actions=1.0  # Delay in seconds between each action (default: 1.0)
+)
+```
+
+#### Parameters
+
+- **`delay_time_between_actions`**: The time to wait (in seconds) between executing consecutive cached actions. This delay helps ensure UI elements can materialize before the next action is executed. Defaults to `1.0` seconds.
 
 You can adjust this value based on your application's responsiveness:
-- For faster applications or quick interactions, you might use a smaller delay (e.g., `0.1` or `0.2` seconds)
-- For slower applications or complex UI updates, you might need a longer delay (e.g., `1.0` or `2.0` seconds)
+- For faster applications or quick interactions, you might use a smaller delay (e.g., `0.2` or `0.5` seconds)
+- For slower applications or complex UI updates, you might need a longer delay (e.g., `2.0` or `3.0` seconds)
 
 ## Usage Examples
 
-### Writing a Cache (Recording)
+### Recording a Cache
 
 Record agent actions to a cache file for later replay:
 
 ```python
 from askui import ComputerAgent
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CachingSettings, CacheWritingSettings
 
 with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form with username 'admin' and password 'secret123'",
         caching_settings=CachingSettings(
-            strategy="write", # you could also use "both" here
-            cache_dir=".cache",
-            filename="login_test.json"
+            strategy="record", # you could also use "auto" here
+            writing_settings=CacheWritingSettings(
+                filename="login_test.json"
+            ),
         )
     )
 ```
 
-After execution, a cache file will be created at `.cache/login_test.json` containing all the tool use actions performed by the agent.
+After execution, a cache file will be created at `.askui_cache/login_test.json` containing all the tool use actions performed by the agent.
 
-### Reading from Cache (Replaying)
+### Executing from Cache (Replaying)
 
 Provide the agent with access to previously recorded trajectories:
 
@@ -94,13 +117,12 @@ with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read", # you could also use "both" here
-            cache_dir=".cache"
+            strategy="execute", # you could also use "auto" here
         )
     )
 ```
 
-When using `strategy="read"`, the agent receives two additional tools:
+When using `strategy="execute"`, the agent receives two additional tools:
 
 1. **`retrieve_available_trajectories_tool`**: Lists all available cache files in the cache directory
 2. **`execute_cached_executions_tool`**: Executes a specific cached trajectory
@@ -109,7 +131,7 @@ The agent will automatically check if a relevant cached trajectory exists and us
 
 ### Referencing Cache Files in Goal Prompts
 
-When using `strategy="read"` or `strategy="both"`, **you need to inform the agent about which cache files are available and when to use them**. This is done by including cache file information directly in your goal prompt.
+When using `strategy="execute"` or `strategy="auto"`, **you need to inform the agent about which cache files are available and when to use them**. This is done by including cache file information directly in your goal prompt.
 
 #### Explicit Cache File References
 
@@ -126,7 +148,7 @@ with ComputerAgent() as agent:
         If the cache file "open_website_in_chrome.json" is available, please use it
         for this execution. It will open a new window in Chrome and navigate to the website.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -149,7 +171,7 @@ with ComputerAgent() as agent:
         Check if a cache file named "{test_id}.json" exists. If it does, use it to
         replay the test actions, then verify the results.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir="test_cache"
         )
     )
@@ -171,7 +193,7 @@ with ComputerAgent() as agent:
         Choose the most recent one if multiple are available, as it likely contains
         the most up-to-date interaction sequence.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -195,7 +217,7 @@ with ComputerAgent() as agent:
 
         After each cached execution, verify the step completed successfully before proceeding.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir=".cache"
         )
     )
@@ -213,17 +235,16 @@ You can customize the delay between cached actions to match your application's r
 
 ```python
 from askui import ComputerAgent
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import CachingSettings, CacheExecutionSettings
 
 with ComputerAgent() as agent:
     agent.act(
         goal="Fill out the login form",
         caching_settings=CachingSettings(
-            strategy="read",
-            cache_dir=".cache",
-            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-                delay_time_between_action=1.0  # Wait 1 second between each action
-            )
+            strategy="execute",
+            execution_settings=CacheExecutionSettings(
+                delay_time_between_actions=2.0  # Wait 2 seconds between each action
+            ),
         )
     )
 ```
@@ -233,21 +254,22 @@ This is particularly useful when:
 - UI elements take time to become interactive after appearing
 - You're testing on slower hardware or environments
 
-### Using Both Strategies
+### Using Auto Strategy
 
 Enable both reading and writing simultaneously:
 
 ```python
 from askui import ComputerAgent
-from askui.models.shared.settings import CachingSettings
+from askui.models.shared.settings import CachingSettings, CacheWritingSettings
 
 with ComputerAgent() as agent:
     agent.act(
         goal="Complete the checkout process",
         caching_settings=CachingSettings(
-            strategy="both",
-            cache_dir=".cache",
-            filename="checkout_test.json"
+            strategy="auto",
+            writing_settings=CacheWritingSettings(
+                filename="checkout_test.json"
+            ),
         )
     )
 ```
@@ -298,13 +320,11 @@ Note: Screenshot actions are excluded from cached trajectories as they don't mod
 
 ### Write Mode
 
-In write mode, the `CacheWriter` class:
+In write mode, the `CacheManager`:
 
-1. Intercepts all assistant messages via a callback function
-2. Extracts tool use blocks from the messages
-3. Stores them in memory during execution
-4. Writes them to a JSON file when the agent finishes (on `stop_reason="end_turn"`)
-5. Automatically skips writing if a cached execution was used (to avoid recording replays)
+1. Extracts tool use blocks from the full message history when the conversation ends
+2. Writes them to a JSON file
+3. Automatically skips writing if a cached execution was used (to avoid recording replays)
 
 ### Read Mode
 
@@ -314,16 +334,15 @@ In read mode:
 2. A special system prompt (`CACHE_USE_PROMPT`) is appended to instruct the agent on how to use trajectories
 3. The agent can call `retrieve_available_trajectories_tool` to see available cache files
 4. The agent can call `execute_cached_executions_tool` with a trajectory file path to replay it
-5. During replay, each tool use block is executed sequentially with a configurable delay between actions (default: 0.5 seconds)
+5. During replay, each tool use block is executed sequentially with a configurable delay between actions (default: 1.0 seconds)
 6. Screenshot and trajectory retrieval tools are skipped during replay
 7. The agent is instructed to verify results after replay and make corrections if needed
 
-The delay between actions can be customized using `CachedExecutionToolSettings` to accommodate different application response times.
+The delay between actions can be customized using `CacheExecutionSettings` to accommodate different application response times.
 
 ## Limitations
 
 - **UI State Sensitivity**: Cached trajectories assume the UI is in the same state as when they were recorded. If the UI has changed, the replay may fail or produce incorrect results.
-- **No on_message Callback**: When using `strategy="write"` or `strategy="both"`, you cannot provide a custom `on_message` callback, as the caching system uses this callback to record actions.
 - **Verification Required**: After executing a cached trajectory, the agent should verify that the results are correct, as UI changes may cause partial failures.
 
 ## Example: Complete Test Workflow
@@ -332,7 +351,11 @@ Here's a complete example showing how to record and replay a test:
 
 ```python
 from askui import ComputerAgent
-from askui.models.shared.settings import CachingSettings, CachedExecutionToolSettings
+from askui.models.shared.settings import (
+    CachingSettings,
+    CacheExecutionSettings,
+    CacheWritingSettings,
+)
 
 # Step 1: Record a successful login flow
 print("Recording login flow...")
@@ -340,9 +363,11 @@ with ComputerAgent() as agent:
     agent.act(
         goal="Navigate to the login page and log in with username 'testuser' and password 'testpass123'",
         caching_settings=CachingSettings(
-            strategy="write",
+            strategy="record",
             cache_dir="test_cache",
-            filename="user_login.json"
+            writing_settings=CacheWritingSettings(
+                filename="user_login.json"
+            ),
         )
     )
 
@@ -356,11 +381,11 @@ with ComputerAgent() as agent:
         the login sequence. It contains the steps to navigate to the login page and
         authenticate with the test credentials.""",
         caching_settings=CachingSettings(
-            strategy="read",
+            strategy="execute",
             cache_dir="test_cache",
-            execute_cached_trajectory_tool_settings=CachedExecutionToolSettings(
-                delay_time_between_action=1.0
-            )
+            execution_settings=CacheExecutionSettings(
+                delay_time_between_actions=2.0
+            ),
         )
     )
 ```

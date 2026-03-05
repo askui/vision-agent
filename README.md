@@ -112,17 +112,18 @@ with ComputerAgent() as agent:
 
 Ready to build your first agent? Check out our documentation:
 
-1. **[Start Here](docs/00_overview.md)** - Overview and core concepts
-2. **[Setup](docs/01_setup.md)** - Installation and configuration
-3. **[Using Agents](docs/02_using_agents.md)** - Using the AskUI ComputerAgent and AndroidAgent
-4. **[System Prompts](docs/03_prompting.md)** - How to write effective instructions
-5. **[Using Models](docs/04_using_models.md)** - Using different models as backbone for act, get, and locate
-6. **[BYOM](docs/05_bring_your_own_model_provider.md)** - use your own model cloud by plugging in your own model provider
-7. **[Caching](docs/06_caching.md)** - Optimize performance and costs
-8. **[Tools](docs/07_tools.md)** - Extend agent capabilities
-9. **[Reporting](docs/08_reporting.md)** - Obtain agent logs as execution reports and summaries as test reports
-10. **[Observability](docs/09_observability_telemetry_tracing.md)** - Monitor and debug agents
-11. **[Extracting Data](docs/10_extracting_data.md)** - Extracting structured data from screenshots and files
+0. **[Start Here](docs/00_overview.md)** - Overview and core concepts
+1. **[Setup](docs/01_setup.md)** - Installation and configuration
+2. **[Using Agents](docs/02_using_agents.md)** - Using the AskUI ComputerAgent and AndroidAgent
+3. **[System Prompts](docs/03_prompting.md)** - How to write effective instructions
+4. **[Using Models](docs/04_using_models.md)** - Using different models as backbone for act, get, and locate
+5. **[BYOM](docs/05_bring_your_own_model_provider.md)** - use your own model cloud by plugging in your own model provider
+6. **[Caching](docs/06_caching.md)** - Optimize performance and costs
+7. **[Tools](docs/07_tools.md)** - Extend agent capabilities
+8. **[Reporting](docs/08_reporting.md)** - Obtain agent logs as execution reports and summaries as test reports
+9. **[Observability](docs/09_observability_telemetry_tracing.md)** - Monitor and debug agents
+10. **[Extracting Data](docs/10_extracting_data.md)** - Extracting structured data from screenshots and files
+11. **[Callbacks](docs/11_callbacks.md)** - Inject custom logic into the control loop
 
 **Official documentation:** [docs.askui.com](https://docs.askui.com)
 

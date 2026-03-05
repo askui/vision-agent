@@ -49,7 +49,7 @@ Environment variables:
 
 If you want to use Anthropic models directly from the Anthropic API with your Anthropic API key, you can use:
 - `AnthropicVlmProvider` for `act()`
-- `AntrhopicImageQAProvider` for `get()`
+- `AnthropicImageQAProvider` for `get()`
 
 ```python
 import os
@@ -78,12 +78,11 @@ If you want to use Google models directly from the Google API with your Google A
 - `GoogleImageQAProvider` for `get()`
 
 ```python
-import os
 from askui import AgentSettings, ComputerAgent
-from askui.model_providers import AnthropicVlmProvider
+from askui.model_providers import GoogleImageQAProvider
 
 with ComputerAgent(settings=AgentSettings(
-    vlm_provider=GoogleImageQAProvider(
+    image_qa_provider=GoogleImageQAProvider(
         model_id="gemini-2.5-pro",
     ),
 )) as agent:

@@ -118,7 +118,7 @@ with WebVisionAgent() as agent:
         "Log in with username 'testuser' and password 'testpass123'",
         # CAUTION: this will also override all other MessageSettings
         # eventually provided earlier!
-        settings=ActSettings(messages=MessageSettings(system=prompt))
+        act_settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
 
@@ -170,7 +170,7 @@ prompt = ActSystemPrompt(
 with WebVisionAgent() as agent:
     agent.act(
         "Your task",
-        settings=ActSettings(messages=MessageSettings(system=prompt))
+        act_settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
 
@@ -329,6 +329,6 @@ with WebVisionAgent() as agent:
         "Find a laptop under $1000 and add it to cart",
         # CAUTION: this will also override all other MessageSettings
         # eventually provided earlier!
-        settings=ActSettings(messages=MessageSettings(system=prompt))
+        act_settings=ActSettings(messages=MessageSettings(system=prompt))
     )
 ```
