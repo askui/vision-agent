@@ -68,7 +68,9 @@ class ComputerAgent(Agent):
         ```
     """
 
-    @telemetry.record_call(exclude={"reporters", "tools", "act_tools", "callbacks"})
+    @telemetry.record_call(
+        exclude={"reporters", "tools", "settings", "act_tools", "callbacks"}
+    )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
