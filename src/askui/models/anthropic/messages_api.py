@@ -56,6 +56,9 @@ def from_content_block(block: ContentBlockParam) -> BetaContentBlockParam:
     as it is not accepted by the API.
     """
     if isinstance(block, ToolUseBlockParam):
+        # visual_representation is an internal field (perceptual hash for cache
+        # validation) that does not exist in the Anthropic API schema. Sending
+        # it would cause the API to reject the request with an unknown-field error.
         return cast(
             "BetaContentBlockParam",
             block.model_dump(exclude={"visual_representation"}),
