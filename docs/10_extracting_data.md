@@ -30,7 +30,7 @@ page_title = agent.get("What is the page title?")
 button_count = agent.get("How many buttons are visible on this page?")
 ```
 
-Instead of taking a screenshot, you can also analyze specific images or documents. Please refer to [11_file_support.md](11_file_support.md) for detailed instructions.
+Instead of taking a screenshot, you can also analyze specific images or documents. Please refer to [File Support](#file-support) below for detailed instructions.
 
 ## File Support
 
