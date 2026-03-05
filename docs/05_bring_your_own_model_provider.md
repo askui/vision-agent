@@ -58,7 +58,7 @@ from askui.model_providers import AnthropicVlmProvider
 
 with ComputerAgent(settings=AgentSettings(
     vlm_provider=AnthropicVlmProvider(
-        model_id="claude-sonnet-4-5-20251101",
+        model_id="claude-opus-4-6",
     ),
 )) as agent:
     agent.act("Navigate to settings")

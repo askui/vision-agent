@@ -153,7 +153,7 @@ class AgentSettings:
         from askui.model_providers import AskUIVlmProvider, AskUIImageQAProvider
 
         agent = ComputerAgent(settings=AgentSettings(
-            vlm_provider=AskUIVlmProvider(model_id=\"claude-opus-4-5-20251101\"),
+            vlm_provider=AskUIVlmProvider(model_id=\"claude-opus-4-6\"),
             image_qa_provider=AskUIImageQAProvider(model_id=\"gemini-2.5-pro\"),
         ))
         ```
