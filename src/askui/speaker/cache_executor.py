@@ -570,29 +570,19 @@ class CacheExecutor(Speaker):
         )
 
         # Create assistant message (tool use) - DON'T execute yet
-        try:
-            logger.debug("Preparing step %d: %s", step_index, step.name)
+        logger.debug("Preparing step %d: %s", step_index, step.name)
 
-            assistant_message = MessageParam(
-                role="assistant",
-                content=[substituted_step],
-            )
+        assistant_message = MessageParam(
+            role="assistant",
+            content=[substituted_step],
+        )
 
-            return ExecutionResult(
-                status="SUCCESS",
-                step_index=step_index,
-                tool_result=None,
-                message_history=[assistant_message],
-            )
-
-        except Exception as e:
-            logger.exception("Error preparing step %d: %s", step_index, step.name)
-            return ExecutionResult(
-                status="FAILED",
-                step_index=step_index,
-                error_message=str(e),
-                message_history=self._message_history.copy(),
-            )
+        return ExecutionResult(
+            status="SUCCESS",
+            step_index=step_index,
+            tool_result=None,
+            message_history=[assistant_message],
+        )
 
     def _should_pause_for_agent(self, step: ToolUseBlockParam) -> bool:
         """Check if execution should pause for agent intervention."""
