@@ -828,13 +828,13 @@ class SimpleHtmlReporter(Reporter):
                             {% if cache_original_usage is not none %}
                                 {% if cache_original_usage.get('input_tokens') is not none %}
                                 <tr>
-                                    <th>Original Input Tokens</th>
+                                    <th>Original Input Tokens <span style="font-weight:normal;color:#888;">(consumed when recording the cache file)</span></th>
                                     <td>{{ "{:,}".format(cache_original_usage.get('input_tokens')) }}</td>
                                 </tr>
                                 {% endif %}
                                 {% if cache_original_usage.get('output_tokens') is not none %}
                                 <tr>
-                                    <th>Original Output Tokens</th>
+                                    <th>Original Output Tokens <span style="font-weight:normal;color:#888;">(consumed when recording the cache file)</span></th>
                                     <td>{{ "{:,}".format(cache_original_usage.get('output_tokens')) }}</td>
                                 </tr>
                                 {% endif %}
