@@ -191,11 +191,12 @@ class VerifyCacheExecution(Tool):
             f"Cache verification reported: success={success}, "
             f"notes={verification_notes}"
         )
-        logger.info(
-            "Cache verification reported: success=%s, notes=%s",
-            success,
-            verification_notes,
-        )
+        if success:
+            logger.info("Cache verified successfully")
+        else:
+            logger.warning("Cache verification failed!")
+        logger.debug("Cache verification notes: %s", verification_notes)
+
         return message
 
 
