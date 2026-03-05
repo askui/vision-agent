@@ -116,8 +116,11 @@ class AgentSpeaker(Speaker):
                 usage=response.usage,
             )
 
+        # "continue" if tool calls present (conversation needs to execute them
+        # and feed results back), "done" if the LLM produced a final text response.
+        status = "continue" if self._has_tool_calls(response) else "done"
         return SpeakerResult(
-            status="done",
+            status=status,
             messages_to_add=[response],
             usage=response.usage,
         )
@@ -148,6 +151,12 @@ class AgentSpeaker(Speaker):
                 return speaker_name, speaker_context
 
         return None
+
+    def _has_tool_calls(self, message: MessageParam) -> bool:
+        """Check if the message contains tool use blocks."""
+        if isinstance(message.content, str):
+            return False
+        return any(block.type == "tool_use" for block in message.content)
 
     def _handle_stop_reason(self, message: MessageParam, max_tokens: int) -> None:
         """Handle agent stop reasons.
