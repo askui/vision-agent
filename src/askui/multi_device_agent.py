@@ -110,6 +110,8 @@ class MultiDeviceAgent(Agent):
         )
 
         if tools:
+            # After all, I don't even know why we actually have both parameters in
+            # the constructor.
             msg = (
                 "'tools' parameter is not supported for MultiDeviceAgent and will"
                 " be ignored. Please set tools via the 'act_tools' parameter"
