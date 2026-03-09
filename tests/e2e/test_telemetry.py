@@ -1,8 +1,8 @@
 import pytest
 from PIL import Image
 
+from askui import ComputerAgent
 from askui import locators as loc
-from askui.agent import ComputerAgent
 from askui.container import telemetry
 from askui.telemetry.processors import Segment, SegmentSettings
 from askui.tools.toolbox import AgentToolbox

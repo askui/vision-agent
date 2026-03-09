@@ -6,8 +6,7 @@ from typing import Generator
 import pytest
 from typing_extensions import override
 
-from askui import AgentSettings
-from askui.agent import ComputerAgent
+from askui import AgentSettings, ComputerAgent
 from askui.locators.locators import Locator
 from askui.locators.serializers import AskUiLocatorSerializer
 from askui.model_providers.detection_provider import DetectionProvider

@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 from PIL import Image as PILImage
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.locators import Element
 
 if TYPE_CHECKING:

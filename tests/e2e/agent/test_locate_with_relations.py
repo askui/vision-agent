@@ -5,7 +5,7 @@ import pathlib
 import pytest
 from PIL import Image as PILImage
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.locators import Element, Image, Prompt, Text
 from askui.locators.locators import AiElement
 from askui.models.exceptions import ElementNotFoundError

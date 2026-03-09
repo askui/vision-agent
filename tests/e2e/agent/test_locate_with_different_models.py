@@ -3,7 +3,7 @@
 import pytest
 from PIL import Image as PILImage
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.exceptions import AutomationError
 from askui.locators import AiElement, Prompt, Text
 

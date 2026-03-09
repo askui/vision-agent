@@ -8,7 +8,7 @@ import pytest
 from PIL import Image as PILImage
 from pydantic import ValidationError
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.locators import Element
 from askui.models.exceptions import WaitUntilError
 
