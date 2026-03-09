@@ -54,6 +54,9 @@ try:
 except ImportError:
     _ANDROID_AGENT_AVAILABLE = False
 
+if _ANDROID_AGENT_AVAILABLE:
+    from .multi_device_agent import MultiDeviceAgent
+
 try:
     from .web_agent import WebVisionAgent
     from .web_testing_agent import WebTestingAgent
@@ -107,7 +110,7 @@ __all__ = [
 ]
 
 if _ANDROID_AGENT_AVAILABLE:
-    __all__ += ["AndroidAgent", "AndroidVisionAgent"]
+    __all__ += ["AndroidAgent", "AndroidVisionAgent", "MultiDeviceAgent"]
 
 if _WEB_AGENTS_AVAILABLE:
     __all__ += ["WebVisionAgent", "WebTestingAgent"]
