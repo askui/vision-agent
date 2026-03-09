@@ -1,6 +1,6 @@
 # Using Agents
 
-AskUI Vision Agent provides three predefined agent types for different automation targets. All agents share the same core API (`act()`, `get()`, `locate()`) but are optimized for their respective platforms. Each agent comes with its own system prompt tailored to its platform-specific tools and capabilities.
+AskUI Vision Agent provides four predefined agent types for different automation targets. All agents share the same core API (`act()`, `get()`, `locate()`) but are optimized for their respective platforms. Each agent comes with its own system prompt tailored to its platform-specific tools and capabilities.
 
 ## ComputerAgent
 
@@ -47,10 +47,30 @@ with WebVisionAgent() as agent:
 
 **Default tools:** All `ComputerAgent` tools plus `goto`, `back`, `forward`, `get_page_title`, `get_page_url`
 
+## MultiDeviceAgent
+
+Use this agent when you need to control a desktop computer and an Android device within the same task. The agent has access to both the full set of computer tools (via AskUI Agent OS) and Android tools (via ADB), and can switch between devices seamlessly during execution.
+
+This is useful for cross-device workflows, such as triggering an action on the desktop and verifying the result on a mobile device, or transferring data between devices.
+
+```python
+from askui import MultiDeviceAgent
+
+with MultiDeviceAgent(android_device_sn="emulator-5554") as agent:
+    agent.act("Open the web app on the computer and send a push notification, then verify it appears on the Android device")
+```
+
+If you have multiple Android devices connected, pass the serial number of the target device via `android_device_sn`. You can find serial numbers by running `adb devices`. If omitted, no device is preselected and the agent will select one at runtime.
+
+Requires the `android` dependency installed (`pip install askui[android]`) and a connected device (physical or emulator).
+
+**Default tools:** All `ComputerAgent` tools plus all `AndroidAgent` tools. Additional tools can be provided via the `act_tools` parameter.
+
 ## Choosing an Agent
 
 | Target | Agent | Backend |
 |--------|-------|---------|
 | Desktop (Windows/macOS/Linux) | `ComputerAgent` | AskUI Agent OS (gRPC) |
 | Android devices | `AndroidAgent` | ADB |
+| Desktop + Android | `MultiDeviceAgent` | AskUI Agent OS (gRPC) + ADB |
 | Web browsers | `WebVisionAgent` | Playwright |
