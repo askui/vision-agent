@@ -60,8 +60,8 @@ class MultiDeviceAgent(Agent):
         android_device_sn: str | None = None,
     ):
         self.android_device_sn = android_device_sn
-        self.android_os = PpadbAgentOs()
         reporter = CompositeReporter(reporters=reporters)
+        self.android_os = PpadbAgentOs(reporter=reporter)
         self.android_agent_os_facade = AndroidAgentOsFacade(self.android_os)
         self.computer_agent_os_tool = AgentToolbox(
             AskUiControllerClient(
