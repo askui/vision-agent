@@ -826,7 +826,7 @@ class SimpleHtmlReporter(Reporter):
                                 {% endif %}
                                 {% if usage_summary.get('total_cost') is not none %}
                                 <tr>
-                                    <th>Estimated Cost</th>
+                                    <th>Estimated Cost <span style="font-weight:normal;color:var(--text-muted);">(actual cost may differ)</span></th>
                                     <td>
                                         {{ "%.2f"|format(usage_summary.get('total_cost')) }} {{ usage_summary.get('currency', 'USD') }}
                                         <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
