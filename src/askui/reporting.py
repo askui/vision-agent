@@ -824,6 +824,18 @@ class SimpleHtmlReporter(Reporter):
                                     </td>
                                 </tr>
                                 {% endif %}
+                                {% if usage_summary.get('total_cost') is not none %}
+                                <tr>
+                                    <th>Estimated Cost</th>
+                                    <td>
+                                        {{ "%.2f"|format(usage_summary.get('total_cost')) }} {{ usage_summary.get('currency', 'USD') }}
+                                        <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                            (Input: ${{ "%.2f"|format(usage_summary.get('input_cost_per_million_tokens', 0)) }}/1M tokens,
+                                             Output: ${{ "%.2f"|format(usage_summary.get('output_cost_per_million_tokens', 0)) }}/1M tokens)
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             {% endif %}
                             {% if cache_original_usage is not none %}
                                 {% if cache_original_usage.get('input_tokens') is not none %}

@@ -135,6 +135,49 @@ class MyImageQAProvider(ImageQAProvider):
 ```
 
 
+### Execution Cost Tracking
+
+If you want execution cost tracking in your reports, override the `pricing` property on your custom `VlmProvider`:
+
+```python
+from typing import Any
+from typing_extensions import override
+from askui.model_providers import VlmProvider, ModelPricing
+from askui.models.shared.agent_message_param import MessageParam, ThinkingConfigParam, ToolChoiceParam
+from askui.models.shared.prompts import SystemPrompt
+from askui.models.shared.tools import ToolCollection
+
+
+class MyVlmProvider(VlmProvider):
+    @property
+    def model_id(self) -> str:
+        return "my-model-v1"
+
+    @property
+    @override
+    def pricing(self) -> ModelPricing | None:
+        return ModelPricing(
+            input_cost_per_million_tokens=1.0,
+            output_cost_per_million_tokens=5.0,
+        )
+
+    @override
+    def create_message(
+        self,
+        messages: list[MessageParam],
+        tools: ToolCollection | None = None,
+        max_tokens: int | None = None,
+        system: SystemPrompt | None = None,
+        thinking: ThinkingConfigParam | None = None,
+        tool_choice: ToolChoiceParam | None = None,
+        temperature: float | None = None,
+        provider_options: dict[str, Any] | None = None,
+    ) -> MessageParam:
+        ...  # call your API here
+```
+
+---
+
 ## Advanced: Injecting a Custom Client
 
 For full control over HTTP settings (timeouts, proxies, retries), you can inject a pre-configured client:

@@ -75,7 +75,12 @@ class Agent:
         # Create conversation with speakers and model providers
         speakers = Speakers()
         _callbacks = list(callbacks or [])
-        _callbacks.append(UsageTrackingCallback(reporter=self._reporter))
+        _callbacks.append(
+            UsageTrackingCallback(
+                reporter=self._reporter,
+                pricing=self._vlm_provider.pricing,
+            )
+        )
         self._conversation = Conversation(
             speakers=speakers,
             vlm_provider=self._vlm_provider,

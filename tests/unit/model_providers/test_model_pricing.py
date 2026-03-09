@@ -1,0 +1,129 @@
+"""Unit tests for model pricing resolution and cost calculation."""
+
+from typing import Any
+from unittest.mock import MagicMock
+
+import pytest
+
+from askui.models.shared.agent_message_param import UsageParam
+from askui.models.shared.usage_tracking_callback import UsageTrackingCallback
+from askui.utils.model_pricing import ModelPricing, resolve_default_pricing
+
+
+class TestResolveDefaultPricing:
+    def test_prefix_match_sonnet(self) -> None:
+        pricing = resolve_default_pricing("claude-sonnet-4-6")
+        assert pricing is not None
+        assert pricing.input_cost_per_million_tokens == 3.0
+        assert pricing.output_cost_per_million_tokens == 15.0
+
+    def test_prefix_match_opus(self) -> None:
+        pricing = resolve_default_pricing("claude-opus-4-6")
+        assert pricing is not None
+        assert pricing.input_cost_per_million_tokens == 15.0
+        assert pricing.output_cost_per_million_tokens == 75.0
+
+    def test_prefix_match_haiku(self) -> None:
+        pricing = resolve_default_pricing("claude-haiku-4-5-20251001")
+        assert pricing is not None
+        assert pricing.input_cost_per_million_tokens == 0.80
+        assert pricing.output_cost_per_million_tokens == 4.0
+
+    def test_unknown_model_returns_none(self) -> None:
+        assert resolve_default_pricing("unknown-model-v1") is None
+
+    def test_empty_string_returns_none(self) -> None:
+        assert resolve_default_pricing("") is None
+
+
+def _get_usage_dict(reporter_mock: MagicMock) -> dict[str, Any]:
+    return reporter_mock.add_usage_summary.call_args[0][0]  # type: ignore[no-any-return]
+
+
+class TestUsageTrackingCallbackCost:
+    def _make_callback(
+        self, pricing: ModelPricing | None = None
+    ) -> tuple[UsageTrackingCallback, MagicMock]:
+        reporter = MagicMock()
+        callback = UsageTrackingCallback(reporter=reporter, pricing=pricing)
+        return callback, reporter
+
+    def test_cost_included_when_pricing_set(self) -> None:
+        pricing = ModelPricing(
+            input_cost_per_million_tokens=3.0,
+            output_cost_per_million_tokens=15.0,
+        )
+        callback, reporter = self._make_callback(pricing)
+        callback._accumulated_usage = UsageParam(
+            input_tokens=1_000_000,
+            output_tokens=100_000,
+        )
+        callback.on_conversation_end(MagicMock())
+
+        usage_dict = _get_usage_dict(reporter)
+        assert usage_dict["total_cost"] == pytest.approx(4.5)
+        assert usage_dict["input_cost"] == pytest.approx(3.0)
+        assert usage_dict["output_cost"] == pytest.approx(1.5)
+        assert usage_dict["currency"] == "USD"
+        assert usage_dict["input_cost_per_million_tokens"] == 3.0
+        assert usage_dict["output_cost_per_million_tokens"] == 15.0
+
+    def test_no_cost_when_pricing_none(self) -> None:
+        callback, reporter = self._make_callback(pricing=None)
+        callback._accumulated_usage = UsageParam(
+            input_tokens=500,
+            output_tokens=200,
+        )
+        callback.on_conversation_end(MagicMock())
+
+        usage_dict = _get_usage_dict(reporter)
+        assert "total_cost" not in usage_dict
+        assert "currency" not in usage_dict
+
+    def test_zero_tokens_produce_zero_cost(self) -> None:
+        pricing = ModelPricing(
+            input_cost_per_million_tokens=3.0,
+            output_cost_per_million_tokens=15.0,
+        )
+        callback, reporter = self._make_callback(pricing)
+        callback._accumulated_usage = UsageParam(
+            input_tokens=0,
+            output_tokens=0,
+        )
+        callback.on_conversation_end(MagicMock())
+
+        usage_dict = _get_usage_dict(reporter)
+        assert usage_dict["total_cost"] == 0.0
+
+    def test_none_tokens_treated_as_zero(self) -> None:
+        pricing = ModelPricing(
+            input_cost_per_million_tokens=3.0,
+            output_cost_per_million_tokens=15.0,
+        )
+        callback, reporter = self._make_callback(pricing)
+        callback._accumulated_usage = UsageParam()
+        callback.on_conversation_end(MagicMock())
+
+        usage_dict = _get_usage_dict(reporter)
+        assert usage_dict["total_cost"] == 0.0
+
+    def test_cost_calculation_accuracy(self) -> None:
+        pricing = ModelPricing(
+            input_cost_per_million_tokens=15.0,
+            output_cost_per_million_tokens=75.0,
+        )
+        callback, reporter = self._make_callback(pricing)
+        callback._accumulated_usage = UsageParam(
+            input_tokens=50_000,
+            output_tokens=10_000,
+        )
+        callback.on_conversation_end(MagicMock())
+
+        usage_dict = _get_usage_dict(reporter)
+        expected_input = 50_000 * 15.0 / 1_000_000
+        expected_output = 10_000 * 75.0 / 1_000_000
+        assert usage_dict["input_cost"] == pytest.approx(expected_input)
+        assert usage_dict["output_cost"] == pytest.approx(expected_output)
+        assert usage_dict["total_cost"] == pytest.approx(
+            expected_input + expected_output
+        )
