@@ -11,29 +11,32 @@ from askui.utils.model_pricing import ModelPricing, resolve_default_pricing
 
 
 class TestResolveDefaultPricing:
-    def test_prefix_match_sonnet(self) -> None:
+    def test_exact_match_sonnet_4_6(self) -> None:
         pricing = resolve_default_pricing("claude-sonnet-4-6")
         assert pricing is not None
         assert pricing.input_cost_per_million_tokens == 3.0
         assert pricing.output_cost_per_million_tokens == 15.0
 
-    def test_prefix_match_opus(self) -> None:
+    def test_exact_match_opus_4_6(self) -> None:
         pricing = resolve_default_pricing("claude-opus-4-6")
         assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 15.0
-        assert pricing.output_cost_per_million_tokens == 75.0
+        assert pricing.input_cost_per_million_tokens == 5.0
+        assert pricing.output_cost_per_million_tokens == 25.0
 
-    def test_prefix_match_haiku(self) -> None:
+    def test_exact_match_haiku(self) -> None:
         pricing = resolve_default_pricing("claude-haiku-4-5-20251001")
         assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 0.80
-        assert pricing.output_cost_per_million_tokens == 4.0
+        assert pricing.input_cost_per_million_tokens == 1.0
+        assert pricing.output_cost_per_million_tokens == 5.0
 
     def test_unknown_model_returns_none(self) -> None:
         assert resolve_default_pricing("unknown-model-v1") is None
 
     def test_empty_string_returns_none(self) -> None:
         assert resolve_default_pricing("") is None
+
+    def test_partial_model_id_returns_none(self) -> None:
+        assert resolve_default_pricing("claude-sonnet-4") is None
 
 
 def _get_usage_dict(reporter_mock: MagicMock) -> dict[str, Any]:
