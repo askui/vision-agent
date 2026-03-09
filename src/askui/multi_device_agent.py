@@ -1,145 +1,104 @@
-import logging
 from typing import Annotated
 
 from pydantic import Field
 
+from askui.agent import ComputerAgent
 from askui.agent_base import Agent
+from askui.agent_settings import AgentSettings
+from askui.android_agent import AndroidAgent
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import create_multidevice_agent_prompt
 from askui.reporting import CompositeReporter, Reporter
 from askui.retry import Retry
-from askui.tools import AgentToolbox, ComputerAgentOsFacade
-from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
-from askui.tools.android.ppadb_agent_os import PpadbAgentOs
-from askui.tools.android.tools import (
-    AndroidDragAndDropTool,
-    AndroidGetConnectedDevicesSerialNumbersTool,
-    AndroidGetConnectedDisplaysInfosTool,
-    AndroidGetCurrentConnectedDeviceInfosTool,
-    AndroidKeyCombinationTool,
-    AndroidKeyTapEventTool,
-    AndroidScreenshotTool,
-    AndroidSelectDeviceBySerialNumberTool,
-    AndroidSelectDisplayByUniqueIDTool,
-    AndroidShellTool,
-    AndroidSwipeTool,
-    AndroidTapTool,
-    AndroidTypeTool,
-)
-from askui.tools.askui import AskUiControllerClient
-from askui.tools.computer import (
-    ComputerGetMousePositionTool,
-    ComputerGetSystemInfoTool,
-    ComputerKeyboardPressedTool,
-    ComputerKeyboardReleaseTool,
-    ComputerKeyboardTapTool,
-    ComputerListDisplaysTool,
-    ComputerMouseClickTool,
-    ComputerMouseHoldDownTool,
-    ComputerMouseReleaseTool,
-    ComputerMouseScrollTool,
-    ComputerMoveMouseTool,
-    ComputerRetrieveActiveDisplayTool,
-    ComputerScreenshotTool,
-    ComputerSetActiveDisplayTool,
-    ComputerTypeTool,
-)
-from askui.tools.exception_tool import ExceptionTool
-
-logger = logging.getLogger(__name__)
 
 
 class MultiDeviceAgent(Agent):
+    """
+    Multi device agent that combines a computer and an Android agent.
+    It can be used to perform actions on both devices simultaneously.
+
+    Args:
+        display (int, optional): The display number for computer screen
+            interactions. Defaults to `1`.
+        reporters (list[Reporter] | None, optional): List of reporter instances.
+        tools (AgentToolbox | None, optional): Not supported; use `act_tools`.
+        retry (Retry | None, optional): Retry instance for failed actions.
+        act_tools (list[Tool] | None, optional): Additional tools for `act()`.
+        android_device_sn (str | None, optional): Android device serial number
+            to select on open.
+
+    Example:
+        ```python
+        from askui import MultiDeviceAgent
+
+        with MultiDeviceAgent(android_device_sn="emulator-5554") as agent:
+            agent.computer.click("Start")
+            agent.android.tap("OK")
+            agent.act("Fill the form on the phone and submit from the desktop")
+        ```
+    """
+
     def __init__(
         self,
-        display: Annotated[int, Field(ge=1)] = 1,
+        desktop_display: Annotated[int, Field(ge=1)] = 1,
+        android_device_sn: str | int = 0,
         reporters: list[Reporter] | None = None,
-        tools: AgentToolbox | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
-        android_device_sn: str | None = None,
-    ):
-        self.android_device_sn = android_device_sn
+        settings: AgentSettings | None = None,
+    ) -> None:
         reporter = CompositeReporter(reporters=reporters)
-        self.android_os = PpadbAgentOs(reporter=reporter)
-        self.android_agent_os_facade = AndroidAgentOsFacade(self.android_os)
-        self.computer_agent_os_tool = AgentToolbox(
-            AskUiControllerClient(
-                display=display,
-                reporter=reporter,
-            )
-        )
 
-        self.android_tools: list[Tool] = [
-            AndroidScreenshotTool(self.android_agent_os_facade),
-            AndroidTapTool(self.android_agent_os_facade),
-            AndroidTypeTool(self.android_agent_os_facade),
-            AndroidDragAndDropTool(self.android_agent_os_facade),
-            AndroidKeyTapEventTool(self.android_agent_os_facade),
-            AndroidSwipeTool(self.android_agent_os_facade),
-            AndroidKeyCombinationTool(self.android_agent_os_facade),
-            AndroidShellTool(self.android_agent_os_facade),
-            AndroidSelectDeviceBySerialNumberTool(self.android_agent_os_facade),
-            AndroidSelectDisplayByUniqueIDTool(self.android_agent_os_facade),
-            AndroidGetConnectedDevicesSerialNumbersTool(self.android_agent_os_facade),
-            AndroidGetConnectedDisplaysInfosTool(self.android_agent_os_facade),
-            AndroidGetCurrentConnectedDeviceInfosTool(self.android_agent_os_facade),
-        ]
-        self.computer_tools: list[Tool] = [
-            ComputerGetSystemInfoTool(),
-            ComputerGetMousePositionTool(),
-            ComputerKeyboardPressedTool(),
-            ComputerKeyboardReleaseTool(),
-            ComputerKeyboardTapTool(),
-            ComputerMouseClickTool(),
-            ComputerMouseHoldDownTool(),
-            ComputerMouseReleaseTool(),
-            ComputerMouseScrollTool(),
-            ComputerMoveMouseTool(),
-            ComputerScreenshotTool(),
-            ComputerTypeTool(),
-            ComputerListDisplaysTool(),
-            ComputerRetrieveActiveDisplayTool(),
-            ComputerSetActiveDisplayTool(),
-        ]
-
-        act_tools = act_tools or []
-
-        multi_device_tools: list[Tool] = (
-            act_tools + self.android_tools + self.computer_tools + [ExceptionTool()]
-        )
-
-        if tools:
-            # After all, I don't even know why we actually have both parameters in
-            # the constructor.
-            msg = (
-                "'tools' parameter is not supported for MultiDeviceAgent and will"
-                " be ignored. Please set tools via the 'act_tools' parameter"
-            )
-            logger.warning(msg)
-
+        # Initialize the base agent
         super().__init__(
             reporter=reporter,
-            tools=multi_device_tools,
             retry=retry,
-            agent_os=self.computer_agent_os_tool.os,
+            settings=settings,
         )
 
-        self.computer_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
-            self.computer_agent_os_tool.os
+        # Initialize the computer agent
+        self._computer_agent = ComputerAgent(
+            display=desktop_display,
+            reporters=[reporter],
+            settings=settings,
         )
-        self.act_tool_collection.add_agent_os(self.computer_agent_os_facade)
+
+        # Initialize the Android agent
+        self._android_agent = AndroidAgent(
+            device=android_device_sn,
+            reporters=[reporter],
+            settings=settings,
+        )
+
+        # Combine the tool collections of the computer and Android agents
+        self.act_tool_collection = (
+            self._computer_agent.act_tool_collection
+            + self._android_agent.act_tool_collection
+        )
+
+        self.act_tool_collection.append_tool(*(act_tools or []))
 
         self.act_settings.messages.system = create_multidevice_agent_prompt()
 
+    @property
+    def computer(self) -> ComputerAgent:
+        """The composed computer agent."""
+        return self._computer_agent
+
+    @property
+    def android(self) -> AndroidAgent:
+        """The composed Android agent."""
+        return self._android_agent
+
     def close(self) -> None:
-        self.android_os.disconnect()
+        self._computer_agent.act_agent_os_facade.disconnect()
+        self._android_agent.act_agent_os_facade.disconnect()
         super().close()
 
     def open(self) -> None:
-        self.android_os.connect()
-        if self.android_device_sn is not None:
-            self.android_os.set_device_by_serial_number(self.android_device_sn)
-        if self._agent_os is not None:
-            self._agent_os.connect()
+        self._computer_agent.open()
+        self._android_agent.open()
         super().open()
+
+    # Get and locate functions must be overridden and throw please use
+    #   .computer_agent and .android_agent instead.
