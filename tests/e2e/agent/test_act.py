@@ -1,4 +1,4 @@
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 
 
 def test_act(

@@ -7,9 +7,9 @@ import os
 
 os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
-from .agent import ComputerAgent, VisionAgent
 from .agent_base import Agent
 from .agent_settings import AgentSettings
+from .computer_agent import ComputerAgent, VisionAgent
 from .locators import Locator
 from .models import (
     Base64ImageSourceParam,

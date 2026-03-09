@@ -1,6 +1,6 @@
 from pydantic import ConfigDict, validate_call
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.agent_settings import AgentSettings
 from askui.models.shared.settings import (
     ActSettings,

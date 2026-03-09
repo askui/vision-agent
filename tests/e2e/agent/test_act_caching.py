@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from askui.agent import ComputerAgent
+from askui import ComputerAgent
 from askui.models.shared.settings import CacheExecutionSettings, CachingSettings
 
 

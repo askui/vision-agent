@@ -81,23 +81,7 @@ class AndroidAgent(Agent):
         super().__init__(
             reporter=reporter,
             retry=retry,
-            tools=[
-                AndroidScreenshotTool(),
-                AndroidTapTool(),
-                AndroidTypeTool(),
-                AndroidDragAndDropTool(),
-                AndroidKeyTapEventTool(),
-                AndroidSwipeTool(),
-                AndroidKeyCombinationTool(),
-                AndroidShellTool(),
-                AndroidSelectDeviceBySerialNumberTool(),
-                AndroidSelectDisplayByUniqueIDTool(),
-                AndroidGetConnectedDevicesSerialNumbersTool(),
-                AndroidGetConnectedDisplaysInfosTool(),
-                AndroidGetCurrentConnectedDeviceInfosTool(),
-                ExceptionTool(),
-            ]
-            + (act_tools or []),
+            tools=self.get_default_tools() + (act_tools or []),
             agent_os=self.os,
             settings=settings,
             callbacks=callbacks,
@@ -356,6 +340,25 @@ class AndroidAgent(Agent):
             f"set_device_by_serial_number(device_sn='{device_sn}')",
         )
         self.os.set_device_by_serial_number(device_sn)
+
+    @staticmethod
+    def get_default_tools() -> list[Tool]:
+        return [
+            AndroidScreenshotTool(),
+            AndroidTapTool(),
+            AndroidTypeTool(),
+            AndroidDragAndDropTool(),
+            AndroidKeyTapEventTool(),
+            AndroidSwipeTool(),
+            AndroidKeyCombinationTool(),
+            AndroidShellTool(),
+            AndroidSelectDeviceBySerialNumberTool(),
+            AndroidSelectDisplayByUniqueIDTool(),
+            AndroidGetConnectedDevicesSerialNumbersTool(),
+            AndroidGetConnectedDisplaysInfosTool(),
+            AndroidGetCurrentConnectedDeviceInfosTool(),
+            ExceptionTool(),
+        ]
 
 
 class AndroidVisionAgent(AndroidAgent):

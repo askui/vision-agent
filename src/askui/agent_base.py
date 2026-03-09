@@ -878,3 +878,7 @@ class Agent:
         traceback: types.TracebackType | None,
     ) -> None:
         self.close()
+
+    @staticmethod
+    def get_default_tools() -> list[Tool]:
+        return []

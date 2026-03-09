@@ -183,7 +183,7 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"src/askui/agent.py" = ["E501"]
+"src/askui/computer_agent.py" = ["E501"]
 "src/askui/android_agent.py" = ["E501"]
 "src/askui/locators/locators.py" = ["E501"]
 "src/askui/locators/relatable.py" = ["E501", "SLF001"]

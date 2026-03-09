@@ -92,25 +92,7 @@ class ComputerAgent(Agent):
         super().__init__(
             reporter=reporter,
             retry=retry,
-            tools=[
-                ExceptionTool(),
-                ComputerGetSystemInfoTool(),
-                ComputerGetMousePositionTool(),
-                ComputerKeyboardPressedTool(),
-                ComputerKeyboardReleaseTool(),
-                ComputerKeyboardTapTool(),
-                ComputerMouseClickTool(),
-                ComputerMouseHoldDownTool(),
-                ComputerMouseReleaseTool(),
-                ComputerMouseScrollTool(),
-                ComputerMoveMouseTool(),
-                ComputerScreenshotTool(),
-                ComputerTypeTool(),
-                ComputerListDisplaysTool(),
-                ComputerRetrieveActiveDisplayTool(),
-                ComputerSetActiveDisplayTool(),
-            ]
-            + (act_tools or []),
+            tools=self.get_default_tools() + (act_tools or []),
             agent_os=self.tools.os,
             settings=settings,
             callbacks=callbacks,
@@ -507,6 +489,27 @@ class ComputerAgent(Agent):
             "ComputerAgent received instruction to execute '%s' on cli", command
         )
         self.tools.os.run_command(command)
+
+    @staticmethod
+    def get_default_tools() -> list[Tool]:
+        return [
+            ExceptionTool(),
+            ComputerGetSystemInfoTool(),
+            ComputerGetMousePositionTool(),
+            ComputerKeyboardPressedTool(),
+            ComputerKeyboardReleaseTool(),
+            ComputerKeyboardTapTool(),
+            ComputerMouseClickTool(),
+            ComputerMouseHoldDownTool(),
+            ComputerMouseReleaseTool(),
+            ComputerMouseScrollTool(),
+            ComputerMoveMouseTool(),
+            ComputerScreenshotTool(),
+            ComputerTypeTool(),
+            ComputerListDisplaysTool(),
+            ComputerRetrieveActiveDisplayTool(),
+            ComputerSetActiveDisplayTool(),
+        ]
 
 
 class VisionAgent(ComputerAgent):
