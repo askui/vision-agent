@@ -137,43 +137,40 @@ class MyImageQAProvider(ImageQAProvider):
 
 ### Execution Cost Tracking
 
-If you want execution cost tracking in your reports, override the `pricing` property on your custom `VlmProvider`:
+The built-in providers include default pricing for supported models. You can override the pricing on any provider by passing `input_cost_per_million_tokens` and `output_cost_per_million_tokens`:
 
 ```python
-from typing import Any
-from typing_extensions import override
-from askui.model_providers import VlmProvider, ModelPricing
-from askui.models.shared.agent_message_param import MessageParam, ThinkingConfigParam, ToolChoiceParam
-from askui.models.shared.prompts import SystemPrompt
-from askui.models.shared.tools import ToolCollection
+from askui import AgentSettings, ComputerAgent
+from askui.model_providers import AnthropicVlmProvider
+from askui.reporting import SimpleHtmlReporter
 
+with ComputerAgent(
+    reporters=[SimpleHtmlReporter()],
+    settings=AgentSettings(
+        vlm_provider=AnthropicVlmProvider(
+            model_id="claude-sonnet-4-6",
+            input_cost_per_million_tokens=3.0,
+            output_cost_per_million_tokens=15.0,
+        ),
+    ),
+) as agent:
+    agent.act("Open settings")
+```
+
+If you implement a fully custom `VlmProvider`, override the `pricing` property to enable cost tracking:
+
+```python
+from askui.model_providers import VlmProvider, ModelPricing
 
 class MyVlmProvider(VlmProvider):
     @property
-    def model_id(self) -> str:
-        return "my-model-v1"
-
-    @property
-    @override
     def pricing(self) -> ModelPricing | None:
         return ModelPricing(
             input_cost_per_million_tokens=1.0,
             output_cost_per_million_tokens=5.0,
         )
 
-    @override
-    def create_message(
-        self,
-        messages: list[MessageParam],
-        tools: ToolCollection | None = None,
-        max_tokens: int | None = None,
-        system: SystemPrompt | None = None,
-        thinking: ThinkingConfigParam | None = None,
-        tool_choice: ToolChoiceParam | None = None,
-        temperature: float | None = None,
-        provider_options: dict[str, Any] | None = None,
-    ) -> MessageParam:
-        ...  # call your API here
+    # ... rest of implementation
 ```
 
 ---
