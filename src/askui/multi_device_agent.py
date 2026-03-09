@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional, Type, overload
 
 from pydantic import Field
 
@@ -6,10 +6,15 @@ from askui.agent import ComputerAgent
 from askui.agent_base import Agent
 from askui.agent_settings import AgentSettings
 from askui.android_agent import AndroidAgent
+from askui.locators.locators import Locator
+from askui.models.shared.settings import GetSettings, LocateSettings
 from askui.models.shared.tools import Tool
+from askui.models.types.geometry import Point
+from askui.models.types.response_schemas import ResponseSchema
 from askui.prompts.act_prompts import create_multidevice_agent_prompt
 from askui.reporting import CompositeReporter, Reporter
 from askui.retry import Retry
+from askui.utils.source_utils import InputSource
 
 
 class MultiDeviceAgent(Agent):
@@ -90,6 +95,65 @@ class MultiDeviceAgent(Agent):
         """The composed Android agent."""
         return self._android_agent
 
+    @overload
+    def get(
+        self,
+        query: Annotated[str, Field(min_length=1)],
+        response_schema: None = None,
+        source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
+    ) -> str: ...
+    @overload
+    def get(
+        self,
+        query: Annotated[str, Field(min_length=1)],
+        response_schema: Type[ResponseSchema],
+        source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
+    ) -> ResponseSchema: ...
+
+    def get(
+        self,
+        query: Annotated[str, Field(min_length=1)],
+        response_schema: Type[ResponseSchema] | None = None,
+        source: Optional[InputSource] = None,
+        get_settings: GetSettings | None = None,
+    ) -> ResponseSchema | str:
+        """Not supported on `MultiDeviceAgent`.
+
+        Use `agent.computer.get()` or `agent.android.get()` instead.
+
+        Raises:
+            NotImplementedError: Always.
+        """
+        error_msg = (
+            "MultiDeviceAgent does not support get() directly."
+            " Use agent.computer.get() or agent.android.get()"
+            " instead."
+        )
+        raise NotImplementedError(error_msg)
+
+    def locate(
+        self,
+        locator: str | Locator,
+        screenshot: Optional[InputSource] = None,
+        locate_settings: LocateSettings | None = None,
+    ) -> Point:
+        """Not supported on `MultiDeviceAgent`.
+
+        Use `agent.computer.locate()` or `agent.android.locate()`
+        instead.
+
+        Raises:
+            NotImplementedError: Always.
+        """
+        error_msg = (
+            "MultiDeviceAgent does not support locate() directly."
+            " Use agent.computer.locate() or"
+            " agent.android.locate() instead."
+        )
+        raise NotImplementedError(error_msg)
+
     def close(self) -> None:
         self._computer_agent.act_agent_os_facade.disconnect()
         self._android_agent.act_agent_os_facade.disconnect()
@@ -99,6 +163,3 @@ class MultiDeviceAgent(Agent):
         self._computer_agent.open()
         self._android_agent.open()
         super().open()
-
-    # Get and locate functions must be overridden and throw please use
-    #   .computer_agent and .android_agent instead.
