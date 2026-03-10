@@ -229,19 +229,30 @@ class AndroidDisplay:
         return f"-d {self.unique_display_id}"
 
 
-class UnknownAndroidDisplay(AndroidDisplay):
+class SingleAndroidDisplay(AndroidDisplay):
+    """
+    Single display when there is only one display connected.
+    """
+
+    def __init__(self, display_name: str) -> None:
+        super().__init__(0, display_name, 0)
+
+    # In case of a single display, the display id flag is not needed
+    def get_display_id_flag(self) -> str:
+        return ""
+
+    # In case of a single display, the display unique id flag is not needed
+    def get_display_unique_id_flag(self) -> str:
+        return ""
+
+
+class UnknownAndroidDisplay(SingleAndroidDisplay):
     """
     Fallback display for when the Agent OS is not able to determine the displays.
     """
 
     def __init__(self) -> None:
-        super().__init__(0, "Unknown", 0)
-
-    def get_display_id_flag(self) -> str:
-        return ""
-
-    def get_display_unique_id_flag(self) -> str:
-        return ""
+        super().__init__("Unknown")
 
 
 class AndroidAgentOs(ABC):
