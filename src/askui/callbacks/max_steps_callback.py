@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
+from askui.callbacks.conversation_callback import ConversationCallback
 from askui.models.exceptions import MaxStepsReachedError
-from askui.models.shared.conversation_callback import ConversationCallback
 
 if TYPE_CHECKING:
     from askui.models.shared.conversation import Conversation

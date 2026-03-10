@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 from opentelemetry import trace
 from typing_extensions import override
 
+from askui.callbacks.conversation_callback import ConversationCallback
 from askui.models.shared.agent_message_param import UsageParam
-from askui.models.shared.conversation_callback import ConversationCallback
 from askui.reporting import NULL_REPORTER, Reporter
 
 if TYPE_CHECKING:
