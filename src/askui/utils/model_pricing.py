@@ -9,8 +9,8 @@ class ModelPricing(BaseModel):
     """Cost per 1 million tokens for a model.
 
     Args:
-        input_cost_per_million_tokens (float): Cost in USD per 1M input tokens.
-        output_cost_per_million_tokens (float): Cost in USD per 1M output tokens.
+        input_cost_per_million_tokens (float): Cost per 1M input tokens in Currency.
+        output_cost_per_million_tokens (float): Cost per 1M output tokens in Currency.
         currency (str): ISO 4217 currency code. Defaults to ``"USD"``.
     """
 
