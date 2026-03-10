@@ -56,10 +56,10 @@ class UsageTrackingCallback(ConversationCallback):
             input_tokens = self._accumulated_usage.input_tokens or 0
             output_tokens = self._accumulated_usage.output_tokens or 0
             input_cost = (
-                input_tokens * self._pricing.input_cost_per_million_tokens / 1_000_000
+                input_tokens * self._pricing.input_cost_per_million_tokens / 1e7
             )
             output_cost = (
-                output_tokens * self._pricing.output_cost_per_million_tokens / 1_000_000
+                output_tokens * self._pricing.output_cost_per_million_tokens / 1e7
             )
             usage_dict["input_cost"] = input_cost
             usage_dict["output_cost"] = output_cost
