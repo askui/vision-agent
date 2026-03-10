@@ -11,7 +11,7 @@ class ModelPricing(BaseModel):
     Args:
         input_cost_per_million_tokens (float): Cost per 1M input tokens in Currency.
         output_cost_per_million_tokens (float): Cost per 1M output tokens in Currency.
-        currency (str): ISO 4217 currency code. Defaults to ``"USD"``.
+        currency (str): descriptor of the currency. Defaults to ``"USD"``.
     """
 
     input_cost_per_million_tokens: float
