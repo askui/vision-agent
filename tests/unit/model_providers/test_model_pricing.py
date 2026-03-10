@@ -13,51 +13,55 @@ from askui.utils.model_pricing import ModelPricing
 
 
 class TestModelPricingForModel:
-    def test_exact_match_sonnet_4_6(self) -> None:
-        pricing = ModelPricing.for_model("claude-sonnet-4-6")
+    @pytest.mark.parametrize(
+        ("model_id", "expected_input", "expected_output"),
+        [
+            ("claude-haiku-4-5-20251001", 1.0, 5.0),
+            ("claude-sonnet-4-5-20250929", 3.0, 15.0),
+            ("claude-opus-4-5-20251101", 5.0, 25.0),
+            ("claude-sonnet-4-6", 3.0, 15.0),
+            ("claude-opus-4-6", 5.0, 25.0),
+        ],
+    )
+    def test_known_model_returns_default_pricing(
+        self,
+        model_id: str,
+        expected_input: float,
+        expected_output: float,
+    ) -> None:
+        pricing = ModelPricing.for_model(model_id)
         assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 3.0
-        assert pricing.output_cost_per_million_tokens == 15.0
+        assert pricing.input_cost_per_million_tokens == expected_input
+        assert pricing.output_cost_per_million_tokens == expected_output
 
-    def test_exact_match_opus_4_6(self) -> None:
-        pricing = ModelPricing.for_model("claude-opus-4-6")
-        assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 5.0
-        assert pricing.output_cost_per_million_tokens == 25.0
+    @pytest.mark.parametrize(
+        "model_id",
+        ["unknown-model-v1", "", "claude-sonnet-4"],
+    )
+    def test_unknown_model_returns_none(self, model_id: str) -> None:
+        assert ModelPricing.for_model(model_id) is None
 
-    def test_exact_match_haiku(self) -> None:
-        pricing = ModelPricing.for_model("claude-haiku-4-5-20251001")
-        assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 1.0
-        assert pricing.output_cost_per_million_tokens == 5.0
-
-    def test_unknown_model_returns_none(self) -> None:
-        assert ModelPricing.for_model("unknown-model-v1") is None
-
-    def test_empty_string_returns_none(self) -> None:
-        assert ModelPricing.for_model("") is None
-
-    def test_partial_model_id_returns_none(self) -> None:
-        assert ModelPricing.for_model("claude-sonnet-4") is None
-
-    def test_override_costs(self) -> None:
+    @pytest.mark.parametrize(
+        ("model_id", "input_cost", "output_cost"),
+        [
+            ("claude-sonnet-4-6", 99.0, 199.0),
+            ("unknown-model", 1.0, 2.0),
+        ],
+    )
+    def test_override_costs(
+        self,
+        model_id: str,
+        input_cost: float,
+        output_cost: float,
+    ) -> None:
         pricing = ModelPricing.for_model(
-            "claude-sonnet-4-6",
-            input_cost_per_million_tokens=99.0,
-            output_cost_per_million_tokens=199.0,
+            model_id,
+            input_cost_per_million_tokens=input_cost,
+            output_cost_per_million_tokens=output_cost,
         )
         assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 99.0
-        assert pricing.output_cost_per_million_tokens == 199.0
-
-    def test_override_costs_unknown_model(self) -> None:
-        pricing = ModelPricing.for_model(
-            "unknown-model",
-            input_cost_per_million_tokens=1.0,
-            output_cost_per_million_tokens=2.0,
-        )
-        assert pricing is not None
-        assert pricing.input_cost_per_million_tokens == 1.0
+        assert pricing.input_cost_per_million_tokens == input_cost
+        assert pricing.output_cost_per_million_tokens == output_cost
 
 
 def _get_usage_summary(reporter_mock: MagicMock) -> UsageSummary:
@@ -72,25 +76,50 @@ class TestUsageTrackingCallbackCost:
         callback = UsageTrackingCallback(reporter=reporter, pricing=pricing)
         return callback, reporter
 
-    def test_cost_included_when_pricing_set(self) -> None:
+    @pytest.mark.parametrize(
+        (
+            "input_tokens",
+            "output_tokens",
+            "input_rate",
+            "output_rate",
+            "expected_input_cost",
+            "expected_output_cost",
+        ),
+        [
+            (1_000_000, 100_000, 3.0, 15.0, 3.0, 1.5),
+            (50_000, 10_000, 15.0, 75.0, 0.75, 0.75),
+            (0, 0, 3.0, 15.0, 0.0, 0.0),
+        ],
+    )
+    def test_cost_calculation(
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        input_rate: float,
+        output_rate: float,
+        expected_input_cost: float,
+        expected_output_cost: float,
+    ) -> None:
         pricing = ModelPricing(
-            input_cost_per_million_tokens=3.0,
-            output_cost_per_million_tokens=15.0,
+            input_cost_per_million_tokens=input_rate,
+            output_cost_per_million_tokens=output_rate,
         )
         callback, reporter = self._make_callback(pricing)
         callback._accumulated_usage = UsageParam(
-            input_tokens=1_000_000,
-            output_tokens=100_000,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )
         callback.on_conversation_end(MagicMock())
 
         summary = _get_usage_summary(reporter)
-        assert summary.total_cost == pytest.approx(4.5)
-        assert summary.input_cost == pytest.approx(3.0)
-        assert summary.output_cost == pytest.approx(1.5)
+        assert summary.input_cost == pytest.approx(expected_input_cost)
+        assert summary.output_cost == pytest.approx(expected_output_cost)
+        assert summary.total_cost == pytest.approx(
+            expected_input_cost + expected_output_cost
+        )
         assert summary.currency == "USD"
-        assert summary.input_cost_per_million_tokens == 3.0
-        assert summary.output_cost_per_million_tokens == 15.0
+        assert summary.input_cost_per_million_tokens == input_rate
+        assert summary.output_cost_per_million_tokens == output_rate
 
     def test_no_cost_when_pricing_none(self) -> None:
         callback, reporter = self._make_callback(pricing=None)
@@ -104,21 +133,6 @@ class TestUsageTrackingCallbackCost:
         assert summary.total_cost is None
         assert summary.currency is None
 
-    def test_zero_tokens_produce_zero_cost(self) -> None:
-        pricing = ModelPricing(
-            input_cost_per_million_tokens=3.0,
-            output_cost_per_million_tokens=15.0,
-        )
-        callback, reporter = self._make_callback(pricing)
-        callback._accumulated_usage = UsageParam(
-            input_tokens=0,
-            output_tokens=0,
-        )
-        callback.on_conversation_end(MagicMock())
-
-        summary = _get_usage_summary(reporter)
-        assert summary.total_cost == 0.0
-
     def test_none_tokens_treated_as_zero(self) -> None:
         pricing = ModelPricing(
             input_cost_per_million_tokens=3.0,
@@ -130,22 +144,3 @@ class TestUsageTrackingCallbackCost:
 
         summary = _get_usage_summary(reporter)
         assert summary.total_cost == 0.0
-
-    def test_cost_calculation_accuracy(self) -> None:
-        pricing = ModelPricing(
-            input_cost_per_million_tokens=15.0,
-            output_cost_per_million_tokens=75.0,
-        )
-        callback, reporter = self._make_callback(pricing)
-        callback._accumulated_usage = UsageParam(
-            input_tokens=50_000,
-            output_tokens=10_000,
-        )
-        callback.on_conversation_end(MagicMock())
-
-        summary = _get_usage_summary(reporter)
-        expected_input = 50_000 * 15.0 / 1_000_000
-        expected_output = 10_000 * 75.0 / 1_000_000
-        assert summary.input_cost == pytest.approx(expected_input)
-        assert summary.output_cost == pytest.approx(expected_output)
-        assert summary.total_cost == pytest.approx(expected_input + expected_output)
