@@ -5,16 +5,46 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from opentelemetry import trace
+from pydantic import BaseModel
 from typing_extensions import override
 
 from askui.models.shared.agent_message_param import UsageParam
 from askui.models.shared.conversation_callback import ConversationCallback
-from askui.reporting import NULL_REPORTER, Reporter
+from askui.reporting import NULL_REPORTER
 
 if TYPE_CHECKING:
     from askui.models.shared.conversation import Conversation
+    from askui.reporting import Reporter
     from askui.speaker.speaker import SpeakerResult
     from askui.utils.model_pricing import ModelPricing
+
+
+class UsageSummary(BaseModel):
+    """Accumulated token usage and optional cost breakdown for a conversation.
+
+    Args:
+        input_tokens (int | None): Total input tokens sent to the API.
+        output_tokens (int | None): Total output tokens generated.
+        cache_creation_input_tokens (int | None): Tokens used for cache creation.
+        cache_read_input_tokens (int | None): Tokens read from cache.
+        input_cost (float | None): Computed input cost in `currency`.
+        output_cost (float | None): Computed output cost in `currency`.
+        total_cost (float | None): Sum of `input_cost` and `output_cost`.
+        currency (str | None): ISO 4217 currency code (e.g. ``"USD"``).
+        input_cost_per_million_tokens (float | None): Rate used to compute `input_cost`.
+        output_cost_per_million_tokens (float|None): Rate used to compute `output_cost`.
+    """
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
+    input_cost: float | None = None
+    output_cost: float | None = None
+    total_cost: float | None = None
+    currency: str | None = None
+    input_cost_per_million_tokens: float | None = None
+    output_cost_per_million_tokens: float | None = None
 
 
 class UsageTrackingCallback(ConversationCallback):
@@ -51,27 +81,40 @@ class UsageTrackingCallback(ConversationCallback):
 
     @override
     def on_conversation_end(self, conversation: Conversation) -> None:
-        usage_dict = self._accumulated_usage.model_dump()
+        input_cost: float | None = None
+        output_cost: float | None = None
+        total_cost: float | None = None
+        currency: str | None = None
+        input_cost_per_million_tokens: float | None = None
+        output_cost_per_million_tokens: float | None = None
         if self._pricing is not None:
             input_tokens = self._accumulated_usage.input_tokens or 0
             output_tokens = self._accumulated_usage.output_tokens or 0
             input_cost = (
-                input_tokens * self._pricing.input_cost_per_million_tokens / 1e7
+                input_tokens * self._pricing.input_cost_per_million_tokens / 1e6
             )
             output_cost = (
-                output_tokens * self._pricing.output_cost_per_million_tokens / 1e7
+                output_tokens * self._pricing.output_cost_per_million_tokens / 1e6
             )
-            usage_dict["input_cost"] = input_cost
-            usage_dict["output_cost"] = output_cost
-            usage_dict["total_cost"] = input_cost + output_cost
-            usage_dict["currency"] = self._pricing.currency
-            usage_dict["input_cost_per_million_tokens"] = (
-                self._pricing.input_cost_per_million_tokens
-            )
-            usage_dict["output_cost_per_million_tokens"] = (
+            total_cost = input_cost + output_cost
+            currency = self._pricing.currency
+            input_cost_per_million_tokens = self._pricing.input_cost_per_million_tokens
+            output_cost_per_million_tokens = (
                 self._pricing.output_cost_per_million_tokens
             )
-        self._reporter.add_usage_summary(usage_dict)
+        summary = UsageSummary(
+            input_tokens=self._accumulated_usage.input_tokens,
+            output_tokens=self._accumulated_usage.output_tokens,
+            cache_creation_input_tokens=self._accumulated_usage.cache_creation_input_tokens,
+            cache_read_input_tokens=self._accumulated_usage.cache_read_input_tokens,
+            input_cost=input_cost,
+            output_cost=output_cost,
+            total_cost=total_cost,
+            currency=currency,
+            input_cost_per_million_tokens=input_cost_per_million_tokens,
+            output_cost_per_million_tokens=output_cost_per_million_tokens,
+        )
+        self._reporter.add_usage_summary(summary)
 
     @property
     def accumulated_usage(self) -> UsageParam:

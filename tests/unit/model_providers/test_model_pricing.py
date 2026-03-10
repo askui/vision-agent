@@ -1,12 +1,14 @@
 """Unit tests for model pricing resolution and cost calculation."""
 
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from askui.models.shared.agent_message_param import UsageParam
-from askui.models.shared.usage_tracking_callback import UsageTrackingCallback
+from askui.models.shared.usage_tracking_callback import (
+    UsageSummary,
+    UsageTrackingCallback,
+)
 from askui.utils.model_pricing import ModelPricing
 
 
@@ -58,7 +60,7 @@ class TestModelPricingForModel:
         assert pricing.input_cost_per_million_tokens == 1.0
 
 
-def _get_usage_dict(reporter_mock: MagicMock) -> dict[str, Any]:
+def _get_usage_summary(reporter_mock: MagicMock) -> UsageSummary:
     return reporter_mock.add_usage_summary.call_args[0][0]  # type: ignore[no-any-return]
 
 
@@ -82,13 +84,13 @@ class TestUsageTrackingCallbackCost:
         )
         callback.on_conversation_end(MagicMock())
 
-        usage_dict = _get_usage_dict(reporter)
-        assert usage_dict["total_cost"] == pytest.approx(4.5)
-        assert usage_dict["input_cost"] == pytest.approx(3.0)
-        assert usage_dict["output_cost"] == pytest.approx(1.5)
-        assert usage_dict["currency"] == "USD"
-        assert usage_dict["input_cost_per_million_tokens"] == 3.0
-        assert usage_dict["output_cost_per_million_tokens"] == 15.0
+        summary = _get_usage_summary(reporter)
+        assert summary.total_cost == pytest.approx(4.5)
+        assert summary.input_cost == pytest.approx(3.0)
+        assert summary.output_cost == pytest.approx(1.5)
+        assert summary.currency == "USD"
+        assert summary.input_cost_per_million_tokens == 3.0
+        assert summary.output_cost_per_million_tokens == 15.0
 
     def test_no_cost_when_pricing_none(self) -> None:
         callback, reporter = self._make_callback(pricing=None)
@@ -98,9 +100,9 @@ class TestUsageTrackingCallbackCost:
         )
         callback.on_conversation_end(MagicMock())
 
-        usage_dict = _get_usage_dict(reporter)
-        assert "total_cost" not in usage_dict
-        assert "currency" not in usage_dict
+        summary = _get_usage_summary(reporter)
+        assert summary.total_cost is None
+        assert summary.currency is None
 
     def test_zero_tokens_produce_zero_cost(self) -> None:
         pricing = ModelPricing(
@@ -114,8 +116,8 @@ class TestUsageTrackingCallbackCost:
         )
         callback.on_conversation_end(MagicMock())
 
-        usage_dict = _get_usage_dict(reporter)
-        assert usage_dict["total_cost"] == 0.0
+        summary = _get_usage_summary(reporter)
+        assert summary.total_cost == 0.0
 
     def test_none_tokens_treated_as_zero(self) -> None:
         pricing = ModelPricing(
@@ -126,8 +128,8 @@ class TestUsageTrackingCallbackCost:
         callback._accumulated_usage = UsageParam()
         callback.on_conversation_end(MagicMock())
 
-        usage_dict = _get_usage_dict(reporter)
-        assert usage_dict["total_cost"] == 0.0
+        summary = _get_usage_summary(reporter)
+        assert summary.total_cost == 0.0
 
     def test_cost_calculation_accuracy(self) -> None:
         pricing = ModelPricing(
@@ -141,11 +143,9 @@ class TestUsageTrackingCallbackCost:
         )
         callback.on_conversation_end(MagicMock())
 
-        usage_dict = _get_usage_dict(reporter)
+        summary = _get_usage_summary(reporter)
         expected_input = 50_000 * 15.0 / 1_000_000
         expected_output = 10_000 * 75.0 / 1_000_000
-        assert usage_dict["input_cost"] == pytest.approx(expected_input)
-        assert usage_dict["output_cost"] == pytest.approx(expected_output)
-        assert usage_dict["total_cost"] == pytest.approx(
-            expected_input + expected_output
-        )
+        assert summary.input_cost == pytest.approx(expected_input)
+        assert summary.output_cost == pytest.approx(expected_output)
+        assert summary.total_cost == pytest.approx(expected_input + expected_output)
