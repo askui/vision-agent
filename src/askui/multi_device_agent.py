@@ -2,10 +2,10 @@ from typing import Annotated, Optional, Type, overload
 
 from pydantic import Field
 
-from askui.agent import ComputerAgent
 from askui.agent_base import Agent
 from askui.agent_settings import AgentSettings
 from askui.android_agent import AndroidAgent
+from askui.computer_agent import ComputerAgent
 from askui.locators.locators import Locator
 from askui.models.shared.settings import GetSettings, LocateSettings
 from askui.models.shared.tools import Tool
