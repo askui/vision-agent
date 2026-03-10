@@ -36,26 +36,6 @@ SimpleHtmlReporter(output_dir="./execution_reports", filename="agent_run.html")
 
 The HTML report automatically shows the estimated API cost when using a `VlmProvider` with pricing information. The built-in Anthropic and AskUI providers include default pricing for supported Claude models.
 
-To override pricing (for example, if you have a custom pricing agreement):
-
-```python
-from askui import AgentSettings, ComputerAgent
-from askui.model_providers import AnthropicVlmProvider
-from askui.reporting import SimpleHtmlReporter
-
-with ComputerAgent(
-    reporters=[SimpleHtmlReporter()],
-    settings=AgentSettings(
-        vlm_provider=AnthropicVlmProvider(
-            model_id="claude-sonnet-4-6",
-            input_cost_per_million_tokens=2.5,
-            output_cost_per_million_tokens=12.0,
-        ),
-    ),
-) as agent:
-    agent.act("Open settings")
-```
-
 The report will display:
 - Total estimated cost
 - Per-token rates used for the calculation

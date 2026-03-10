@@ -137,7 +137,7 @@ class MyImageQAProvider(ImageQAProvider):
 
 ### Execution Cost Tracking
 
-The built-in providers include default pricing for supported models. You can override the pricing on any provider by passing `input_cost_per_million_tokens` and `output_cost_per_million_tokens`:
+The built-in VLM providers include default pricing for supported models. You can override the pricing on any provider by passing `input_cost_per_million_tokens` and `output_cost_per_million_tokens`:
 
 ```python
 from askui import AgentSettings, ComputerAgent
