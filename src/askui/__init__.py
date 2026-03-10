@@ -30,7 +30,9 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
+from .models.exceptions import MaxStepsReachedError
 from .models.shared.conversation_callback import ConversationCallback
+from .models.shared.max_steps_callback import MaxStepsCallback
 from .models.shared.settings import (
     DEFAULT_GET_RESOLUTION,
     DEFAULT_LOCATE_RESOLUTION,
@@ -81,6 +83,8 @@ __all__ = [
     "ConfigurableRetry",
     "ContentBlockParam",
     "ConversationCallback",
+    "MaxStepsCallback",
+    "MaxStepsReachedError",
     "DEFAULT_GET_RESOLUTION",
     "DEFAULT_LOCATE_RESOLUTION",
     "GetSettings",
