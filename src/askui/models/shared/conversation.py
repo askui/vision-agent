@@ -22,7 +22,7 @@ from askui.speaker.speaker import SpeakerResult, Speakers
 from askui.tools.switch_speaker_tool import SwitchSpeakerTool
 
 if TYPE_CHECKING:
-    from askui.models.shared.conversation_callback import ConversationCallback
+    from askui.callbacks import ConversationCallback
     from askui.utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)

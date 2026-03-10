@@ -6,10 +6,10 @@ from pydantic import ConfigDict, Field, validate_call
 
 from askui.agent_base import Agent
 from askui.agent_settings import AgentSettings
+from askui.callbacks import ConversationCallback
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.models import Point
-from askui.models.shared.conversation_callback import ConversationCallback
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
 from askui.prompts.act_prompts import create_android_agent_prompt

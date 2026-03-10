@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from askui.callbacks import MaxStepsCallback
 from askui.models.exceptions import MaxStepsReachedError
-from askui.models.shared.max_steps_callback import MaxStepsCallback
 
 
 class TestMaxStepsCallback:

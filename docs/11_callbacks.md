@@ -2,6 +2,8 @@
 
 Callbacks provide hooks into the agent's conversation lifecycle, similar to PyTorch Lightning's callback system. Use them for logging, monitoring, custom metrics, or extending agent behavior.
 
+All callbacks live in `askui.callbacks` and can be imported from there.
+
 ## Usage
 
 Subclass `ConversationCallback` and override the hooks you need:
@@ -69,6 +71,19 @@ class TimingCallback(ConversationCallback):
 
 with ComputerAgent(callbacks=[TimingCallback()]) as agent:
     agent.act("Search for documents")
+```
+
+## Built-in Callbacks
+
+### `MaxStepsCallback`
+
+Terminates the agentic loop after a maximum number of steps. Raises `MaxStepsReachedError` when the limit is reached.
+
+```python
+from askui import ComputerAgent, MaxStepsCallback
+
+with ComputerAgent(callbacks=[MaxStepsCallback(max_steps=10)]) as agent:
+    agent.act("Open the settings menu")
 ```
 
 ## Multiple Callbacks
