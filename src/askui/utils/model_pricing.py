@@ -53,6 +53,8 @@ class ModelPricing(BaseModel):
         return _DEFAULT_PRICING.get(model_id)
 
 
+# taken from: https://platform.claude.com/docs/en/about-claude/models/overview
+# last accessed: March 10, 2026
 _DEFAULT_PRICING.update(
     {
         "claude-haiku-4-5-20251001": ModelPricing(
