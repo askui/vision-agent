@@ -7,36 +7,55 @@ import pytest
 
 from askui.models.shared.agent_message_param import UsageParam
 from askui.models.shared.usage_tracking_callback import UsageTrackingCallback
-from askui.utils.model_pricing import ModelPricing, resolve_default_pricing
+from askui.utils.model_pricing import ModelPricing
 
 
-class TestResolveDefaultPricing:
+class TestModelPricingForModel:
     def test_exact_match_sonnet_4_6(self) -> None:
-        pricing = resolve_default_pricing("claude-sonnet-4-6")
+        pricing = ModelPricing.for_model("claude-sonnet-4-6")
         assert pricing is not None
         assert pricing.input_cost_per_million_tokens == 3.0
         assert pricing.output_cost_per_million_tokens == 15.0
 
     def test_exact_match_opus_4_6(self) -> None:
-        pricing = resolve_default_pricing("claude-opus-4-6")
+        pricing = ModelPricing.for_model("claude-opus-4-6")
         assert pricing is not None
         assert pricing.input_cost_per_million_tokens == 5.0
         assert pricing.output_cost_per_million_tokens == 25.0
 
     def test_exact_match_haiku(self) -> None:
-        pricing = resolve_default_pricing("claude-haiku-4-5-20251001")
+        pricing = ModelPricing.for_model("claude-haiku-4-5-20251001")
         assert pricing is not None
         assert pricing.input_cost_per_million_tokens == 1.0
         assert pricing.output_cost_per_million_tokens == 5.0
 
     def test_unknown_model_returns_none(self) -> None:
-        assert resolve_default_pricing("unknown-model-v1") is None
+        assert ModelPricing.for_model("unknown-model-v1") is None
 
     def test_empty_string_returns_none(self) -> None:
-        assert resolve_default_pricing("") is None
+        assert ModelPricing.for_model("") is None
 
     def test_partial_model_id_returns_none(self) -> None:
-        assert resolve_default_pricing("claude-sonnet-4") is None
+        assert ModelPricing.for_model("claude-sonnet-4") is None
+
+    def test_override_costs(self) -> None:
+        pricing = ModelPricing.for_model(
+            "claude-sonnet-4-6",
+            input_cost_per_million_tokens=99.0,
+            output_cost_per_million_tokens=199.0,
+        )
+        assert pricing is not None
+        assert pricing.input_cost_per_million_tokens == 99.0
+        assert pricing.output_cost_per_million_tokens == 199.0
+
+    def test_override_costs_unknown_model(self) -> None:
+        pricing = ModelPricing.for_model(
+            "unknown-model",
+            input_cost_per_million_tokens=1.0,
+            output_cost_per_million_tokens=2.0,
+        )
+        assert pricing is not None
+        assert pricing.input_cost_per_million_tokens == 1.0
 
 
 def _get_usage_dict(reporter_mock: MagicMock) -> dict[str, Any]:

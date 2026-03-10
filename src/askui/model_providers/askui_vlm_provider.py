@@ -17,7 +17,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
-from askui.utils.model_pricing import ModelPricing, resolve_default_pricing
+from askui.utils.model_pricing import ModelPricing
 
 _DEFAULT_MODEL_ID = "claude-sonnet-4-6"
 
@@ -72,17 +72,11 @@ class AskUIVlmProvider(VlmProvider):
             model_id or os.environ.get("VLM_PROVIDER_MODEL_ID") or _DEFAULT_MODEL_ID
         )
         self._injected_client = client
-        self._pricing: ModelPricing | None
-        if (
-            input_cost_per_million_tokens is not None
-            and output_cost_per_million_tokens is not None
-        ):
-            self._pricing = ModelPricing(
-                input_cost_per_million_tokens=input_cost_per_million_tokens,
-                output_cost_per_million_tokens=output_cost_per_million_tokens,
-            )
-        else:
-            self._pricing = resolve_default_pricing(self._model_id_value)
+        self._pricing = ModelPricing.for_model(
+            self._model_id_value,
+            input_cost_per_million_tokens=input_cost_per_million_tokens,
+            output_cost_per_million_tokens=output_cost_per_million_tokens,
+        )
 
     @property
     @override
