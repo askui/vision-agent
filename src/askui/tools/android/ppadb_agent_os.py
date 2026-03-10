@@ -14,6 +14,7 @@ from askui.tools.android.agent_os import (
     ANDROID_KEY,
     AndroidAgentOs,
     AndroidDisplay,
+    SingleAndroidDisplay,
     UnknownAndroidDisplay,
 )
 from askui.tools.android.android_agent_os_error import AndroidAgentOsError
@@ -116,6 +117,10 @@ class PpadbAgentOs(AndroidAgentOs):
                     )
         if not displays:
             return [UnknownAndroidDisplay()]
+
+        if len(displays) == 1:
+            return [SingleAndroidDisplay(displays[0].display_name)]
+
         return displays
 
     def set_display_by_index(self, display_index: int = 0) -> None:
