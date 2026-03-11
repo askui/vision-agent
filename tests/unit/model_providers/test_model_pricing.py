@@ -105,9 +105,8 @@ class TestUsageTrackingCallbackCost:
             output_cost_per_million_tokens=output_rate,
         )
         callback, reporter = self._make_callback(pricing)
-        callback._accumulated_usage = UsageParam(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
+        callback._accumulate(
+            UsageParam(input_tokens=input_tokens, output_tokens=output_tokens)
         )
         callback.on_conversation_end(MagicMock())
 
@@ -123,10 +122,7 @@ class TestUsageTrackingCallbackCost:
 
     def test_no_cost_when_pricing_none(self) -> None:
         callback, reporter = self._make_callback(pricing=None)
-        callback._accumulated_usage = UsageParam(
-            input_tokens=500,
-            output_tokens=200,
-        )
+        callback._accumulate(UsageParam(input_tokens=500, output_tokens=200))
         callback.on_conversation_end(MagicMock())
 
         summary = _get_usage_summary(reporter)
@@ -139,7 +135,7 @@ class TestUsageTrackingCallbackCost:
             output_cost_per_million_tokens=15.0,
         )
         callback, reporter = self._make_callback(pricing)
-        callback._accumulated_usage = UsageParam()
+        callback._accumulate(UsageParam())
         callback.on_conversation_end(MagicMock())
 
         summary = _get_usage_summary(reporter)
