@@ -607,6 +607,7 @@ class CacheExecutor(Speaker):
             "retrieve_available_trajectories_tool",
             "switch_speaker",
             "execute_cached_executions_tool",  # backward compat for old caches
+            "print_to_console",  # verbosity is not needed during cached executions
         ]
         return any(step.name.startswith(prefix) for prefix in tools_to_skip)
 
