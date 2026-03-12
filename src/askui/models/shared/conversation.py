@@ -216,11 +216,10 @@ class Conversation:
         if self.settings.max_steps is None:
             return False
         if self._step_index >= self.settings.max_steps:
-            logger.info(
-                "Reached max_steps limit (%d), stopping conversation",
-                self.settings.max_steps,
+            msg = (
+                f"Reached max_steps limit {self.settings.max_steps}, stopping execution"
             )
-            return True
+            raise ConversationException(msg)
         return False
 
     @tracer.start_as_current_span("_teardown_control_loop")
