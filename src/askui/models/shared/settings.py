@@ -89,6 +89,7 @@ class ActSettings(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: MessageSettings = Field(default_factory=MessageSettings)
+    max_steps: int | None = None
 
 
 class GetSettings(BaseModel):
