@@ -207,8 +207,21 @@ class Conversation:
         self._step_index = 0
         continue_execution = True
         while continue_execution:
+            if self._is_max_steps_reached():
+                break
             continue_execution = self._execute_step()
         self._on_control_loop_end()
+
+    def _is_max_steps_reached(self) -> bool:
+        if self.settings.max_steps is None:
+            return False
+        if self._step_index >= self.settings.max_steps:
+            logger.info(
+                "Reached max_steps limit (%d), stopping conversation",
+                self.settings.max_steps,
+            )
+            return True
+        return False
 
     @tracer.start_as_current_span("_teardown_control_loop")
     def _teardown_control_loop(self) -> None:
