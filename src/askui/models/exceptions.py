@@ -147,25 +147,6 @@ class MaxTokensExceededError(AutomationError):
         super().__init__(error_msg)
 
 
-class MaxStepsReachedError(AutomationError):
-    """Exception raised when the agent reaches the maximum number of steps.
-
-    Args:
-        max_steps (int): The maximum step limit that was reached.
-        message (str, optional): Custom error message. If not provided, a default
-            message will be generated.
-    """
-
-    def __init__(self, max_steps: int, message: str | None = None):
-        self.max_steps = max_steps
-        error_msg = (
-            f"Agent stopped due to reaching maximum step limit of {max_steps} steps"
-            if message is None
-            else message
-        )
-        super().__init__(error_msg)
-
-
 class ModelRefusalError(AutomationError):
     """Exception raised when the model refuses to process the request.
 

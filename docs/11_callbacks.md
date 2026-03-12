@@ -75,16 +75,7 @@ with ComputerAgent(callbacks=[TimingCallback()]) as agent:
 
 ## Built-in Callbacks
 
-### `MaxStepsCallback`
-
-Terminates the agentic loop after a maximum number of steps. Raises `MaxStepsReachedError` when the limit is reached.
-
-```python
-from askui import ComputerAgent, MaxStepsCallback
-
-with ComputerAgent(callbacks=[MaxStepsCallback(max_steps=10)]) as agent:
-    agent.act("Open the settings menu")
-```
+(we will add built-in callbacks at a later stage)
 
 ## Multiple Callbacks
 

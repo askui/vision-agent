@@ -9,7 +9,7 @@ os.environ["FASTMCP_EXPERIMENTAL_ENABLE_NEW_OPENAPI_PARSER"] = "true"
 
 from .agent_base import Agent
 from .agent_settings import AgentSettings
-from .callbacks import ConversationCallback, MaxStepsCallback
+from .callbacks import ConversationCallback
 from .computer_agent import ComputerAgent, VisionAgent
 from .locators import Locator
 from .models import (
@@ -31,7 +31,6 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
-from .models.exceptions import MaxStepsReachedError
 from .models.shared.settings import (
     DEFAULT_GET_RESOLUTION,
     DEFAULT_LOCATE_RESOLUTION,
@@ -82,8 +81,6 @@ __all__ = [
     "ConfigurableRetry",
     "ContentBlockParam",
     "ConversationCallback",
-    "MaxStepsCallback",
-    "MaxStepsReachedError",
     "DEFAULT_GET_RESOLUTION",
     "DEFAULT_LOCATE_RESOLUTION",
     "GetSettings",
