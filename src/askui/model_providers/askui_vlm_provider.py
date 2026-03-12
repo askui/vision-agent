@@ -37,7 +37,6 @@ class AskUIVlmProvider(VlmProvider):
             `"claude-sonnet-4-6"`.
         client (Anthropic | None, optional): Pre-configured Anthropic client.
             If provided, `workspace_id` and `token` are ignored.
-
     Example:
         ```python
         from askui import AgentSettings, ComputerAgent
