@@ -117,28 +117,30 @@ class UsageTrackingCallback(ConversationCallback):
         )
 
         # Update costs from updated totals if pricing values are set
-        if (
+        if not (
             self._pricing
             and self._pricing.input_cost_per_million_tokens
             and self._pricing.output_cost_per_million_tokens
         ):
-            input_cost = (
-                self._summary.input_tokens
-                * self._pricing.input_cost_per_million_tokens
-                / 1e6
-            )
-            output_cost = (
-                self._summary.output_tokens
-                * self._pricing.output_cost_per_million_tokens
-                / 1e6
-            )
-            self._summary.input_cost = input_cost
-            self._summary.output_cost = output_cost
-            self._summary.total_cost = input_cost + output_cost
-            self._summary.currency = self._pricing.currency
-            self._summary.input_cost_per_million_tokens = (
-                self._pricing.input_cost_per_million_tokens
-            )
-            self._summary.output_cost_per_million_tokens = (
-                self._pricing.output_cost_per_million_tokens
-            )
+            return
+
+        input_cost = (
+            self._summary.input_tokens
+            * self._pricing.input_cost_per_million_tokens
+            / 1e6
+        )
+        output_cost = (
+            self._summary.output_tokens
+            * self._pricing.output_cost_per_million_tokens
+            / 1e6
+        )
+        self._summary.input_cost = input_cost
+        self._summary.output_cost = output_cost
+        self._summary.total_cost = input_cost + output_cost
+        self._summary.currency = self._pricing.currency
+        self._summary.input_cost_per_million_tokens = (
+            self._pricing.input_cost_per_million_tokens
+        )
+        self._summary.output_cost_per_million_tokens = (
+            self._pricing.output_cost_per_million_tokens
+        )
