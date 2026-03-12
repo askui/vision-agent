@@ -21,7 +21,7 @@ from askui.utils.annotated_image import AnnotatedImage
 if TYPE_CHECKING:
     from PIL import Image
 
-    from askui.models.shared.usage_tracking_callback import UsageSummary
+    from askui.callbacks.usage_tracking_callback import UsageSummary
 
 
 def normalize_to_pil_images(
