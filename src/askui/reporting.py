@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import io
 import json
@@ -9,13 +11,17 @@ from datetime import datetime, timezone
 from importlib.metadata import distributions
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from jinja2 import Template
-from PIL import Image
 from typing_extensions import TypedDict, override
 
 from askui.utils.annotated_image import AnnotatedImage
+
+if TYPE_CHECKING:
+    from PIL import Image
+
+    from askui.models.shared.usage_tracking_callback import UsageSummary
 
 
 def normalize_to_pil_images(
@@ -80,15 +86,14 @@ class Reporter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+    def add_usage_summary(self, usage: UsageSummary) -> None:
         """Add usage statistics summary to the report.
 
-        Called at the end of an act() execution with accumulated token usage.
+        Called at the end of an ``act()`` execution with accumulated token
+        usage and optional cost breakdown.
 
         Args:
-            usage (dict[str, int | None]): Accumulated usage statistics containing:
-                - input_tokens: Total input tokens sent to API
-                - output_tokens: Total output tokens generated
+            usage (UsageSummary): Accumulated usage statistics.
         """
         raise NotImplementedError
 
@@ -134,7 +139,7 @@ class NullReporter(Reporter):
         pass
 
     @override
-    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+    def add_usage_summary(self, usage: UsageSummary) -> None:
         pass
 
     @override
@@ -177,7 +182,7 @@ class CompositeReporter(Reporter):
             reporter.add_message(role, content, image)
 
     @override
-    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+    def add_usage_summary(self, usage: UsageSummary) -> None:
         """Add usage summary to all reporters."""
         for reporter in self._reporters:
             reporter.add_usage_summary(usage)
@@ -215,7 +220,7 @@ class SimpleHtmlReporter(Reporter):
         self.report_dir = Path(report_dir)
         self.messages: list[dict[str, Any]] = []
         self.system_info = self._collect_system_info()
-        self.usage_summary: dict[str, int | None] | None = None
+        self.usage_summary: UsageSummary | None = None
         self.cache_original_usage: dict[str, int | None] | None = None
         self._start_time: datetime | None = None
 
@@ -264,7 +269,7 @@ class SimpleHtmlReporter(Reporter):
         self.messages.append(message)
 
     @override
-    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+    def add_usage_summary(self, usage: UsageSummary) -> None:
         """Store usage summary for inclusion in the report."""
         self.usage_summary = usage
 
@@ -790,14 +795,14 @@ class SimpleHtmlReporter(Reporter):
                             </tr>
                             {% endif %}
                             {% if usage_summary is not none %}
-                                {% if usage_summary.get('input_tokens') is not none %}
+                                {% if usage_summary.input_tokens is not none %}
                                 <tr>
                                     <th>Input Tokens</th>
                                     <td>
-                                        {{ "{:,}".format(usage_summary.get('input_tokens')) }}
+                                        {{ "{:,}".format(usage_summary.input_tokens) }}
                                         {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
                                             {% set original = cache_original_usage.get('input_tokens') %}
-                                            {% set current = usage_summary.get('input_tokens') %}
+                                            {% set current = usage_summary.input_tokens %}
                                             {% set saved = original - current %}
                                             {% if saved > 0 and original > 0 %}
                                                 {% set savings_pct = (saved / original * 100) %}
@@ -807,20 +812,32 @@ class SimpleHtmlReporter(Reporter):
                                     </td>
                                 </tr>
                                 {% endif %}
-                                {% if usage_summary.get('output_tokens') is not none %}
+                                {% if usage_summary.output_tokens is not none %}
                                 <tr>
                                     <th>Output Tokens</th>
                                     <td>
-                                        {{ "{:,}".format(usage_summary.get('output_tokens')) }}
+                                        {{ "{:,}".format(usage_summary.output_tokens) }}
                                         {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
                                             {% set original = cache_original_usage.get('output_tokens') %}
-                                            {% set current = usage_summary.get('output_tokens') %}
+                                            {% set current = usage_summary.output_tokens %}
                                             {% set saved = original - current %}
                                             {% if saved > 0 and original > 0 %}
                                                 {% set savings_pct = (saved / original * 100) %}
                                                 <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
                                             {% endif %}
                                         {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if usage_summary.total_cost is not none %}
+                                <tr>
+                                    <th>Estimated Cost <span style="font-weight:normal;color:var(--text-muted);">(actual cost may differ)</span></th>
+                                    <td>
+                                        {{ "%.2f"|format(usage_summary.total_cost) }} {{ usage_summary.currency or 'USD' }}
+                                        <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                            (Input: ${{ "%.2f"|format(usage_summary.input_cost_per_million_tokens or 0) }}/1M tokens,
+                                             Output: ${{ "%.2f"|format(usage_summary.output_cost_per_million_tokens or 0) }}/1M tokens)
+                                        </span>
                                     </td>
                                 </tr>
                                 {% endif %}
@@ -980,7 +997,7 @@ class AllureReporter(Reporter):
                     )
 
     @override
-    def add_usage_summary(self, usage: dict[str, int | None]) -> None:
+    def add_usage_summary(self, usage: UsageSummary) -> None:
         """No-op for AllureReporter - usage is not tracked."""
 
     @override

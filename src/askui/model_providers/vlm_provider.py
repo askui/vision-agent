@@ -10,6 +10,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
+from askui.utils.model_pricing import ModelPricing
 
 
 class VlmProvider(ABC):
@@ -42,6 +43,15 @@ class VlmProvider(ABC):
     @abstractmethod
     def model_id(self) -> str:
         """The model identifier used by this provider."""
+
+    @property
+    def pricing(self) -> ModelPricing | None:
+        """Pricing information for this provider's model.
+
+        Returns ``None`` if no pricing information is available.
+        Override in subclasses to provide model-specific pricing.
+        """
+        return None
 
     @abstractmethod
     def create_message(

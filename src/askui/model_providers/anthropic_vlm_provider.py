@@ -16,6 +16,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
+from askui.utils.model_pricing import ModelPricing
 
 _DEFAULT_MODEL_ID = "claude-sonnet-4-6"
 
@@ -38,6 +39,11 @@ class AnthropicVlmProvider(VlmProvider):
             `\"claude-sonnet-4-6\"`.
         client (Anthropic | None, optional): Pre-configured Anthropic client.
             If provided, other connection parameters are ignored.
+        input_cost_per_million_tokens (float | None, optional): Override
+            cost in USD per 1M input tokens. Both cost params must be set
+            to override the built-in defaults.
+        output_cost_per_million_tokens (float | None, optional): Override
+            cost in USD per 1M output tokens.
 
     Example:
         ```python
@@ -60,6 +66,8 @@ class AnthropicVlmProvider(VlmProvider):
         auth_token: str | None = None,
         model_id: str | None = None,
         client: Anthropic | None = None,
+        input_cost_per_million_tokens: float | None = None,
+        output_cost_per_million_tokens: float | None = None,
     ) -> None:
         self._model_id_value = (
             model_id or os.environ.get("VLM_PROVIDER_MODEL_ID") or _DEFAULT_MODEL_ID
@@ -72,11 +80,21 @@ class AnthropicVlmProvider(VlmProvider):
                 base_url=base_url,
                 auth_token=auth_token,
             )
+        self._pricing = ModelPricing.for_model(
+            self._model_id_value,
+            input_cost_per_million_tokens=input_cost_per_million_tokens,
+            output_cost_per_million_tokens=output_cost_per_million_tokens,
+        )
 
     @property
     @override
     def model_id(self) -> str:
         return self._model_id_value
+
+    @property
+    @override
+    def pricing(self) -> ModelPricing | None:
+        return self._pricing
 
     @cached_property
     def _messages_api(self) -> AnthropicMessagesApi:

@@ -46,7 +46,9 @@ with user interfaces through computer vision and input control.
   down/up to see everything before deciding something isn't available.
 * When using your function calls, they take a while to run and send back
   to you. Where possible/feasible, try to chain multiple of these calls
-  all into one function calls request."""
+  all into one function calls request.
+* If you need to execute a click, make sure to move the mouse to the correct
+  position first!"""
 
 ANDROID_CAPABILITIES = """You are an autonomous Android device control agent
 operating via ADB on a test device with full system access.

@@ -135,6 +135,46 @@ class MyImageQAProvider(ImageQAProvider):
 ```
 
 
+### Execution Cost Tracking
+
+The built-in VLM providers include default pricing for supported models. You can override the pricing on any provider by passing `input_cost_per_million_tokens` and `output_cost_per_million_tokens`:
+
+```python
+from askui import AgentSettings, ComputerAgent
+from askui.model_providers import AnthropicVlmProvider
+from askui.reporting import SimpleHtmlReporter
+
+with ComputerAgent(
+    reporters=[SimpleHtmlReporter()],
+    settings=AgentSettings(
+        vlm_provider=AnthropicVlmProvider(
+            model_id="claude-sonnet-4-6",
+            input_cost_per_million_tokens=3.0,
+            output_cost_per_million_tokens=15.0,
+        ),
+    ),
+) as agent:
+    agent.act("Open settings")
+```
+
+If you implement a fully custom `VlmProvider`, override the `pricing` property to enable cost tracking:
+
+```python
+from askui.model_providers import VlmProvider, ModelPricing
+
+class MyVlmProvider(VlmProvider):
+    @property
+    def pricing(self) -> ModelPricing | None:
+        return ModelPricing(
+            input_cost_per_million_tokens=1.0,
+            output_cost_per_million_tokens=5.0,
+        )
+
+    # ... rest of implementation
+```
+
+---
+
 ## Advanced: Injecting a Custom Client
 
 For full control over HTTP settings (timeouts, proxies, retries), you can inject a pre-configured client:

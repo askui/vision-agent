@@ -23,6 +23,7 @@ from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.google_image_qa_provider import GoogleImageQAProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
+from askui.utils.model_pricing import ModelPricing
 
 __all__ = [
     "AnthropicImageQAProvider",
@@ -33,5 +34,6 @@ __all__ = [
     "DetectionProvider",
     "GoogleImageQAProvider",
     "ImageQAProvider",
+    "ModelPricing",
     "VlmProvider",
 ]
