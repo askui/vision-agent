@@ -788,10 +788,10 @@ class SimpleHtmlReporter(Reporter):
                     <div class="section">
                         <h2>Execution Statistics</h2>
                         <table class="system-info">
-                            {% if execution_time_seconds is not none %}
+                            {% if execution_time_formatted is not none %}
                             <tr>
                                 <th>Execution Time</th>
-                                <td>{{ "%.2f"|format(execution_time_seconds) }} seconds</td>
+                                <td>{{ execution_time_formatted }}</td>
                             </tr>
                             {% endif %}
                             {% if usage_summary is not none %}
@@ -903,9 +903,12 @@ class SimpleHtmlReporter(Reporter):
 
         # Calculate execution time
         end_time = datetime.now(tz=timezone.utc)
-        execution_time_seconds: float | None = None
+        execution_time_formatted: str | None = None
         if self._start_time is not None:
-            execution_time_seconds = (end_time - self._start_time).total_seconds()
+            total_secs = int((end_time - self._start_time).total_seconds())
+            hours, remainder = divmod(total_secs, 3600)
+            minutes, secs = divmod(remainder, 60)
+            execution_time_formatted = f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
         html = template.render(
             timestamp=end_time,
@@ -913,7 +916,7 @@ class SimpleHtmlReporter(Reporter):
             system_info=self.system_info,
             usage_summary=self.usage_summary,
             cache_original_usage=self.cache_original_usage,
-            execution_time_seconds=execution_time_seconds,
+            execution_time_formatted=execution_time_formatted,
         )
 
         report_path = (
