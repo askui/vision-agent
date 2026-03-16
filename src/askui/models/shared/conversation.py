@@ -219,7 +219,8 @@ class Conversation:
             msg = (
                 f"Reached max_steps limit {self.settings.max_steps}, stopping execution"
             )
-            raise ConversationException(msg)
+            logger.exception(msg)
+            return True
         return False
 
     @tracer.start_as_current_span("_teardown_control_loop")
