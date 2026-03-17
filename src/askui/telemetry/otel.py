@@ -1,4 +1,3 @@
-import base64
 import logging
 
 from opentelemetry import trace
@@ -26,7 +25,7 @@ class OtelSettings(BaseSettings):
     enabled: bool = Field(default=False)
     b64_secret: SecretStr | None = Field(
         default=None,
-        description="Secret for OTLP authentication, encoded as base64 array." \
+        description="Secret for OTLP authentication, encoded as base64 array."
         "Required when enabled=True.",
     )
     service_name: str = Field(default="askui-python-sdk")

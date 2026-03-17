@@ -119,7 +119,9 @@ class Agent:
         self.locate_settings = LocateSettings()
         self.caching_settings = CachingSettings()
 
-    @telemetry.record_call(exclude={"goal", "act_settings", "tools", "tracing_settings"})
+    @telemetry.record_call(
+        exclude={"goal", "act_settings", "tools", "tracing_settings"}
+    )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
