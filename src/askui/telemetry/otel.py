@@ -1,3 +1,4 @@
+import base64
 import logging
 
 from opentelemetry import trace
@@ -23,10 +24,13 @@ class OtelSettings(BaseSettings):
     )
 
     enabled: bool = Field(default=False)
-    b64_secret: SecretStr | None = Field(
+    user: str | None = Field(
         default=None,
-        description="Secret for OTLP authentication, encoded as base64 array."
-        "Required when enabled=True.",
+        description="User for OTLP authentication. Required when enabled=True.",
+    )
+    secret: SecretStr | None = Field(
+        default=None,
+        description="Secret for OTLP authentication. Required when enabled=True.",
     )
     service_name: str = Field(default="askui-python-sdk")
     service_version: str = Field(default=__version__)
@@ -39,7 +43,10 @@ class OtelSettings(BaseSettings):
     @model_validator(mode="after")
     def validate_secret_when_enabled(self) -> Self:
         """Ensure secret is provided when OpenTelemetry is enabled."""
-        if self.enabled and self.b64_secret is None:
+        if self.enabled and self.user is None:
+            error_msg = "User is required when OpenTelemetry is enabled"
+            raise ValueError(error_msg)
+        if self.enabled and self.secret is None:
             error_msg = "Secret is required when OpenTelemetry is enabled"
             raise ValueError(error_msg)
         return self
@@ -68,7 +75,10 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
             SQLAlchemyInstrumentor,
         )
     except ImportError:
-        logger.exception("Failed to set up OTEL Tracing.")
+        logger.exception("Failed to set up OpenTelemetry Tracing.")
+        return
+
+    if not settings.enabled:
         return
 
     resource = Resource.create(
@@ -80,9 +90,12 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
     )
     provider = TracerProvider(resource=resource)
 
+    base: str = settings.user + ":" + settings.secret.get_secret_value()  # type: ignore
+    encoded = base64.b64encode(base.encode("utf-8")).decode("utf-8")
+
     otlp_exporter = OTLPSpanExporter(
         endpoint=settings.endpoint,
-        headers={"authorization": f"Basic {settings.b64_secret.get_secret_value()}"},  # type: ignore[union-attr]
+        headers={"authorization": f"Basic {encoded}"},
     )
 
     span_processor = BatchSpanProcessor(otlp_exporter)

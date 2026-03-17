@@ -87,7 +87,8 @@ Set the following environment variables to configure tracing. All variables use 
 | Environment Variable | Description | Default |
 |---|---|---|
 | `ASKUI__OTEL_ENABLED` | Enable or disable OpenTelemetry tracing | `False` |
-| `ASKUI__OTEL_B64_SECRET` | Base64-encoded secret for OTLP authentication (required when enabled) | — |
+| `ASKUI__OTEL_USER` | user for OTLP authentication (required when enabled) | — |
+| `ASKUI__OTEL_SECRET` | secret for OTLP authentication (required when enabled) | — |
 | `ASKUI__OTEL_ENDPOINT` | OTLP HTTP endpoint URL | — |
 | `ASKUI__OTEL_SERVICE_NAME` | Service name reported in traces | `askui-python-sdk` |
 | `ASKUI__OTEL_SERVICE_VERSION` | Service version reported in traces | Current package version |
@@ -96,14 +97,16 @@ Set the following environment variables to configure tracing. All variables use 
 #### Linux & MacOS
 ```bash
 export ASKUI__OTEL_ENABLED=True
-export ASKUI__OTEL_B64_SECRET="your-base64-encoded-secret"
+export ASKUI__OTEL_SECRET="your-user"
+export ASKUI__OTEL_SECRET="your-secret"
 export ASKUI__OTEL_ENDPOINT="https://your-otlp-endpoint/v1/traces"
 ```
 
 #### Windows PowerShell
 ```powershell
 $env:ASKUI__OTEL_ENABLED="True"
-$env:ASKUI__OTEL_B64_SECRET="your-base64-encoded-secret"
+$env:ASKUI__OTEL_SECRET="your-user"
+$env:ASKUI__OTEL_B64_SECRET="your-secret"
 $env:ASKUI__OTEL_ENDPOINT="https://your-otlp-endpoint/v1/traces"
 ```
 
