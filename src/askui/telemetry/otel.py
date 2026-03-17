@@ -58,13 +58,13 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
 
     """
     try:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # type: ignore
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.httpx import (  # type: ignore
+        from opentelemetry.instrumentation.httpx import (
             HTTPXClientInstrumentor,
         )
-        from opentelemetry.instrumentation.sqlalchemy import (  # type: ignore
+        from opentelemetry.instrumentation.sqlalchemy import (
             SQLAlchemyInstrumentor,
         )
     except ImportError:
