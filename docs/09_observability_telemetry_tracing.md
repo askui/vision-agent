@@ -97,7 +97,7 @@ Set the following environment variables to configure tracing. All variables use 
 #### Linux & MacOS
 ```bash
 export ASKUI__OTEL_ENABLED=True
-export ASKUI__OTEL_SECRET="your-user"
+export ASKUI__OTEL_USER="your-user"
 export ASKUI__OTEL_SECRET="your-secret"
 export ASKUI__OTEL_ENDPOINT="https://your-otlp-endpoint/v1/traces"
 ```
