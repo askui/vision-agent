@@ -105,8 +105,8 @@ export ASKUI__OTEL_ENDPOINT="https://your-otlp-endpoint/v1/traces"
 #### Windows PowerShell
 ```powershell
 $env:ASKUI__OTEL_ENABLED="True"
-$env:ASKUI__OTEL_SECRET="your-user"
-$env:ASKUI__OTEL_B64_SECRET="your-secret"
+$env:ASKUI__OTEL_USER="your-user"
+$env:ASKUI__OTEL_SECRET="your-secret"
 $env:ASKUI__OTEL_ENDPOINT="https://your-otlp-endpoint/v1/traces"
 ```
 

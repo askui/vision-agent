@@ -58,7 +58,7 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
 
     Args:
         settings (OtelSettings): OpenTelemetry configuration settings containing
-            endpoint, b64_secret, service name, and version.
+            endpoint, user, secret, service name, and version.
 
     Returns:
         None
