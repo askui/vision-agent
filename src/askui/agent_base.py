@@ -25,6 +25,7 @@ from askui.models.shared.settings import (
 from askui.models.shared.tools import Tool, ToolCollection
 from askui.models.shared.usage_tracking_callback import UsageTrackingCallback
 from askui.prompts.act_prompts import CACHE_USE_PROMPT, create_default_prompt
+from askui.telemetry.otel import OtelSettings, setup_opentelemetry_tracing
 from askui.tools.agent_os import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
 from askui.tools.caching_tools import (
@@ -118,7 +119,9 @@ class Agent:
         self.locate_settings = LocateSettings()
         self.caching_settings = CachingSettings()
 
-    @telemetry.record_call(exclude={"goal", "act_settings", "tools"})
+    @telemetry.record_call(
+        exclude={"goal", "act_settings", "tools", "tracing_settings"}
+    )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def act(
         self,
@@ -126,6 +129,7 @@ class Agent:
         act_settings: ActSettings | None = None,
         tools: list[Tool] | ToolCollection | None = None,
         caching_settings: CachingSettings | None = None,
+        tracing_settings: OtelSettings | None = None,
     ) -> None:
         """
         Instructs the agent to achieve a specified goal through autonomous actions.
@@ -150,6 +154,9 @@ class Agent:
                 caching), "record" (record actions to cache file), "execute" (replay
                 from cached trajectories), "auto" (execute and record). Defaults to
                 no caching.
+            tracing_settings (OtelSettings | None, optional): The tracing settings
+                for the act execution. Controls if and how traces are exported via
+                Opentelemetry.
 
         Returns:
             None
@@ -242,6 +249,10 @@ class Agent:
             _caching_settings, _act_settings, tools, goal_str
         )
         _tools = self._build_tools(tools)
+
+        # setup opentelemetry for tracing
+        if tracing_settings:
+            setup_opentelemetry_tracing(tracing_settings)
 
         # Set toolbox on cache_manager for non-cacheable tool detection
         if cache_manager:

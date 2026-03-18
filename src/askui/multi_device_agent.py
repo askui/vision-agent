@@ -62,14 +62,14 @@ class MultiDeviceAgent(Agent):
         )
 
         # Initialize the computer agent
-        self._computer_agent = ComputerAgent(
+        self._computer_agent: ComputerAgent = ComputerAgent(
             display=desktop_display,
             reporters=[reporter],
             settings=settings,
         )
 
         # Initialize the Android agent
-        self._android_agent = AndroidAgent(
+        self._android_agent: AndroidAgent = AndroidAgent(
             device=android_device_sn,
             reporters=[reporter],
             settings=settings,
