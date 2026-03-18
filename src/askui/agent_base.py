@@ -250,7 +250,8 @@ class Agent:
         )
         _tools = self._build_tools(tools)
 
-        if tracing_settings is not None:
+        # setup opentelemetry for tracing
+        if tracing_settings:
             setup_opentelemetry_tracing(tracing_settings)
 
         # Set toolbox on cache_manager for non-cacheable tool detection
