@@ -207,9 +207,9 @@ class Conversation:
         self._step_index = 0
         continue_execution = True
         while continue_execution:
-            if self._is_max_steps_reached():
-                break
             continue_execution = self._execute_step()
+            if self._is_max_steps_reached():
+                continue_execution = False
         self._on_control_loop_end()
 
     def _is_max_steps_reached(self) -> bool:
