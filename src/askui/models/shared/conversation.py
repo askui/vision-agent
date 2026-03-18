@@ -22,7 +22,7 @@ from askui.speaker.speaker import SpeakerResult, Speakers
 from askui.tools.switch_speaker_tool import SwitchSpeakerTool
 
 if TYPE_CHECKING:
-    from askui.models.shared.conversation_callback import ConversationCallback
+    from askui.callbacks import ConversationCallback
     from askui.utils.caching.cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
@@ -208,7 +208,20 @@ class Conversation:
         continue_execution = True
         while continue_execution:
             continue_execution = self._execute_step()
+            if self._is_max_steps_reached():
+                continue_execution = False
         self._on_control_loop_end()
+
+    def _is_max_steps_reached(self) -> bool:
+        if self.settings.max_steps is None:
+            return False
+        if self._step_index >= self.settings.max_steps:
+            msg = (
+                f"Reached max_steps limit {self.settings.max_steps}, stopping execution"
+            )
+            logger.exception(msg)
+            return True
+        return False
 
     @tracer.start_as_current_span("_teardown_control_loop")
     def _teardown_control_loop(self) -> None:

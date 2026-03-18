@@ -8,7 +8,7 @@ from opentelemetry import trace
 from pydantic import BaseModel
 from typing_extensions import override
 
-from askui.models.shared.conversation_callback import ConversationCallback
+from askui.callbacks.conversation_callback import ConversationCallback
 from askui.reporting import NULL_REPORTER
 
 if TYPE_CHECKING:

@@ -4,11 +4,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from askui.models.shared.agent_message_param import UsageParam
-from askui.models.shared.usage_tracking_callback import (
+from askui.callbacks.usage_tracking_callback import (
     UsageSummary,
     UsageTrackingCallback,
 )
+from askui.models.shared.agent_message_param import UsageParam
 from askui.utils.model_pricing import ModelPricing
 
 

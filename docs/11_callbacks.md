@@ -2,6 +2,8 @@
 
 Callbacks provide hooks into the agent's conversation lifecycle, similar to PyTorch Lightning's callback system. Use them for logging, monitoring, custom metrics, or extending agent behavior.
 
+All callbacks live in `askui.callbacks` and can be imported from there.
+
 ## Usage
 
 Subclass `ConversationCallback` and override the hooks you need:
@@ -70,6 +72,10 @@ class TimingCallback(ConversationCallback):
 with ComputerAgent(callbacks=[TimingCallback()]) as agent:
     agent.act("Search for documents")
 ```
+
+## Built-in Callbacks
+
+(we will add built-in callbacks at a later stage)
 
 ## Multiple Callbacks
 
