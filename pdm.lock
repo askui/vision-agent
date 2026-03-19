@@ -5,7 +5,7 @@
 groups = ["default", "all", "android", "bedrock", "dev", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:860b7990d08be9d842b6e507d955fd350dad1e81c45fcf4cce4627b44506be68"
+content_hash = "sha256:52d39f70b344148d3dd0461d075a560f85a0563971bc9ea4edfa86c8037fb578"
 
 [[metadata.targets]]
 requires_python = ">=3.10,<3.14"
@@ -149,6 +149,40 @@ dependencies = [
 files = [
     {file = "arrow-1.4.0-py3-none-any.whl", hash = "sha256:749f0769958ebdc79c173ff0b0670d59051a535fa26e8eba02953dc19eb43205"},
     {file = "arrow-1.4.0.tar.gz", hash = "sha256:ed0cc050e98001b8779e84d461b0098c4ac597e88704a655582b21d116e526d7"},
+]
+
+[[package]]
+name = "askui-agent-os"
+version = "26.1.1"
+requires_python = ">=3.8"
+summary = "Platform-specific binaries for the AskUI Remote Device Controller, shipped as a Python package. Used by the AskUI Agent (created with the AskUI Python SDK) to control the local device on Windows, Linux, and macOS."
+groups = ["default"]
+files = [
+    {file = "askui_agent_os-26.1.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:03f4f7aa7c6c40903ca5e7155207db4c282b95d87542cc883b0c827feb0bbebc"},
+    {file = "askui_agent_os-26.1.1-cp310-cp310-manylinux_2_34_aarch64.whl", hash = "sha256:797079d8c560c3a8925e1a94869fb1fb971fb4d5c2b38ab034c5dbfa0e15c13f"},
+    {file = "askui_agent_os-26.1.1-cp310-cp310-manylinux_2_34_x86_64.whl", hash = "sha256:5273f7bf7ca7dae922458f37dbaf54e84f8c783cb9122be0239358ac609c8e9c"},
+    {file = "askui_agent_os-26.1.1-cp310-cp310-win32.whl", hash = "sha256:6158028333fc93a43845210a11bedc41a98fa3178cbb68e070ddaa153e3597c8"},
+    {file = "askui_agent_os-26.1.1-cp310-cp310-win_amd64.whl", hash = "sha256:e9ac17789c44eeb9df14c2d975d6b00e2283509c817e5c55b01cd7e92922c46c"},
+    {file = "askui_agent_os-26.1.1-cp310-cp310-win_arm64.whl", hash = "sha256:40908a46cde60a2a2543930e6bb19cdde3e0af843ee5fc343fd5f9a38ce9b4c0"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4e16ff453ed2cdb25a2bd97b67fcdaef1be293e96a2497720238c464f4a18afb"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-manylinux_2_34_aarch64.whl", hash = "sha256:7abca8dd98d3bf615401cf42650688a82011aa60f7d4f1bc8b1c0b6033c95dd2"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-manylinux_2_34_x86_64.whl", hash = "sha256:ec0704dbdeeb8ebb9c7557c874682a6ed7bf4009f04b41264561a535b85c7ed0"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-win32.whl", hash = "sha256:68130e52923367d58d080024c27944ca8d4be45a1420011b39a8bf14b46d0248"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-win_amd64.whl", hash = "sha256:90ca39ba3b1cdb3dedb9225db1dcd6524d8e0b261439dc32522241ebc1b84c1d"},
+    {file = "askui_agent_os-26.1.1-cp311-cp311-win_arm64.whl", hash = "sha256:481c1ebadf9a511804ca702c1403a68af037b6f40d68b662cccc9979be6bc70c"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:7471cad085e380ab9f580a77d1957011ca08677e8f7eb313b16dc1b1fc8d159e"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-manylinux_2_34_aarch64.whl", hash = "sha256:5e6719db637251e67877b6e8cd3c8bade448e2523ee1f8b90c51b5ef1c03a288"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:0856001118b0f5f870c6686d4f561f54914f1742bd37e0c5f893df04b1484d29"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-win32.whl", hash = "sha256:c3c42a62bfb8efea8c80fcb3f52c78aec86fb938d7397526969918469968623a"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-win_amd64.whl", hash = "sha256:80734af7d6d752913e9b058f1ce578e64e76e3203532244d2aa6e739ff7ca244"},
+    {file = "askui_agent_os-26.1.1-cp312-cp312-win_arm64.whl", hash = "sha256:91165a559b61d4e61efeae917d52dd31c2b28187808c6b7130bab384f4ec397b"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:e8c69de3554170d0dfb7f3941e99a50c403d33700802d83091901e32c78b3a0d"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-manylinux_2_34_aarch64.whl", hash = "sha256:4a85dd025125ca6b2f2e4a9df0f961103d06563db0a58f9457d63e213ca5c3d4"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:6bc687ed47b1dc25b7f42db656204ac297ca9ff6e5d7308d4262542ff7207f2e"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-win32.whl", hash = "sha256:478323c694196ffaabc77bbd0112cb59922c53fd6bc30ce896572b9297f3baf2"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-win_amd64.whl", hash = "sha256:7086e1bff487c42ba707da33906dd53ddc976afcedf1b0791f976b2fa5494d6f"},
+    {file = "askui_agent_os-26.1.1-cp313-cp313-win_arm64.whl", hash = "sha256:f17ce6a3da87e2d75b8119a3fdadf08f961b60b5f8a1552bb7f3a5b7a1d8c0bd"},
+    {file = "askui_agent_os-26.1.1.tar.gz", hash = "sha256:2fd72c0ace97e9c39e18ba4420a7d526b95069a45389a291e699048bf2865da8"},
 ]
 
 [[package]]
