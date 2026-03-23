@@ -4,6 +4,7 @@ from PIL import Image
 
 from askui.models.shared.tool_tags import ToolTags
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
+from askui.tools.android.uiautomator_hierarchy import UIElementCollection
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
@@ -121,3 +122,15 @@ class AndroidAgentOsFacade(AndroidAgentOs):
 
     def pull(self, remote_path: str, local_path: str) -> None:
         self._agent_os.pull(remote_path, local_path)
+
+    def get_ui_elements(self) -> UIElementCollection:
+        ui_elemet_collection = self._agent_os.get_ui_elements()
+
+        for element in ui_elemet_collection:
+            if element.center is None:
+                continue
+            element.set_center(
+                self._scale_coordinates_back(element.center[0], element.center[1])
+            )
+
+        return ui_elemet_collection

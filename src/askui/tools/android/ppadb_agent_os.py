@@ -18,6 +18,7 @@ from askui.tools.android.agent_os import (
     UnknownAndroidDisplay,
 )
 from askui.tools.android.android_agent_os_error import AndroidAgentOsError
+from askui.tools.android.uiautomator_hierarchy import UIElementCollection
 from askui.utils.annotated_image import AnnotatedImage
 
 
@@ -34,6 +35,7 @@ class PpadbAgentOs(AndroidAgentOs):
     """
 
     _REPORTER_ROLE_NAME: str = "AndroidAgentOS"
+    _UIAUTOMATOR_DUMP_PATH: str = "/data/local/tmp/askui_window_dump.xml"
 
     def __init__(
         self, reporter: Reporter = NULL_REPORTER, device_identifier: str | int = 0
@@ -482,3 +484,33 @@ class PpadbAgentOs(AndroidAgentOs):
             self._REPORTER_ROLE_NAME,
             f"pull(remote_path='{remote_path}', local_path='{local_path}')",
         )
+
+    def get_ui_elements(self) -> UIElementCollection:
+        """
+        Return UI elements from a `uiautomator dump` of the current screen.
+
+        Returns:
+            UIElementCollection: Parsed hierarchy from the dump, or empty if the dump
+            has no usable content.
+
+        Raises:
+            AndroidAgentOsError: When the dump command does not report success (often
+            while animations are visible on screen).
+
+        Notes:
+            `uiautomator dump` is unreliable while the screen shows animation
+            (transitions, loaders, pulsing highlights, etc.). Retry after motion has
+            stopped and the UI has settled.
+        """
+        self._check_if_device_is_selected()
+        assert self._device is not None
+        dump_cmd = f"uiautomator dump {self._UIAUTOMATOR_DUMP_PATH}"
+        dump_response = self.shell(dump_cmd)
+        if "dumped" not in dump_response.lower():
+            msg = f"Failed to dump UI hierarchy: {dump_response}"
+            raise AndroidAgentOsError(msg)
+
+        raw = self.shell(f"cat {self._UIAUTOMATOR_DUMP_PATH}")
+        if not raw or not raw.strip():
+            return UIElementCollection([])
+        return UIElementCollection.build_from_xml_dump(raw)
