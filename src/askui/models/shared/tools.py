@@ -5,7 +5,7 @@ import uuid
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from functools import wraps
-from typing import Any, Literal, Protocol, Type
+from typing import Any, Callable, Literal, Protocol, Type
 
 import jsonref
 import mcp
@@ -14,6 +14,8 @@ from fastmcp.client.client import CallToolResult, ProgressHandler
 from fastmcp.tools import Tool as FastMcpTool
 from fastmcp.utilities.types import Image as FastMcpImage
 from mcp import Tool as McpTool
+from mcp.types import ImageContent as McpImageContent
+from mcp.types import TextContent as McpTextContent
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from typing_extensions import Self
@@ -30,7 +32,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.tools import AgentOs
 from askui.tools.android.agent_os import AndroidAgentOs
-from askui.utils.image_utils import ImageSource
+from askui.utils.image_utils import ImageSource, base64_to_image
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,26 @@ def _convert_to_mcp_content(
         return FastMcpImage(data=src.to_bytes(), format="png").to_image_content()
 
     return result
+
+
+def _convert_from_mcp_tool_call_result(
+    tool_name: str,
+    result: Any,
+) -> PrimitiveToolCallResult:
+    if isinstance(result, str):
+        return result
+    if not isinstance(result, (McpTextContent, McpImageContent)):
+        unexpected_type = type(result).__name__
+        msg = (
+            f"MCP tool returned unexpected content type: {unexpected_type}. "
+            "Expected McpTextContent or McpImageContent."
+        )
+        raise McpToolAdapterException(tool_name, msg)
+
+    if isinstance(result, McpImageContent):
+        return base64_to_image(result.data)
+
+    return result.text
 
 
 PLAYWRIGHT_TOOL_PREFIX = "browser_"
@@ -237,6 +259,91 @@ class Tool(BaseModel, ABC):
             description=self.description,
             tags=tags,
         )
+
+    @staticmethod
+    def from_mcp_tool(
+        mcp_tool: FastMcpTool,
+        name_prefix: str | None = None,
+    ) -> "Tool":
+        """Wrap a FastMCP tool as an AskUI `Tool`.
+
+        Delegates execution and reuses the MCP tool's name, description, and
+        input schema for `ToolCollection` and related flows.
+
+        Args:
+            mcp_tool (FastMcpTool): The MCP tool to wrap.
+            name_prefix (str | None, optional): If set, the AskUI tool name is
+                `{name_prefix}{mcp_tool.name}`.
+
+        Returns:
+            Tool: An AskUI tool whose `__call__` returns a `ToolCallResult`.
+
+        Notes:
+            The underlying callable must return values this adapter can turn
+            into text or image: `str`, `McpTextContent`, or `McpImageContent`
+            (or a `list` / `tuple` of those). Other types raise `TypeError`.
+
+        Example:
+            ```python
+            from fastmcp.tools import Tool as FastMcpTool
+            from askui.models.shared.tools import Tool
+
+            def my_tool(x: int) -> str:
+                return str(x)
+
+            mcp_tool = FastMcpTool.from_function(
+                my_tool, name="my_tool", description="Returns string of x"
+            )
+            askui_tool = Tool.from_mcp_tool(mcp_tool)
+            ```
+        """
+        return _McpToolAdapter(mcp_tool=mcp_tool, name_prefix=name_prefix)
+
+
+class McpToolAdapterException(Exception):
+    """
+    Exception raised when the MCP tool adapter fails.
+    """
+
+    def __init__(self, tool_name: str, reason: str):
+        self.tool_name = tool_name
+        super().__init__(
+            f"Failed to convert MCP to AskUI tool {tool_name}: Reason {reason}"
+        )
+
+
+class _McpToolAdapter(Tool):
+    """Concrete Tool that delegates to a FastMCP tool."""
+
+    def __init__(
+        self,
+        mcp_tool: FastMcpTool,
+        name_prefix: str | None = None,
+    ) -> None:
+        name = mcp_tool.name
+        if name_prefix is not None:
+            name = f"{name_prefix}{name}"
+        super().__init__(
+            name=name,
+            description=mcp_tool.description or "",
+            input_schema=mcp_tool.parameters,
+        )
+        self._function: Callable[[Any], Any] = mcp_tool.fn  # type: ignore[attr-defined]
+        if not callable(self._function):
+            msg = "MCP tool has no callable (fn or __call__)"
+            raise McpToolAdapterException(self.name, msg)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> ToolCallResult:
+        result = self._function(*args, **kwargs)
+        if isinstance(result, list):
+            return [
+                _convert_from_mcp_tool_call_result(self.name, item) for item in result
+            ]
+        if isinstance(result, tuple):
+            return tuple(
+                _convert_from_mcp_tool_call_result(self.name, item) for item in result
+            )
+        return _convert_from_mcp_tool_call_result(self.name, result)
 
 
 class ToolWithAgentOS(Tool):
