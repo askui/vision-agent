@@ -281,7 +281,8 @@ class Tool(BaseModel, ABC):
         Notes:
             The underlying callable must return values this adapter can turn
             into text or image: `str`, `McpTextContent`, or `McpImageContent`
-            (or a `list` / `tuple` of those). Other types raise `TypeError`.
+            (or a `list` / `tuple` of those).
+            Any other types raise `McpToolAdapterException`.
 
         Example:
             ```python
