@@ -66,10 +66,6 @@ class UsageTrackingCallback(ConversationCallback):
         self._summary = UsageSummary()
 
     @override
-    def on_conversation_start(self, conversation: Conversation) -> None:
-        self._summary = UsageSummary()
-
-    @override
     def on_step_end(
         self,
         conversation: Conversation,
@@ -77,6 +73,10 @@ class UsageTrackingCallback(ConversationCallback):
         result: SpeakerResult,
     ) -> None:
         if result.usage:
+            self._reporter.add_message(
+                role="Usage Tracker",
+                content=f"Usage for step {step_index}: {str(result.usage)}",
+            )
             self._accumulate(result.usage)
 
     @override
