@@ -227,11 +227,6 @@ class UsageTrackingCallback(ConversationCallback):
         current_span = trace.get_current_span()
         current_span.set_attributes(step_summary.token_attributes())
 
-        self._reporter.add_message(
-            role="Usage Tracker",
-            content=f"Usage for step {step_index}: {str(step_usage)}",
-        )
-
     @override
     def on_conversation_end(self, conversation: Conversation) -> None:
         generated_steps: list[StepUsageSummary] = [
