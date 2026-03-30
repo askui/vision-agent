@@ -17,7 +17,6 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.tools import ToolCollection
-from askui.utils.model_pricing import ModelPricing
 
 _DEFAULT_MODEL_ID = "claude-sonnet-4-6"
 
@@ -69,10 +68,6 @@ class AskUIVlmProvider(VlmProvider):
     @override
     def model_id(self) -> str:
         return self._model_id_value
-
-    @property
-    def pricing(self) -> ModelPricing | None:
-        return ModelPricing.for_model(self._model_id_value)
 
     @cached_property
     def _messages_api(self) -> AnthropicMessagesApi:
