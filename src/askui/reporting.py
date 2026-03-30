@@ -651,6 +651,84 @@ class SimpleHtmlReporter(Reporter):
                         max-width: 800px;
                     }
 
+
+                    .usage-subtitle {
+                        color: var(--text-secondary);
+                        margin-top: -8px;
+                        margin-bottom: 16px;
+                        font-size: 0.95em;
+                    }
+
+                    .nested-table {
+                        margin: 12px 0 0 0;
+                        width: 100%;
+                    }
+
+                    .nested-table th, .nested-table td {
+                        padding: 10px 12px;
+                        font-size: 0.9em;
+                    }
+
+                    .usage-breakdown-list {
+                        display: grid;
+                        gap: 12px;
+                    }
+
+                    .usage-breakdown-item {
+                        border: 1px solid var(--section-border);
+                        border-radius: 10px;
+                        background: rgba(255, 255, 255, 0.02);
+                        overflow: hidden;
+                    }
+
+                    .usage-breakdown-item summary {
+                        list-style: none;
+                        cursor: pointer;
+                        padding: 14px 16px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                        color: var(--text-primary);
+                    }
+
+                    .usage-breakdown-item summary::-webkit-details-marker {
+                        display: none;
+                    }
+
+                    .usage-breakdown-item summary::after {
+                        content: "▸";
+                        color: var(--text-muted);
+                        font-size: 0.95em;
+                        transition: transform 0.2s ease;
+                    }
+
+                    .usage-breakdown-item[open] summary::after {
+                        transform: rotate(90deg);
+                    }
+
+                    .usage-breakdown-title {
+                        font-weight: 600;
+                    }
+
+                    .usage-breakdown-meta {
+                        color: var(--text-secondary);
+                        font-size: 0.9em;
+                    }
+
+                    .usage-breakdown-content {
+                        padding: 0 16px 16px 16px;
+                    }
+
+                    .usage-breakdown-content table {
+                        margin-top: 8px;
+                    }
+
+                    .mono {
+                        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono',
+                            'Source Code Pro', monospace;
+                    }
+
                     @media (max-width: 768px) {
                         .container {
                             padding: 20px 10px;
@@ -800,6 +878,11 @@ class SimpleHtmlReporter(Reporter):
                                     <th>Input Tokens</th>
                                     <td>
                                         {{ "{:,}".format(usage_summary.input_tokens) }}
+                                        {% if usage_summary.input_token_cost is not none %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (${{ "%.6f"|format(usage_summary.input_token_cost) }} {{ usage_summary.currency or 'USD' }})
+                                            </span>
+                                        {% endif %}
                                         {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
                                             {% set original = cache_original_usage.get('input_tokens') %}
                                             {% set current = usage_summary.input_tokens %}
@@ -817,6 +900,11 @@ class SimpleHtmlReporter(Reporter):
                                     <th>Output Tokens</th>
                                     <td>
                                         {{ "{:,}".format(usage_summary.output_tokens) }}
+                                        {% if usage_summary.output_token_cost is not none %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (${{ "%.6f"|format(usage_summary.output_token_cost) }} {{ usage_summary.currency or 'USD' }})
+                                            </span>
+                                        {% endif %}
                                         {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
                                             {% set original = cache_original_usage.get('output_tokens') %}
                                             {% set current = usage_summary.output_tokens %}
@@ -829,14 +917,52 @@ class SimpleHtmlReporter(Reporter):
                                     </td>
                                 </tr>
                                 {% endif %}
-                                {% if usage_summary.total_cost is not none %}
+                                {% if usage_summary.cache_creation_input_tokens is not none %}
+                                <tr>
+                                    <th>Cache Create Tokens</th>
+                                    <td>
+                                        {{ "{:,}".format(usage_summary.cache_creation_input_tokens) }}
+                                        {% if usage_summary.cache_write_token_cost is not none and usage_summary.cache_write_token_cost > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (${{ "%.6f"|format(usage_summary.cache_write_token_cost) }} {{ usage_summary.currency or 'USD' }})
+                                            </span>
+                                        {% endif %}
+                                        {% if usage_summary.cache_write_cost_per_million_tokens is not none and usage_summary.cache_write_cost_per_million_tokens > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (Rate: ${{ "%.2f"|format(usage_summary.cache_write_cost_per_million_tokens) }}/1M tokens)
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if usage_summary.cache_read_input_tokens is not none %}
+                                <tr>
+                                    <th>Cache Read Tokens</th>
+                                    <td>
+                                        {{ "{:,}".format(usage_summary.cache_read_input_tokens) }}
+                                        {% if usage_summary.cache_read_token_cost is not none and usage_summary.cache_read_token_cost > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (${{ "%.6f"|format(usage_summary.cache_read_token_cost) }} {{ usage_summary.currency or 'USD' }})
+                                            </span>
+                                        {% endif %}
+                                        {% if usage_summary.cache_read_cost_per_million_tokens is not none and usage_summary.cache_read_cost_per_million_tokens > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (Rate: ${{ "%.2f"|format(usage_summary.cache_read_cost_per_million_tokens) }}/1M tokens)
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if usage_summary.total_cost is not none and usage_summary.total_cost > 0 %}
                                 <tr>
                                     <th>Estimated Cost <span style="font-weight:normal;color:var(--text-muted);">(actual cost may differ)</span></th>
                                     <td>
-                                        {{ "%.2f"|format(usage_summary.total_cost) }} {{ usage_summary.currency or 'USD' }}
+                                        {{ "%.6f"|format(usage_summary.total_cost) }} {{ usage_summary.currency or 'USD' }}
                                         <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
                                             (Input: ${{ "%.2f"|format(usage_summary.input_cost_per_million_tokens or 0) }}/1M tokens,
-                                             Output: ${{ "%.2f"|format(usage_summary.output_cost_per_million_tokens or 0) }}/1M tokens)
+                                             Output: ${{ "%.2f"|format(usage_summary.output_cost_per_million_tokens or 0) }}/1M tokens,
+                                             Cache write: ${{ "%.2f"|format(usage_summary.cache_write_cost_per_million_tokens or 0) }}/1M tokens,
+                                             Cache read: ${{ "%.2f"|format(usage_summary.cache_read_cost_per_million_tokens or 0) }}/1M tokens)
                                         </span>
                                     </td>
                                 </tr>
@@ -858,6 +984,102 @@ class SimpleHtmlReporter(Reporter):
                             {% endif %}
                         </table>
                     </div>
+                    {% if usage_summary is not none and usage_summary.per_conversation_summaries %}
+                    <div class="section">
+                        <h2>Usage Breakdown</h2>
+                        <p class="usage-subtitle">
+                            Total usage grouped by conversation, with per-step token and cost details.
+                        </p>
+                        <div class="usage-breakdown-list">
+                            {% for conversation_usage in usage_summary.per_conversation_summaries %}
+                            <details class="usage-breakdown-item">
+                                <summary>
+                                    <span class="usage-breakdown-title">
+                                        Conversation #{{ conversation_usage.conversation_index }}
+                                    </span>
+                                    <span class="usage-breakdown-meta">
+                                        Input {{ "{:,}".format(conversation_usage.input_tokens or 0) }},
+                                        Output {{ "{:,}".format(conversation_usage.output_tokens or 0) }}
+                                        {% if conversation_usage.total_cost is not none and conversation_usage.total_cost > 0 %}
+                                            , Cost:
+                                            ${{ "%.6f"|format(conversation_usage.total_cost) }}
+                                            {{ conversation_usage.currency or "USD" }}
+                                        {% endif %}
+                                    </span>
+                                </summary>
+                                <div class="usage-breakdown-content">
+                                    {% set show_conversation_cost = conversation_usage.total_cost is not none and conversation_usage.total_cost > 0 %}
+                                    <table class="nested-table">
+                                        <tr>
+                                            <th>Conversation ID</th>
+                                            <th>Input Tokens</th>
+                                            <th>Output Tokens</th>
+                                            <th>Cache Create</th>
+                                            <th>Cache Read</th>
+                                            {% if show_conversation_cost %}
+                                            <th>Estimated Cost</th>
+                                            {% endif %}
+                                        </tr>
+                                        <tr class="system">
+                                            <td class="mono">{{ conversation_usage.conversation_id }}</td>
+                                            <td>{{ "{:,}".format(conversation_usage.input_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(conversation_usage.output_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(conversation_usage.cache_creation_input_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(conversation_usage.cache_read_input_tokens or 0) }}</td>
+                                            {% if show_conversation_cost %}
+                                            <td>
+                                                ${{ "%.6f"|format(conversation_usage.total_cost or 0) }}
+                                                {{ conversation_usage.currency or "USD" }}
+                                            </td>
+                                            {% endif %}
+                                        </tr>
+                                    </table>
+                                    {% if conversation_usage.step_summaries %}
+                                    {% set step_cost = namespace(show=false) %}
+                                    {% for step_usage in conversation_usage.step_summaries %}
+                                        {% if step_usage.total_cost is not none and step_usage.total_cost > 0 %}
+                                            {% set step_cost.show = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    <table class="nested-table">
+                                        <tr>
+                                            <th>Step</th>
+                                            <th>Input Tokens</th>
+                                            <th>Output Tokens</th>
+                                            <th>Cache Create</th>
+                                            <th>Cache Read</th>
+                                            {% if step_cost.show %}
+                                            <th>Estimated Cost</th>
+                                            {% endif %}
+                                        </tr>
+                                        {% for step_usage in conversation_usage.step_summaries %}
+                                        <tr>
+                                            <td>#{{ step_usage.step_index }}</td>
+                                            <td>{{ "{:,}".format(step_usage.input_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(step_usage.output_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(step_usage.cache_creation_input_tokens or 0) }}</td>
+                                            <td>{{ "{:,}".format(step_usage.cache_read_input_tokens or 0) }}</td>
+                                            {% if step_cost.show %}
+                                            <td>
+                                                {% if step_usage.total_cost is not none and step_usage.total_cost > 0 %}
+                                                    ${{ "%.6f"|format(step_usage.total_cost) }}
+                                                    {{ step_usage.currency or "USD" }}
+                                                {% endif %}
+                                            </td>
+                                            {% endif %}
+                                        </tr>
+                                        {% endfor %}
+                                    </table>
+                                    {% else %}
+                                        <span style="color: var(--text-muted);">No step usage entries</span>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
 
                     <div class="section">
                         <h2>Conversation Log</h2>
