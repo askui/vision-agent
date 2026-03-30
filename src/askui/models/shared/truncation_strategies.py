@@ -5,9 +5,7 @@ from pydantic import Field
 from typing_extensions import override
 
 from askui.models.shared.agent_message_param import (
-    CacheControlEphemeralParam,
     MessageParam,
-    TextBlockParam,
     ToolParam,
 )
 from askui.models.shared.prompts import ActSystemPrompt
@@ -175,36 +173,7 @@ class SimpleTruncationStrategy(TruncationStrategy):
     @property
     @override
     def messages(self) -> list[MessageParam]:
-        self._move_cache_control_to_last_non_tool_result_user_message()
         return self._messages
-
-    def _move_cache_control_to_last_non_tool_result_user_message(self) -> None:
-        found_last = False
-        for message in reversed(self._messages):
-            if message.role == "user" and not _is_tool_result_user_message(message):
-                if not found_last:
-                    found_last = True
-                    if isinstance(message.content, str):
-                        message.content = [
-                            TextBlockParam(
-                                text=message.content,
-                                cache_control=CacheControlEphemeralParam(
-                                    type="ephemeral",
-                                ),
-                            )
-                        ]
-                    elif len(message.content) > 0:
-                        last_content = message.content[-1]
-                        if hasattr(last_content, "cache_control"):
-                            last_content.cache_control = CacheControlEphemeralParam(
-                                type="ephemeral",
-                            )
-                else:
-                    if isinstance(message.content, list) and message.content:
-                        last_content = message.content[-1]
-                        if hasattr(last_content, "cache_control"):
-                            last_content.cache_control = None
-                    break
 
     def _truncate(self) -> None:  # noqa: C901
         messages_to_remove_min = min(

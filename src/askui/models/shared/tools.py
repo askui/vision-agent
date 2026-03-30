@@ -20,7 +20,6 @@ from typing_extensions import Self
 
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
-    CacheControlEphemeralParam,
     ContentBlockParam,
     ImageBlockParam,
     TextBlockParam,
@@ -395,12 +394,7 @@ class ToolCollection:
             for tool_name, tool in tool_map.items()
             if self._include is None or tool_name in self._include
         }
-        result = list(filtered_tool_map.values())
-        if result:
-            result[-1]["cache_control"] = CacheControlEphemeralParam(
-                type="ephemeral",
-            )
-        return result
+        return list(filtered_tool_map.values())
 
     def _get_mcp_tool_params(self) -> dict[str, ToolParam]:
         if not self._mcp_client:

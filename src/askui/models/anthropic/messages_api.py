@@ -10,6 +10,7 @@ from anthropic import (
 )
 from anthropic.types import AnthropicBetaParam
 from anthropic.types.beta import (
+    BetaCacheControlEphemeralParam,
     BetaContentBlockParam,
     BetaMessageParam,
     BetaThinkingConfigParam,
@@ -27,6 +28,7 @@ from askui.models.askui.retry_utils import (
 )
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
+    CacheControlEphemeralParam,
     ContentBlockParam,
     ImageBlockParam,
     MessageParam,
@@ -108,6 +110,7 @@ def built_messages_for_get_and_locate(
 def _parse_to_anthropic_types(
     tools: ToolCollection | None,
     betas: list[str] | None = None,
+    cache_control: CacheControlEphemeralParam | None = None,
     system: SystemPrompt | None = None,
     thinking: ThinkingConfigParam | None = None,
     tool_choice: ToolChoiceParam | None = None,
@@ -115,6 +118,7 @@ def _parse_to_anthropic_types(
 ) -> Tuple[
     list[BetaToolUnionParam] | Omit,
     list[AnthropicBetaParam] | Omit,
+    BetaCacheControlEphemeralParam | Omit,
     str | Omit,
     BetaThinkingConfigParam | Omit,
     BetaToolChoiceParam | Omit,
@@ -132,6 +136,13 @@ def _parse_to_anthropic_types(
         else omit
     )
     _betas = cast("list[AnthropicBetaParam]", betas) or omit
+
+    _cache_control = (
+        cast("BetaCacheControlEphemeralParam", cache_control.model_dump())
+        if cache_control is not None
+        else omit
+    )
+
     _system: str | Omit = omit if system is None else str(system)
     # Cast dicts to Anthropic's TypedDict types
     # Runtime validation happens in Anthropic SDK
@@ -143,7 +154,15 @@ def _parse_to_anthropic_types(
     )
     _temperature = temperature or omit
 
-    return (_tools, _betas, _system, _thinking, _tool_choice, _temperature)
+    return (
+        _tools,
+        _betas,
+        _cache_control,
+        _system,
+        _thinking,
+        _tool_choice,
+        _temperature,
+    )
 
 
 class AnthropicMessagesApi(MessagesApi):
@@ -179,18 +198,27 @@ class AnthropicMessagesApi(MessagesApi):
 
         # Extract betas from provider_options
         betas: list[str] | None = None
+        cache_control: CacheControlEphemeralParam | None = None
         if provider_options is not None:
             betas = provider_options.get("betas")
+            cache_control = provider_options.get("cache_control")
 
-        _tools, _betas, _system, _thinking, _tool_choice, _temperature = (
-            _parse_to_anthropic_types(
-                tools, betas, system, thinking, tool_choice, temperature
-            )
+        (
+            _tools,
+            _betas,
+            _cache_control,
+            _system,
+            _thinking,
+            _tool_choice,
+            _temperature,
+        ) = _parse_to_anthropic_types(
+            tools, betas, cache_control, system, thinking, tool_choice, temperature
         )
 
         response = self._client.beta.messages.create(  # type: ignore[misc]
             messages=_messages,
             max_tokens=max_tokens or 8192,
+            cache_control=_cache_control,
             model=model_id,
             tools=_tools,
             betas=_betas,
