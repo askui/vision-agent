@@ -72,6 +72,7 @@ class ToolResultBlockParam(BaseModel):
     cache_control: CacheControlEphemeralParam | None = None
     content: str | list[TextBlockParam | ImageBlockParam]
     is_error: bool = False
+    error_type: str | None = None
 
 
 class ToolUseBlockParam(BaseModel):

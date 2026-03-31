@@ -33,6 +33,7 @@ from askui.models.shared.agent_message_param import (
     TextBlockParam,
     ThinkingConfigParam,
     ToolChoiceParam,
+    ToolResultBlockParam,
     ToolUseBlockParam,
 )
 from askui.models.shared.messages_api import MessagesApi
@@ -52,8 +53,9 @@ def from_content_block(block: ContentBlockParam) -> BetaContentBlockParam:
     """Convert an internal content block to an Anthropic API-compatible dict.
 
     Uses `model_dump()` to produce plain dicts compatible with Anthropic's
-    TypedDicts. Strips ``visual_representation`` from `ToolUseBlockParam`
-    as it is not accepted by the API.
+    TypedDicts. Strips internal-only fields that are not accepted by the API:
+    - ``visual_representation`` from `ToolUseBlockParam`
+    - ``error_type`` from `ToolResultBlockParam`
     """
     if isinstance(block, ToolUseBlockParam):
         # visual_representation is an internal field (perceptual hash for cache
@@ -62,6 +64,13 @@ def from_content_block(block: ContentBlockParam) -> BetaContentBlockParam:
         return cast(
             "BetaContentBlockParam",
             block.model_dump(exclude={"visual_representation"}),
+        )
+    if isinstance(block, ToolResultBlockParam):
+        # error_type is an internal field for unfixable error detection that
+        # does not exist in the Anthropic API schema.
+        return cast(
+            "BetaContentBlockParam",
+            block.model_dump(exclude={"error_type"}),
         )
     return cast("BetaContentBlockParam", block.model_dump())
 

@@ -84,12 +84,20 @@ class ActSettings(BaseModel):
     Args:
         messages (MessageSettings): Settings for message creation including
             max tokens, temperature, and system prompt configuration.
+        max_steps (int | None): Maximum number of conversation steps before
+            the agent stops. If ``None``, no step limit is imposed.
+        unfixable_errors (list[str]): Exception type names that should
+            immediately stop the conversation loop when encountered as tool
+            errors. Matched against ``ToolResultBlockParam.error_type``.
+            Example: ``["ConnectionRefusedError", "FileNotFoundError"]``.
+            Defaults to an empty list (all tool errors are retryable).
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     messages: MessageSettings = Field(default_factory=MessageSettings)
     max_steps: int | None = None
+    unfixable_errors: list[str] = Field(default_factory=list)
 
 
 class GetSettings(BaseModel):

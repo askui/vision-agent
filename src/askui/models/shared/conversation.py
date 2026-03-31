@@ -9,7 +9,10 @@ from opentelemetry import trace
 from askui.model_providers.detection_provider import DetectionProvider
 from askui.model_providers.image_qa_provider import ImageQAProvider
 from askui.model_providers.vlm_provider import VlmProvider
-from askui.models.shared.agent_message_param import MessageParam
+from askui.models.shared.agent_message_param import (
+    MessageParam,
+    ToolResultBlockParam,
+)
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
@@ -406,9 +409,42 @@ class Conversation:
             status_continue = True
 
         if tool_result_message:
+            if self._has_unfixable_error(tool_result_message):
+                return False
             # we always continue after a tool was called
             return True
         return status_continue
+
+    def _has_unfixable_error(self, tool_result_message: MessageParam) -> bool:
+        """Check if a tool result message contains an unfixable error.
+
+        An error is unfixable if its ``error_type`` appears in
+        ``self.settings.unfixable_errors``.
+
+        Args:
+            tool_result_message: The message containing tool results.
+
+        Returns:
+            ``True`` if an unfixable error was found, ``False`` otherwise.
+        """
+        if not self.settings.unfixable_errors:
+            return False
+
+        if isinstance(tool_result_message.content, str):
+            return False
+
+        unfixable_set = set(self.settings.unfixable_errors)
+        for block in tool_result_message.content:
+            if (
+                isinstance(block, ToolResultBlockParam)
+                and block.is_error
+                and block.error_type is not None
+                and block.error_type in unfixable_set
+            ):
+                msg = f"Unfixable error detected: {block.error_type}"
+                logger.error(msg)
+                return True
+        return False
 
     def _switch_speaker_if_needed(self) -> None:
         """Switch to default speaker if current one cannot handle."""

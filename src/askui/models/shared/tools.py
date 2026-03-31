@@ -155,6 +155,7 @@ def _create_tool_result_block_param_for_playwright_error(
         content="\n\n".join(lines),
         is_error=True,
         tool_use_id=param.id,
+        error_type=type(error).__name__,
     )
 
 
@@ -552,6 +553,7 @@ class ToolCollection:
                 content=f"Tool raised an unexpected error: {error_message}",
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
+                error_type=type(e).__name__,
             )
 
     async def _call_mcp_tool(
@@ -598,6 +600,7 @@ class ToolCollection:
                 content=str(e),
                 is_error=True,
                 tool_use_id=tool_use_block_param.id,
+                error_type=type(e).__name__,
             )
 
     def __add__(self, other: "ToolCollection") -> "ToolCollection":
