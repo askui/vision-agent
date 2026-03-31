@@ -100,7 +100,7 @@ class UIElementCollection:
     """Collection of UI elements."""
 
     def __init__(self, elements: list[UIElement]) -> None:
-        self._elements = list(elements)
+        self._elements = elements
 
     def get_all(self) -> list[UIElement]:
         """Return a copy of all elements."""
