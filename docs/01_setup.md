@@ -4,7 +4,7 @@ This guide will get AskUI Vision Agent installed and configured on your system.
 
 ## Python Package Installation
 
-AskUI Vision Agent requires Python >=3.10.
+AskUI Vision Agent requires Python >=3.10 and <3.14.
 
 For installing the python-sdk please run
 
