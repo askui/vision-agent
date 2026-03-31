@@ -175,6 +175,13 @@ class TestUsageTrackingCallbackCost:
         )
         callback.on_conversation_end(conversation)
 
+        summary = _get_usage_summary(reporter)
+
+        assert summary.total_cost is None
+        assert summary.input_token_cost is None
+        assert summary.output_token_cost is None
+        assert summary.currency is None
+
     def test_none_tokens_treated_as_zero(self) -> None:
         pricing = ModelPricing(
             input_cost_per_million_tokens=3.0,
