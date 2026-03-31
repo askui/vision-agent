@@ -43,6 +43,12 @@ The AskUI Python SDK supports the use of various file formats.
 - Word Files (.docx, .doc)
 - CSV Files (.csv)
 
+**Office documents (Excel and Word)** are loaded as `OfficeDocumentSource` and converted to Markdown with MarkItDown. That stack is optional: the base `askui` install does not include it. Install AskUI with the **office-document** extra when you use Excel or Word as `get()` sources:
+
+```bash
+pip install "askui[office-document]"
+```
+
 **Model Compatibility Matrix**
 
 | File Format         | AskUI Gemini | Anthropic Claude | Google Gemini
