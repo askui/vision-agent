@@ -5,10 +5,10 @@
 groups = ["default", "all", "bedrock", "dev", "office-document", "otel", "vertex", "web"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:2c4b2134f151b1ff74b7090f5fc0f1daf6eb1b07e04be6178f260c3eb07c44f7"
+content_hash = "sha256:beae0adc50041e278e9a76b220a7b19781da8709e4c351657623ae9de795a02e"
 
 [[metadata.targets]]
-requires_python = ">=3.10"
+requires_python = ">=3.10,<3.14"
 
 [[package]]
 name = "aiofile"
