@@ -299,19 +299,20 @@ class Conversation:
             self._add_message(message)
 
         # 3. Execute tool calls if applicable
-        continue_loop = False
+        tool_result_message = None
         if result.messages_to_add:
             last_message = result.messages_to_add[-1]
             tool_result_message = self._execute_tools_if_present(last_message)
             if tool_result_message:
                 self._add_message(tool_result_message)
-                continue_loop = True  # we always continue after a tool was called
 
         # 4. Check if conversation should continue and switch speaker if necessary
-        # Note:_handle_continue_conversation must always be called (not short-circuited)
-        # because it has side effects (e.g., triggering speaker switches).
-        status_continue = self._handle_continue_conversation(result)
-        continue_loop = continue_loop or status_continue
+        continue_loop = self._handle_continue_conversation(result, tool_result_message)
+        if result.status == "switch_speaker" and result.next_speaker:
+            self.switch_speaker(
+                result.next_speaker,
+                speaker_context=result.speaker_context,
+            )
 
         self._on_step_end(self._step_index, result)
         self._step_index += 1
@@ -376,30 +377,38 @@ class Conversation:
         )
 
     @tracer.start_as_current_span("_handle_continue_conversation")
-    def _handle_continue_conversation(self, result: SpeakerResult) -> bool:
+    def _handle_continue_conversation(
+        self, result: SpeakerResult, tool_result_message: MessageParam | None
+    ) -> bool:
         """Handle speaker result status and determine if loop should continue.
+
+        Side effects (logging, speaker switches) always run regardless of
+        whether tools were called.  After that, tool execution overrides the
+        status-based decision: if tools ran we always continue.
 
         Args:
             result: Result from speaker
+            tool_result_message: Tool result message if tools were executed
 
         Returns:
             True if loop should continue, False if done
         """
         if result.status == "done":
             logger.info("Conversation completed successfully")
-            return False
-        if result.status == "failed":
+            status_continue = False
+        elif result.status == "failed":
             logger.error("Conversation failed")
-            return False
-        if result.status == "switch_speaker":
-            if result.next_speaker:
-                self.switch_speaker(
-                    result.next_speaker,
-                    speaker_context=result.speaker_context,
-                )
+            status_continue = False
+        elif result.status == "switch_speaker":
+            status_continue = True
+        else:
+            # status == "continue"
+            status_continue = True
+
+        if tool_result_message:
+            # we always continue after a tool was called
             return True
-        # status == "continue"
-        return True
+        return status_continue
 
     def _switch_speaker_if_needed(self) -> None:
         """Switch to default speaker if current one cannot handle."""
