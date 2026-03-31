@@ -1,6 +1,10 @@
 """Pricing information for model API calls."""
 
+import logging
+
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_PRICING: dict[str, "ModelPricing"] = {}
 
@@ -66,6 +70,9 @@ class ModelPricing(BaseModel):
                 cache_write_cost_per_million_tokens=cache_write_cost_per_million_tokens,
                 cache_read_cost_per_million_tokens=cache_read_cost_per_million_tokens,
             )
+        msg = "Not all Pricing values are set, trying to use default pricing instead"
+        logger.warning(msg)
+
         return _DEFAULT_PRICING.get(model_id)
 
 

@@ -277,8 +277,19 @@ class SimpleHtmlReporter(Reporter):
     def add_cache_execution_statistics(
         self, original_usage: dict[str, int | None]
     ) -> None:
-        """Store original cache usage for calculating savings."""
-        self.cache_original_usage = original_usage
+        """Accumulate original cache usage for calculating savings.
+
+        Called once per cache file. Token counts are summed so that the
+        savings percentage reflects all cache files used during execution.
+        """
+        if self.cache_original_usage is None:
+            self.cache_original_usage = dict(original_usage)
+            return
+        for key, value in original_usage.items():
+            if value is not None:
+                self.cache_original_usage[key] = (
+                    self.cache_original_usage.get(key) or 0
+                ) + value
 
     @override
     def generate(self) -> None:
@@ -872,6 +883,34 @@ class SimpleHtmlReporter(Reporter):
                                 <td>{{ execution_time_formatted }}</td>
                             </tr>
                             {% endif %}
+                            <tr>
+                                <th>Estimated Token Cost <span style="font-weight:normal;color:var(--text-muted);">(actual cost may differ)</span></th>
+                                <td>
+                                    {% if usage_summary is not none and usage_summary.total_cost is not none %}
+                                        ${{ "%.6f"|format(usage_summary.total_cost) }} {{ usage_summary.currency or 'USD' }}
+                                        {% if cache_original_usage is not none and usage_summary.total_cost > 0
+                                            and usage_summary.input_cost_per_million_tokens is not none
+                                            and usage_summary.output_cost_per_million_tokens is not none %}
+                                            {% set original_input = cache_original_usage.get('input_tokens') or 0 %}
+                                            {% set original_output = cache_original_usage.get('output_tokens') or 0 %}
+                                            {% set original_cache_read = cache_original_usage.get('cache_read_input_tokens') or 0 %}
+                                            {% set original_cache_write = cache_original_usage.get('cache_creation_input_tokens') or 0 %}
+                                            {% set original_cost = (original_input * usage_summary.input_cost_per_million_tokens + original_output * usage_summary.output_cost_per_million_tokens + original_cache_read * (usage_summary.cache_read_cost_per_million_tokens or 0) + original_cache_write * (usage_summary.cache_write_cost_per_million_tokens or 0)) / 1000000 %}
+                                            {% if original_cost > 0 %}
+                                                {% set savings_pct = ((usage_summary.total_cost - original_cost) / original_cost * 100) %}
+                                                <span style="color: #22c55e; margin-left: 8px; font-weight: 600;">
+                                                    ({{ "%.0f"|format(savings_pct) }}%)
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                        <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                            (pricing not configured)
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
                             {% if usage_summary is not none %}
                                 {% if usage_summary.input_tokens is not none %}
                                 <tr>
@@ -883,14 +922,10 @@ class SimpleHtmlReporter(Reporter):
                                                 (${{ "%.6f"|format(usage_summary.input_token_cost) }} {{ usage_summary.currency or 'USD' }})
                                             </span>
                                         {% endif %}
-                                        {% if cache_original_usage and cache_original_usage.get('input_tokens') %}
-                                            {% set original = cache_original_usage.get('input_tokens') %}
-                                            {% set current = usage_summary.input_tokens %}
-                                            {% set saved = original - current %}
-                                            {% if saved > 0 and original > 0 %}
-                                                {% set savings_pct = (saved / original * 100) %}
-                                                <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
-                                            {% endif %}
+                                        {% if usage_summary.input_cost_per_million_tokens is not none and usage_summary.input_cost_per_million_tokens > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (Rate: ${{ "%.2f"|format(usage_summary.input_cost_per_million_tokens) }}/1M tokens)
+                                            </span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -905,14 +940,10 @@ class SimpleHtmlReporter(Reporter):
                                                 (${{ "%.6f"|format(usage_summary.output_token_cost) }} {{ usage_summary.currency or 'USD' }})
                                             </span>
                                         {% endif %}
-                                        {% if cache_original_usage and cache_original_usage.get('output_tokens') %}
-                                            {% set original = cache_original_usage.get('output_tokens') %}
-                                            {% set current = usage_summary.output_tokens %}
-                                            {% set saved = original - current %}
-                                            {% if saved > 0 and original > 0 %}
-                                                {% set savings_pct = (saved / original * 100) %}
-                                                <span style="color: #22c55e; margin-left: 8px;">({{ "%.1f"|format(savings_pct) }}% saved via trajectory caching)</span>
-                                            {% endif %}
+                                        {% if usage_summary.output_cost_per_million_tokens is not none and usage_summary.output_cost_per_million_tokens > 0 %}
+                                            <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
+                                                (Rate: ${{ "%.2f"|format(usage_summary.output_cost_per_million_tokens) }}/1M tokens)
+                                            </span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -951,34 +982,6 @@ class SimpleHtmlReporter(Reporter):
                                             </span>
                                         {% endif %}
                                     </td>
-                                </tr>
-                                {% endif %}
-                                {% if usage_summary.total_cost is not none and usage_summary.total_cost > 0 %}
-                                <tr>
-                                    <th>Estimated Cost <span style="font-weight:normal;color:var(--text-muted);">(actual cost may differ)</span></th>
-                                    <td>
-                                        {{ "%.6f"|format(usage_summary.total_cost) }} {{ usage_summary.currency or 'USD' }}
-                                        <span style="color: var(--text-muted); margin-left: 8px; font-size: 0.85em;">
-                                            (Input: ${{ "%.2f"|format(usage_summary.input_cost_per_million_tokens or 0) }}/1M tokens,
-                                             Output: ${{ "%.2f"|format(usage_summary.output_cost_per_million_tokens or 0) }}/1M tokens,
-                                             Cache write: ${{ "%.2f"|format(usage_summary.cache_write_cost_per_million_tokens or 0) }}/1M tokens,
-                                             Cache read: ${{ "%.2f"|format(usage_summary.cache_read_cost_per_million_tokens or 0) }}/1M tokens)
-                                        </span>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                            {% endif %}
-                            {% if cache_original_usage is not none %}
-                                {% if cache_original_usage.get('input_tokens') is not none %}
-                                <tr>
-                                    <th>Original Input Tokens <span style="font-weight:normal;color:#888;">(consumed when recording the cache file)</span></th>
-                                    <td>{{ "{:,}".format(cache_original_usage.get('input_tokens')) }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if cache_original_usage.get('output_tokens') is not none %}
-                                <tr>
-                                    <th>Original Output Tokens <span style="font-weight:normal;color:#888;">(consumed when recording the cache file)</span></th>
-                                    <td>{{ "{:,}".format(cache_original_usage.get('output_tokens')) }}</td>
                                 </tr>
                                 {% endif %}
                             {% endif %}
