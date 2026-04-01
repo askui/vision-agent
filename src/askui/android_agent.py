@@ -12,6 +12,7 @@ from askui.locators.locators import Locator
 from askui.models.models import Point
 from askui.models.shared.settings import ActSettings, MessageSettings
 from askui.models.shared.tools import Tool
+from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.prompts.act_prompts import create_android_agent_prompt
 from askui.tools.android.agent_os import ANDROID_KEY
 from askui.tools.android.agent_os_facade import AndroidAgentOsFacade
@@ -74,6 +75,7 @@ class AndroidAgent(Agent):
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        truncation_strategy: TruncationStrategy | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.os = PpadbAgentOs(device_identifier=device, reporter=reporter)
@@ -85,6 +87,7 @@ class AndroidAgent(Agent):
             agent_os=self.os,
             settings=settings,
             callbacks=callbacks,
+            truncation_strategy=truncation_strategy,
         )
         self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
         # Override default act settings with Android-specific settings

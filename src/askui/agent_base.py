@@ -23,6 +23,7 @@ from askui.models.shared.settings import (
     LocateSettings,
 )
 from askui.models.shared.tools import Tool, ToolCollection
+from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.prompts.act_prompts import CACHE_USE_PROMPT, create_default_prompt
 from askui.telemetry.otel import OtelSettings, setup_opentelemetry_tracing
 from askui.tools.agent_os import AgentOs
@@ -59,6 +60,7 @@ class Agent:
         agent_os: AgentOs | AndroidAgentOs | None = None,
         settings: AgentSettings | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        truncation_strategy: TruncationStrategy | None = None,
     ) -> None:
         load_dotenv()
         self._reporter: Reporter = reporter or CompositeReporter(reporters=None)
@@ -87,6 +89,7 @@ class Agent:
             image_qa_provider=self._image_qa_provider,
             detection_provider=self._detection_provider,
             reporter=self._reporter,
+            truncation_strategy=truncation_strategy,
             callbacks=_callbacks,
         )
 
