@@ -13,7 +13,7 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
-    AskUITruncationStrategy,
+    SummarizingTruncationStrategy,
     TruncationStrategy,
 )
 from askui.reporting import NULL_REPORTER, Reporter
@@ -98,8 +98,11 @@ class Conversation:
         self._step_index: int = 0
 
         # truncation strategy
-        self._truncation_strategy = truncation_strategy or AskUITruncationStrategy(
-            vlm_provider=vlm_provider,
+        self._truncation_strategy = (
+            truncation_strategy
+            or SummarizingTruncationStrategy(
+                vlm_provider=vlm_provider,
+            )
         )
 
         # Track if cache execution was used (to prevent recording during playback)

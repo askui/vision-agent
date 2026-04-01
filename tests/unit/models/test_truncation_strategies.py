@@ -13,7 +13,8 @@ from askui.models.shared.agent_message_param import (
     UrlImageSourceParam,
 )
 from askui.models.shared.truncation_strategies import (
-    AskUITruncationStrategy,
+    SlidingImageWindowSummarizingTruncationStrategy,
+    SummarizingTruncationStrategy,
 )
 
 IMAGE_REMOVED_PLACEHOLDER = "[Screenshot removed to reduce message history length]"
@@ -60,8 +61,8 @@ def _make_strategy(
     n_images_to_keep: int = 3,
     n_messages_to_keep: int = 10,
     max_input_tokens: int = 100_000,
-) -> AskUITruncationStrategy:
-    return AskUITruncationStrategy(
+) -> SlidingImageWindowSummarizingTruncationStrategy:
+    return SlidingImageWindowSummarizingTruncationStrategy(
         vlm_provider=vlm_provider or _make_vlm_provider(),
         n_images_to_keep=n_images_to_keep,
         n_messages_to_keep=n_messages_to_keep,
@@ -387,6 +388,71 @@ class TestTruncation:
         # Truncated messages should be shorter
         assert len(strategy.truncated_messages) < 6
 
+    def test_truncate_preserves_tool_use_tool_result_pairs(self) -> None:
+        vlm = _make_vlm_provider()
+        # n_messages_to_keep=3: naive cut would start on the
+        # user tool_result, orphaning it from its tool_use.
+        strategy = _make_strategy(vlm_provider=vlm, n_messages_to_keep=3)
+        # Build a realistic tool-calling conversation:
+        # user(goal) -> asst(tool_use) -> user(tool_result)
+        #            -> asst(tool_use) -> user(tool_result)
+        #            -> asst(text)
+        strategy.append_message(MessageParam(role="user", content="do something"))
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_1", input={}, name="tool_a", type="tool_use"
+                    ),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_1", content="result 1"),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_2", input={}, name="tool_b", type="tool_use"
+                    ),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_2", content="result 2"),
+                ],
+            )
+        )
+        strategy.append_message(MessageParam(role="assistant", content="all done"))
+
+        strategy.truncate()
+        msgs = strategy.truncated_messages
+
+        # Every user message with tool_results must be preceded
+        # by an assistant message (not the summary or synthetic).
+        for i, m in enumerate(msgs):
+            if m.role != "user" or isinstance(m.content, str):
+                continue
+            has_tr = any(isinstance(b, ToolResultBlockParam) for b in m.content)
+            if has_tr:
+                prev = msgs[i - 1]
+                assert prev.role == "assistant"
+                assert (
+                    not isinstance(prev.content, str)
+                    or "Understood" not in prev.content
+                ), f"tool_result at index {i} follows synthetic assistant"
+
     def test_auto_truncation_on_token_limit(self) -> None:
         vlm = _make_vlm_provider()
         # Very low token threshold to trigger auto-truncation
@@ -462,3 +528,214 @@ class TestEdgeCases:
         result = strategy.truncated_messages[0].content
         assert isinstance(result, list)
         assert isinstance(result[0], ToolUseBlockParam)
+
+
+# ---------------------------------------------------------------------------
+# SummarizingTruncationStrategy
+# ---------------------------------------------------------------------------
+
+
+def _make_summarizing_strategy(
+    vlm_provider: MagicMock | None = None,
+    n_messages_to_keep: int = 10,
+    max_input_tokens: int = 100_000,
+) -> SummarizingTruncationStrategy:
+    return SummarizingTruncationStrategy(
+        vlm_provider=vlm_provider or _make_vlm_provider(),
+        n_messages_to_keep=n_messages_to_keep,
+        max_input_tokens=max_input_tokens,
+    )
+
+
+class TestSummarizingAppend:
+    def test_appends_to_both_histories(self) -> None:
+        strategy = _make_summarizing_strategy()
+        msg = MessageParam(role="user", content="hello")
+        strategy.append_message(msg)
+        assert len(strategy.full_messages) == 1
+        assert len(strategy.truncated_messages) == 1
+
+    def test_does_not_strip_images(self) -> None:
+        strategy = _make_summarizing_strategy()
+        for i in range(5):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(
+                MessageParam(
+                    role=role,
+                    content=[_make_base64_image_block()],
+                )
+            )
+        # All images should remain since no image stripping
+        for msg in strategy.truncated_messages:
+            assert isinstance(msg.content, list)
+            assert isinstance(msg.content[0], ImageBlockParam)
+
+    def test_sets_cache_breakpoint_on_last_user_message(self) -> None:
+        strategy = _make_summarizing_strategy()
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[TextBlockParam(text="hello")],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[TextBlockParam(text="hi")],
+            )
+        )
+        # Last (and only) user message should have cache breakpoint
+        user_msg = strategy.truncated_messages[0]
+        assert isinstance(user_msg.content, list)
+        assert _get_cache_control(user_msg.content[-1]) is not None
+        # Assistant message should not
+        asst_msg = strategy.truncated_messages[1]
+        assert isinstance(asst_msg.content, list)
+        assert _get_cache_control(asst_msg.content[-1]) is None
+
+    def test_moves_cache_breakpoint_forward(self) -> None:
+        strategy = _make_summarizing_strategy()
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[TextBlockParam(text="first")],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[TextBlockParam(text="reply")],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[TextBlockParam(text="second")],
+            )
+        )
+        # Old user message (index 0) should have cache_control cleared
+        old_content = strategy.truncated_messages[0].content
+        assert isinstance(old_content, list)
+        assert _get_cache_control(old_content[-1]) is None
+        # New user message (index 2) should have it set
+        new_content = strategy.truncated_messages[2].content
+        assert isinstance(new_content, list)
+        assert _get_cache_control(new_content[-1]) is not None
+
+
+class TestSummarizingTruncation:
+    def test_truncate_replaces_history_with_summary(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(vlm_provider=vlm, n_messages_to_keep=2)
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        msgs = strategy.truncated_messages
+        assert msgs[0].role == "user"
+        assert msgs[0].content == "Summary of the conversation."
+        assert msgs[-1].content == "msg 5"
+        assert msgs[-2].content == "msg 4"
+
+    def test_truncate_inserts_synthetic_assistant(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(vlm_provider=vlm, n_messages_to_keep=2)
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        msgs = strategy.truncated_messages
+        assert msgs[0].role == "user"
+        assert msgs[1].role == "assistant"
+        assert "Understood" in str(msgs[1].content)
+
+    def test_truncate_skips_when_too_few_messages(self) -> None:
+        strategy = _make_summarizing_strategy(n_messages_to_keep=10)
+        for i in range(4):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        assert len(strategy.truncated_messages) == 4
+
+    def test_full_messages_preserved_after_truncation(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(vlm_provider=vlm, n_messages_to_keep=2)
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        assert len(strategy.full_messages) == 6
+        assert len(strategy.truncated_messages) < 6
+
+    def test_preserves_tool_use_tool_result_pairs(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(vlm_provider=vlm, n_messages_to_keep=3)
+        strategy.append_message(MessageParam(role="user", content="do something"))
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_1",
+                        input={},
+                        name="tool_a",
+                        type="tool_use",
+                    ),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_1", content="result 1"),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_2",
+                        input={},
+                        name="tool_b",
+                        type="tool_use",
+                    ),
+                ],
+            )
+        )
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_2", content="result 2"),
+                ],
+            )
+        )
+        strategy.append_message(MessageParam(role="assistant", content="all done"))
+        strategy.truncate()
+        msgs = strategy.truncated_messages
+        for i, m in enumerate(msgs):
+            if m.role != "user" or isinstance(m.content, str):
+                continue
+            has_tr = any(isinstance(b, ToolResultBlockParam) for b in m.content)
+            if has_tr:
+                prev = msgs[i - 1]
+                assert prev.role == "assistant"
+                assert (
+                    not isinstance(prev.content, str)
+                    or "Understood" not in prev.content
+                ), f"tool_result at index {i} follows synthetic"
+
+    def test_auto_truncation_on_token_limit(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            max_input_tokens=100,
+        )
+        strategy.append_message(MessageParam(role="user", content="x" * 300))
+        strategy.append_message(MessageParam(role="assistant", content="y" * 300))
+        strategy.append_message(MessageParam(role="user", content="z" * 300))
+        vlm.create_message.assert_called_once()
