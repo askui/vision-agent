@@ -1,9 +1,7 @@
 """Truncation strategies for managing conversation message history."""
 
-import json
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
 
 from typing_extensions import override
 
@@ -226,8 +224,6 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
-        debug_dir: When set, write diagnostic snapshots to
-            this directory after each append/truncate.
     """
 
     def __init__(
@@ -238,7 +234,6 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
-        debug_dir: Path | None = None,
     ) -> None:
         super().__init__(max_messages, max_input_tokens, truncation_threshold)
         self._vlm_provider = vlm_provider
@@ -246,29 +241,13 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         self._n_messages_to_keep = n_messages_to_keep
         self._token_counter = SimpleTokenCounter()
         self._image_removal_boundary_index: int | None = None
-        self._debug_dir = debug_dir
-        self._debug_step = 0
+        try:
+            from askui.models.shared.truncation_debug import TruncationDebugWriter
 
-        msg = """CAUTION: The Truncation Strategy you are using is experimental!
-        While it will lead to faster executions in longer runs it might crash or
-        lead to overall unexpected behavior! If in doubt, we recommend using the
-        default truncation strategy instead."""
-        logger.warning(msg)
-
-        if self._debug_dir is not None:
-            self._debug_dir.mkdir(parents=True, exist_ok=True)
-            # Write config
-            config = {
-                "n_images_to_keep": n_images_to_keep,
-                "n_messages_to_keep": n_messages_to_keep,
-                "max_messages": max_messages,
-                "max_input_tokens": max_input_tokens,
-                "truncation_threshold": truncation_threshold,
-                "absolute_threshold": self._absolute_truncation_threshold,
-            }
-            (self._debug_dir / "config.json").write_text(
-                json.dumps(config, indent=2), encoding="utf-8"
-            )
+            self._debug_writer = TruncationDebugWriter()
+        except ImportError:
+            self._debug_writer = None
+            logger.exception("Could not add truncation debug writer")
 
     @override
     def append_message(self, message: MessageParam) -> None:
@@ -299,10 +278,15 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             self.truncate()
             truncated = True
 
-        self._write_debug_snapshot(
-            event="truncate" if truncated else "append",
-            token_total=token_counts.total,
-        )
+        if self._debug_writer:
+            self._debug_writer.write_snapshot(
+                event="truncate" if truncated else "append",
+                full_messages=self._full_message_history,
+                truncated_messages=self._truncated_message_history,
+                token_estimate=token_counts.total,
+                threshold=self._absolute_truncation_threshold,
+                image_boundary_idx=self._image_removal_boundary_index,
+            )
 
     @override
     def truncate(self) -> None:
@@ -517,115 +501,6 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         """Set cache breakpoint on last block of a message."""
         _set_cache_breakpoint(msg)
 
-    # ------------------------------------------------------------------
-    # Debug diagnostics
-    # ------------------------------------------------------------------
-
-    def _write_debug_snapshot(
-        self,
-        event: str,
-        token_total: int = 0,
-    ) -> None:
-        """Write a diagnostic snapshot to the debug dir.
-
-        Each snapshot summarises both message histories
-        compactly (no base64 data) so you can verify at a
-        glance that image stripping, cache breakpoints, and
-        truncation work correctly.
-
-        Args:
-            event: ``"append"`` or ``"truncate"``.
-            token_total: Estimated token count for the
-                truncated history.
-        """
-        if self._debug_dir is None:
-            return
-
-        self._debug_step += 1
-
-        full_imgs = self._count_base64_images(self._full_message_history)
-        trunc_imgs = self._count_base64_images(self._truncated_message_history)
-
-        snapshot: dict[str, object] = {
-            "step": self._debug_step,
-            "event": event,
-            "full_msg_count": len(self._full_message_history),
-            "full_base64_images": full_imgs,
-            "truncated_msg_count": len(self._truncated_message_history),
-            "truncated_base64_images": trunc_imgs,
-            "images_stripped": full_imgs - trunc_imgs,
-            "image_boundary_idx": (self._image_removal_boundary_index),
-            "token_estimate": token_total,
-            "threshold": self._absolute_truncation_threshold,
-            "truncated_messages": [
-                self._summarise_message(i, m)
-                for i, m in enumerate(self._truncated_message_history)
-            ],
-        }
-
-        filename = f"step_{self._debug_step:03d}_{event}.json"
-        (self._debug_dir / filename).write_text(
-            json.dumps(snapshot, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-
-    def _summarise_message(self, index: int, msg: MessageParam) -> dict[str, object]:
-        """Build a compact summary of a message for debug.
-
-        Returns a dict with role, block descriptions, and
-        cache breakpoint info — no base64 data.
-        """
-        result: dict[str, object] = {
-            "index": index,
-            "role": msg.role,
-        }
-
-        if isinstance(msg.content, str):
-            preview = msg.content
-            if len(preview) > 120:
-                preview = preview[:120] + "..."
-            result["content"] = preview
-            return result
-
-        blocks: list[str] = []
-        has_cache_bp = False
-
-        for block in msg.content:
-            desc = self._describe_block(block)
-            blocks.append(desc)
-            cc = getattr(block, "cache_control", None)
-            if cc is not None:
-                has_cache_bp = True
-
-        result["blocks"] = blocks
-        result["has_cache_breakpoint"] = has_cache_bp
-        return result
-
-    @staticmethod
-    def _describe_block(
-        block: ContentBlockParam,
-    ) -> str:
-        """One-line description of a content block."""
-        if isinstance(block, TextBlockParam):
-            preview = block.text[:60]
-            if len(block.text) > 60:
-                preview += "..."
-            return f"text({preview})"
-
-        if isinstance(block, ImageBlockParam):
-            kind = (
-                "base64" if isinstance(block.source, Base64ImageSourceParam) else "url"
-            )
-            return f"image:{kind}"
-
-        if isinstance(block, ToolUseBlockParam):
-            return f"tool_use({block.name})"
-
-        if isinstance(block, ToolResultBlockParam):
-            return _describe_tool_result(block)
-
-        return block.type
-
 
 class SummarizingTruncationStrategy(TruncationStrategy):
     """Truncation strategy that summarizes when limits are hit.
@@ -752,19 +627,3 @@ class SummarizingTruncationStrategy(TruncationStrategy):
 
         new_messages.extend(recent)
         self._truncated_message_history = new_messages
-
-
-def _describe_tool_result(
-    block: ToolResultBlockParam,
-) -> str:
-    """One-line description of a tool result block."""
-    if isinstance(block.content, str):
-        return f"tool_result({block.content[:40]})"
-    nested = []
-    for n in block.content:
-        if isinstance(n, TextBlockParam):
-            nested.append(f"text({n.text[:30]})")
-        elif isinstance(n, ImageBlockParam):
-            kind = "b64" if isinstance(n.source, Base64ImageSourceParam) else "url"
-            nested.append(f"img:{kind}")
-    return f"tool_result[{', '.join(nested)}]"
