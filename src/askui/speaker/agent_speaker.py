@@ -81,7 +81,7 @@ class AgentSpeaker(Speaker):
 
         # Make API call to get agent response using VlmProvider
         response = conversation.vlm_provider.create_message(
-            messages=truncation_strategy.messages,
+            messages=truncation_strategy.truncated_messages,
             tools=conversation.tools,
             max_tokens=conversation.settings.messages.max_tokens,
             system=conversation.settings.messages.system,
