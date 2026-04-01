@@ -5,7 +5,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
@@ -21,6 +21,7 @@ class OtelSettings(BaseSettings):
         env_prefix="ASKUI__OTEL_",
         case_sensitive=False,
         extra="ignore",
+        validate_by_name=True,
     )
 
     enabled: bool = Field(default=False)
@@ -38,7 +39,11 @@ class OtelSettings(BaseSettings):
         default=None,
         description="OTLP endpoint URL.",
     )
-    cluster_name: str = Field(default="askui-dev")
+    workspace_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ASKUI_WORKSPACE_ID", "askui_workspace_id"),
+        description="AskUI workspace ID. Read from ASKUI_WORKSPACE_ID env var.",
+    )
 
     @model_validator(mode="after")
     def validate_secret_when_enabled(self) -> Self:
@@ -71,9 +76,6 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
         from opentelemetry.instrumentation.httpx import (
             HTTPXClientInstrumentor,
         )
-        from opentelemetry.instrumentation.sqlalchemy import (
-            SQLAlchemyInstrumentor,
-        )
     except ImportError:
         logger.exception("Failed to set up OpenTelemetry Tracing.")
         return
@@ -81,13 +83,13 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
     if not settings.enabled:
         return
 
-    resource = Resource.create(
-        {
-            "service.name": settings.service_name,
-            "service.version": settings.service_version,
-            "cluster.name": settings.cluster_name,
-        }
-    )
+    resource_attributes: dict[str, str] = {
+        "service.name": settings.service_name,
+        "service.version": settings.service_version,
+    }
+    if settings.workspace_id:
+        resource_attributes["askui.workspace.id"] = settings.workspace_id
+    resource = Resource.create(resource_attributes)
     provider = TracerProvider(resource=resource)
 
     base: str = settings.user + ":" + settings.secret.get_secret_value()  # type: ignore
@@ -104,4 +106,3 @@ def setup_opentelemetry_tracing(settings: OtelSettings) -> None:
     trace.set_tracer_provider(provider)
 
     HTTPXClientInstrumentor().instrument()
-    SQLAlchemyInstrumentor().instrument()
