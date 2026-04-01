@@ -175,13 +175,13 @@ class SimpleTruncationStrategy(TruncationStrategy):
     @property
     @override
     def messages(self) -> list[MessageParam]:
-        self._move_cache_control_to_last_non_tool_result_user_message()
+        self._move_cache_control_to_last_user_message()
         return self._messages
 
-    def _move_cache_control_to_last_non_tool_result_user_message(self) -> None:
+    def _move_cache_control_to_last_user_message(self) -> None:
         found_last = False
         for message in reversed(self._messages):
-            if message.role == "user" and not _is_tool_result_user_message(message):
+            if message.role == "user":
                 if not found_last:
                     found_last = True
                     if isinstance(message.content, str):
