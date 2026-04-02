@@ -92,7 +92,6 @@ Set the following environment variables to configure tracing. All variables use 
 | `ASKUI__OTEL_ENDPOINT` | OTLP HTTP endpoint URL | — |
 | `ASKUI__OTEL_SERVICE_NAME` | Service name reported in traces | `askui-python-sdk` |
 | `ASKUI__OTEL_SERVICE_VERSION` | Service version reported in traces | Current package version |
-| `ASKUI__OTEL_CLUSTER_NAME` | Cluster name reported in traces | `askui-dev` |
 
 #### Linux & MacOS
 ```bash
@@ -132,7 +131,6 @@ from askui.telemetry.otel import OtelSettings
 
 settings = OtelSettings(
     enabled=True,
-    service_name="my-custom-service",
-    cluster_name="production",
+    service_name="my-custom-service"
 )
 ```
