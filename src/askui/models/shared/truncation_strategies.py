@@ -242,7 +242,9 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         self._token_counter = SimpleTokenCounter()
         self._image_removal_boundary_index: int | None = None
         try:
-            from askui.models.shared.truncation_debug import TruncationDebugWriter  # noqa
+            from askui.models.shared.truncation_debug import (  # type: ignore[import-untyped]
+                TruncationDebugWriter,
+            )
 
             self._debug_writer = TruncationDebugWriter()
         except ImportError:
