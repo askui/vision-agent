@@ -17,6 +17,7 @@ from askui.models.shared.agent_message_param import (
     ToolUseBlockParam,
 )
 from askui.models.shared.token_counter import SimpleTokenCounter
+from askui.prompts.truncation import SUMMARIZE_INSTRUCTION_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -72,14 +73,7 @@ def _summarize_message_history(
     messages_to_summarize.append(
         MessageParam(
             role="user",
-            content=(
-                "Please provide a concise summary of the "
-                "conversation history above. Focus on: key "
-                "actions taken, results observed, current "
-                "state, and any pending tasks or errors. "
-                "This summary will replace the earlier "
-                "conversation history to save context space."
-            ),
+            content=SUMMARIZE_INSTRUCTION_PROMPT,
         )
     )
 
