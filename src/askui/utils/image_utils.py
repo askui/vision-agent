@@ -306,9 +306,7 @@ def scale_coordinates(
     offset = _calc_center_offset(scaling_results.size, target_size)
     result = _scale_coordinates(coordinates, offset, scaling_results.factor, inverse)
     if check_coordinates_in_bounds:
-        _check_coordinates_in_bounds(
-            result, original_size if inverse else scaling_results.size
-        )
+        _check_coordinates_in_bounds(result, original_size if inverse else target_size)
     return result
 
 

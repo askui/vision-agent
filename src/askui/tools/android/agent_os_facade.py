@@ -4,6 +4,7 @@ from PIL import Image
 
 from askui.models.shared.tool_tags import ToolTags
 from askui.tools.android.agent_os import ANDROID_KEY, AndroidAgentOs, AndroidDisplay
+from askui.tools.android.uiautomator_hierarchy import UIElementCollection
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 
@@ -36,7 +37,12 @@ class AndroidAgentOsFacade(AndroidAgentOs):
             self._target_resolution,
         )
 
-    def _scale_coordinates_back(self, x: int, y: int) -> Tuple[int, int]:
+    def _scale_coordinates(
+        self,
+        x: int,
+        y: int,
+        from_agent: bool = True,
+    ) -> Tuple[int, int]:
         if self._real_screen_resolution is None:
             self._real_screen_resolution = self._agent_os.screenshot().size
 
@@ -44,25 +50,25 @@ class AndroidAgentOsFacade(AndroidAgentOs):
             (x, y),
             self._real_screen_resolution,
             self._target_resolution,
-            inverse=True,
+            inverse=from_agent,
         )
 
     def tap(self, x: int, y: int) -> None:
-        x, y = self._scale_coordinates_back(x, y)
+        x, y = self._scale_coordinates(x, y)
         self._agent_os.tap(x, y)
 
     def swipe(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
-        x1, y1 = self._scale_coordinates_back(x1, y1)
-        x2, y2 = self._scale_coordinates_back(x2, y2)
+        x1, y1 = self._scale_coordinates(x1, y1)
+        x2, y2 = self._scale_coordinates(x2, y2)
         self._agent_os.swipe(x1, y1, x2, y2, duration_in_ms)
 
     def drag_and_drop(
         self, x1: int, y1: int, x2: int, y2: int, duration_in_ms: int = 1000
     ) -> None:
-        x1, y1 = self._scale_coordinates_back(x1, y1)
-        x2, y2 = self._scale_coordinates_back(x2, y2)
+        x1, y1 = self._scale_coordinates(x1, y1)
+        x2, y2 = self._scale_coordinates(x2, y2)
         self._agent_os.drag_and_drop(x1, y1, x2, y2, duration_in_ms)
 
     def type(self, text: str) -> None:
@@ -121,3 +127,17 @@ class AndroidAgentOsFacade(AndroidAgentOs):
 
     def pull(self, remote_path: str, local_path: str) -> None:
         self._agent_os.pull(remote_path, local_path)
+
+    def get_ui_elements(self) -> UIElementCollection:
+        ui_elemet_collection = self._agent_os.get_ui_elements()
+        for element in ui_elemet_collection:
+            if element.center is None:
+                continue
+            element.set_center(
+                self._scale_coordinates(
+                    x=element.center[0],
+                    y=element.center[1],
+                    from_agent=False,
+                )
+            )
+        return ui_elemet_collection
