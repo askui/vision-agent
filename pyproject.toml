@@ -28,17 +28,16 @@ dependencies = [
     "protobuf>=6.31.1",
     "google-genai>=1.20.0",
     "filetype>=1.2.0",
-    "markitdown[xls,xlsx,docx]>=0.1.2",
     "asyncer==0.0.8",
-    "bson>=0.5.10",
     "aiofiles>=24.1.0",
     "anyio==4.10.0",  # We need to pin this version otherwise listing mcp tools using fastmcp within runner fails
     "sqlalchemy[mypy]>=2.0.44",
     "apscheduler==4.0.0a6",
     "opentelemetry-api>=1.38.0",
-    "imagehash>=4.3.0",
+    "imagehash>=4.3.0", # requires python <3.14 because of dependency on scipy
+    "pure-python-adb>=0.3.0.dev0"
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10, <3.14"
 readme = "README.md"
 license = {text = "MIT"}
 dynamic = ["version"]
@@ -217,9 +216,9 @@ known-first-party = ["askui"]
 known-third-party = ["pytest", "mypy"]
 
 [project.optional-dependencies]
-all = ["askui[android,bedrock,otel,vertex,web]"]
-android = [
-    "pure-python-adb>=0.3.0.dev0"
+all = ["askui[office-document,bedrock,otel,vertex,web]"]
+office-document = [
+    "markitdown[xls,xlsx,docx]>=0.1.2"
 ]
 bedrock = [
     "anthropic[bedrock]>=0.72.0"

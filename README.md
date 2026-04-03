@@ -130,10 +130,36 @@ Ready to build your first agent? Check out our documentation:
 ## Quick Install
 
 ```bash
+pip install askui
+```
+
+**Requires Python >=3.10*
+
+The default install includes core dependencies (Agent OS client, HTTP, common model APIs, Android tooling, etc.). Add **optional extras** only when you need the features below.
+
+```bash
 pip install askui[all]
 ```
 
-**Requires Python >=3.10, <3.14**
+`all` pulls in every optional extra in one command (larger install). Prefer picking individual extras when you know what you need. Or start using AskUI with a minimal install and add extras as you need them.
+
+### Optional install extras
+
+| Extra | When to use it |
+| --- | --- |
+| *(none)* | Everyday automation. Smallest footprint. |
+| `all` | You want every optional integration below without choosing extras (CI images, demos, or “install everything once”). |
+| `office-document` | Reading or converting **Office files** (Excel `.xls`/`.xlsx`, Word `.docx`) via MarkItDown—e.g. extracting content from spreadsheets or documents in workflows. To be used in `get()` methods. |
+| `bedrock` | Running **Anthropic Claude through AWS Bedrock** (`anthropic[bedrock]`). Use when your org routes Claude via Bedrock, not the direct Anthropic API. |
+| `vertex` | Running **Anthropic Claude on Google Vertex AI** plus Vertex client libraries. Use when models are hosted on Vertex, not only the public Anthropic API. |
+| `otel` | **OpenTelemetry** export and instrumentation you enable in code: OTLP over HTTP, plus optional instrumentation for `httpx` and SQLAlchemy. Use for production tracing/metrics pipelines—not required for local scripts. |
+| `web` | **Browser automation with Playwright** (e.g. web-focused agents and Playwright-backed flows). Core desktop control still uses Agent OS; this extra is for the Playwright stack. |
+
+Combine extras as needed, for example:
+
+```bash
+pip install askui[bedrock,otel]
+```
 
 You'll also need to install AskUI Agent OS for device control. See [Setup Guide](docs/01_setup.md) for detailed instructions.
 
