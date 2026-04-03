@@ -172,3 +172,5 @@ reports/
 .askui_cache/*
 
 bom.json
+
+*playground*

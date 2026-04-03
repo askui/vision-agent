@@ -18,6 +18,7 @@ from askui.tools.android.agent_os import (
     UnknownAndroidDisplay,
 )
 from askui.tools.android.android_agent_os_error import AndroidAgentOsError
+from askui.tools.android.uiautomator_hierarchy import UIElementCollection
 from askui.utils.annotated_image import AnnotatedImage
 
 
@@ -34,6 +35,7 @@ class PpadbAgentOs(AndroidAgentOs):
     """
 
     _REPORTER_ROLE_NAME: str = "AndroidAgentOS"
+    _UIAUTOMATOR_DUMP_PATH: str = "/data/local/tmp/askui_window_dump.xml"
 
     def __init__(
         self, reporter: Reporter = NULL_REPORTER, device_identifier: str | int = 0
@@ -72,8 +74,8 @@ class PpadbAgentOs(AndroidAgentOs):
             self.set_device_by_serial_number(self._device_identifier)
         else:
             self.set_device_by_index(self._device_identifier)
-        assert self._device is not None
-        self._device.wait_boot_complete()
+        device: AndroidDevice = self._get_selected_device()
+        device.wait_boot_complete()
 
     def disconnect(self) -> None:
         self._client = None
@@ -92,10 +94,9 @@ class PpadbAgentOs(AndroidAgentOs):
         )
 
     def get_connected_displays(self) -> list[AndroidDisplay]:
-        self._check_if_device_is_selected()
-        assert self._device is not None
+        device: AndroidDevice = self._get_selected_device()
         displays: list[AndroidDisplay] = []
-        output: str = self._device.shell(
+        output: str = device.shell(
             "dumpsys SurfaceFlinger --display-id",
         )
 
@@ -202,11 +203,10 @@ class PpadbAgentOs(AndroidAgentOs):
         raise AndroidAgentOsError(msg)
 
     def _screenshot_without_reporting(self) -> Image.Image:
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
-        connection_to_device = self._device.create_connection()
+        connection_to_device = device.create_connection()
         unique_display_id_flag = self._selected_display.get_display_unique_id_flag()
         connection_to_device.send(
             f"shell:/system/bin/screencap -p {unique_display_id_flag}"
@@ -222,10 +222,9 @@ class PpadbAgentOs(AndroidAgentOs):
         return screenshot
 
     def shell(self, command: str) -> str:
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
-        response: str = self._device.shell(command)
+        response: str = device.shell(command)
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
             f"shell(command='{command}') -> '{response}'",
@@ -233,9 +232,8 @@ class PpadbAgentOs(AndroidAgentOs):
         return response
 
     def tap(self, x: int, y: int) -> None:
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
@@ -243,7 +241,7 @@ class PpadbAgentOs(AndroidAgentOs):
             f"tap(x={x}, y={y})",
             AnnotatedImage(self._screenshot_without_reporting, [(x, y)]),
         )
-        self._device.shell(f"input {display_flag} tap {x} {y}")
+        device.shell(f"input {display_flag} tap {x} {y}")
         self._mouse_position = (x, y)
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
@@ -259,9 +257,8 @@ class PpadbAgentOs(AndroidAgentOs):
         y2: int,
         duration_in_ms: int = 1000,
     ) -> None:
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
@@ -272,9 +269,7 @@ class PpadbAgentOs(AndroidAgentOs):
             ),
             AnnotatedImage(self._screenshot_without_reporting, [(x1, y1)]),
         )
-        self._device.shell(
-            f"input {display_flag} swipe {x1} {y1} {x2} {y2} {duration_in_ms}"
-        )
+        device.shell(f"input {display_flag} swipe {x1} {y1} {x2} {y2} {duration_in_ms}")
         self._mouse_position = (x2, y2)
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
@@ -290,9 +285,8 @@ class PpadbAgentOs(AndroidAgentOs):
         y2: int,
         duration_in_ms: int = 1000,
     ) -> None:
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
@@ -301,7 +295,7 @@ class PpadbAgentOs(AndroidAgentOs):
             AnnotatedImage(self._screenshot_without_reporting, [(x1, y1)]),
         )
 
-        self._device.shell(
+        device.shell(
             f"input {display_flag} draganddrop {x1} {y1} {x2} {y2} {duration_in_ms}"
         )
         self._mouse_position = (x2, y2)
@@ -319,9 +313,8 @@ class PpadbAgentOs(AndroidAgentOs):
                 + "or special characters which are not supported by the device"
             )
             raise AndroidAgentOsError(error_msg_nonprintable)
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         escaped_text = shlex.quote(text)
@@ -331,7 +324,7 @@ class PpadbAgentOs(AndroidAgentOs):
             f"Typing text: '{text}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
-        self._device.shell(f"input {display_flag} text {shell_safe_text}")
+        device.shell(f"input {display_flag} text {shell_safe_text}")
 
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
@@ -343,9 +336,8 @@ class PpadbAgentOs(AndroidAgentOs):
         if key not in get_args(ANDROID_KEY):
             error_msg_invalid_key: str = f"Invalid key: {key}"
             raise AndroidAgentOsError(error_msg_invalid_key)
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
@@ -353,7 +345,7 @@ class PpadbAgentOs(AndroidAgentOs):
             f"Tapping key: '{key}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
-        self._device.shell(f"input {display_flag} keyevent {key}")
+        device.shell(f"input {display_flag} keyevent {key}")
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
             f"After tapping key: '{key}'",
@@ -372,9 +364,8 @@ class PpadbAgentOs(AndroidAgentOs):
             raise AndroidAgentOsError(error_msg_too_few)
 
         keys_string = " ".join(keys)
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         display_flag = self._selected_display.get_display_id_flag()
         self._reporter.add_message(
@@ -382,7 +373,7 @@ class PpadbAgentOs(AndroidAgentOs):
             f"Performing key combination: '{keys_string}'",
             AnnotatedImage(self._screenshot_without_reporting),
         )
-        self._device.shell(
+        device.shell(
             f"input {display_flag} keycombination -t {duration_in_ms} {keys_string}"
         )
         self._reporter.add_message(
@@ -391,7 +382,7 @@ class PpadbAgentOs(AndroidAgentOs):
             AnnotatedImage(self._screenshot_without_reporting),
         )
 
-    def _check_if_device_is_selected(self) -> None:
+    def _get_selected_device(self) -> AndroidDevice:
         devices: list[AndroidDevice] = self._get_connected_devices()
 
         if not self._device:
@@ -400,7 +391,7 @@ class PpadbAgentOs(AndroidAgentOs):
 
         for device in devices:
             if device.serial == self._device.serial:
-                return
+                return self._device
         msg = f"Device {self._device.serial} not found in connected devices"
         raise AndroidAgentOsError(msg)
 
@@ -441,30 +432,28 @@ class PpadbAgentOs(AndroidAgentOs):
         """
         Get the selected device infos.
         """
-        self._check_if_device_is_selected()
+        device: AndroidDevice = self._get_selected_device()
         self._check_if_display_is_selected()
-        assert self._device is not None
         assert self._selected_display is not None
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
             (
                 "get_selected_device_infos() -> "
-                f"Selected device serial number: '{self._device.serial}' "
+                f"Selected device serial number: '{device.serial}' "
                 f"and selected display: '{self._selected_display}'"
             ),
         )
-        return (self._device.serial, self._selected_display)
+        return (device.serial, self._selected_display)
 
     def push(self, local_path: str, remote_path: str) -> None:
         """
         Push a file to the device.
         """
-        self._check_if_device_is_selected()
-        assert self._device is not None
+        device: AndroidDevice = self._get_selected_device()
         if not Path.exists(Path(local_path)):
             msg = f"Local path {local_path} does not exist"
             raise FileNotFoundError(msg)
-        self._device.push(local_path, remote_path)
+        device.push(local_path, remote_path)
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
             f"push(local_path='{local_path}', remote_path='{remote_path}')",
@@ -474,11 +463,39 @@ class PpadbAgentOs(AndroidAgentOs):
         """
         Pull a file from the device.
         """
-        self._check_if_device_is_selected()
-        assert self._device is not None
+        device: AndroidDevice = self._get_selected_device()
         Path.mkdir(Path.absolute(Path(local_path).parent), exist_ok=True)
-        self._device.pull(remote_path, local_path)
+        device.pull(remote_path, local_path)
         self._reporter.add_message(
             self._REPORTER_ROLE_NAME,
             f"pull(remote_path='{remote_path}', local_path='{local_path}')",
         )
+
+    def get_ui_elements(self) -> UIElementCollection:
+        """
+        Return UI elements from a `uiautomator dump` of the current screen.
+
+        Returns:
+            UIElementCollection: Parsed hierarchy from the dump, or empty if the dump
+            has no usable content.
+
+        Raises:
+            AndroidAgentOsError: When the dump command does not report success (often
+            while animations are visible on screen).
+
+        Notes:
+            `uiautomator dump` is unreliable while the screen shows animation
+            (transitions, loaders, pulsing highlights, etc.). Retry after motion has
+            stopped and the UI has settled.
+        """
+        self._get_selected_device()
+        dump_cmd = f"uiautomator dump {self._UIAUTOMATOR_DUMP_PATH}"
+        dump_response = self.shell(dump_cmd)
+        if "dumped" not in dump_response.lower():
+            msg = f"Failed to dump UI hierarchy: {dump_response}"
+            raise AndroidAgentOsError(msg)
+
+        raw = self.shell(f"cat {self._UIAUTOMATOR_DUMP_PATH}")
+        if not raw or not raw.strip():
+            return UIElementCollection([])
+        return UIElementCollection.build_from_xml_dump(raw)

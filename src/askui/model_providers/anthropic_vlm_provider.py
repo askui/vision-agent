@@ -40,10 +40,14 @@ class AnthropicVlmProvider(VlmProvider):
         client (Anthropic | None, optional): Pre-configured Anthropic client.
             If provided, other connection parameters are ignored.
         input_cost_per_million_tokens (float | None, optional): Override
-            cost in USD per 1M input tokens. Both cost params must be set
-            to override the built-in defaults.
+            cost in USD per 1M input tokens. All override pricing params must be set to
+            override the built-in defaults.
         output_cost_per_million_tokens (float | None, optional): Override
             cost in USD per 1M output tokens.
+        cache_write_cost_per_million_tokens (float | None, optional): Override
+            cost in USD per 1M cache write input tokens.
+        cache_read_cost_per_million_tokens (float | None, optional): Override
+            cost in USD per 1M cache read input tokens.
 
     Example:
         ```python
@@ -68,6 +72,8 @@ class AnthropicVlmProvider(VlmProvider):
         client: Anthropic | None = None,
         input_cost_per_million_tokens: float | None = None,
         output_cost_per_million_tokens: float | None = None,
+        cache_write_cost_per_million_tokens: float | None = None,
+        cache_read_cost_per_million_tokens: float | None = None,
     ) -> None:
         self._model_id_value = (
             model_id or os.environ.get("VLM_PROVIDER_MODEL_ID") or _DEFAULT_MODEL_ID
@@ -84,6 +90,8 @@ class AnthropicVlmProvider(VlmProvider):
             self._model_id_value,
             input_cost_per_million_tokens=input_cost_per_million_tokens,
             output_cost_per_million_tokens=output_cost_per_million_tokens,
+            cache_write_cost_per_million_tokens=cache_write_cost_per_million_tokens,
+            cache_read_cost_per_million_tokens=cache_read_cost_per_million_tokens,
         )
 
     @property
