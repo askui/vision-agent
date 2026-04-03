@@ -6,11 +6,11 @@ authors = [
 ]
 dependencies = [
     "askui-agent-os>=26.1.1",
-    "anthropic>=0.72.0",
+    "anthropic>=0.86.0",
     "fastapi>=0.115.12",
     "fastmcp>=2.3.0",
     "gradio-client>=1.4.3",
-    "grpcio>=1.73.1",
+    "grpcio>=1.73.1,<1.80.0",
     "httpx>=0.28.1",
     "Jinja2>=3.1.4",
     "openai>=1.61.1",
@@ -228,7 +228,6 @@ otel = [
     "opentelemetry-api>=1.38.0",
     "opentelemetry-exporter-otlp-proto-http>=1.38.0",
     "opentelemetry-instrumentation-httpx>=0.59b0",
-    "opentelemetry-instrumentation-sqlalchemy>=0.59b0",
 ]
 vertex = [
     "google-cloud-aiplatform>=1.122.0",
