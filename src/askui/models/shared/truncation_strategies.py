@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 
 from typing_extensions import override
 
+from askui.callbacks.conversation_callback import ConversationCallback
 from askui.model_providers.vlm_provider import VlmProvider
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
@@ -18,6 +19,7 @@ from askui.models.shared.agent_message_param import (
 )
 from askui.models.shared.token_counter import SimpleTokenCounter
 from askui.prompts.truncation import SUMMARIZE_INSTRUCTION_PROMPT
+from askui.reporting import Reporter
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def _has_orphaned_tool_results(msg: MessageParam) -> bool:
 def _summarize_message_history(
     vlm_provider: VlmProvider,
     messages: list[MessageParam],
-) -> str:
+) -> MessageParam:
     """Ask the VLM to summarize the conversation history.
 
     Args:
@@ -57,7 +59,7 @@ def _summarize_message_history(
         messages: Messages to summarize.
 
     Returns:
-        A summary string of the conversation so far.
+        The raw VLM response message.
     """
     messages_to_summarize = list(messages)
 
@@ -77,18 +79,19 @@ def _summarize_message_history(
         )
     )
 
-    response = vlm_provider.create_message(
+    return vlm_provider.create_message(
         messages=messages_to_summarize,
         max_tokens=2048,
     )
 
+
+def _extract_summary_text(response: MessageParam) -> str:
+    """Extract text content from a VLM summary response."""
     if isinstance(response.content, str):
         return response.content
-
-    texts = [
+    return "\n".join(
         block.text for block in response.content if isinstance(block, TextBlockParam)
-    ]
-    return "\n".join(texts)
+    )
 
 
 def _clear_cache_control(msg: MessageParam) -> None:
@@ -140,6 +143,11 @@ class TruncationStrategy(ABC):
         max_input_tokens: Maximum input tokens for the endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
+        reporter: Optional reporter to log summarization
+            events as a ``"TruncationStrategy"``-role step.
+        callbacks: Optional list of conversation callbacks
+            notified via ``on_truncation_summarize`` whenever
+            summarization happens.
     """
 
     def __init__(
@@ -147,6 +155,8 @@ class TruncationStrategy(ABC):
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
+        reporter: Reporter | None = None,
+        callbacks: list[ConversationCallback] | None = None,
     ) -> None:
         self._full_message_history: list[MessageParam] = []
         self._truncated_message_history: list[MessageParam] = []
@@ -154,6 +164,8 @@ class TruncationStrategy(ABC):
         self._absolute_truncation_threshold = int(
             max_input_tokens * truncation_threshold
         )
+        self._reporter = reporter
+        self._callbacks = callbacks or []
 
     @abstractmethod
     def append_message(self, message: MessageParam) -> None:
@@ -218,6 +230,11 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
+        reporter: Optional reporter to log summarization
+            events as a ``"TruncationStrategy"``-role step.
+        callbacks: Optional list of conversation callbacks
+            notified via ``on_truncation_summarize`` whenever
+            summarization happens.
     """
 
     def __init__(
@@ -228,8 +245,16 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
+        reporter: Reporter | None = None,
+        callbacks: list[ConversationCallback] | None = None,
     ) -> None:
-        super().__init__(max_messages, max_input_tokens, truncation_threshold)
+        super().__init__(
+            max_messages,
+            max_input_tokens,
+            truncation_threshold,
+            reporter,
+            callbacks,
+        )
         self._vlm_provider = vlm_provider
         self._n_images_to_keep = n_images_to_keep
         self._n_messages_to_keep = n_messages_to_keep
@@ -293,9 +318,18 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             return
 
         logger.info("Summarizing message history")
-        summary = _summarize_message_history(
+        response = _summarize_message_history(
             self._vlm_provider, self._truncated_message_history
         )
+        if self._reporter:
+            self._reporter.add_message(
+                "TruncationStrategy",
+                response.model_dump(mode="json"),
+            )
+        if response.usage is not None:
+            for callback in self._callbacks:
+                callback.on_truncation_summarize(response.usage)
+        summary = _extract_summary_text(response)
 
         # Find a safe cut point that doesn't orphan tool_results.
         # A user message with tool_result blocks requires the
@@ -518,6 +552,11 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
+        reporter: Optional reporter to log summarization
+            events as a ``"TruncationStrategy"``-role step.
+        callbacks: Optional list of conversation callbacks
+            notified via ``on_truncation_summarize`` whenever
+            summarization happens.
     """
 
     def __init__(
@@ -527,8 +566,16 @@ class SummarizingTruncationStrategy(TruncationStrategy):
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
+        reporter: Reporter | None = None,
+        callbacks: list[ConversationCallback] | None = None,
     ) -> None:
-        super().__init__(max_messages, max_input_tokens, truncation_threshold)
+        super().__init__(
+            max_messages,
+            max_input_tokens,
+            truncation_threshold,
+            reporter,
+            callbacks,
+        )
         self._vlm_provider = vlm_provider
         self._n_messages_to_keep = n_messages_to_keep
         self._token_counter = SimpleTokenCounter()
@@ -586,9 +633,18 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             return
 
         logger.info("Summarizing message history")
-        summary = _summarize_message_history(
+        response = _summarize_message_history(
             self._vlm_provider, self._truncated_message_history
         )
+        if self._reporter:
+            self._reporter.add_message(
+                "TruncationStrategy",
+                response.model_dump(mode="json"),
+            )
+        if response.usage is not None:
+            for callback in self._callbacks:
+                callback.on_truncation_summarize(response.usage)
+        summary = _extract_summary_text(response)
 
         # Find a safe cut point that doesn't orphan
         # tool_results from their tool_use.

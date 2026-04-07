@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock
 
+from askui.callbacks.conversation_callback import ConversationCallback
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     ContentBlockParam,
@@ -11,6 +12,7 @@ from askui.models.shared.agent_message_param import (
     ToolResultBlockParam,
     ToolUseBlockParam,
     UrlImageSourceParam,
+    UsageParam,
 )
 from askui.models.shared.truncation_strategies import (
     SlidingImageWindowSummarizingTruncationStrategy,
@@ -47,11 +49,12 @@ def _make_tool_result_with_image(tool_use_id: str = "tool_1") -> ToolResultBlock
     )
 
 
-def _make_vlm_provider() -> MagicMock:
+def _make_vlm_provider(usage: UsageParam | None = None) -> MagicMock:
     provider = MagicMock()
     provider.create_message.return_value = MessageParam(
         role="assistant",
         content="Summary of the conversation.",
+        usage=usage,
     )
     return provider
 
@@ -739,3 +742,124 @@ class TestSummarizingTruncation:
         strategy.append_message(MessageParam(role="assistant", content="y" * 300))
         strategy.append_message(MessageParam(role="user", content="z" * 300))
         vlm.create_message.assert_called_once()
+
+
+class TestReporterIntegration:
+    def test_summarizing_strategy_reports_summary_response(self) -> None:
+        vlm = _make_vlm_provider()
+        reporter = MagicMock()
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            reporter=reporter,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        reporter.add_message.assert_called_once()
+        call_args = reporter.add_message.call_args
+        assert call_args.args[0] == "TruncationStrategy"
+        # Logged content is the raw VLM response dump
+        assert call_args.args[1]["role"] == "assistant"
+        assert call_args.args[1]["content"] == "Summary of the conversation."
+
+    def test_sliding_strategy_reports_summary_response(self) -> None:
+        vlm = _make_vlm_provider()
+        reporter = MagicMock()
+        strategy = SlidingImageWindowSummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            reporter=reporter,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        reporter.add_message.assert_called_once()
+        call_args = reporter.add_message.call_args
+        assert call_args.args[0] == "TruncationStrategy"
+        assert call_args.args[1]["content"] == "Summary of the conversation."
+
+    def test_strategy_does_not_report_when_no_reporter(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        # Should not crash even though no reporter is set
+        strategy.truncate()
+        assert strategy.truncated_messages[0].content == "Summary of the conversation."
+
+
+class TestCallbackIntegration:
+    def test_summarizing_strategy_notifies_callback_with_usage(self) -> None:
+        usage = UsageParam(
+            input_tokens=42,
+            output_tokens=7,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+        )
+        vlm = _make_vlm_provider(usage=usage)
+        callback = MagicMock(spec=ConversationCallback)
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            callbacks=[callback],
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        callback.on_truncation_summarize.assert_called_once_with(usage)
+
+    def test_sliding_strategy_notifies_callback_with_usage(self) -> None:
+        usage = UsageParam(
+            input_tokens=42,
+            output_tokens=7,
+            cache_creation_input_tokens=0,
+            cache_read_input_tokens=0,
+        )
+        vlm = _make_vlm_provider(usage=usage)
+        callback = MagicMock(spec=ConversationCallback)
+        strategy = SlidingImageWindowSummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            callbacks=[callback],
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        callback.on_truncation_summarize.assert_called_once_with(usage)
+
+    def test_strategy_does_not_notify_callback_when_no_usage(self) -> None:
+        vlm = _make_vlm_provider(usage=None)
+        callback = MagicMock(spec=ConversationCallback)
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            callbacks=[callback],
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        callback.on_truncation_summarize.assert_not_called()
+
+    def test_strategy_no_callbacks_no_crash(self) -> None:
+        vlm = _make_vlm_provider(
+            usage=UsageParam(input_tokens=10, output_tokens=5)
+        )
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        assert strategy.truncated_messages[0].content == "Summary of the conversation."

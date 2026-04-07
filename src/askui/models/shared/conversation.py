@@ -102,6 +102,8 @@ class Conversation:
             truncation_strategy
             or SummarizingTruncationStrategy(
                 vlm_provider=vlm_provider,
+                reporter=reporter,
+                callbacks=self._callbacks,
             )
         )
 

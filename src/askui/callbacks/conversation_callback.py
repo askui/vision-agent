@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from askui.models.shared.agent_message_param import UsageParam
+
 if TYPE_CHECKING:
     from askui.models.shared.conversation import Conversation
     from askui.speaker.speaker import SpeakerResult
@@ -122,4 +124,11 @@ class ConversationCallback:
         Args:
             conversation: The conversation instance.
             tool_names: Names of tools that were executed.
+        """
+
+    def on_truncation_summarize(self, usage: UsageParam) -> None:
+        """Called when a truncation strategy summarizes message history.
+
+        Args:
+            usage: Token usage from the summarization LLM call.
         """
