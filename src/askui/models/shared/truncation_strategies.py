@@ -201,9 +201,7 @@ class TruncationStrategy(ABC):
 
     def _summarization_request_context(
         self,
-    ) -> tuple[
-        SystemPrompt | None, ToolCollection | None, dict[str, Any] | None
-    ]:
+    ) -> tuple[SystemPrompt | None, ToolCollection | None, dict[str, Any] | None]:
         """Read the request context used by the regular conversation calls.
 
         Returns ``(system, tools, provider_options)`` from the owning

@@ -851,9 +851,7 @@ class TestCallbackIntegration:
         callback.on_truncation_summarize.assert_not_called()
 
     def test_strategy_no_callbacks_no_crash(self) -> None:
-        vlm = _make_vlm_provider(
-            usage=UsageParam(input_tokens=10, output_tokens=5)
-        )
+        vlm = _make_vlm_provider(usage=UsageParam(input_tokens=10, output_tokens=5))
         strategy = SummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
