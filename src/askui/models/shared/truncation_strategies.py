@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
@@ -17,9 +18,14 @@ from askui.models.shared.agent_message_param import (
     ToolResultBlockParam,
     ToolUseBlockParam,
 )
+from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.token_counter import SimpleTokenCounter
+from askui.models.shared.tools import ToolCollection
 from askui.prompts.truncation import SUMMARIZE_INSTRUCTION_PROMPT
 from askui.reporting import Reporter
+
+if TYPE_CHECKING:
+    from askui.models.shared.conversation import Conversation
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +37,7 @@ TRUNCATION_THRESHOLD = 0.7
 
 # see https://docs.anthropic.com/en/api/messages#body-messages
 MAX_MESSAGES = 100_000
+MAX_MESSAGES = 20
 
 IMAGE_REMOVED_PLACEHOLDER = "[Screenshot removed to reduce message history length]"
 """Text used to replace stripped base64 images."""
@@ -51,12 +58,27 @@ def _has_orphaned_tool_results(msg: MessageParam) -> bool:
 def _summarize_message_history(
     vlm_provider: VlmProvider,
     messages: list[MessageParam],
+    system: SystemPrompt | None = None,
+    tools: ToolCollection | None = None,
+    provider_options: dict[str, Any] | None = None,
 ) -> MessageParam:
     """Ask the VLM to summarize the conversation history.
+
+    The ``system`` and ``tools`` arguments are forwarded to
+    `VlmProvider.create_message` so the prompt-cache prefix matches
+    the regular conversation calls and we get cache hits on the
+    history. Without them, the cache key differs and every
+    summarization call is a cache miss.
 
     Args:
         vlm_provider: VLM provider to use for summarization.
         messages: Messages to summarize.
+        system: System prompt used by the regular conversation
+            calls. Required for cache hits on the prefix.
+        tools: Tools used by the regular conversation calls.
+            Required for cache hits on the prefix.
+        provider_options: Provider-specific options (e.g. ``betas``)
+            used by the regular conversation calls.
 
     Returns:
         The raw VLM response message.
@@ -82,6 +104,9 @@ def _summarize_message_history(
     return vlm_provider.create_message(
         messages=messages_to_summarize,
         max_tokens=2048,
+        system=system,
+        tools=tools,
+        provider_options=provider_options,
     )
 
 
@@ -148,6 +173,11 @@ class TruncationStrategy(ABC):
         callbacks: Optional list of conversation callbacks
             notified via ``on_truncation_summarize`` whenever
             summarization happens.
+        conversation: Optional owning conversation. When provided,
+            ``system``, ``tools`` and ``provider_options`` are read
+            from it at summarization time so the summarization
+            request shares the same prompt-cache prefix as the
+            regular conversation calls.
     """
 
     def __init__(
@@ -157,6 +187,7 @@ class TruncationStrategy(ABC):
         truncation_threshold: float = TRUNCATION_THRESHOLD,
         reporter: Reporter | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        conversation: "Conversation | None" = None,
     ) -> None:
         self._full_message_history: list[MessageParam] = []
         self._truncated_message_history: list[MessageParam] = []
@@ -166,6 +197,26 @@ class TruncationStrategy(ABC):
         )
         self._reporter = reporter
         self._callbacks = callbacks or []
+        self._conversation = conversation
+
+    def _summarization_request_context(
+        self,
+    ) -> tuple[
+        SystemPrompt | None, ToolCollection | None, dict[str, Any] | None
+    ]:
+        """Read the request context used by the regular conversation calls.
+
+        Returns ``(system, tools, provider_options)`` from the owning
+        conversation, or all-``None`` if no conversation was passed
+        (e.g. in unit tests that exercise the strategy in isolation).
+        """
+        if self._conversation is None:
+            return None, None, None
+        return (
+            self._conversation.settings.messages.system,
+            self._conversation.tools,
+            self._conversation.settings.messages.provider_options,
+        )
 
     @abstractmethod
     def append_message(self, message: MessageParam) -> None:
@@ -235,6 +286,11 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         callbacks: Optional list of conversation callbacks
             notified via ``on_truncation_summarize`` whenever
             summarization happens.
+        conversation: Optional owning conversation. When provided,
+            ``system``, ``tools`` and ``provider_options`` are read
+            from it at summarization time so the summarization
+            request shares the same prompt-cache prefix as the
+            regular conversation calls.
     """
 
     def __init__(
@@ -247,6 +303,7 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         truncation_threshold: float = TRUNCATION_THRESHOLD,
         reporter: Reporter | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        conversation: "Conversation | None" = None,
     ) -> None:
         super().__init__(
             max_messages,
@@ -254,6 +311,7 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             truncation_threshold,
             reporter,
             callbacks,
+            conversation,
         )
         self._vlm_provider = vlm_provider
         self._n_images_to_keep = n_images_to_keep
@@ -318,8 +376,13 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             return
 
         logger.info("Summarizing message history")
+        system, tools, provider_options = self._summarization_request_context()
         response = _summarize_message_history(
-            self._vlm_provider, self._truncated_message_history
+            self._vlm_provider,
+            self._truncated_message_history,
+            system=system,
+            tools=tools,
+            provider_options=provider_options,
         )
         if self._reporter:
             self._reporter.add_message(
@@ -557,6 +620,11 @@ class SummarizingTruncationStrategy(TruncationStrategy):
         callbacks: Optional list of conversation callbacks
             notified via ``on_truncation_summarize`` whenever
             summarization happens.
+        conversation: Optional owning conversation. When provided,
+            ``system``, ``tools`` and ``provider_options`` are read
+            from it at summarization time so the summarization
+            request shares the same prompt-cache prefix as the
+            regular conversation calls.
     """
 
     def __init__(
@@ -568,6 +636,7 @@ class SummarizingTruncationStrategy(TruncationStrategy):
         truncation_threshold: float = TRUNCATION_THRESHOLD,
         reporter: Reporter | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        conversation: "Conversation | None" = None,
     ) -> None:
         super().__init__(
             max_messages,
@@ -575,6 +644,7 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             truncation_threshold,
             reporter,
             callbacks,
+            conversation,
         )
         self._vlm_provider = vlm_provider
         self._n_messages_to_keep = n_messages_to_keep
@@ -633,8 +703,13 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             return
 
         logger.info("Summarizing message history")
+        system, tools, provider_options = self._summarization_request_context()
         response = _summarize_message_history(
-            self._vlm_provider, self._truncated_message_history
+            self._vlm_provider,
+            self._truncated_message_history,
+            system=system,
+            tools=tools,
+            provider_options=provider_options,
         )
         if self._reporter:
             self._reporter.add_message(

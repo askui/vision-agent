@@ -863,3 +863,84 @@ class TestCallbackIntegration:
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
         strategy.truncate()
         assert strategy.truncated_messages[0].content == "Summary of the conversation."
+
+
+class TestSummarizationRequestContext:
+    """Verify summarization passes the same system/tools as regular calls.
+
+    The Anthropic prompt cache key is ``tools + system + messages_prefix``.
+    If the summarization request omits ``system`` or ``tools``, its cache
+    key differs from the regular conversation calls and we get 0 cache
+    reads on the summarization step.
+    """
+
+    def _make_conversation(
+        self,
+        system: str | None = "system prompt",
+        provider_options: dict[str, object] | None = None,
+    ) -> MagicMock:
+        from askui.models.shared.tools import ToolCollection
+
+        conversation = MagicMock()
+        conversation.settings.messages.system = system
+        conversation.tools = ToolCollection()
+        conversation.settings.messages.provider_options = provider_options
+        return conversation
+
+    def test_summarizing_strategy_forwards_system_and_tools(self) -> None:
+        vlm = _make_vlm_provider()
+        conversation = self._make_conversation(
+            system="my system",
+            provider_options={"betas": ["foo"]},
+        )
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            conversation=conversation,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        vlm.create_message.assert_called_once()
+        call_kwargs = vlm.create_message.call_args.kwargs
+        assert call_kwargs["system"] == "my system"
+        assert call_kwargs["tools"] is conversation.tools
+        assert call_kwargs["provider_options"] == {"betas": ["foo"]}
+
+    def test_sliding_strategy_forwards_system_and_tools(self) -> None:
+        vlm = _make_vlm_provider()
+        conversation = self._make_conversation(
+            system="my system",
+            provider_options={"betas": ["bar"]},
+        )
+        strategy = SlidingImageWindowSummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+            conversation=conversation,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        vlm.create_message.assert_called_once()
+        call_kwargs = vlm.create_message.call_args.kwargs
+        assert call_kwargs["system"] == "my system"
+        assert call_kwargs["tools"] is conversation.tools
+        assert call_kwargs["provider_options"] == {"betas": ["bar"]}
+
+    def test_strategy_without_conversation_passes_none_for_context(self) -> None:
+        vlm = _make_vlm_provider()
+        strategy = SummarizingTruncationStrategy(
+            vlm_provider=vlm,
+            n_messages_to_keep=2,
+        )
+        for i in range(6):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.truncate()
+        vlm.create_message.assert_called_once()
+        call_kwargs = vlm.create_message.call_args.kwargs
+        assert call_kwargs["system"] is None
+        assert call_kwargs["tools"] is None
+        assert call_kwargs["provider_options"] is None

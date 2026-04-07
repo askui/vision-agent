@@ -98,12 +98,16 @@ class Conversation:
         self._step_index: int = 0
 
         # truncation strategy
+        # Pass `self` so the strategy can read system/tools/provider_options
+        # from the conversation at summarization time and produce a
+        # request whose prompt-cache prefix matches the regular calls.
         self._truncation_strategy = (
             truncation_strategy
             or SummarizingTruncationStrategy(
                 vlm_provider=vlm_provider,
                 reporter=reporter,
                 callbacks=self._callbacks,
+                conversation=self,
             )
         )
 
