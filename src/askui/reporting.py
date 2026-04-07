@@ -3,8 +3,10 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import platform
 import random
+import shutil
 import sys
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -17,6 +19,8 @@ from jinja2 import Template
 from typing_extensions import TypedDict, override
 
 from askui.utils.annotated_image import AnnotatedImage
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -156,6 +160,70 @@ class NullReporter(Reporter):
 NULL_REPORTER = NullReporter()
 
 
+class ReporterErrorHandler(Reporter):
+    """A reporter that handles errors by logging them and skipping the reporter."""
+
+    def __init__(self, reporter: Reporter) -> None:
+        self._reporter = reporter
+        self._error_occurred = False
+
+    def _log_on_exception(self, error: Exception) -> None:
+        error_message = getattr(error, "message", str(error))
+        logger.exception(
+            "Skipping the usage of reporter %s due to the following exception: %s",
+            self._reporter,
+            error_message,
+        )
+        self._error_occurred = True
+
+    @override
+    def add_message(
+        self,
+        role: str,
+        content: Union[str, dict[str, Any], list[Any]],
+        image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
+    ) -> None:
+        if self._error_occurred:
+            logger.debug("Skipping reporter due to previous error")
+            return
+        try:
+            self._reporter.add_message(role, content, image)
+        except Exception as e:  # noqa: BLE001
+            self._log_on_exception(e)
+
+    @override
+    def add_usage_summary(self, usage: UsageSummary) -> None:
+        if self._error_occurred:
+            logger.debug("Skipping reporter due to previous error")
+            return
+        try:
+            self._reporter.add_usage_summary(usage)
+        except Exception as e:  # noqa: BLE001
+            self._log_on_exception(e)
+
+    @override
+    def add_cache_execution_statistics(
+        self, original_usage: dict[str, int | None]
+    ) -> None:
+        if self._error_occurred:
+            logger.debug("Skipping reporter due to previous error")
+            return
+        try:
+            self._reporter.add_cache_execution_statistics(original_usage)
+        except Exception as e:  # noqa: BLE001
+            self._log_on_exception(e)
+
+    @override
+    def generate(self) -> None:
+        if self._error_occurred:
+            logger.debug("Skipping reporter due to previous error")
+            return
+        try:
+            self._reporter.generate()
+        except Exception as e:  # noqa: BLE001
+            self._log_on_exception(e)
+
+
 class CompositeReporter(Reporter):
     """A reporter that combines multiple reporters.
 
@@ -168,7 +236,9 @@ class CompositeReporter(Reporter):
     """
 
     def __init__(self, reporters: list[Reporter] | None = None) -> None:
-        self._reporters = reporters or []
+        self._reporters = [
+            ReporterErrorHandler(reporter) for reporter in reporters or []
+        ]
 
     @override
     def add_message(
@@ -211,6 +281,10 @@ class SystemInfo(TypedDict):
 class SimpleHtmlReporter(Reporter):
     """A reporter that generates HTML reports with conversation logs and system information.
 
+    Messages are streamed to a temporary file as they arrive so that base64-encoded
+    screenshots are never held in memory all at once. The final report is assembled
+    as a single self-contained HTML file on `generate()`.
+
     Args:
         report_dir (str, optional): Directory where reports will be saved.
             Defaults to `reports`.
@@ -218,7 +292,7 @@ class SimpleHtmlReporter(Reporter):
 
     def __init__(self, report_dir: str = "reports") -> None:
         self.report_dir = Path(report_dir)
-        self.messages: list[dict[str, Any]] = []
+        self._temp_messages_file: Path | None = None
         self.system_info = self._collect_system_info()
         self.usage_summary: UsageSummary | None = None
         self.cache_original_usage: dict[str, int | None] | None = None
@@ -244,6 +318,48 @@ class SimpleHtmlReporter(Reporter):
             return json.dumps(content, indent=2)
         return str(content)
 
+    def _get_temp_messages_file(self) -> Path:
+        """Return the path to the temporary messages file, creating it if needed."""
+        if self._temp_messages_file is None:
+            self.report_dir.mkdir(parents=True, exist_ok=True)
+            self._temp_messages_file = self.report_dir / f"_messages_{id(self)}.tmp"
+        return self._temp_messages_file
+
+    def _render_message_row(
+        self,
+        timestamp: datetime,
+        role: str,
+        content: str,
+        is_json: bool,
+        images: list[str],
+    ) -> str:
+        """Render a single conversation message as an HTML table row."""
+        role_lower = role.lower()
+        ts_str = timestamp.strftime("%H:%M:%S.%f")[:-3]
+
+        if is_json:
+            content_html = (
+                f'<div class="json-content">'
+                f'<pre><code class="json">{content}</code></pre>'
+                f"</div>"
+            )
+        else:
+            content_html = content
+
+        images_html = "".join(
+            f'<br><img src="data:image/png;base64,{image}"'
+            f' class="message-image" alt="Message image">'
+            for image in images
+        )
+
+        return (
+            f'<tr class="{role_lower}">'
+            f'<td class="timestamp">{ts_str} UTC</td>'
+            f'<td><span class="role-badge role-{role_lower}">{role}</span></td>'
+            f'<td class="content-cell">{content_html}{images_html}</td>'
+            f"</tr>\n"
+        )
+
     @override
     def add_message(
         self,
@@ -251,22 +367,27 @@ class SimpleHtmlReporter(Reporter):
         content: Union[str, dict[str, Any], list[Any]],
         image: Optional[Image.Image | list[Image.Image] | AnnotatedImage] = None,
     ) -> None:
-        """Add a message to the report."""
-        # Track start time from first message
+        """Add a message to the report.
+
+        The rendered HTML row is written directly to a temporary file so that
+        base64 image data is not accumulated in memory during long runs.
+        """
         if self._start_time is None:
             self._start_time = datetime.now(tz=timezone.utc)
 
         _images = normalize_to_pil_images(image)
         _content = truncate_content(content)
 
-        message = {
-            "timestamp": datetime.now(tz=timezone.utc),
-            "role": role,
-            "content": self._format_content(_content),
-            "is_json": isinstance(_content, (dict, list)),
-            "images": [self._image_to_base64(img) for img in _images],
-        }
-        self.messages.append(message)
+        timestamp = datetime.now(tz=timezone.utc)
+        formatted_content = self._format_content(_content)
+        is_json = isinstance(_content, (dict, list))
+        image_b64s = [self._image_to_base64(img) for img in _images]
+
+        row_html = self._render_message_row(
+            timestamp, role, formatted_content, is_json, image_b64s
+        )
+        with self._get_temp_messages_file().open(mode="a", encoding="utf-8") as f:
+            f.write(row_html)
 
     @override
     def add_usage_summary(self, usage: UsageSummary) -> None:
@@ -299,8 +420,11 @@ class SimpleHtmlReporter(Reporter):
         - System information
         - All collected messages with their content and images
         - Syntax-highlighted JSON content
+
+        Message rows are streamed from a temporary file so that the full set of
+        base64 images is never held in memory simultaneously.
         """
-        template_str = """
+        _HEADER_TEMPLATE = """
         <!DOCTYPE html>
         <html lang="en">
             <head>
@@ -1092,39 +1216,9 @@ class SimpleHtmlReporter(Reporter):
                                 <th>Role</th>
                                 <th>Content</th>
                             </tr>
-                            {% for msg in messages %}
-                                <tr class="{{ msg.role.lower() }}">
-                                    <td class="timestamp">{{ msg.timestamp.strftime('%H:%M:%S.%f')[:-3] }} UTC</td>
-                                    <td>
-                                        <span class="role-badge role-{{ msg.role.lower() }}">
-                                            {{ msg.role }}
-                                        </span>
-                                    </td>
-                                    <td class="content-cell">
-                                        {% if msg.is_json %}
-                                            <div class="json-content">
-                                                <pre><code class="json">{{ msg.content }}</code></pre>
-                                            </div>
-                                        {% else %}
-                                            {{ msg.content }}
-                                        {% endif %}
-                                        {% for image in msg.images %}
-                                            <br>
-                                            <img src="data:image/png;base64,{{ image }}"
-                                                class="message-image"
-                                                alt="Message image">
-                                        {% endfor %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                </div>
-            </body>
-        </html>
         """
 
-        template = Template(template_str)
+        _FOOTER = "            </table>\n                    </div>\n                </div>\n            </body>\n        </html>"
 
         # Calculate execution time
         end_time = datetime.now(tz=timezone.utc)
@@ -1135,9 +1229,8 @@ class SimpleHtmlReporter(Reporter):
             minutes, secs = divmod(remainder, 60)
             execution_time_formatted = f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
-        html = template.render(
+        header_html = Template(_HEADER_TEMPLATE).render(
             timestamp=end_time,
-            messages=self.messages,
             system_info=self.system_info,
             usage_summary=self.usage_summary,
             cache_original_usage=self.cache_original_usage,
@@ -1145,11 +1238,22 @@ class SimpleHtmlReporter(Reporter):
         )
 
         report_path = (
-            self.report_dir / f"report_{datetime.now(tz=timezone.utc):%Y%m%d%H%M%S%f}"
+            self.report_dir / f"report_{end_time:%Y%m%d%H%M%S%f}"
             f"{random.randint(0, 1000):03}.html"
         )
         self.report_dir.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(html, encoding="utf-8")
+
+        with report_path.open(mode="w", encoding="utf-8") as out:
+            out.write(header_html)
+            if (
+                self._temp_messages_file is not None
+                and self._temp_messages_file.exists()
+            ):
+                with self._temp_messages_file.open(mode="r", encoding="utf-8") as tmp:
+                    shutil.copyfileobj(tmp, out)
+                self._temp_messages_file.unlink()
+                self._temp_messages_file = None
+            out.write(_FOOTER)
 
 
 class AllureReporter(Reporter):
