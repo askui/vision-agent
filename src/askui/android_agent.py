@@ -65,7 +65,15 @@ class AndroidAgent(Agent):
         ```
     """
 
-    @telemetry.record_call(exclude={"reporters", "settings", "act_tools", "callbacks"})
+    @telemetry.record_call(
+        exclude={
+            "reporters",
+            "settings",
+            "act_tools",
+            "callbacks",
+            "truncation_strategy",
+        }
+    )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
         self,
