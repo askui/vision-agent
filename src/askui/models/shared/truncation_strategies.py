@@ -322,6 +322,13 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             self._debug_writer = None
             logger.exception("Could not add truncation debug writer")
 
+        logger.warning(
+            "%s is experimental and may change, misbehave or crash "
+            "without warning. For production use, prefer "
+            "SummarizingTruncationStrategy.",
+            type(self).__name__,
+        )
+
     @override
     def append_message(self, message: MessageParam) -> None:
         """Append a message and apply image stripping,
