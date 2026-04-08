@@ -325,6 +325,26 @@ class SimpleHtmlReporter(Reporter):
             self._temp_messages_file = self.report_dir / f"_messages_{id(self)}.tmp"
         return self._temp_messages_file
 
+    _MESSAGE_ROW_TEMPLATE = Template(
+        '<tr class="{{ role_lower }}">'
+        '<td class="timestamp">{{ ts_str }} UTC</td>'
+        '<td><span class="role-badge role-{{ role_lower }}">{{ role }}</span></td>'
+        '<td class="content-cell">'
+        "{% if is_json %}"
+        '<div class="json-content">'
+        '<pre><code class="json">{{ content }}</code></pre>'
+        "</div>"
+        "{% else %}"
+        "{{ content }}"
+        "{% endif %}"
+        "{% for image in images %}"
+        '<br><img src="data:image/png;base64,{{ image }}" '
+        'class="message-image" alt="Message image">'
+        "{% endfor %}"
+        "</td>"
+        "</tr>\n"
+    )
+
     def _render_message_row(
         self,
         timestamp: datetime,
@@ -334,30 +354,13 @@ class SimpleHtmlReporter(Reporter):
         images: list[str],
     ) -> str:
         """Render a single conversation message as an HTML table row."""
-        role_lower = role.lower()
-        ts_str = timestamp.strftime("%H:%M:%S.%f")[:-3]
-
-        if is_json:
-            content_html = (
-                f'<div class="json-content">'
-                f'<pre><code class="json">{content}</code></pre>'
-                f"</div>"
-            )
-        else:
-            content_html = content
-
-        images_html = "".join(
-            f'<br><img src="data:image/png;base64,{image}"'
-            f' class="message-image" alt="Message image">'
-            for image in images
-        )
-
-        return (
-            f'<tr class="{role_lower}">'
-            f'<td class="timestamp">{ts_str} UTC</td>'
-            f'<td><span class="role-badge role-{role_lower}">{role}</span></td>'
-            f'<td class="content-cell">{content_html}{images_html}</td>'
-            f"</tr>\n"
+        return self._MESSAGE_ROW_TEMPLATE.render(
+            role_lower=role.lower(),
+            ts_str=timestamp.strftime("%H:%M:%S.%f")[:-3],
+            role=role,
+            content=content,
+            is_json=is_json,
+            images=images,
         )
 
     @override
@@ -1245,15 +1248,19 @@ class SimpleHtmlReporter(Reporter):
 
         with report_path.open(mode="w", encoding="utf-8") as out:
             out.write(header_html)
-            if (
-                self._temp_messages_file is not None
-                and self._temp_messages_file.exists()
-            ):
-                with self._temp_messages_file.open(mode="r", encoding="utf-8") as tmp:
-                    shutil.copyfileobj(tmp, out)
-                self._temp_messages_file.unlink()
-                self._temp_messages_file = None
-            out.write(_FOOTER)
+            try:
+                if (
+                    self._temp_messages_file is not None
+                    and self._temp_messages_file.exists()
+                ):
+                    with self._temp_messages_file.open(
+                        mode="r", encoding="utf-8"
+                    ) as tmp:
+                        shutil.copyfileobj(tmp, out)
+                    self._temp_messages_file.unlink()
+                    self._temp_messages_file = None
+            finally:
+                out.write(_FOOTER)
 
 
 class AllureReporter(Reporter):
