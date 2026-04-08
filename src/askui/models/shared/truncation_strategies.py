@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
-from askui.callbacks.conversation_callback import ConversationCallback
 from askui.model_providers.vlm_provider import VlmProvider
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
@@ -22,10 +21,11 @@ from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.token_counter import SimpleTokenCounter
 from askui.models.shared.tools import ToolCollection
 from askui.prompts.truncation import SUMMARIZE_INSTRUCTION_PROMPT
-from askui.reporting import Reporter
 
 if TYPE_CHECKING:
+    from askui.callbacks.conversation_callback import ConversationCallback
     from askui.models.shared.conversation import Conversation
+    from askui.reporting import Reporter
 
 logger = logging.getLogger(__name__)
 
