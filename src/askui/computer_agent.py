@@ -221,15 +221,15 @@ class ComputerAgent(Agent):
     @validate_call
     def mouse_scroll(
         self,
-        x: int,
-        y: int,
+        dx: int,
+        dy: int,
     ) -> None:
         """
         Simulates scrolling the mouse wheel by the specified horizontal and vertical amounts.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
-            y (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
+            dx (int): The horizontal scroll amount. Positive values typically scroll right, negative values scroll left.
+            dy (int): The vertical scroll amount. Positive values typically scroll down, negative values scroll up.
 
         Note:
             The actual scroll direction depends on the operating system's configuration.
@@ -248,8 +248,8 @@ class ComputerAgent(Agent):
                 agent.mouse_scroll(3, 0)   # Usually scrolls right 3 units
             ```
         """
-        self._reporter.add_message("User", f'mouse_scroll: "{x}", "{y}"')
-        self.tools.os.mouse_scroll(x, y)
+        self._reporter.add_message("User", f'mouse_scroll: "{dx}", "{dy}"')
+        self.tools.os.mouse_scroll(dx, dy)
 
     @telemetry.record_call(exclude={"text", "locator"})
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))

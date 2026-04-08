@@ -503,37 +503,37 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def mouse_scroll(self, x: int, y: int) -> None:
+    def mouse_scroll(self, dx: int, dy: int) -> None:
         """
         Scroll the mouse wheel.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values scroll right,
+            dx (int): The horizontal scroll amount. Positive values scroll right,
                 negative values scroll left.
-            y (int): The vertical scroll amount. Positive values scroll down,
+            dy (int): The vertical scroll amount. Positive values scroll down,
                 negative values scroll up.
         """
-        self._reporter.add_message("AgentOS", f"mouse_scroll({x}, {y})")
-        if x != 0:
+        self._reporter.add_message("AgentOS", f"mouse_scroll({dx}, {dy})")
+        if dx != 0:
             self._run_recorder_action(
                 acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll,
                 action_parameters=controller_v1_pbs.ActionParameters(
                     mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
                         direction=controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Horizontal,
                         deltaType=controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
-                        delta=x,
+                        delta=dx,
                         milliseconds=50,
                     )
                 ),
             )
-        if y != 0:
+        if dy != 0:
             self._run_recorder_action(
                 acion_class_id=controller_v1_pbs.ActionClassID_MouseWheelScroll,
                 action_parameters=controller_v1_pbs.ActionParameters(
                     mouseWheelScroll=controller_v1_pbs.ActionParameters_MouseWheelScroll(
                         direction=controller_v1_pbs.MouseWheelScrollDirection.MouseWheelScrollDirection_Vertical,
                         deltaType=controller_v1_pbs.MouseWheelDeltaType.MouseWheelDelta_Raw,
-                        delta=y,
+                        delta=dy,
                         milliseconds=50,
                     )
                 ),

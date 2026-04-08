@@ -84,11 +84,8 @@ class ComputerAgentOsFacade(AgentOs):
     def mouse_up(self, button: MouseButton = "left") -> None:
         self._agent_os.mouse_up(button)
 
-    def mouse_scroll(self, x: int, y: int) -> None:
-        scaled_x, scaled_y = self._scale_coordinates_back(
-            x, y, check_coordinates_in_bounds=False
-        )
-        self._agent_os.mouse_scroll(scaled_x, scaled_y)
+    def mouse_scroll(self, dx: int, dy: int) -> None:
+        self._agent_os.mouse_scroll(dx, dy)
 
     def keyboard_pressed(
         self, key: PcKey | ModifierKey, modifier_keys: list[ModifierKey] | None = None
