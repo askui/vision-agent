@@ -37,7 +37,6 @@ TRUNCATION_THRESHOLD = 0.7
 
 # see https://docs.anthropic.com/en/api/messages#body-messages
 MAX_MESSAGES = 100_000
-MAX_MESSAGES = 20
 
 IMAGE_REMOVED_PLACEHOLDER = "[Screenshot removed to reduce message history length]"
 """Text used to replace stripped base64 images."""
