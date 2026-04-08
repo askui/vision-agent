@@ -333,15 +333,7 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
         self._n_messages_to_keep = n_messages_to_keep
         self._token_counter = SimpleTokenCounter()
         self._image_removal_boundary_index: int | None = None
-        try:
-            from askui.models.shared.truncation_debug import (  # type: ignore[import-untyped]
-                TruncationDebugWriter,
-            )
-
-            self._debug_writer = TruncationDebugWriter()
-        except ImportError:
-            self._debug_writer = None
-            logger.exception("Could not add truncation debug writer")
+        self._debug_writer = None
 
         logger.warning(
             "%s is experimental and may change, misbehave or crash "
@@ -380,7 +372,8 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             truncated = True
 
         if self._debug_writer:
-            self._debug_writer.write_snapshot(
+            # will only be used if compatible debug writer is injected
+            self._debug_writer.write_snapshot(  # type: ignore[unreachable]
                 event="truncate" if truncated else "append",
                 full_messages=self._full_message_history,
                 truncated_messages=self._truncated_message_history,
@@ -401,9 +394,7 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             logger.warning(msg)
             return
         if _has_pending_tool_use(self._truncated_message_history):
-            logger.debug(
-                "Deferring truncation: last message has pending tool_use"
-            )
+            logger.debug("Deferring truncation: last message has pending tool_use")
             return
 
         logger.info("Summarizing message history")
@@ -729,9 +720,7 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             logger.warning(msg)
             return
         if _has_pending_tool_use(self._truncated_message_history):
-            logger.debug(
-                "Deferring truncation: last message has pending tool_use"
-            )
+            logger.debug("Deferring truncation: last message has pending tool_use")
             return
 
         logger.info("Summarizing message history")
