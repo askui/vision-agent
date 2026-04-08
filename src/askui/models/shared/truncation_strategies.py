@@ -162,22 +162,26 @@ class TruncationStrategy(ABC):
     - ``truncated_messages``: may have images stripped and
       history summarized for LLM calls
 
+    Conversation-owned dependencies (``vlm_provider``, ``reporter``,
+    ``callbacks``, ``conversation``) are auto-injected by the
+    `Conversation` when it takes ownership of the strategy, so
+    users only need to configure strategy-specific parameters when
+    constructing a custom strategy:
+
+    .. code-block:: python
+
+        strategy = SummarizingTruncationStrategy(n_messages_to_keep=5)
+        agent = ComputerAgent(truncation_strategy=strategy)
+
+    ``vlm_provider`` can be pre-set to override the conversation's
+    default VLM for summarization (e.g. to use a cheaper model).
+
     Args:
         max_messages: Maximum number of messages before
             forcing truncation.
         max_input_tokens: Maximum input tokens for the endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
-        reporter: Optional reporter to log summarization
-            events as a ``"TruncationStrategy"``-role step.
-        callbacks: Optional list of conversation callbacks
-            notified via ``on_truncation_summarize`` whenever
-            summarization happens.
-        conversation: Optional owning conversation. When provided,
-            ``system``, ``tools`` and ``provider_options`` are read
-            from it at summarization time so the summarization
-            request shares the same prompt-cache prefix as the
-            regular conversation calls.
     """
 
     def __init__(
@@ -185,9 +189,6 @@ class TruncationStrategy(ABC):
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
-        reporter: Reporter | None = None,
-        callbacks: list[ConversationCallback] | None = None,
-        conversation: "Conversation | None" = None,
     ) -> None:
         self._full_message_history: list[MessageParam] = []
         self._truncated_message_history: list[MessageParam] = []
@@ -195,9 +196,13 @@ class TruncationStrategy(ABC):
         self._absolute_truncation_threshold = int(
             max_input_tokens * truncation_threshold
         )
-        self._reporter = reporter
-        self._callbacks = callbacks or []
-        self._conversation = conversation
+        # Conversation-owned dependencies, auto-injected by Conversation.
+        # Can be set manually before passing the strategy to the
+        # conversation (e.g. vlm_provider override, tests in isolation).
+        self.vlm_provider: VlmProvider | None = None
+        self.reporter: Reporter | None = None
+        self.callbacks: list[ConversationCallback] = []
+        self.conversation: "Conversation | None" = None
 
     def _summarization_request_context(
         self,
@@ -205,15 +210,15 @@ class TruncationStrategy(ABC):
         """Read the request context used by the regular conversation calls.
 
         Returns ``(system, tools, provider_options)`` from the owning
-        conversation, or all-``None`` if no conversation was passed
+        conversation, or all-``None`` if no conversation is attached
         (e.g. in unit tests that exercise the strategy in isolation).
         """
-        if self._conversation is None:
+        if self.conversation is None:
             return None, None, None
         return (
-            self._conversation.settings.messages.system,
-            self._conversation.tools,
-            self._conversation.settings.messages.provider_options,
+            self.conversation.settings.messages.system,
+            self.conversation.tools,
+            self.conversation.settings.messages.provider_options,
         )
 
     @abstractmethod
@@ -267,8 +272,13 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
     3. If token count exceeds threshold, summarizes
        the history via the VLM
 
+    Conversation-owned dependencies (``vlm_provider``, ``reporter``,
+    ``callbacks``, ``conversation``) are auto-injected by
+    `Conversation`. Pre-set ``vlm_provider`` to override the
+    conversation's default (e.g. to use a cheaper model for
+    summarization).
+
     Args:
-        vlm_provider: VLM provider used for summarization.
         n_images_to_keep: Number of most-recent base64 images
             to retain.
         n_messages_to_keep: Number of most-recent messages to
@@ -279,39 +289,26 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
-        reporter: Optional reporter to log summarization
-            events as a ``"TruncationStrategy"``-role step.
-        callbacks: Optional list of conversation callbacks
-            notified via ``on_truncation_summarize`` whenever
-            summarization happens.
-        conversation: Optional owning conversation. When provided,
-            ``system``, ``tools`` and ``provider_options`` are read
-            from it at summarization time so the summarization
-            request shares the same prompt-cache prefix as the
-            regular conversation calls.
+        vlm_provider: Optional override for the summarization
+            VLM. When ``None`` (default), the conversation's
+            ``vlm_provider`` is used.
     """
 
     def __init__(
         self,
-        vlm_provider: VlmProvider,
         n_images_to_keep: int = 3,
         n_messages_to_keep: int = 10,
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
-        reporter: Reporter | None = None,
-        callbacks: list[ConversationCallback] | None = None,
-        conversation: "Conversation | None" = None,
+        vlm_provider: VlmProvider | None = None,
     ) -> None:
         super().__init__(
             max_messages,
             max_input_tokens,
             truncation_threshold,
-            reporter,
-            callbacks,
-            conversation,
         )
-        self._vlm_provider = vlm_provider
+        self.vlm_provider = vlm_provider
         self._n_images_to_keep = n_images_to_keep
         self._n_messages_to_keep = n_messages_to_keep
         self._token_counter = SimpleTokenCounter()
@@ -372,23 +369,27 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             msg = "Cannot truncate: too few messages in history"
             logger.warning(msg)
             return
+        if self.vlm_provider is None:
+            msg = "Cannot truncate: no vlm_provider available"
+            logger.warning(msg)
+            return
 
         logger.info("Summarizing message history")
         system, tools, provider_options = self._summarization_request_context()
         response = _summarize_message_history(
-            self._vlm_provider,
+            self.vlm_provider,
             self._truncated_message_history,
             system=system,
             tools=tools,
             provider_options=provider_options,
         )
-        if self._reporter:
-            self._reporter.add_message(
+        if self.reporter:
+            self.reporter.add_message(
                 "TruncationStrategy",
                 response.model_dump(mode="json"),
             )
         if response.usage is not None:
-            for callback in self._callbacks:
+            for callback in self.callbacks:
                 callback.on_truncation_summarize(response.usage)
         summary = _extract_summary_text(response)
 
@@ -603,8 +604,13 @@ class SummarizingTruncationStrategy(TruncationStrategy):
     history via the VLM when the token or message count
     exceeds the configured threshold.
 
+    Conversation-owned dependencies (``vlm_provider``, ``reporter``,
+    ``callbacks``, ``conversation``) are auto-injected by
+    `Conversation`. Pre-set ``vlm_provider`` to override the
+    conversation's default (e.g. to use a cheaper model for
+    summarization).
+
     Args:
-        vlm_provider: VLM provider used for summarization.
         n_messages_to_keep: Number of most-recent messages to
             preserve during summarization.
         max_messages: Maximum number of messages before
@@ -613,38 +619,25 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             endpoint.
         truncation_threshold: Fraction of `max_input_tokens`
             at which to truncate.
-        reporter: Optional reporter to log summarization
-            events as a ``"TruncationStrategy"``-role step.
-        callbacks: Optional list of conversation callbacks
-            notified via ``on_truncation_summarize`` whenever
-            summarization happens.
-        conversation: Optional owning conversation. When provided,
-            ``system``, ``tools`` and ``provider_options`` are read
-            from it at summarization time so the summarization
-            request shares the same prompt-cache prefix as the
-            regular conversation calls.
+        vlm_provider: Optional override for the summarization
+            VLM. When ``None`` (default), the conversation's
+            ``vlm_provider`` is used.
     """
 
     def __init__(
         self,
-        vlm_provider: VlmProvider,
         n_messages_to_keep: int = 10,
         max_messages: int = MAX_MESSAGES,
         max_input_tokens: int = MAX_INPUT_TOKENS,
         truncation_threshold: float = TRUNCATION_THRESHOLD,
-        reporter: Reporter | None = None,
-        callbacks: list[ConversationCallback] | None = None,
-        conversation: "Conversation | None" = None,
+        vlm_provider: VlmProvider | None = None,
     ) -> None:
         super().__init__(
             max_messages,
             max_input_tokens,
             truncation_threshold,
-            reporter,
-            callbacks,
-            conversation,
         )
-        self._vlm_provider = vlm_provider
+        self.vlm_provider = vlm_provider
         self._n_messages_to_keep = n_messages_to_keep
         self._token_counter = SimpleTokenCounter()
 
@@ -699,23 +692,27 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             msg = "Cannot truncate: too few messages in history"
             logger.warning(msg)
             return
+        if self.vlm_provider is None:
+            msg = "Cannot truncate: no vlm_provider available"
+            logger.warning(msg)
+            return
 
         logger.info("Summarizing message history")
         system, tools, provider_options = self._summarization_request_context()
         response = _summarize_message_history(
-            self._vlm_provider,
+            self.vlm_provider,
             self._truncated_message_history,
             system=system,
             tools=tools,
             provider_options=provider_options,
         )
-        if self._reporter:
-            self._reporter.add_message(
+        if self.reporter:
+            self.reporter.add_message(
                 "TruncationStrategy",
                 response.model_dump(mode="json"),
             )
         if response.usage is not None:
-            for callback in self._callbacks:
+            for callback in self.callbacks:
                 callback.on_truncation_summarize(response.usage)
         summary = _extract_summary_text(response)
 

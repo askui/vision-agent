@@ -97,19 +97,21 @@ class Conversation:
         self._reporters: list[Reporter] = []
         self._step_index: int = 0
 
-        # truncation strategy
-        # Pass `self` so the strategy can read system/tools/provider_options
-        # from the conversation at summarization time and produce a
-        # request whose prompt-cache prefix matches the regular calls.
-        self._truncation_strategy = (
-            truncation_strategy
-            or SummarizingTruncationStrategy(
-                vlm_provider=vlm_provider,
-                reporter=reporter,
-                callbacks=self._callbacks,
-                conversation=self,
-            )
+        # Truncation strategy. Conversation-owned dependencies are
+        # auto-injected so users can pass a custom strategy with only
+        # strategy-specific config (e.g. n_messages_to_keep) without
+        # needing access to vlm_provider/reporter/callbacks/conversation
+        # at construction time. ``vlm_provider`` is only injected when
+        # not pre-set, allowing callers to override the summarization
+        # VLM (e.g. with a cheaper model).
+        self._truncation_strategy: TruncationStrategy = (
+            truncation_strategy or SummarizingTruncationStrategy()
         )
+        if self._truncation_strategy.vlm_provider is None:
+            self._truncation_strategy.vlm_provider = vlm_provider
+        self._truncation_strategy.reporter = reporter
+        self._truncation_strategy.callbacks = self._callbacks
+        self._truncation_strategy.conversation = self
 
         # Track if cache execution was used (to prevent recording during playback)
         self._executed_from_cache: bool = False

@@ -751,8 +751,8 @@ class TestReporterIntegration:
         strategy = SummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            reporter=reporter,
         )
+        strategy.reporter = reporter
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -770,8 +770,8 @@ class TestReporterIntegration:
         strategy = SlidingImageWindowSummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            reporter=reporter,
         )
+        strategy.reporter = reporter
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -808,8 +808,8 @@ class TestCallbackIntegration:
         strategy = SummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            callbacks=[callback],
         )
+        strategy.callbacks = [callback]
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -828,8 +828,8 @@ class TestCallbackIntegration:
         strategy = SlidingImageWindowSummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            callbacks=[callback],
         )
+        strategy.callbacks = [callback]
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -842,8 +842,8 @@ class TestCallbackIntegration:
         strategy = SummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            callbacks=[callback],
         )
+        strategy.callbacks = [callback]
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -894,8 +894,8 @@ class TestSummarizationRequestContext:
         strategy = SummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            conversation=conversation,
         )
+        strategy.conversation = conversation
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
@@ -915,8 +915,8 @@ class TestSummarizationRequestContext:
         strategy = SlidingImageWindowSummarizingTruncationStrategy(
             vlm_provider=vlm,
             n_messages_to_keep=2,
-            conversation=conversation,
         )
+        strategy.conversation = conversation
         for i in range(6):
             role = "user" if i % 2 == 0 else "assistant"
             strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
