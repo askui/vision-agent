@@ -228,6 +228,11 @@ class UsageTrackingCallback(ConversationCallback):
         current_span.set_attributes(step_summary.token_attributes())
 
     @override
+    def on_truncation_summarize(self, usage: UsageParam) -> None:
+        self._per_conversation_usage.add_usage(usage)
+        self._summary.add_usage(usage)
+
+    @override
     def on_conversation_end(self, conversation: Conversation) -> None:
         generated_steps: list[StepUsageSummary] = [
             step_summary.generate() for step_summary in self._per_step_summaries
