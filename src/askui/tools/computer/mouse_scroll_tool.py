@@ -10,9 +10,9 @@ class ComputerMouseScrollTool(ComputerBaseTool):
             name="mouse_scroll",
             description=(
                 "Scroll the mouse wheel at the current position. "
-                "The scroll amount is specified in lines. "
-                "For example, dy=3 scrolls down 3 lines and dy=-3 scrolls up 3 lines. "
-                "Use small values (1-5) for precise scrolling and larger values (10-20) for fast scrolling. "
+                "The scroll amount depends on the operating system. "
+                "On Windows, a value of 150 scrolls approximately one page. "
+                "Start with dy=150 or dy=-150 for a normal scroll and adjust based on the result. "
                 "Note: The actual scroll direction may vary depending on the OS configuration "
                 "(e.g., natural scrolling on macOS reverses the direction). "
                 "If you observe that scrolling moves in the opposite direction than expected, "
@@ -24,7 +24,7 @@ class ComputerMouseScrollTool(ComputerBaseTool):
                     "dx": {
                         "type": "integer",
                         "description": (
-                            "The horizontal scroll amount in lines. "
+                            "The horizontal scroll amount. "
                             "Positive values scroll right, negative values scroll left. "
                             "Use 0 if no horizontal scrolling is needed."
                         ),
@@ -32,7 +32,7 @@ class ComputerMouseScrollTool(ComputerBaseTool):
                     "dy": {
                         "type": "integer",
                         "description": (
-                            "The vertical scroll amount in lines. "
+                            "The vertical scroll amount. "
                             "Positive values scroll down, negative values scroll up. "
                             "Use 0 if no vertical scrolling is needed."
                         ),
