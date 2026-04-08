@@ -37,26 +37,34 @@ def normalize_to_pil_images(
     return [image]
 
 
-def truncate_content(
-    content: Any,
-    max_string_length: int = 100000,
-) -> Any:
-    """Filter out long strings (i.e. the base64 image data) to keep reports readable."""
-    if isinstance(content, str):
-        if len(content) > max_string_length:
-            return f"[truncated: {len(content)} characters]"
-        return content
+def truncate_base64_images(content: Any) -> Any:
+    """Replace base64 image data with a placeholder to keep reports readable.
 
+    Walks the message content recursively and replaces the ``data`` field of
+    any base64 image source block (matching the schema of
+    ``Base64ImageSourceParam``, i.e. ``{"type": "base64", "data": "...",
+    "media_type": "image/..."}``) with a placeholder string. All other
+    content (including regular long strings like prompts or tool outputs)
+    is left untouched.
+    """
     if isinstance(content, dict):
+        content_dict: dict[Any, Any] = content
+        media_type = content_dict.get("media_type")
+        if (
+            isinstance(media_type, str)
+            and media_type.startswith("image/")
+            and content_dict.get("type") == "base64"
+            and "data" in content_dict
+        ):
+            return {**content_dict, "data": "[Base64 image data truncated]"}
         return {
-            key: truncate_content(value, max_string_length)
-            for key, value in content.items()
+            key: truncate_base64_images(value) for key, value in content_dict.items()
         }
 
     if isinstance(content, list):
-        return [truncate_content(item, max_string_length) for item in content]
+        content_list: list[Any] = content
+        return [truncate_base64_images(item) for item in content_list]
 
-    # For other types (int, float, bool, None), return as-is
     return content
 
 
@@ -257,7 +265,7 @@ class SimpleHtmlReporter(Reporter):
             self._start_time = datetime.now(tz=timezone.utc)
 
         _images = normalize_to_pil_images(image)
-        _content = truncate_content(content)
+        _content = truncate_base64_images(content)
 
         message = {
             "timestamp": datetime.now(tz=timezone.utc),

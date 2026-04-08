@@ -3,6 +3,8 @@ from typing import List, Literal
 
 from PIL import Image
 
+from askui.tools.android.uiautomator_hierarchy import UIElementCollection
+
 ANDROID_KEY = Literal[  # pylint: disable=C0103
     "HOME",
     "BACK",
@@ -491,5 +493,12 @@ class AndroidAgentOs(ABC):
     def pull(self, remote_path: str, local_path: str) -> None:
         """
         Pulls a file from the device.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_ui_elements(self) -> UIElementCollection:
+        """
+        Gets the UI elements.
         """
         raise NotImplementedError

@@ -1,6 +1,7 @@
+import time
+import uuid
 from typing import Any
 
-import bson
 from pydantic import Field
 
 
@@ -14,7 +15,9 @@ def generate_time_ordered_id(prefix: str) -> str:
         str: Time-ordered ID string
     """
 
-    return f"{prefix}_{str(bson.ObjectId())}"
+    timestamp_hex = f"{time.time_ns():x}"
+    random_hex = uuid.uuid4().hex[:12]
+    return f"{prefix}_{timestamp_hex}{random_hex}"
 
 
 def IdField(prefix: str) -> Any:

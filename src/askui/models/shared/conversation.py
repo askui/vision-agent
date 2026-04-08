@@ -293,12 +293,7 @@ class Conversation:
         self._switch_speaker_if_needed()
 
         # 2. Get next message(s) from speaker and add to history
-        logger.debug("Executing step with speaker: %s", self.current_speaker.name)
-        result: SpeakerResult = self.current_speaker.handle_step(
-            self, self.cache_manager
-        )
-        for message in result.messages_to_add:
-            self._add_message(message)
+        result = self._get_next_message()
 
         # 3. Execute tool calls if applicable
         continue_loop = False
@@ -319,6 +314,16 @@ class Conversation:
         self._step_index += 1
 
         return continue_loop
+
+    @tracer.start_as_current_span("_get_next_message")
+    def _get_next_message(self) -> SpeakerResult:
+        logger.debug("Executing step with speaker: %s", self.current_speaker.name)
+        result: SpeakerResult = self.current_speaker.handle_step(
+            self, self.cache_manager
+        )
+        for message in result.messages_to_add:
+            self._add_message(message)
+        return result
 
     @tracer.start_as_current_span("_execute_tools_if_present")
     def _execute_tools_if_present(self, message: MessageParam) -> MessageParam | None:
