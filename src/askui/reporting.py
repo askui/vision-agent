@@ -39,7 +39,7 @@ def normalize_to_pil_images(
 
 def truncate_content(
     content: Any,
-    max_string_length: int = 100000,
+    max_string_length: int = 10_000,
 ) -> Any:
     """Filter out long strings (i.e. the base64 image data) to keep reports readable."""
     if isinstance(content, str):
