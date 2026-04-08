@@ -471,6 +471,41 @@ class TestTruncation:
         # Should have been auto-truncated
         vlm.create_message.assert_called_once()
 
+    def test_truncate_deferred_when_last_message_has_tool_use(self) -> None:
+        """Truncation must not fire when the last message is an assistant
+        tool_use whose tool_result hasn't been appended yet."""
+        vlm = _make_vlm_provider()
+        strategy = _make_strategy(vlm_provider=vlm, n_messages_to_keep=2)
+        for i in range(4):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        # Append an assistant message with tool_use (simulates the window
+        # between _get_next_message and _execute_tools_if_present)
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_1", input={}, name="tool_a", type="tool_use"
+                    ),
+                ],
+            )
+        )
+        # Truncation should be deferred — VLM must NOT be called
+        strategy.truncate()
+        vlm.create_message.assert_not_called()
+        # After appending the matching tool_result, truncation should proceed
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_1", content="result"),
+                ],
+            )
+        )
+        strategy.truncate()
+        vlm.create_message.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # Edge cases
@@ -741,6 +776,37 @@ class TestSummarizingTruncation:
         strategy.append_message(MessageParam(role="user", content="x" * 300))
         strategy.append_message(MessageParam(role="assistant", content="y" * 300))
         strategy.append_message(MessageParam(role="user", content="z" * 300))
+        vlm.create_message.assert_called_once()
+
+    def test_truncate_deferred_when_last_message_has_tool_use(self) -> None:
+        """Truncation must not fire when the last message is an assistant
+        tool_use whose tool_result hasn't been appended yet."""
+        vlm = _make_vlm_provider()
+        strategy = _make_summarizing_strategy(vlm_provider=vlm, n_messages_to_keep=2)
+        for i in range(4):
+            role = "user" if i % 2 == 0 else "assistant"
+            strategy.append_message(MessageParam(role=role, content=f"msg {i}"))
+        strategy.append_message(
+            MessageParam(
+                role="assistant",
+                content=[
+                    ToolUseBlockParam(
+                        id="tu_1", input={}, name="tool_a", type="tool_use"
+                    ),
+                ],
+            )
+        )
+        strategy.truncate()
+        vlm.create_message.assert_not_called()
+        strategy.append_message(
+            MessageParam(
+                role="user",
+                content=[
+                    ToolResultBlockParam(tool_use_id="tu_1", content="result"),
+                ],
+            )
+        )
+        strategy.truncate()
         vlm.create_message.assert_called_once()
 
 

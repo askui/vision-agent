@@ -54,6 +54,27 @@ def _has_orphaned_tool_results(msg: MessageParam) -> bool:
     return any(isinstance(b, ToolResultBlockParam) for b in msg.content)
 
 
+def _has_pending_tool_use(messages: list[MessageParam]) -> bool:
+    """Check if the last message is an assistant message with tool_use blocks.
+
+    Truncation can fire when ``Conversation._get_next_message``
+    adds the assistant response to history *before* the matching
+    ``tool_result`` user message is appended by
+    ``_execute_tools_if_present``.  In that window the history
+    ends on an assistant ``tool_use``, and
+    ``_summarize_message_history`` would append a plain-text user
+    message (the summarization prompt) which violates the API
+    constraint that every ``tool_use`` must be followed by its
+    ``tool_result``.
+    """
+    if not messages:
+        return False
+    last = messages[-1]
+    if last.role != "assistant" or isinstance(last.content, str):
+        return False
+    return any(isinstance(b, ToolUseBlockParam) for b in last.content)
+
+
 def _summarize_message_history(
     vlm_provider: VlmProvider,
     messages: list[MessageParam],
@@ -379,6 +400,11 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             msg = "Cannot truncate: no vlm_provider available"
             logger.warning(msg)
             return
+        if _has_pending_tool_use(self._truncated_message_history):
+            logger.debug(
+                "Deferring truncation: last message has pending tool_use"
+            )
+            return
 
         logger.info("Summarizing message history")
         system, tools, provider_options = self._summarization_request_context()
@@ -701,6 +727,11 @@ class SummarizingTruncationStrategy(TruncationStrategy):
         if self.vlm_provider is None:
             msg = "Cannot truncate: no vlm_provider available"
             logger.warning(msg)
+            return
+        if _has_pending_tool_use(self._truncated_message_history):
+            logger.debug(
+                "Deferring truncation: last message has pending tool_use"
+            )
             return
 
         logger.info("Summarizing message history")
