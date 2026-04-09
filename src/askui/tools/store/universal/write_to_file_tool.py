@@ -1,6 +1,9 @@
+import logging
 from pathlib import Path
 
 from askui.models.shared.tools import Tool
+
+logger = logging.getLogger(__name__)
 
 
 class WriteToFileTool(Tool):
@@ -118,6 +121,13 @@ class WriteToFileTool(Tool):
             OSError: If the file cannot be written due to filesystem errors.
         """
         absolute_file_path = self._base_dir / file_path
+        if len(str(absolute_file_path)) > 260:
+            logger.warning(
+                "File path exceeds 260 characters (%d characters: '%s')."
+                "This may cause errors on Windows.",
+                len(str(absolute_file_path)),
+                absolute_file_path,
+            )
         absolute_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         mode = "a" if append else "w"
