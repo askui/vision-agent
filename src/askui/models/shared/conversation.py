@@ -13,9 +13,8 @@ from askui.models.shared.agent_message_param import MessageParam
 from askui.models.shared.settings import ActSettings
 from askui.models.shared.tools import ToolCollection
 from askui.models.shared.truncation_strategies import (
-    SimpleTruncationStrategyFactory,
+    SummarizingTruncationStrategy,
     TruncationStrategy,
-    TruncationStrategyFactory,
 )
 from askui.reporting import NULL_REPORTER, Reporter
 from askui.speaker.speaker import SpeakerResult, Speakers
@@ -55,7 +54,7 @@ class Conversation:
         detection_provider: Detection provider (optional)
         reporter: Reporter for logging messages and actions
         cache_manager: Cache manager for recording/playback (optional)
-        truncation_strategy_factory: Factory for creating truncation strategies
+        truncation_strategy: truncation strategies (optional)
         callbacks: List of callbacks for conversation lifecycle hooks (optional)
     """
 
@@ -67,7 +66,7 @@ class Conversation:
         detection_provider: DetectionProvider | None = None,
         reporter: Reporter = NULL_REPORTER,
         cache_manager: "CacheManager | None" = None,
-        truncation_strategy_factory: TruncationStrategyFactory | None = None,
+        truncation_strategy: TruncationStrategy | None = None,
         callbacks: "list[ConversationCallback] | None" = None,
     ) -> None:
         """Initialize conversation with speakers and model providers."""
@@ -90,10 +89,6 @@ class Conversation:
         # Infrastructure
         self._reporter = reporter
         self.cache_manager = cache_manager
-        self._truncation_strategy_factory = (
-            truncation_strategy_factory or SimpleTruncationStrategyFactory()
-        )
-        self._truncation_strategy: TruncationStrategy | None = None
         self._callbacks: "list[ConversationCallback]" = callbacks or []
 
         # State for current execution (set in start())
@@ -101,6 +96,22 @@ class Conversation:
         self.tools: ToolCollection = ToolCollection()
         self._reporters: list[Reporter] = []
         self._step_index: int = 0
+
+        # Truncation strategy. Conversation-owned dependencies are
+        # auto-injected so users can pass a custom strategy with only
+        # strategy-specific config (e.g. n_messages_to_keep) without
+        # needing access to vlm_provider/reporter/callbacks/conversation
+        # at construction time. ``vlm_provider`` is only injected when
+        # not pre-set, allowing callers to override the summarization
+        # VLM (e.g. with a cheaper model).
+        self._truncation_strategy: TruncationStrategy = (
+            truncation_strategy or SummarizingTruncationStrategy()
+        )
+        if self._truncation_strategy.vlm_provider is None:
+            self._truncation_strategy.vlm_provider = vlm_provider
+        self._truncation_strategy.reporter = reporter
+        self._truncation_strategy.callbacks = self._callbacks
+        self._truncation_strategy.conversation = self
 
         # Track if cache execution was used (to prevent recording during playback)
         self._executed_from_cache: bool = False
@@ -180,6 +191,7 @@ class Conversation:
         reporters: list[Reporter] | None = None,
     ) -> None:
         # Reset state
+        self._truncation_strategy.reset(messages)
         self._executed_from_cache = False
         self.speakers.reset_state()
 
@@ -190,16 +202,6 @@ class Conversation:
 
         # Auto-populate speaker descriptions and switch_speaker tool
         self._setup_speaker_handoff()
-
-        # Initialize truncation strategy
-        self._truncation_strategy = (
-            self._truncation_strategy_factory.create_truncation_strategy(
-                tools=self.tools.to_params(),
-                system=self.settings.messages.system,
-                messages=messages,
-                model=self.vlm_provider.model_id,
-            )
-        )
 
     @tracer.start_as_current_span("_execute_control_loop")
     def _execute_control_loop(self) -> None:
@@ -448,7 +450,9 @@ class Conversation:
         Returns:
             List of messages in current conversation
         """
-        return self._truncation_strategy.messages if self._truncation_strategy else []
+        return (
+            self._truncation_strategy.full_messages if self._truncation_strategy else []
+        )
 
     def get_truncation_strategy(self) -> TruncationStrategy | None:
         """Get current truncation strategy.

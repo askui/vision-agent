@@ -12,6 +12,7 @@ from askui.locators.locators import Locator
 from askui.models.models import Point
 from askui.models.shared.settings import ActSettings, LocateSettings, MessageSettings
 from askui.models.shared.tools import Tool
+from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
 )
@@ -69,7 +70,14 @@ class ComputerAgent(Agent):
     """
 
     @telemetry.record_call(
-        exclude={"reporters", "tools", "settings", "act_tools", "callbacks"}
+        exclude={
+            "reporters",
+            "tools",
+            "settings",
+            "act_tools",
+            "callbacks",
+            "truncation_strategy",
+        }
     )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def __init__(
@@ -81,6 +89,7 @@ class ComputerAgent(Agent):
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
         callbacks: list[ConversationCallback] | None = None,
+        truncation_strategy: TruncationStrategy | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.tools = tools or AgentToolbox(
@@ -96,6 +105,7 @@ class ComputerAgent(Agent):
             agent_os=self.tools.os,
             settings=settings,
             callbacks=callbacks,
+            truncation_strategy=truncation_strategy,
         )
         self.act_agent_os_facade: ComputerAgentOsFacade = ComputerAgentOsFacade(
             self.tools.os
