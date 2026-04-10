@@ -34,8 +34,8 @@ class ComputerMoveMouseTool(ComputerBaseTool):
         # 2. Both coords as a single comma-separated string in x
         #    (e.g., x="330, 182" or x="330, ")
         # We handle both cases here.
-        if isinstance(x, str) and "," in x:
-            parts = [p.strip() for p in x.split(",") if p.strip()]
+        if isinstance(x, str) and "," in x:  # type: ignore[unreachable]
+            parts = [p.strip() for p in x.split(",") if p.strip()]  # type: ignore[unreachable]
             x = parts[0]
             if len(parts) > 1:
                 y = parts[1]
