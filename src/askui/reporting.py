@@ -1009,6 +1009,7 @@ class SimpleHtmlReporter(Reporter):
                                         Conversation #{{ conversation_usage.conversation_index }}
                                     </span>
                                     <span class="usage-breakdown-meta">
+                                        {{ conversation_usage.step_summaries | length }} step(s),
                                         Input {{ "{:,}".format(conversation_usage.input_tokens or 0) }},
                                         Output {{ "{:,}".format(conversation_usage.output_tokens or 0) }},
                                         Cache Create {{ "{:,}".format(conversation_usage.cache_creation_input_tokens or 0) }},
