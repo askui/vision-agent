@@ -49,7 +49,9 @@ class ComputerMoveMouseTool(ComputerBaseTool):
         _NUMBER_PATTERN = re.compile(r"-?\d+")
         combined = f"{x},{y}"
         numbers = _NUMBER_PATTERN.findall(combined)
-        if len(numbers) < 2:
-            error_msg = f"Could not parse coordinates from x={x!r}, y={y!r}"
+        if not len(numbers) == 2:
+            error_msg = f"""Could not parse mouse_move coordinates from provided
+              parameters x={x}, y={y}. The parameters x and y must be passed as separate
+              integer values!"""
             raise ValueError(error_msg)
         return int(numbers[0]), int(numbers[1])
