@@ -1,3 +1,5 @@
+import re
+
 from askui.models.shared import ComputerBaseTool, ToolTags
 from askui.tools.computer_agent_os_facade import ComputerAgentOsFacade
 
@@ -8,17 +10,20 @@ class ComputerMoveMouseTool(ComputerBaseTool):
     def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
             name="move_mouse",
-            description="Move the mouse to a specific position.",
+            description="""Move the mouse to a specific position.
+              Pass x and y as separate integer values, not as a combined string.""",
             input_schema={
                 "type": "object",
                 "properties": {
                     "x": {
                         "type": "integer",
-                        "description": "The x coordinate of the mouse position as int.",
+                        "description": """The x (horizontal) pixel coordinate.
+                          Must be a single integer, e.g. 330.""",
                     },
                     "y": {
                         "type": "integer",
-                        "description": "The y coordinate of the mouse position as int.",
+                        "description": """The y (vertical) pixel coordinate.
+                          Must be a single integer, e.g. 182.""",
                     },
                 },
                 "required": ["x", "y"],
@@ -33,12 +38,18 @@ class ComputerMoveMouseTool(ComputerBaseTool):
         # 1. As strings instead of ints (e.g., x="330", y="182")
         # 2. Both coords as a single comma-separated string in x
         #    (e.g., x="330, 182" or x="330, ")
-        # We handle both cases here.
-        if isinstance(x, str) and "," in x:  # type: ignore[unreachable]
-            parts = [p.strip() for p in x.split(",") if p.strip()]  # type: ignore[unreachable]
-            x = parts[0]
-            if len(parts) > 1:
-                y = parts[1]
-        x, y = int(x), int(y)
+        # We extract all numbers from the string representations to handle both cases.
+        if not (isinstance(x, int) and isinstance(y, int)):
+            x, y = self._parse_coordinates(x, y)  # type: ignore[unreachable]
         self.agent_os.mouse_move(x, y)
         return f"Mouse was moved to position ({x}, {y})."
+
+    @staticmethod
+    def _parse_coordinates(x: float | str, y: float | str) -> tuple[int, int]:
+        _NUMBER_PATTERN = re.compile(r"-?\d+")
+        combined = f"{x},{y}"
+        numbers = _NUMBER_PATTERN.findall(combined)
+        if len(numbers) < 2:
+            error_msg = f"Could not parse coordinates from x={x!r}, y={y!r}"
+            raise ValueError(error_msg)
+        return int(numbers[0]), int(numbers[1])
