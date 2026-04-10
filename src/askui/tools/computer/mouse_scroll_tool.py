@@ -11,18 +11,13 @@ class ComputerMouseScrollTool(ComputerBaseTool):
             description=(
                 "Scroll the mouse wheel at the current "
                 "position. The scroll amount depends on "
-                "the operating system. On Windows, a value "
-                "of 150 scrolls approximately one page. "
-                "Start with dy=150 or dy=-150 for a normal "
-                "scroll and adjust based on the result. "
-                "Note: The actual scroll direction may vary "
-                "depending on the OS configuration (e.g., "
-                "natural scrolling on macOS reverses the "
-                "direction). If you observe that scrolling "
-                "moves in the opposite direction than "
-                "expected, invert the values (e.g., use "
-                "negative instead of positive and "
-                "vice versa)."
+                "the operating system. 150 is a small "
+                "but reasonable scroll step. On Windows, "
+                "positive dy scrolls down. On macOS "
+                "(default settings), negative dy scrolls "
+                "down. If scrolling moves in the opposite "
+                "direction than expected, invert the "
+                "values."
             ),
             input_schema={
                 "type": "object",
