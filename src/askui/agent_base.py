@@ -110,11 +110,6 @@ class Agent:
         if agent_os is not None:
             self.act_tool_collection.add_agent_os(agent_os)
 
-        # Add provider-based tools to the act loop
-        if self._agent_os is not None:
-            self.act_tool_collection.append_tool(self._get_tool)
-            self.act_tool_collection.append_tool(self._locate_tool)
-
         # Settings stored at agent level (mutable)
         self.act_settings = ActSettings()
         self.get_settings = GetSettings()
