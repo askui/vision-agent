@@ -29,9 +29,16 @@ class ComputerMoveMouseTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self, x: int, y: int) -> str:
-        # for some reason, the agent occasionally calls the tool with the coords
-        # encoded as strings, which will lead the tool to failing. To prevent this we
-        # will explicitly convert to int here
+        # The agent occasionally passes coordinates incorrectly:
+        # 1. As strings instead of ints (e.g., x="330", y="182")
+        # 2. Both coords as a single comma-separated string in x
+        #    (e.g., x="330, 182" or x="330, ")
+        # We handle both cases here.
+        if isinstance(x, str) and "," in x:
+            parts = [p.strip() for p in x.split(",") if p.strip()]
+            x = parts[0]
+            if len(parts) > 1:
+                y = parts[1]
         x, y = int(x), int(y)
         self.agent_os.mouse_move(x, y)
         return f"Mouse was moved to position ({x}, {y})."
