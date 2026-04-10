@@ -651,11 +651,11 @@ class ToolCollection:
             raise
         except Exception as e:  # noqa: BLE001
             error_message = getattr(e, "message", str(e))
-            logger.warning(
+            logger.info(
                 "Tool failed",
                 extra={"tool_name": tool_use_block_param.name, "error": error_message},
             )
-            logger.warning("%s - %s", tool_use_block_param.name, error_message)
+            logger.info("%s - %s", tool_use_block_param.name, error_message)
             return ToolResultBlockParam(
                 content=f"Tool raised an unexpected error: {error_message}",
                 is_error=True,
