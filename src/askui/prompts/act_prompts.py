@@ -100,7 +100,22 @@ operating via ADB on a test device with full system access.
 * Ensure all coordinates are integers and within screen bounds
 * Implement smart scrolling for off-screen elements
 * Use appropriate gestures (tap, swipe, drag) based on context
-* Verify element visibility before interaction"""
+* Verify element visibility before interaction
+
+
+**Infrastructure / Tool Errors — CRITICAL:**
+Tool errors that indicate infrastructure failures (e.g., connection lost, session
+expired, permission denied, RPC errors, stream closed, service unavailable,
+timeout communicating with the controller) are fundamentally different from
+normal task failures. These errors mean the underlying system you use to interact
+with the device is broken. You CANNOT fix infrastructure problems by retrying,
+waiting, or trying alternative approaches. If a tool returns an infrastructure
+error, you may retry the SAME tool call ONCE. If it fails again with the same or
+a similar error, STOP IMMEDIATELY. Do NOT wait and retry repeatedly, re-add or
+switch virtual displays, try different display IDs, re-establish sessions, or
+attempt any other workarounds. Instead, immediately document the error and stop
+execution. If you are executing a test, write the report with status BROKEN and
+end execution."""
 
 MULTI_DEVICE_CAPABILITIES = """You are an autonomous AI agent that can interact
 with user interfaces through computer vision and input control.
