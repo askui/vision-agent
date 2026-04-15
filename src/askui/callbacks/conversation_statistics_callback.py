@@ -1,4 +1,9 @@
-"""Callback for tracking token usage and reporting usage summaries."""
+"""Callback for tracking per-conversation statistics (token usage, timing).
+
+Emits a `UsageSummary` (with per-conversation and per-step breakdowns,
+including start/end timestamps for each conversation) to a reporter when the
+conversation ends.
+"""
 
 from __future__ import annotations
 
@@ -180,19 +185,28 @@ class ConversationUsageSummary(UsageSummary):
             current agent lifecycle.
         conversation_id (str): Unique identifier of the conversation.
         step_summaries (list[StepUsageSummary]): Per-step usage summaries.
-        duration_seconds (float | None): Wall-clock duration of the conversation
-            in seconds, measured between `on_conversation_start` and
-            `on_conversation_end`. `None` if duration was not tracked.
+        started_at (datetime | None): UTC timestamp captured at
+            `on_conversation_start`. `None` if timing was not tracked.
+        ended_at (datetime | None): UTC timestamp captured at
+            `on_conversation_end`. `None` if timing was not tracked.
     """
 
     conversation_index: int
     conversation_id: str
     step_summaries: list[StepUsageSummary] = Field(default_factory=list)
-    duration_seconds: float | None = None
+    started_at: datetime | None = None
+    ended_at: datetime | None = None
 
 
-class UsageTrackingCallback(ConversationCallback):
-    """Tracks token usage per step and reports a summary at conversation end.
+class ConversationStatisticsCallback(ConversationCallback):
+    """Tracks per-conversation statistics (token usage per step and wall-clock
+    timing) and reports a summary at conversation end.
+
+    The reported `UsageSummary` contains, for each conversation, the raw
+    ``started_at`` and ``ended_at`` UTC timestamps alongside token usage.
+    Downstream consumers (e.g. `SimpleHtmlReporter`) are responsible for
+    deriving human-readable durations from those timestamps so the raw values
+    remain available for other uses.
 
     Args:
         reporter: Reporter to write the final usage summary to.
@@ -211,14 +225,14 @@ class UsageTrackingCallback(ConversationCallback):
         self._per_conversation_summaries: list[ConversationUsageSummary] = []
         self._per_step_summaries: list[StepUsageSummary] = []
         self._conversation_index: int = 0
-        self._conversation_start_time: datetime | None = None
+        self._conversation_started_at: datetime | None = None
 
     @override
     def on_conversation_start(self, conversation: Conversation) -> None:
         self._per_conversation_usage = UsageSummary.create_from(self._summary)
         self._per_step_summaries = []
         self._conversation_index += 1
-        self._conversation_start_time = datetime.now(tz=timezone.utc)
+        self._conversation_started_at = datetime.now(tz=timezone.utc)
 
     @override
     def on_step_end(
@@ -251,15 +265,12 @@ class UsageTrackingCallback(ConversationCallback):
         generated_steps: list[StepUsageSummary] = [
             step_summary.generate() for step_summary in self._per_step_summaries
         ]
-        duration_seconds: float | None = None
-        if self._conversation_start_time is not None:
-            duration_seconds = (
-                datetime.now(tz=timezone.utc) - self._conversation_start_time
-            ).total_seconds()
+        ended_at = datetime.now(tz=timezone.utc)
         conversation_summary = self._create_conversation_summary(
             conversation=conversation,
             generated_step_summaries=generated_steps,
-            duration_seconds=duration_seconds,
+            started_at=self._conversation_started_at,
+            ended_at=ended_at,
         )
         self._per_conversation_summaries.append(conversation_summary)
         self._summary.per_conversation_summaries = list(
@@ -295,13 +306,15 @@ class UsageTrackingCallback(ConversationCallback):
         self,
         conversation: Conversation,
         generated_step_summaries: list[StepUsageSummary],
-        duration_seconds: float | None = None,
+        started_at: datetime | None = None,
+        ended_at: datetime | None = None,
     ) -> ConversationUsageSummary:
         conversation_summary = ConversationUsageSummary(
             conversation_index=self._conversation_index,
             conversation_id=conversation.conversation_id,
             step_summaries=generated_step_summaries,
-            duration_seconds=duration_seconds,
+            started_at=started_at,
+            ended_at=ended_at,
             input_tokens=self._per_conversation_usage.input_tokens,
             output_tokens=self._per_conversation_usage.output_tokens,
             cache_creation_input_tokens=(

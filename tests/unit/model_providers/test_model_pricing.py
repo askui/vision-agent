@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from askui.callbacks.usage_tracking_callback import (
+from askui.callbacks.conversation_statistics_callback import (
+    ConversationStatisticsCallback,
     UsageSummary,
-    UsageTrackingCallback,
 )
 from askui.models.shared.agent_message_param import UsageParam
 from askui.speaker.speaker import SpeakerResult
@@ -98,12 +98,12 @@ def _assert_close(
     assert abs(actual - expected) <= tolerance
 
 
-class TestUsageTrackingCallbackCost:
+class TestConversationStatisticsCallbackCost:
     def _make_callback(
         self, pricing: ModelPricing | None = None
-    ) -> tuple[UsageTrackingCallback, MagicMock]:
+    ) -> tuple[ConversationStatisticsCallback, MagicMock]:
         reporter = MagicMock()
-        callback = UsageTrackingCallback(reporter=reporter, pricing=pricing)
+        callback = ConversationStatisticsCallback(reporter=reporter, pricing=pricing)
         return callback, reporter
 
     @pytest.mark.parametrize(
@@ -245,8 +245,9 @@ class TestUsageTrackingCallbackCost:
         assert per_conversation_summary.output_tokens == 30
         _assert_close(per_conversation_summary.total_cost, 0.0009)
         assert len(per_conversation_summary.step_summaries) == 2
-        assert per_conversation_summary.duration_seconds is not None
-        assert per_conversation_summary.duration_seconds >= 0.0
+        assert per_conversation_summary.started_at is not None
+        assert per_conversation_summary.ended_at is not None
+        assert per_conversation_summary.ended_at >= per_conversation_summary.started_at
 
         first_step = per_conversation_summary.step_summaries[0]
         assert first_step.step_index == 0
@@ -304,8 +305,11 @@ class TestUsageTrackingCallbackCost:
         assert summary.per_conversation_summaries[0].conversation_id == "conversation-1"
         assert summary.per_conversation_summaries[1].conversation_id == "conversation-2"
         for per_conversation_summary in summary.per_conversation_summaries:
-            assert per_conversation_summary.duration_seconds is not None
-            assert per_conversation_summary.duration_seconds >= 0.0
+            assert per_conversation_summary.started_at is not None
+            assert per_conversation_summary.ended_at is not None
+            assert (
+                per_conversation_summary.ended_at >= per_conversation_summary.started_at
+            )
 
     def test_includes_cache_costs_from_provider_pricing(self) -> None:
         pricing = ModelPricing(
