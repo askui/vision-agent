@@ -245,6 +245,8 @@ class TestUsageTrackingCallbackCost:
         assert per_conversation_summary.output_tokens == 30
         _assert_close(per_conversation_summary.total_cost, 0.0009)
         assert len(per_conversation_summary.step_summaries) == 2
+        assert per_conversation_summary.duration_seconds is not None
+        assert per_conversation_summary.duration_seconds >= 0.0
 
         first_step = per_conversation_summary.step_summaries[0]
         assert first_step.step_index == 0
@@ -301,6 +303,9 @@ class TestUsageTrackingCallbackCost:
         assert len(summary.per_conversation_summaries) == 2
         assert summary.per_conversation_summaries[0].conversation_id == "conversation-1"
         assert summary.per_conversation_summaries[1].conversation_id == "conversation-2"
+        for per_conversation_summary in summary.per_conversation_summaries:
+            assert per_conversation_summary.duration_seconds is not None
+            assert per_conversation_summary.duration_seconds >= 0.0
 
     def test_includes_cache_costs_from_provider_pricing(self) -> None:
         pricing = ModelPricing(

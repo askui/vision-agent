@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from opentelemetry import trace
@@ -172,11 +173,22 @@ class StepUsageSummary(UsageSummary):
 
 
 class ConversationUsageSummary(UsageSummary):
-    """Usage summary for one conversation including per-step breakdown."""
+    """Usage summary for one conversation including per-step breakdown.
+
+    Args:
+        conversation_index (int): 1-based index of the conversation within the
+            current agent lifecycle.
+        conversation_id (str): Unique identifier of the conversation.
+        step_summaries (list[StepUsageSummary]): Per-step usage summaries.
+        duration_seconds (float | None): Wall-clock duration of the conversation
+            in seconds, measured between `on_conversation_start` and
+            `on_conversation_end`. `None` if duration was not tracked.
+    """
 
     conversation_index: int
     conversation_id: str
     step_summaries: list[StepUsageSummary] = Field(default_factory=list)
+    duration_seconds: float | None = None
 
 
 class UsageTrackingCallback(ConversationCallback):
@@ -199,12 +211,14 @@ class UsageTrackingCallback(ConversationCallback):
         self._per_conversation_summaries: list[ConversationUsageSummary] = []
         self._per_step_summaries: list[StepUsageSummary] = []
         self._conversation_index: int = 0
+        self._conversation_start_time: datetime | None = None
 
     @override
     def on_conversation_start(self, conversation: Conversation) -> None:
         self._per_conversation_usage = UsageSummary.create_from(self._summary)
         self._per_step_summaries = []
         self._conversation_index += 1
+        self._conversation_start_time = datetime.now(tz=timezone.utc)
 
     @override
     def on_step_end(
@@ -237,9 +251,15 @@ class UsageTrackingCallback(ConversationCallback):
         generated_steps: list[StepUsageSummary] = [
             step_summary.generate() for step_summary in self._per_step_summaries
         ]
+        duration_seconds: float | None = None
+        if self._conversation_start_time is not None:
+            duration_seconds = (
+                datetime.now(tz=timezone.utc) - self._conversation_start_time
+            ).total_seconds()
         conversation_summary = self._create_conversation_summary(
             conversation=conversation,
             generated_step_summaries=generated_steps,
+            duration_seconds=duration_seconds,
         )
         self._per_conversation_summaries.append(conversation_summary)
         self._summary.per_conversation_summaries = list(
@@ -275,11 +295,13 @@ class UsageTrackingCallback(ConversationCallback):
         self,
         conversation: Conversation,
         generated_step_summaries: list[StepUsageSummary],
+        duration_seconds: float | None = None,
     ) -> ConversationUsageSummary:
         conversation_summary = ConversationUsageSummary(
             conversation_index=self._conversation_index,
             conversation_id=conversation.conversation_id,
             step_summaries=generated_step_summaries,
+            duration_seconds=duration_seconds,
             input_tokens=self._per_conversation_usage.input_tokens,
             output_tokens=self._per_conversation_usage.output_tokens,
             cache_creation_input_tokens=(
