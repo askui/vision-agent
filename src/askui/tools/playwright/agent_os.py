@@ -259,21 +259,21 @@ class PlaywrightAgentOs(AgentOs):
         self._page.mouse.up(button=button)
 
     @override
-    def mouse_scroll(self, x: int, y: int) -> None:
+    def mouse_scroll(self, dx: int, dy: int) -> None:
         """
         Simulates scrolling the mouse wheel.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values scroll right,
+            dx (int): The horizontal scroll amount. Positive values scroll right,
                 negative values scroll left.
-            y (int): The vertical scroll amount. Positive values scroll down,
+            dy (int): The vertical scroll amount. Positive values scroll down,
                 negative values scroll up.
         """
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
-        self._page.mouse.wheel(delta_x=x, delta_y=y)
+        self._page.mouse.wheel(delta_x=dx, delta_y=dy)
 
     @override
     def keyboard_pressed(

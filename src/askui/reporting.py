@@ -26,7 +26,10 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from PIL import Image
 
-    from askui.callbacks.usage_tracking_callback import UsageSummary
+    from askui.callbacks.conversation_statistics_callback import (
+        ConversationUsageSummary,
+        UsageSummary,
+    )
 
 
 def normalize_to_pil_images(
@@ -40,6 +43,27 @@ def normalize_to_pil_images(
     if isinstance(image, list):
         return image
     return [image]
+
+
+def _format_duration(seconds: float) -> str:
+    """Format a duration given in seconds as ``HH:MM:SS`` or
+    ``HH:MM:SS.mmm`` for sub-second precision.
+
+    Used by `SimpleHtmlReporter` to render both the overall execution time and
+    per-conversation durations consistently.
+    """
+    total_seconds = max(float(seconds), 0.0)
+    whole_seconds = int(total_seconds)
+    millis = int(round((total_seconds - whole_seconds) * 1000))
+    if millis == 1000:
+        whole_seconds += 1
+        millis = 0
+    hours, remainder = divmod(whole_seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    base = f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    if whole_seconds == 0 and millis > 0:
+        return f"{base}.{millis:03d}"
+    return base
 
 
 def truncate_base64_images(content: Any) -> Any:
@@ -1134,14 +1158,21 @@ class SimpleHtmlReporter(Reporter):
                         </p>
                         <div class="usage-breakdown-list">
                             {% for conversation_usage in usage_summary.per_conversation_summaries %}
+                            {% set conversation_duration = format_conversation_duration(conversation_usage) %}
                             <details class="usage-breakdown-item">
                                 <summary>
                                     <span class="usage-breakdown-title">
                                         Conversation #{{ conversation_usage.conversation_index }}
                                     </span>
                                     <span class="usage-breakdown-meta">
+                                        {{ conversation_usage.step_summaries | length }} step(s),
+                                        {% if conversation_duration is not none %}
+                                            Duration: {{ conversation_duration }},
+                                        {% endif %}
                                         Input {{ "{:,}".format(conversation_usage.input_tokens or 0) }},
-                                        Output {{ "{:,}".format(conversation_usage.output_tokens or 0) }}
+                                        Output {{ "{:,}".format(conversation_usage.output_tokens or 0) }},
+                                        Cache Create {{ "{:,}".format(conversation_usage.cache_creation_input_tokens or 0) }},
+                                        Cache Read {{ "{:,}".format(conversation_usage.cache_read_input_tokens or 0) }}
                                         {% if conversation_usage.total_cost is not none and conversation_usage.total_cost > 0 %}
                                             , Cost:
                                             ${{ "%.6f"|format(conversation_usage.total_cost) }}
@@ -1154,6 +1185,9 @@ class SimpleHtmlReporter(Reporter):
                                     <table class="nested-table">
                                         <tr>
                                             <th>Conversation ID</th>
+                                            {% if conversation_duration is not none %}
+                                            <th>Duration</th>
+                                            {% endif %}
                                             <th>Input Tokens</th>
                                             <th>Output Tokens</th>
                                             <th>Cache Create</th>
@@ -1164,6 +1198,9 @@ class SimpleHtmlReporter(Reporter):
                                         </tr>
                                         <tr class="system">
                                             <td class="mono">{{ conversation_usage.conversation_id }}</td>
+                                            {% if conversation_duration is not none %}
+                                            <td>{{ conversation_duration }}</td>
+                                            {% endif %}
                                             <td>{{ "{:,}".format(conversation_usage.input_tokens or 0) }}</td>
                                             <td>{{ "{:,}".format(conversation_usage.output_tokens or 0) }}</td>
                                             <td>{{ "{:,}".format(conversation_usage.cache_creation_input_tokens or 0) }}</td>
@@ -1239,10 +1276,28 @@ class SimpleHtmlReporter(Reporter):
         end_time = datetime.now(tz=timezone.utc)
         execution_time_formatted: str | None = None
         if self._start_time is not None:
-            total_secs = int((end_time - self._start_time).total_seconds())
-            hours, remainder = divmod(total_secs, 3600)
-            minutes, secs = divmod(remainder, 60)
-            execution_time_formatted = f"{hours:02d}:{minutes:02d}:{secs:02d}"
+            execution_time_formatted = _format_duration(
+                (end_time - self._start_time).total_seconds()
+            )
+
+        def _format_conversation_duration(
+            conversation_usage: "ConversationUsageSummary",
+        ) -> str | None:
+            """Derive the formatted conversation duration from stored timestamps.
+
+            Returns ``None`` if either ``started_at`` or ``ended_at`` is missing
+            so the template can skip rendering.
+            """
+            if (
+                conversation_usage.started_at is None
+                or conversation_usage.ended_at is None
+            ):
+                return None
+            return _format_duration(
+                (
+                    conversation_usage.ended_at - conversation_usage.started_at
+                ).total_seconds()
+            )
 
         header_html = Template(_HEADER_TEMPLATE).render(
             timestamp=end_time,
@@ -1250,6 +1305,7 @@ class SimpleHtmlReporter(Reporter):
             usage_summary=self.usage_summary,
             cache_original_usage=self.cache_original_usage,
             execution_time_formatted=execution_time_formatted,
+            format_conversation_duration=_format_conversation_duration,
         )
 
         report_path = (

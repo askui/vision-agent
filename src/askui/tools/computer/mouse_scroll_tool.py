@@ -8,7 +8,18 @@ class ComputerMouseScrollTool(ComputerBaseTool):
     def __init__(self, agent_os: ComputerAgentOsFacade | None = None) -> None:
         super().__init__(
             name="mouse_scroll",
-            description="Scroll the mouse wheel at the current position.",
+            description=(
+                "Scroll the mouse wheel at the current "
+                "position. The scroll amount depends on "
+                "the operating system. Start with "
+                "dy=150 or dy=-150 for a normal scroll "
+                "and adjust based on the result. "
+                "On Windows, positive dy scrolls down. "
+                "On macOS (default settings), negative "
+                "dy scrolls down. If scrolling moves in "
+                "the opposite direction than expected, "
+                "invert the values."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {
@@ -16,14 +27,18 @@ class ComputerMouseScrollTool(ComputerBaseTool):
                         "type": "integer",
                         "description": (
                             "The horizontal scroll amount. "
-                            "Positive values scroll right, negative values scroll left."
+                            "Positive values scroll right, "
+                            "negative values scroll left. "
+                            "Use 0 if no horizontal "
+                            "scrolling is needed."
                         ),
                     },
                     "dy": {
                         "type": "integer",
                         "description": (
                             "The vertical scroll amount. "
-                            "Positive values scroll down, negative values scroll up."
+                            "Positive values scroll down, negative values scroll up. "
+                            "Use 0 if no vertical scrolling is needed."
                         ),
                     },
                 },

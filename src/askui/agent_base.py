@@ -10,7 +10,7 @@ from pydantic import ConfigDict, Field, validate_call
 from typing_extensions import Self
 
 from askui.agent_settings import AgentSettings
-from askui.callbacks import ConversationCallback, UsageTrackingCallback
+from askui.callbacks import ConversationCallback, ConversationStatisticsCallback
 from askui.container import telemetry
 from askui.locators.locators import Locator
 from askui.models.shared.agent_message_param import MessageParam
@@ -78,7 +78,7 @@ class Agent:
         speakers = Speakers()
         _callbacks = list(callbacks or [])
         _callbacks.append(
-            UsageTrackingCallback(
+            ConversationStatisticsCallback(
                 reporter=self._reporter,
                 pricing=self._vlm_provider.pricing,
             )
@@ -109,11 +109,6 @@ class Agent:
         self.act_tool_collection = ToolCollection(tools=tools)
         if agent_os is not None:
             self.act_tool_collection.add_agent_os(agent_os)
-
-        # Add provider-based tools to the act loop
-        if self._agent_os is not None:
-            self.act_tool_collection.append_tool(self._get_tool)
-            self.act_tool_collection.append_tool(self._locate_tool)
 
         # Settings stored at agent level (mutable)
         self.act_settings = ActSettings()

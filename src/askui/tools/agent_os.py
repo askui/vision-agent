@@ -319,14 +319,14 @@ class AgentOs(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mouse_scroll(self, x: int, y: int) -> None:
+    def mouse_scroll(self, dx: int, dy: int) -> None:
         """
         Simulates scrolling the mouse wheel.
 
         Args:
-            x (int): The horizontal scroll amount. Positive values scroll right,
+            dx (int): The horizontal scroll amount. Positive values scroll right,
                 negative values scroll left.
-            y (int): The vertical scroll amount. Positive values scroll down,
+            dy (int): The vertical scroll amount. Positive values scroll down,
                 negative values scroll up.
         """
         raise NotImplementedError
