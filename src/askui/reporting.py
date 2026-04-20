@@ -8,7 +8,6 @@ import platform
 import random
 import shutil
 import sys
-import tempfile
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from importlib.metadata import distributions
@@ -353,12 +352,12 @@ class SimpleHtmlReporter(Reporter):
 
     def _get_temp_messages_file(self) -> Path:
         """Return the path to the temporary messages file, creating it if needed."""
-        if self._temp_messages_file is None:
+        if self._temp_messages_file is None or not self._temp_messages_file.exists():
             self.report_dir.mkdir(parents=True, exist_ok=True)
-            _, temp_report_file_name = tempfile.mkstemp(
-                prefix="AskUI_report", suffix=".tmp", dir=str(self.report_dir)
+            _report_ts = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+            self._temp_messages_file = (
+                self.report_dir / f"AskUI_report_{_report_ts}.tmp"
             )
-            self._temp_messages_file = Path(temp_report_file_name)
         return self._temp_messages_file
 
     _MESSAGE_ROW_TEMPLATE = Template(
