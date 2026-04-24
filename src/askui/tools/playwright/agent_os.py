@@ -16,24 +16,29 @@ from playwright.sync_api import (
 )
 from typing_extensions import override
 
+from askui.reporting import NULL_REPORTER, Reporter
+from askui.utils.annotated_image import AnnotatedImage
+
 from ..agent_os import AgentOs, Display, DisplaySize, InputEvent, ModifierKey, PcKey
 
 
 class PlaywrightAgentOs(AgentOs):
-    """
-    Playwright-based implementation of AgentOs.
+    """Playwright-based implementation of `AgentOs`.
 
     This implementation uses Playwright's Python SDK to control browser automation
     and simulate user interactions. It provides mouse control, keyboard input,
     and screen capture functionality through a browser context.
 
     Args:
+        reporter (Reporter, optional): Reporter used for reporting. Defaults to
+            `NULL_REPORTER`.
         browser_type (Literal["chromium", "firefox", "webkit"], optional): The browser
             type to use. Defaults to `"chromium"`.
         headless (bool, optional): Whether to run the browser in headless mode.
             Defaults to `False`.
-        viewport_size (ViewportSize | None, optional): The viewport size.
-            Defaults to `None` (uses default).
+        viewport_size (ViewportSize | None, optional): The viewport size. When
+            ``None``, the browser inherits the system's native DPI and window
+            size (``no_viewport=True``). Defaults to `None`.
         slow_mo (int, optional): Slows down Playwright operations by the specified
             amount of milliseconds. Defaults to `0`.
         install_browser (bool, optional): Whether to install browser on connection.
@@ -42,8 +47,11 @@ class PlaywrightAgentOs(AgentOs):
             (requires root permissions). Defaults to `False`.
     """
 
+    _REPORTER_ROLE_NAME: str = "PlaywrightAgentOS"
+
     def __init__(
         self,
+        reporter: Reporter = NULL_REPORTER,
         browser_type: Literal["chromium", "firefox", "webkit"] = "chromium",
         headless: bool = False,
         viewport_size: ViewportSize | None = None,
@@ -63,6 +71,7 @@ class PlaywrightAgentOs(AgentOs):
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
         self._page: Page | None = None
+        self._reporter: Reporter = reporter
 
         # Event listening state
         self._listening = False
@@ -112,6 +121,14 @@ class PlaywrightAgentOs(AgentOs):
             )
             raise RuntimeError(error_msg) from e
 
+    def _annotated_screenshot(
+        self,
+        point_list: list[tuple[int, int]],
+    ) -> AnnotatedImage:
+        """Capture a screenshot and wrap it in an `AnnotatedImage` with annotations."""
+        screenshot = self.screenshot(report=False)
+        return AnnotatedImage(lambda: screenshot, point_list)
+
     @override
     def connect(self) -> None:
         """Establishes a synchronous connection to the browser."""
@@ -129,13 +146,28 @@ class PlaywrightAgentOs(AgentOs):
             headless=self._headless,
             slow_mo=self._slow_mo,
         )
-        self._context = self._browser.new_context(
-            viewport=self._viewport_size,
-        )
+        if self._viewport_size is not None:
+            self._context = self._browser.new_context(
+                viewport=self._viewport_size,
+            )
+        else:
+            # Use no_viewport to inherit the system's native DPI and window
+            # size.  Without this, Playwright defaults to 1280x720 with
+            # deviceScaleFactor=1.  On high-DPI screens (e.g. macOS Retina)
+            # Chromium compensates by zooming the page 2x and briefly
+            # un-zooming every time a screenshot is captured, causing a
+            # visible flicker.
+            self._context = self._browser.new_context(
+                no_viewport=True,
+            )
 
         self._page = self._context.new_page()
         # Navigate to a blank page to ensure we have a working page
-        self._page.goto("data:text/html,<html><body></body></html>")
+        self._page.goto("data:text/html,<html><body><h1>Starting...</h1></body></html>")
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "Connected to playwright browser",
+        )
 
     @override
     def disconnect(self) -> None:
@@ -159,10 +191,14 @@ class PlaywrightAgentOs(AgentOs):
             self._playwright.stop()
             self._playwright = None
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "Disconnected from playwright os",
+        )
+
     @override
     def screenshot(self, report: bool = True) -> Image.Image:
-        """
-        Captures a screenshot of the current page.
+        """Capture a screenshot of the current page.
 
         Args:
             report (bool, optional): Whether to include the screenshot in
@@ -175,23 +211,34 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
-        screenshot_bytes = self._page.screenshot()
-        return Image.open(io.BytesIO(screenshot_bytes))
+        screenshot_bytes = self._page.screenshot(scale="css")
+        screenshot = Image.open(io.BytesIO(screenshot_bytes))
+        if report:
+            self._reporter.add_message(
+                self._REPORTER_ROLE_NAME, "screenshot()", screenshot
+            )
+        return screenshot
 
     @override
-    def mouse_move(self, x: int, y: int, _duration: int = 500) -> None:
-        """
-        Moves the mouse cursor to specified coordinates on the page.
+    def mouse_move(self, x: int, y: int, duration: int = 500) -> None:
+        """Move the mouse cursor to specified coordinates on the page.
 
         Args:
             x (int): The horizontal coordinate (in pixels) to move to.
             y (int): The vertical coordinate (in pixels) to move to.
-            _duration (int): Unused parameter as it is not applicable here.
+            duration (int, optional): Ignored — Playwright moves the mouse
+                instantly. Kept for compatibility with the base class.
+                Defaults to `500`.
         """
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"mouse_move(x={x}, y={y})",
+            self._annotated_screenshot([(x, y)]),
+        )
         self._page.mouse.move(x, y)
 
     @override
@@ -208,9 +255,19 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"Typing text: '{text}'",
+            self.screenshot(report=False),
+        )
         # Convert typing speed from CPM to delay between characters
         delay = 1000 / typing_speed if typing_speed > 0 else 0
         self._page.keyboard.type(text, delay=delay)
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"After typing text: '{text}'",
+            self.screenshot(report=False),
+        )
 
     @override
     def click(
@@ -224,9 +281,19 @@ class PlaywrightAgentOs(AgentOs):
                 button to click. Defaults to `"left"`.
             count (int, optional): Number of times to click. Defaults to `1`.
         """
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"click(button={button}, count={count})",
+            self.screenshot(report=False),
+        )
         for _ in range(count):
             self.mouse_down(button)
             self.mouse_up(button)
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"After click(button={button}, count={count})",
+            self.screenshot(report=False),
+        )
 
     @override
     def mouse_down(self, button: Literal["left", "middle", "right"] = "left") -> None:
@@ -241,6 +308,10 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"mouse_down(button={button})",
+        )
         self._page.mouse.down(button=button)
 
     @override
@@ -257,6 +328,10 @@ class PlaywrightAgentOs(AgentOs):
             raise RuntimeError(error_msg)
 
         self._page.mouse.up(button=button)
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"mouse_up(button={button})",
+        )
 
     @override
     def mouse_scroll(self, dx: int, dy: int) -> None:
@@ -273,7 +348,17 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"mouse_scroll(dx={dx}, dy={dy})",
+            self.screenshot(report=False),
+        )
         self._page.mouse.wheel(delta_x=dx, delta_y=dy)
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"After mouse_scroll(dx={dx}, dy={dy})",
+            self.screenshot(report=False),
+        )
 
     @override
     def keyboard_pressed(
@@ -291,6 +376,11 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"keyboard_pressed(key={key}, modifier_keys={modifier_keys})",
+            self.screenshot(report=False),
+        )
         # Press modifier keys first
         if modifier_keys:
             for modifier in modifier_keys:
@@ -323,6 +413,12 @@ class PlaywrightAgentOs(AgentOs):
             for modifier in modifier_keys:
                 self._page.keyboard.up(self._convert_key(modifier))
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"keyboard_release(key={key}, modifier_keys={modifier_keys})",
+            self.screenshot(report=False),
+        )
+
     @override
     def keyboard_tap(
         self,
@@ -343,6 +439,11 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            (f"keyboard_tap(key={key}, modifier_keys={modifier_keys}, count={count})"),
+            self.screenshot(report=False),
+        )
         for _ in range(count):
             # Press modifier keys first
             if modifier_keys:
@@ -356,6 +457,15 @@ class PlaywrightAgentOs(AgentOs):
             if modifier_keys:
                 for modifier in modifier_keys:
                     self._page.keyboard.up(self._convert_key(modifier))
+
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            (
+                f"After keyboard_tap(key={key}, "
+                f"modifier_keys={modifier_keys}, count={count})"
+            ),
+            self.screenshot(report=False),
+        )
 
     @override
     def retrieve_active_display(self) -> Display:
@@ -443,21 +553,50 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"goto(url='{url}')",
+        )
         self._page.goto(url)
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"After goto(url='{url}')",
+            self.screenshot(report=False),
+        )
 
     def back(self) -> None:
+        """Navigate back to the previous page in the browser history."""
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "back()",
+        )
         self._page.go_back()
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "After back()",
+            self.screenshot(report=False),
+        )
 
     def forward(self) -> None:
+        """Navigate forward to the next page in the browser history."""
         if not self._page:
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "forward()",
+        )
         self._page.go_forward()
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            "After forward()",
+            self.screenshot(report=False),
+        )
 
     def get_page_title(self) -> str:
         """
@@ -470,7 +609,12 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
-        return self._page.title()
+        title = self._page.title()
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"get_page_title() -> '{title}'",
+        )
+        return title
 
     def get_page_url(self) -> str:
         """
@@ -483,4 +627,29 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
-        return self._page.url
+        url = self._page.url
+        self._reporter.add_message(
+            self._REPORTER_ROLE_NAME,
+            f"get_page_url() -> '{url}'",
+        )
+        return url
+
+    @property
+    def tags(self) -> list[str]:
+        """Get the tags for this agent OS.
+
+        Returns:
+            list[str]: A list of tags that identify this agent OS type.
+        """
+        if not hasattr(self, "_tags"):
+            self._tags = ["playwright"]
+        return self._tags
+
+    @tags.setter
+    def tags(self, tags: list[str]) -> None:
+        """Set the tags for this agent OS.
+
+        Args:
+            tags (list[str]): A list of tags that identify this agent OS type.
+        """
+        self._tags = tags

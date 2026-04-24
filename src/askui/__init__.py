@@ -58,7 +58,7 @@ if _ANDROID_AGENT_AVAILABLE:
     from .multi_device_agent import MultiDeviceAgent
 
 try:
-    from .web_agent import WebVisionAgent
+    from .web_agent import WebAgent, WebVisionAgent
     from .web_testing_agent import WebTestingAgent
 
     _WEB_AGENTS_AVAILABLE = True
@@ -113,4 +113,4 @@ if _ANDROID_AGENT_AVAILABLE:
     __all__ += ["AndroidAgent", "AndroidVisionAgent", "MultiDeviceAgent"]
 
 if _WEB_AGENTS_AVAILABLE:
-    __all__ += ["WebVisionAgent", "WebTestingAgent"]
+    __all__ += ["WebAgent", "WebVisionAgent", "WebTestingAgent"]
