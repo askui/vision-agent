@@ -4,7 +4,7 @@ from typing import get_args
 from PIL import Image
 from typing_extensions import override
 
-from askui.models.shared import PlaywrightBaseTool
+from askui.models.shared import PlaywrightBaseTool, ToolTags
 from askui.tools.agent_os import ModifierKey, MouseButton, PcKey
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
 
@@ -17,6 +17,7 @@ class PlaywrightScreenshotTool(PlaywrightBaseTool):
             name="screenshot",
             description="Take a screenshot of the current browser page.",
             agent_os=agent_os,
+            required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
         self.is_cacheable = True
 
@@ -57,6 +58,7 @@ class PlaywrightMouseMoveTool(PlaywrightBaseTool):
                 "required": ["x", "y"],
             },
             agent_os=agent_os,
+            required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
         self.is_cacheable = True
 
@@ -159,6 +161,7 @@ class PlaywrightMouseScrollTool(PlaywrightBaseTool):
                 "required": ["dx", "dy"],
             },
             agent_os=agent_os,
+            required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
         self.is_cacheable = True
 

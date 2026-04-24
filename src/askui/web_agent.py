@@ -15,6 +15,7 @@ from askui.models.shared.truncation_strategies import TruncationStrategy
 from askui.prompts.act_prompts import create_web_agent_prompt
 from askui.tools.exception_tool import ExceptionTool
 from askui.tools.playwright.agent_os import PlaywrightAgentOs
+from askui.tools.playwright.agent_os_facade import PlaywrightAgentOsFacade
 from askui.tools.playwright.tools import (
     PlaywrightBackTool,
     PlaywrightForwardTool,
@@ -59,6 +60,7 @@ class WebAgent(Agent):
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
         self.os = PlaywrightAgentOs(reporter)
+        self.act_agent_os_facade = PlaywrightAgentOsFacade(self.os)
         super().__init__(
             reporter=reporter,
             retry=retry,
@@ -68,7 +70,7 @@ class WebAgent(Agent):
             callbacks=callbacks,
             truncation_strategy=truncation_strategy,
         )
-        self.act_tool_collection.add_agent_os(self.os)
+        self.act_tool_collection.add_agent_os(self.act_agent_os_facade)
         self.act_settings = ActSettings(
             messages=MessageSettings(
                 system=create_web_agent_prompt(),

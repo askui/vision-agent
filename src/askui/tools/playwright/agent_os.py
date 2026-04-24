@@ -211,7 +211,7 @@ class PlaywrightAgentOs(AgentOs):
             error_msg = "No active page. Call connect() first."
             raise RuntimeError(error_msg)
 
-        screenshot_bytes = self._page.screenshot()
+        screenshot_bytes = self._page.screenshot(scale="css")
         screenshot = Image.open(io.BytesIO(screenshot_bytes))
         if report:
             self._reporter.add_message(
