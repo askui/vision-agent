@@ -28,6 +28,7 @@ class ComputerListProcessTool(ComputerBaseTool):
             """,
             agent_os=agent_os,
         )
+        self.is_cacheable = True
 
     def __call__(self) -> str:
         result = self.agent_os.get_process_list(get_extended_info=True)
