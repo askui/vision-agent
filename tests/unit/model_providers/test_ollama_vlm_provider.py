@@ -11,7 +11,7 @@ from askui.models.shared.agent_message_param import MessageParam
 class TestOllamaVlmProvider:
     def test_default_model_id(self) -> None:
         provider = OllamaVlmProvider()
-        assert provider.model_id == "qwen2.5vl"
+        assert provider.model_id == "qwen3.5"
 
     def test_custom_model_id(self) -> None:
         provider = OllamaVlmProvider(model_id="llava")

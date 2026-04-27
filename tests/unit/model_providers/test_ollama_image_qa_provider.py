@@ -23,7 +23,7 @@ def _make_completion(content: str) -> ChatCompletion:
             )
         ],
         created=1234567890,
-        model="qwen2.5vl",
+        model="qwen3.5",
         object="chat.completion",
         usage=CompletionUsage(prompt_tokens=10, completion_tokens=20, total_tokens=30),
     )
@@ -32,7 +32,7 @@ def _make_completion(content: str) -> ChatCompletion:
 class TestOllamaImageQAProvider:
     def test_default_model_id(self) -> None:
         provider = OllamaImageQAProvider()
-        assert provider._model_id == "qwen2.5vl"
+        assert provider._model_id == "qwen3.5"
 
     def test_custom_model_id(self) -> None:
         provider = OllamaImageQAProvider(model_id="llava")
