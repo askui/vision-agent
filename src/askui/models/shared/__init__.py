@@ -4,6 +4,7 @@ from .tool_tags import ToolTags
 
 try:
     from .playwright_base_tool import PlaywrightBaseTool
+
     _PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     _PLAYWRIGHT_AVAILABLE = False
