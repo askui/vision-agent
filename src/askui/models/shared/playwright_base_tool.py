@@ -47,11 +47,11 @@ class PlaywrightBaseTool(ToolWithAgentOS):
                 instance to set.
 
         Raises:
-            TypeError: If the agent OS is not an `AgentOs` instance.
+            TypeError: If the agent OS is not an `PlaywrightAgentOs` instance.
         """
-        if not isinstance(agent_os, AgentOs):
+        if not isinstance(agent_os, PlaywrightAgentOs):
             raise AgentOsTypeError(
-                expected_type=AgentOs,
+                expected_type=PlaywrightAgentOs,
                 actual_type=type(agent_os),
             )
         self._agent_os = agent_os
