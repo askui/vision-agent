@@ -177,10 +177,11 @@ class Conversation:
         self._setup_control_loop(messages, tools, settings, reporters)
 
         self._on_conversation_start()
-        self._execute_control_loop()
-        self._on_conversation_end()
-
-        self._teardown_control_loop()
+        try:
+            self._execute_control_loop()
+        finally:
+            self._on_conversation_end()
+            self._teardown_control_loop()
 
     @tracer.start_as_current_span("_setup_control_loop")
     def _setup_control_loop(

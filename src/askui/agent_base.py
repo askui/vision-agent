@@ -159,6 +159,8 @@ class Agent:
             None
 
         Raises:
+            AutomationError: If a tool raises an unfixable error that cannot be
+                auto-corrected by the agent.
             MaxTokensExceededError: If the model reaches the maximum token limit
                 defined in the agent settings.
             ModelRefusalError: If the model refuses to process the request.
