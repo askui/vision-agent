@@ -19,7 +19,7 @@ class ComputerTypeTool(ComputerBaseTool):
                     "typing_speed": {
                         "type": "integer",
                         "description": (
-                            "The speed of typing in characters per minute."
+                            "The speed of typing in characters per second."
                             " Defaults to 50"
                         ),
                         "default": 50,
@@ -35,5 +35,5 @@ class ComputerTypeTool(ComputerBaseTool):
         self.agent_os.type(text, typing_speed)
         return (
             f"Text was typed: {text} with typing speed: "
-            f" {typing_speed} characters per minute."
+            f" {typing_speed} characters per second."
         )
