@@ -8,6 +8,7 @@ from .keyboard_tap_tool import ComputerKeyboardTapTool
 from .list_displays_tool import ComputerListDisplaysTool
 from .mouse_click_tool import ComputerMouseClickTool
 from .mouse_hold_down_tool import ComputerMouseHoldDownTool
+from .mouse_press_hold_release_tool import ComputerMousePressHoldReleaseTool
 from .mouse_release_tool import ComputerMouseReleaseTool
 from .mouse_scroll_tool import ComputerMouseScrollTool
 from .move_mouse_tool import ComputerMoveMouseTool
@@ -26,6 +27,7 @@ __all__ = [
     "ComputerKeyboardTapTool",
     "ComputerMouseClickTool",
     "ComputerMouseHoldDownTool",
+    "ComputerMousePressHoldReleaseTool",
     "ComputerMouseReleaseTool",
     "ComputerMouseScrollTool",
     "ComputerMoveMouseTool",
