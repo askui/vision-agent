@@ -31,6 +31,7 @@ from .models import (
     ToolUseBlockParam,
     UrlImageSourceParam,
 )
+from .models.exceptions import AutomationError
 from .models.shared.settings import (
     DEFAULT_GET_RESOLUTION,
     DEFAULT_LOCATE_RESOLUTION,
@@ -69,6 +70,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     "Agent",
+    "AutomationError",
     "ComputerAgent",
     "VisionAgent",
     "AgentSettings",

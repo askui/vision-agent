@@ -1,4 +1,4 @@
-from askui.models.shared.tools import AgentException, Tool
+from askui.models.shared.tools import AgentError, Tool
 
 
 class ExceptionTool(Tool):
@@ -28,4 +28,4 @@ class ExceptionTool(Tool):
         )
 
     def __call__(self, text: str) -> None:
-        raise AgentException(text)
+        raise AgentError(text)

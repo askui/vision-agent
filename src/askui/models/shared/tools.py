@@ -20,6 +20,7 @@ from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from typing_extensions import Self
 
+from askui.models.exceptions import AutomationError
 from askui.models.shared.agent_message_param import (
     Base64ImageSourceParam,
     CacheControlEphemeralParam,
@@ -384,10 +385,8 @@ class ToolWithAgentOS(Tool):
         return self._agent_os is not None
 
 
-class AgentException(Exception):
-    """
-    Exception raised by the agent.
-    """
+class AgentError(Exception):
+    """Unfixable error raised by the agent that terminates execution immediately."""
 
     def __init__(self, message: str):
         self.message = message
@@ -647,7 +646,7 @@ class ToolCollection:
                 content=_convert_to_content(tool_result),
                 tool_use_id=tool_use_block_param.id,
             )
-        except AgentException:
+        except (AgentError, AutomationError):
             raise
         except Exception as e:  # noqa: BLE001
             error_message = getattr(e, "message", str(e))
@@ -691,6 +690,8 @@ class ToolCollection:
                 content=_convert_to_content(result),
                 tool_use_id=tool_use_block_param.id,
             )
+        except AutomationError:
+            raise
         except Exception as e:  # noqa: BLE001
             logger.warning(
                 "MCP tool failed",

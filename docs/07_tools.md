@@ -251,6 +251,46 @@ class GreetingTool(Tool):
             return f"{base_greeting}, {name}! How are you today?"
 ```
 
+### Error Handling in Tools
+
+When a tool raises an exception, the agent distinguishes between **fixable** and **unfixable** errors:
+
+- **Fixable errors** (regular exceptions): The error message is returned to the model, which can auto-correct and retry with different parameters. This is the default behavior for any `Exception` raised inside `__call__`.
+- **Unfixable errors** (`AutomationError`): The error propagates immediately to the caller, terminating the agent's execution. Use this for errors where retrying cannot help (e.g., missing credentials, unreachable services, invalid environment state).
+
+```python
+from askui import AutomationError
+from askui.models.shared.tools import Tool
+
+
+class DatabaseQueryTool(Tool):
+    """Queries a database."""
+
+    def __init__(self):
+        super().__init__(
+            name="database_query",
+            description="Executes a read-only SQL query",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "SQL query to execute"}
+                },
+                "required": ["query"],
+            },
+        )
+
+    def __call__(self, query: str) -> str:
+        if not self._is_connected():
+            # Unfixable: no amount of retrying will help
+            raise AutomationError("Database connection is not available")
+
+        if "DROP" in query.upper():
+            # Fixable: the agent can rephrase the query
+            raise ValueError("Only SELECT queries are allowed")
+
+        return self._execute(query)
+```
+
 To use this tool with the ComputerAgent, you can run
 ```python
 from askui import ComputerAgent
