@@ -296,7 +296,7 @@ class AgentOs(ABC):
         Args:
             text (str): The text to be typed.
             typing_speed (int, optional): The speed of typing in characters per
-                minute. Defaults to `50`.
+                second. Defaults to `50`.
         """
         raise NotImplementedError
 
