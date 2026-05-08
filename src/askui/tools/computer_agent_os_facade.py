@@ -291,8 +291,8 @@ class ComputerAgentOsFacade(AgentOs):
     def list_target_computers(self) -> "list[TargetComputer]":
         return self._agent_os.list_target_computers()
 
-    def get_active_target_computer(self) -> "TargetComputer":
-        return self._agent_os.get_active_target_computer()
+    def get_active_target_computer(self, report: bool = True) -> "TargetComputer":
+        return self._agent_os.get_active_target_computer(report=report)
 
     def switch_target_computer(self, session_guid: str) -> "TargetComputer":
         return self._agent_os.switch_target_computer(session_guid)

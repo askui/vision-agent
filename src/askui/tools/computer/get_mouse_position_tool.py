@@ -19,7 +19,7 @@ class ComputerGetMousePositionTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> str:
-        target = self.agent_os.get_active_target_computer()
+        target = self.agent_os.get_active_target_computer(report=False)
         cursor_position = self.agent_os.get_mouse_position()
         return (
             f"[target {target.session_guid}]: Mouse is at position "

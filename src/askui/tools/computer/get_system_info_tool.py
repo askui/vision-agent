@@ -32,6 +32,6 @@ class ComputerGetSystemInfoTool(ComputerBaseTool):
         )
 
     def __call__(self) -> str:
-        target = self.agent_os.get_active_target_computer()
+        target = self.agent_os.get_active_target_computer(report=False)
         system_info_json = self.agent_os.get_system_info().model_dump_json()
         return f"[target {target.session_guid}]: {system_info_json}"

@@ -16,7 +16,7 @@ class ComputerListDisplaysTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> str:
-        target = self.agent_os.get_active_target_computer()
+        target = self.agent_os.get_active_target_computer(report=False)
         displays_json = self.agent_os.list_displays().model_dump_json(
             exclude={"data": {"__all__": {"size"}}},
         )

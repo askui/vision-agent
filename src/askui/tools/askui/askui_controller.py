@@ -257,15 +257,17 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def get_active_target_computer(self) -> TargetComputer:
+    def get_active_target_computer(self, report: bool = True) -> TargetComputer:
         """Return the currently active controller server."""
-        self._reporter.add_message(
-            self._REPORTER_SOURCE, "get_active_target_computer()"
-        )
+        if report:
+            self._reporter.add_message(
+                self._REPORTER_SOURCE, "get_active_target_computer()"
+            )
         server = self._require_active_server()
-        self._reporter.add_message(
-            self._REPORTER_SOURCE, f"get_active_target_computer() -> {server!r}"
-        )
+        if report:
+            self._reporter.add_message(
+                self._REPORTER_SOURCE, f"get_active_target_computer() -> {server!r}"
+            )
         return server
 
     @telemetry.record_call()

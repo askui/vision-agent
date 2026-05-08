@@ -22,6 +22,6 @@ class ComputerScreenshotTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> tuple[str, Image.Image]:
-        target = self.agent_os.get_active_target_computer()
+        target = self.agent_os.get_active_target_computer(report=False)
         screenshot = self.agent_os.screenshot()
         return f"[target {target.session_guid}]: Screenshot was taken.", screenshot

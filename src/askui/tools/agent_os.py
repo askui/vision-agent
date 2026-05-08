@@ -710,7 +710,7 @@ class AgentOs(ABC):
         """Return all registered target computers."""
         raise NotImplementedError
 
-    def get_active_target_computer(self) -> "TargetComputer":
+    def get_active_target_computer(self, report: bool = True) -> "TargetComputer":
         """Return the currently active target computer."""
         raise NotImplementedError
 

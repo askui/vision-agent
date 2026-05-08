@@ -78,7 +78,6 @@ class TargetComputer:
         return (
             f"{type(self).__name__}("
             f"session_guid={self._session_guid!r}, "
-            f"address={self._address!r}, "
             f"description={self._description!r})"
         )
 

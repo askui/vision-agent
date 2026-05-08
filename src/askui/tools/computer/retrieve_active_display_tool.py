@@ -17,7 +17,7 @@ class ComputerRetrieveActiveDisplayTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> str:
-        target = self.agent_os.get_active_target_computer()
+        target = self.agent_os.get_active_target_computer(report=False)
         display_json = self.agent_os.retrieve_active_display().model_dump_json(
             exclude={"size"}
         )
