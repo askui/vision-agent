@@ -8,3 +8,5 @@ class ToolTags(str, Enum):
     COMPUTER = "computer"
     SCALED_AGENT_OS = "scaled_agent_os"
     PLAYWRIGHT = "playwright"
+    LOCAL = "local"
+    REMOTE = "remote"

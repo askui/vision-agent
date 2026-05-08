@@ -26,6 +26,10 @@ if TYPE_CHECKING:
         GetActiveWindowResponseModel,
         GetSystemInfoResponseModel,
     )
+    from askui.tools.askui.target_computer import (
+        RemoteTargetComputer,
+        TargetComputer,
+    )
 
 
 class ComputerAgentOsFacade(AgentOs):
@@ -265,6 +269,34 @@ class ComputerAgentOsFacade(AgentOs):
             window_id (int): The ID of the window to set as active.
         """
         self._agent_os.set_window_in_focus(process_id, window_id)
+
+    def add_target_computer(self, server: "TargetComputer") -> "TargetComputer":
+        return self._agent_os.add_target_computer(server)
+
+    def add_remote_target_computer(
+        self,
+        address: str,
+        tags: list[str] | None = None,
+        description: str | None = None,
+    ) -> "RemoteTargetComputer":
+        return self._agent_os.add_remote_target_computer(
+            address=address, tags=tags, description=description
+        )
+
+    def reset_target_computers(
+        self,
+        target_computers: "list[TargetComputer] | None" = None,
+    ) -> None:
+        self._agent_os.reset_target_computers(target_computers)
+
+    def list_target_computers(self) -> "list[TargetComputer]":
+        return self._agent_os.list_target_computers()
+
+    def get_active_target_computer(self) -> "TargetComputer":
+        return self._agent_os.get_active_target_computer()
+
+    def switch_target_computer(self, session_guid: str) -> "TargetComputer":
+        return self._agent_os.switch_target_computer(session_guid)
 
     def _scale_coordinates_back(
         self,

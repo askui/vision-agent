@@ -1,6 +1,6 @@
 """AskUI Python SDK"""
 
-__version__ = "0.32.1"
+__version__ = "0.33.0"
 
 import logging
 import os
@@ -45,6 +45,7 @@ from .models.shared.tools import Tool
 from .models.types.response_schemas import ResponseSchema, ResponseSchemaBase
 from .retry import ConfigurableRetry, Retry
 from .tools import ModifierKey, PcKey
+from .tools.askui import RemoteTargetComputer, TargetComputer
 from .utils.image_utils import ImageSource
 from .utils.source_utils import InputSource
 
@@ -69,6 +70,8 @@ except ImportError:
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
+    "RemoteTargetComputer",
+    "TargetComputer",
     "Agent",
     "AutomationError",
     "ComputerAgent",

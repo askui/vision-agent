@@ -17,12 +17,14 @@ from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
 )
 from askui.tools.computer import (
+    ComputerGetActiveTargetComputerTool,
     ComputerGetMousePositionTool,
     ComputerGetSystemInfoTool,
     ComputerKeyboardPressedTool,
     ComputerKeyboardReleaseTool,
     ComputerKeyboardTapTool,
     ComputerListDisplaysTool,
+    ComputerListTargetComputersTool,
     ComputerMouseClickTool,
     ComputerMouseHoldDownTool,
     ComputerMouseReleaseTool,
@@ -31,6 +33,7 @@ from askui.tools.computer import (
     ComputerRetrieveActiveDisplayTool,
     ComputerScreenshotTool,
     ComputerSetActiveDisplayTool,
+    ComputerSwitchTargetComputerTool,
     ComputerTypeTool,
 )
 from askui.tools.exception_tool import ExceptionTool
@@ -38,7 +41,7 @@ from askui.tools.exception_tool import ExceptionTool
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
-from .tools.askui import AskUiControllerClient
+from .tools.askui import AskUiControllerClient, TargetComputer
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,10 @@ class ComputerAgent(Agent):
     Args:
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        tools (AgentToolbox | None, optional): Custom toolbox instance. If `None`, a default one will be created with `AskUiControllerClient`.
+        target_computers (list[TargetComputer] | None, optional):
+            Controller servers used by the default `AskUiControllerClient`. Must contain
+            at least one server, at most one local, and remote addresses must be unique.
+            Defaults to a single local controller server. Ignored when `tools` is set.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
@@ -72,11 +78,11 @@ class ComputerAgent(Agent):
     @telemetry.record_call(
         exclude={
             "reporters",
-            "tools",
             "settings",
             "act_tools",
             "callbacks",
             "truncation_strategy",
+            "target_computers",
         }
     )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -84,7 +90,7 @@ class ComputerAgent(Agent):
         self,
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
-        tools: AgentToolbox | None = None,
+        target_computers: list[TargetComputer] | None = None,
         settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
@@ -92,10 +98,11 @@ class ComputerAgent(Agent):
         truncation_strategy: TruncationStrategy | None = None,
     ) -> None:
         reporter = CompositeReporter(reporters=reporters)
-        self.tools = tools or AgentToolbox(
+        self.tools = AgentToolbox(
             agent_os=AskUiControllerClient(
                 display=display,
                 reporter=reporter,
+                target_computers=target_computers,
             )
         )
         super().__init__(
@@ -519,6 +526,9 @@ class ComputerAgent(Agent):
             ComputerListDisplaysTool(),
             ComputerRetrieveActiveDisplayTool(),
             ComputerSetActiveDisplayTool(),
+            ComputerListTargetComputersTool(),
+            ComputerSwitchTargetComputerTool(),
+            ComputerGetActiveTargetComputerTool(),
         ]
 
 

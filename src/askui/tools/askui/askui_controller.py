@@ -1,10 +1,7 @@
 import logging
-import pathlib
-import subprocess
-import sys
 import time
 import types
-import uuid
+from dataclasses import dataclass
 from typing import Literal, Type
 
 import grpc
@@ -22,10 +19,6 @@ from askui.tools.agent_os import (
     ModifierKey,
     PcKey,
 )
-from askui.tools.askui.askui_controller_client_settings import (
-    AskUiControllerClientSettings,
-)
-from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.askui.askui_ui_controller_grpc.desktop_agent_os_error import (
     DesktopAgentOsError,
 )
@@ -69,9 +62,16 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
     GetSystemInfoResponse,
     GetSystemInfoResponseModel,
 )
+from askui.tools.askui.target_computer import (
+    LocalTargetComputer,
+    RemoteTargetComputer,
+    TargetComputer,
+)
+from askui.tools.askui.target_computer_manager import (
+    TargetComputerManager,
+)
 from askui.utils.annotated_image import AnnotatedImage
 
-from ..utils import process_exists, wait_for_port
 from .exceptions import (
     AskUiControllerError,
     AskUiControllerInvalidCommandError,
@@ -81,148 +81,262 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class AskUiControllerServer:
-    """
-    Concrete implementation of `ControllerServer` for managing the AskUI Remote Device
-    Controller process.
-    Handles process discovery, startup, and shutdown for the native controller binary.
+@dataclass
+class _Connection:
+    """gRPC connection state for a single controller server."""
 
-    Args:
-        settings (AskUiControllerSettings | None, optional): Settings for the AskUI.
-    """
-
-    def __init__(self, settings: AskUiControllerSettings | None = None) -> None:
-        self._process: subprocess.Popen[bytes] | None = None
-        self._settings = settings or AskUiControllerSettings()
-
-    def _start_process(
-        self,
-        path: pathlib.Path,
-        args: str | None = None,
-    ) -> None:
-        commands = [str(path)]
-        if args:
-            commands.extend(args.split())
-        if not logger.isEnabledFor(logging.DEBUG):
-            self._process = subprocess.Popen(
-                commands, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-        else:
-            self._process = subprocess.Popen(commands)
-        wait_for_port(23000)
-
-    def start(self, clean_up: bool = False) -> None:
-        """
-        Start the controller process.
-
-        Args:
-            clean_up (bool, optional): Whether to clean up existing processes
-                (only on Windows) before starting. Defaults to `False`.
-        """
-        if (
-            sys.platform == "win32"
-            and clean_up
-            and process_exists("AskuiRemoteDeviceController.exe")
-        ):
-            self.clean_up()
-        logger.debug(
-            "Starting AskUI Remote Device Controller",
-            extra={"path": str(self._settings.controller_path)},
-        )
-        self._start_process(
-            self._settings.controller_path, self._settings.controller_args
-        )
-        time.sleep(0.5)
-
-    def clean_up(self) -> None:
-        subprocess.run("taskkill.exe /IM AskUI*")
-        time.sleep(0.1)
-
-    def stop(self, force: bool = False) -> None:
-        """
-        Stop the controller process.
-
-        Args:
-            force (bool, optional): Whether to forcefully terminate the process.
-                Defaults to `False`.
-        """
-        if self._process is None:
-            return  # Nothing to stop
-
-        try:
-            if force:
-                self._process.kill()
-                if sys.platform == "win32":
-                    self.clean_up()
-            else:
-                self._process.terminate()
-        except Exception:  # noqa: BLE001 - We want to catch all other exceptions here
-            logger.exception("Controller error")
-        finally:
-            self._process = None
+    channel: grpc.Channel
+    stub: controller_v1.ControllerAPIStub
+    session_info: controller_v1_pbs.SessionInfo
+    started_process: bool
 
 
 class AskUiControllerClient(AgentOs):
     """
-    Implementation of `AgentOs` that communicates with the AskUI Remote Device
-    Controller via gRPC.
+    Implementation of `AgentOs` that communicates with one or more AskUI Remote Device
+    Controller servers via gRPC.
+
+    A client is configured with a non-empty list of `target_computers` (at most one
+    local, the rest remote with unique addresses). `connect()` opens a gRPC channel
+    and session for *every* registered server. Exactly one server is *active* at a
+    time; agent-os actions are routed to its connection. `disconnect()` closes every
+    open connection and stops only those local processes that were autostarted by
+    this client (i.e. `is_local` and `autostart=True` at connect time).
+
+    Use `add_target_computer` / `add_remote_target_computer` to register additional
+    targets (which auto-connect if the client is currently connected),
+    `switch_target_computer` to change the active one, `list_target_computers` to
+    inspect the list, and `reset_target_computers` to clear or replace the list.
 
     Args:
         reporter (Reporter): Reporter used for reporting with the `"AgentOs"`.
         display (int, optional): Display number to use. Defaults to `1`.
-        controller_server (AskUiControllerServer | None, optional): Custom controller
-            server. Defaults to `ControllerServer`.
+        target_computers (list[TargetComputer] | None, optional):
+            Controller servers to register. Must be non-empty if provided, contain at
+            most one local server, and have unique addresses across remote servers.
+            If `None` (default), a single `LocalTargetComputer` with
+            default settings is registered.
     """
 
-    @telemetry.record_call(exclude={"reporter", "controller_server"})
+    @telemetry.record_call(exclude={"reporter", "target_computers"})
     def __init__(
         self,
         reporter: Reporter = NULL_REPORTER,
         display: int = 1,
-        controller_server: AskUiControllerServer | None = None,
-        settings: AskUiControllerClientSettings | None = None,
+        target_computers: list[TargetComputer] | None = None,
     ) -> None:
-        self._stub: controller_v1.ControllerAPIStub | None = None
-        self._channel: grpc.Channel | None = None
-        self._session_info: controller_v1_pbs.SessionInfo | None = None
+        if not target_computers:
+            target_computers = [LocalTargetComputer()]
+
+        self._connections: dict[str, _Connection] = {}
         self._pre_action_wait = 0
         self._post_action_wait = 0.05
         self._max_retries = 10
         self._display = display
         self._reporter = reporter
-        self._controller_server = controller_server or AskUiControllerServer()
-        self._session_guid = "{" + str(uuid.uuid4()) + "}"
-        self._settings = settings or AskUiControllerClientSettings()
+        self._manager = TargetComputerManager(target_computers=target_computers)
+
+    @property
+    def target_computer_manager(self) -> TargetComputerManager:
+        """The underlying target-computer manager."""
+        return self._manager
+
+    @property
+    def is_connected(self) -> bool:
+        """`True` when at least one target-computer connection is open."""
+        return bool(self._connections)
+
+    def _require_active_server(self) -> TargetComputer:
+        server = self._manager.active
+        if server is None:
+            error_msg = "No active controller server is registered"
+            raise AskUiControllerError(error_msg)
+        return server
+
+    def _active_connection(self) -> _Connection:
+        server = self._require_active_server()
+        conn = self._connections.get(server.session_guid)
+        if conn is None:
+            error_msg = (
+                f"Active controller server {server.session_guid} is not connected; "
+                "call connect() first"
+            )
+            raise AskUiControllerError(error_msg)
+        return conn
+
+    @property
+    def _session_info(self) -> controller_v1_pbs.SessionInfo:
+        return self._active_connection().session_info
+
+    @telemetry.record_call()
+    @override
+    def add_remote_target_computer(
+        self,
+        address: str,
+        tags: list[str] | None = None,
+        description: str | None = None,
+    ) -> RemoteTargetComputer:
+        """
+        Register a remote controller server. Auto-connects if the client is currently
+        connected.
+
+        Args:
+            address (str): gRPC address of the remote controller (required).
+            tags (list[str] | None, optional)
+            description (str | None, optional)
+
+        Returns:
+            RemoteTargetComputer: The newly registered server.
+        """
+        server = self._manager.add_remote(
+            address=address, tags=tags, description=description
+        )
+        if self.is_connected:
+            self._connect_server(server)
+        return server
+
+    @telemetry.record_call(exclude={"server"})
+    @override
+    def add_target_computer(self, server: TargetComputer) -> TargetComputer:
+        """
+        Register an already-constructed controller server. Auto-connects if the
+        client is currently connected.
+        """
+        self._manager.add(server)
+        if self.is_connected:
+            self._connect_server(server)
+        return server
+
+    @telemetry.record_call(exclude={"target_computers"})
+    @override
+    def reset_target_computers(
+        self,
+        target_computers: list[TargetComputer] | None = None,
+    ) -> None:
+        """
+        Disconnect (if connected) and replace the controller-server list.
+
+        Args:
+            target_computers (list[TargetComputer] | None, optional):
+                New list of controller servers to register after the reset. If `None`,
+                the list is left empty and a subsequent `connect()` will fail until
+                at least one server has been registered again. Same validation rules
+                as the constructor (at most one local, unique remote addresses).
+        """
+        was_connected = self.is_connected
+        if was_connected:
+            self.disconnect()
+        self._manager.reset()
+        if target_computers is not None:
+            for server in target_computers:
+                self._manager.add(server)
+            if was_connected:
+                self.connect()
+
+    @telemetry.record_call()
+    @override
+    def list_target_computers(self) -> list[TargetComputer]:
+        """Return all registered controller servers."""
+        return self._manager.list()
+
+    @telemetry.record_call()
+    @override
+    def get_active_target_computer(self) -> TargetComputer:
+        """Return the currently active controller server."""
+        return self._require_active_server()
+
+    @telemetry.record_call()
+    @override
+    def switch_target_computer(self, session_guid: str) -> TargetComputer:
+        """
+        Switch the active controller server.
+
+        Connections to all registered servers stay open across switches; this just
+        changes which connection routes future agent-os actions. If the target was
+        added after `connect()` and isn't connected yet, it is connected on switch.
+
+        Args:
+            session_guid (str): The session GUID of the server to switch to.
+
+        Returns:
+            TargetComputer: The newly active server.
+        """
+        server = self._manager.switch(session_guid)
+        if self.is_connected and session_guid not in self._connections:
+            self._connect_server(server)
+        return server
 
     @telemetry.record_call()
     @override
     def connect(self) -> None:
         """
-        Establishes a connection to the AskUI Remote Device Controller.
+        Open a gRPC channel and session to every registered controller server.
 
-        This method starts the controller server, establishes a gRPC channel,
-        creates a session, and sets up the initial display.
+        For each server: starts the local process when `is_local` and `autostart`
+        are both `True`, opens an insecure gRPC channel, starts a session, starts
+        execution, and sets the configured display. Servers already connected are
+        skipped, so calling `connect()` twice is safe.
+
+        On failure mid-loop, all servers connected so far are rolled back via
+        `disconnect()` before re-raising.
         """
-        if self._settings.server_autostart:
-            self._controller_server.start()
-        self._channel = grpc.insecure_channel(
-            self._settings.server_address,
+        if not self._manager.list():
+            error_msg = "No controller servers registered; cannot connect"
+            raise AskUiControllerError(error_msg)
+        try:
+            for server in self._manager.list():
+                self._connect_server(server)
+        except Exception:
+            self.disconnect()
+            raise
+
+    def _connect_server(self, server: TargetComputer) -> None:
+        if server.session_guid in self._connections:
+            return
+        started_process = False
+        if isinstance(server, LocalTargetComputer) and server.autostart:
+            server.start()
+            started_process = True
+        channel = grpc.insecure_channel(
+            server.address,
             options=[
                 ("grpc.max_send_message_length", 2**30),
                 ("grpc.max_receive_message_length", 2**30),
                 ("grpc.default_deadline", 300000),
             ],
         )
-        self._stub = controller_v1.ControllerAPIStub(self._channel)
-        self._start_session()
-        self._start_execution()
-        self.set_display(self._display)
+        stub = controller_v1.ControllerAPIStub(channel)
+        try:
+            session_response: controller_v1_pbs.Response_StartSession = (
+                stub.StartSession(
+                    controller_v1_pbs.Request_StartSession(
+                        sessionGUID=server.session_guid, immediateExecution=True
+                    )
+                )
+            )
+            session_info = session_response.sessionInfo
+            stub.StartExecution(
+                controller_v1_pbs.Request_StartExecution(sessionInfo=session_info)
+            )
+            stub.SetActiveDisplay(
+                controller_v1_pbs.Request_SetActiveDisplay(displayID=self._display)
+            )
+        except Exception:
+            try:
+                channel.close()
+            finally:
+                if started_process:
+                    server.stop()
+            raise
+        self._connections[server.session_guid] = _Connection(
+            channel=channel,
+            stub=stub,
+            session_info=session_info,
+            started_process=started_process,
+        )
 
     def _get_stub(self) -> controller_v1.ControllerAPIStub:
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized. Call `connect()` first."
-        )
-        return self._stub
+        return self._active_connection().stub
 
     def _run_recorder_action(
         self,
@@ -264,24 +378,47 @@ class AskUiControllerClient(AgentOs):
     @override
     def disconnect(self) -> None:
         """
-        Terminates the connection to the AskUI Remote Device Controller.
+        Close every open controller-server connection.
 
-        This method stops the execution, ends the session, closes the gRPC channel,
-        and stops the controller server.
+        For each connection: stops execution, ends the session, closes the gRPC
+        channel, and (only when the local process was autostarted by `connect()`)
+        stops the controller process. Errors are logged but do not abort the loop -
+        a partial failure on one server still releases the others.
         """
+        for session_guid in list(self._connections.keys()):
+            self._disconnect_server(session_guid)
+
+    def _disconnect_server(self, session_guid: str) -> None:
+        conn = self._connections.pop(session_guid, None)
+        if conn is None:
+            return
         try:
-            self._stop_execution()
-            self._stop_session()
-            if self._channel is not None:
-                self._channel.close()
-            self._controller_server.stop()
-        except Exception as e:  # noqa: BLE001
-            # We want to catch all other exceptions here and not re-raise them
-            msg = (
-                "Error while disconnecting from the AskUI Remote Device Controller"
-                f" Error: {e}"
+            conn.stub.StopExecution(
+                controller_v1_pbs.Request_StopExecution(sessionInfo=conn.session_info)
             )
-            logger.exception(msg)
+            conn.stub.EndSession(
+                controller_v1_pbs.Request_EndSession(sessionInfo=conn.session_info)
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Error stopping execution/session for controller %s", session_guid
+            )
+        try:
+            conn.channel.close()
+        except Exception:  # noqa: BLE001
+            logger.exception("Error closing channel for controller %s", session_guid)
+        if conn.started_process:
+            try:
+                server = self._manager.get(session_guid)
+            except KeyError:
+                return
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "Error stopping autostarted process for controller %s",
+                    session_guid,
+                )
 
     @telemetry.record_call()
     def __enter__(self) -> Self:
@@ -310,29 +447,6 @@ class AskUiControllerClient(AgentOs):
             traceback: The traceback if an exception was raised.
         """
         self.disconnect()
-
-    def _start_session(self) -> None:
-        response = self._get_stub().StartSession(
-            controller_v1_pbs.Request_StartSession(
-                sessionGUID=self._session_guid, immediateExecution=True
-            )
-        )
-        self._session_info = response.sessionInfo
-
-    def _stop_session(self) -> None:
-        self._get_stub().EndSession(
-            controller_v1_pbs.Request_EndSession(sessionInfo=self._session_info)
-        )
-
-    def _start_execution(self) -> None:
-        self._get_stub().StartExecution(
-            controller_v1_pbs.Request_StartExecution(sessionInfo=self._session_info)
-        )
-
-    def _stop_execution(self) -> None:
-        self._get_stub().StopExecution(
-            controller_v1_pbs.Request_StopExecution(sessionInfo=self._session_info)
-        )
 
     @telemetry.record_call()
     @override
@@ -1039,7 +1153,8 @@ class AskUiControllerClient(AgentOs):
                 on the server side.
         """
 
-        header = Header(authentication=Guid(root=self._session_guid))
+        server = self._require_active_server()
+        header = Header(authentication=Guid(root=server.session_guid))
         message = Message(header=header, command=command)
 
         request = AskUIAgentOSSendRequestSchema(message=message)
@@ -1207,9 +1322,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             SystemInfo: The system information.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
         self._reporter.add_message("AgentOS", "get_system_info()")
         command = GetSystemInfoCommand()
         res = self._send_command(command).message.command
@@ -1226,9 +1338,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             GetActiveProcessResponseModel: The active process.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
         self._reporter.add_message("AgentOS", "get_active_process()")
         command = GetActiveProcessCommand()
         res = self._send_command(command).message.command
@@ -1245,9 +1354,6 @@ class AskUiControllerClient(AgentOs):
         Args:
             process_id (int): The ID of the process to set as active.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
         self._reporter.add_message("AgentOS", f"set_active_process({process_id})")
         _process_id = Parameter3(root=process_id)
         command = SetActiveProcessCommand(parameters=[_process_id])
@@ -1262,9 +1368,6 @@ class AskUiControllerClient(AgentOs):
         Returns:
             GetActiveWindowResponseModel: The active window.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
         self._reporter.add_message("AgentOS", "get_active_window()")
         command = GetActiveWindowCommand()
         res = self._send_command(command).message.command
@@ -1284,9 +1387,6 @@ class AskUiControllerClient(AgentOs):
             process_id (int): The ID of the process that owns the window.
             window_id (int): The ID of the window to set as active.
         """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
         self._reporter.add_message(
             "AgentOS", f"set_window_in_focus({process_id}, {window_id})"
         )

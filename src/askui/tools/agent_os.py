@@ -18,6 +18,10 @@ if TYPE_CHECKING:
         GetActiveWindowResponseModel,
         GetSystemInfoResponseModel,
     )
+    from askui.tools.askui.target_computer import (
+        RemoteTargetComputer,
+        TargetComputer,
+    )
 
 MouseButton = Literal["left", "middle", "right"]
 
@@ -675,4 +679,42 @@ class AgentOs(ABC):
             process_id (int): The ID of the process that owns the window.
             window_id (int): The ID of the window to set as active.
         """
+        raise NotImplementedError
+
+    # --- Target-computer management -----------------------------------------------
+    # These methods only do something meaningful for backends that talk to multiple
+    # AskUI Remote Device Controller servers (`AskUiControllerClient`). Other
+    # `AgentOs` implementations (Playwright, Android, ...) inherit the default
+    # implementations, which raise `NotImplementedError`.
+
+    def add_target_computer(self, target: "TargetComputer") -> "TargetComputer":
+        """Register an additional target computer. Auto-connects if connected."""
+        raise NotImplementedError
+
+    def add_remote_target_computer(
+        self,
+        address: str,
+        tags: list[str] | None = None,
+        description: str | None = None,
+    ) -> "RemoteTargetComputer":
+        """Register an additional remote target computer."""
+        raise NotImplementedError
+
+    def reset_target_computers(
+        self,
+        target_computers: "list[TargetComputer] | None" = None,
+    ) -> None:
+        """Disconnect (if connected) and replace the target-computer list."""
+        raise NotImplementedError
+
+    def list_target_computers(self) -> "list[TargetComputer]":
+        """Return all registered target computers."""
+        raise NotImplementedError
+
+    def get_active_target_computer(self) -> "TargetComputer":
+        """Return the currently active target computer."""
+        raise NotImplementedError
+
+    def switch_target_computer(self, session_guid: str) -> "TargetComputer":
+        """Switch the active target computer by its session GUID."""
         raise NotImplementedError

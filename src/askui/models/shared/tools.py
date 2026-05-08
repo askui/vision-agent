@@ -534,12 +534,23 @@ class ToolCollection:
         """Reset the tools in the collection with new tools."""
         self._tools = tools or []
 
-    def get_agent_os_by_tags(self, tags: list[str]) -> AgentOs | AndroidAgentOs:
-        """Get an agent OS by tags."""
+    def get_agent_os_by_tags(
+        self, required_tags: list[str]
+    ) -> AgentOs | AndroidAgentOs:
+        """
+        Find the first registered agent OS whose tags are a superset of
+        `required_tags`.
+
+        Every tag in `required_tags` must appear in the agent OS's tags; the
+        agent OS may declare additional tags beyond those.
+
+        Raises:
+            ValueError: when no registered agent OS satisfies the required tags.
+        """
         for agent_os in self._agent_os_list:
-            if all(tag in agent_os.tags for tag in tags):
+            if all(required in agent_os.tags for required in required_tags):
                 return agent_os
-        msg = f"Agent OS with tags [{', '.join(tags)}] not found"
+        msg = f"No agent OS satisfies required tags [{', '.join(required_tags)}]"
         raise ValueError(msg)
 
     def _initialize_tools(self) -> None:
