@@ -694,8 +694,7 @@ class AgentOs(ABC):
     def add_remote_target_computer(
         self,
         address: str,
-        tags: list[str] | None = None,
-        description: str | None = None,
+        description: str,
     ) -> "RemoteTargetComputer":
         """Register an additional remote target computer."""
         raise NotImplementedError

@@ -276,11 +276,10 @@ class ComputerAgentOsFacade(AgentOs):
     def add_remote_target_computer(
         self,
         address: str,
-        tags: list[str] | None = None,
-        description: str | None = None,
+        description: str,
     ) -> "RemoteTargetComputer":
         return self._agent_os.add_remote_target_computer(
-            address=address, tags=tags, description=description
+            address=address, description=description
         )
 
     def reset_target_computers(

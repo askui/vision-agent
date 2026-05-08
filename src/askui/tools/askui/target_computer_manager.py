@@ -73,23 +73,19 @@ class TargetComputerManager:
     def add_remote(
         self,
         address: str,
-        tags: list[str] | None = None,
-        description: str | None = None,
+        description: str,
     ) -> RemoteTargetComputer:
         """
         Convenience method to construct and register a remote target computer.
 
         Args:
             address (str): gRPC address of the remote controller.
-            tags (list[str] | None, optional)
-            description (str | None, optional)
+            description (str): Human-readable description.
 
         Returns:
             RemoteTargetComputer: The newly registered target.
         """
-        target = RemoteTargetComputer(
-            address=address, tags=tags, description=description
-        )
+        target = RemoteTargetComputer(address=address, description=description)
         self.add(target)
         return target
 

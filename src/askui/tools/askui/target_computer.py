@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 from typing_extensions import override
 
-from askui.models.shared.tool_tags import ToolTags
 from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 from askui.tools.utils import process_exists, wait_for_port
 
@@ -31,25 +30,22 @@ class TargetComputer:
     Base class describing a target computer (i.e. an AskUI Remote Device Controller
     server) that the `AskUiControllerClient` can connect to.
 
-    Each target has a unique session GUID, a gRPC address, plus optional `tags` and
-    `description` for categorization.
+    Each target has a unique session GUID, a gRPC address, and a human-readable
+    description.
 
     Args:
         address (str): gRPC address of the controller server
             (e.g. ``"localhost:23000"``).
-        tags (list[str] | None, optional): Tags for categorizing the target.
-        description (str | None, optional): Human-readable description.
+        description (str): Human-readable description.
     """
 
     def __init__(
         self,
         address: str,
         description: str,
-        tags: list[str] | None = None,
     ) -> None:
         self._session_guid = _generate_session_guid()
         self._address = address
-        self._tags = tags or []
         self._description = description
 
     @property
@@ -61,11 +57,6 @@ class TargetComputer:
     def address(self) -> str:
         """gRPC address of the target computer."""
         return self._address
-
-    @property
-    def tags(self) -> list[str]:
-        """Tags assigned to this target computer."""
-        return list(self._tags)
 
     @property
     def description(self) -> str:
@@ -88,7 +79,6 @@ class TargetComputer:
             f"{type(self).__name__}("
             f"session_guid={self._session_guid!r}, "
             f"address={self._address!r}, "
-            f"tags={self._tags!r}, "
             f"description={self._description!r})"
         )
 
@@ -107,8 +97,7 @@ class LocalTargetComputer(TargetComputer):
         discover_service (bool, optional): On Windows, probe for a running
             ``askuicoreservice`` and, if found, switch the address to port
             ``26000`` and disable autostart. Defaults to `True`.
-        tags (list[str] | None, optional)
-        description (str | None, optional)
+        description (str, optional)
     """
 
     _ASKUI_CORE_SERVICE_NAME = "AskuiCoreService"
@@ -121,7 +110,6 @@ class LocalTargetComputer(TargetComputer):
         address: str = "localhost:23000",
         autostart: bool = True,
         discover_service: bool = True,
-        tags: list[str] | None = None,
     ) -> None:
         if discover_service and self._is_askui_core_service_running():
             service_msg = (
@@ -131,9 +119,7 @@ class LocalTargetComputer(TargetComputer):
             logger.info(service_msg)
             address = _replace_port(address, self._ASKUI_CORE_SERVICE_PORT)
             autostart = False
-        tags = tags or []
-        tags.append(ToolTags.LOCAL.value)
-        super().__init__(address=address, tags=tags, description=description)
+        super().__init__(address=address, description=description)
         self._autostart = autostart
         self._settings = settings or AskUiControllerSettings()
         self._process: subprocess.Popen[bytes] | None = None
@@ -263,19 +249,15 @@ class RemoteTargetComputer(TargetComputer):
 
     Args:
         address (str): gRPC address of the remote controller (required).
-        tags (list[str] | None, optional)
-        description (str | None, optional)
+        description (str): Human-readable description.
     """
 
     def __init__(
         self,
         address: str,
         description: str,
-        tags: list[str] | None = None,
     ) -> None:
-        tags = tags or []
-        tags.append(ToolTags.REMOTE.value)
-        super().__init__(address=address, tags=tags, description=description)
+        super().__init__(address=address, description=description)
 
 
 __all__ = [

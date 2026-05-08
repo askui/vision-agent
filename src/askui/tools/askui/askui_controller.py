@@ -175,8 +175,7 @@ class AskUiControllerClient(AgentOs):
     def add_remote_target_computer(
         self,
         address: str,
-        tags: list[str] | None = None,
-        description: str | None = None,
+        description: str,
     ) -> RemoteTargetComputer:
         """
         Register a remote controller server. Auto-connects if the client is currently
@@ -184,20 +183,16 @@ class AskUiControllerClient(AgentOs):
 
         Args:
             address (str): gRPC address of the remote controller (required).
-            tags (list[str] | None, optional)
-            description (str | None, optional)
+            description (str): Human-readable description.
 
         Returns:
             RemoteTargetComputer: The newly registered server.
         """
         self._reporter.add_message(
             self._REPORTER_SOURCE,
-            f"add_remote_target_computer({address!r}, tags={tags!r}, "
-            f"description={description!r})",
+            f"add_remote_target_computer({address!r}, description={description!r})",
         )
-        server = self._manager.add_remote(
-            address=address, tags=tags, description=description
-        )
+        server = self._manager.add_remote(address=address, description=description)
         if self.is_connected:
             self._connect_server(server)
         self._reporter.add_message(
