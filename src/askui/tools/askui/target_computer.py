@@ -15,33 +15,8 @@ from askui.tools.utils import process_exists, wait_for_port
 logger = logging.getLogger(__name__)
 
 
-_DEFAULT_LOCAL_ADDRESS = "localhost:23000"
-_ASKUI_CORE_SERVICE_NAME = "askuicoreservice"
-_ASKUI_CORE_SERVICE_PORT = 26000
-
-
 def _generate_session_guid() -> str:
     return "{" + str(uuid.uuid4()) + "}"
-
-
-def _is_askui_core_service_running() -> bool:
-    """Return `True` when the `askuicoreservice` Windows service is RUNNING."""
-    if sys.platform != "win32":
-        return False
-    try:
-        result = subprocess.run(
-            ["sc", "query", _ASKUI_CORE_SERVICE_NAME],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        logger.debug("Failed to query %s service", _ASKUI_CORE_SERVICE_NAME)
-        return False
-    if result.returncode != 0:
-        return False
-    return "RUNNING" in result.stdout.upper()
 
 
 def _replace_port(address: str, port: int) -> str:
@@ -136,6 +111,9 @@ class LocalTargetComputer(TargetComputer):
         description (str | None, optional)
     """
 
+    _ASKUI_CORE_SERVICE_NAME = "AskuiCoreService"
+    _ASKUI_CORE_SERVICE_PORT = 26000
+
     def __init__(
         self,
         description: str = "Local target computer",
@@ -145,13 +123,13 @@ class LocalTargetComputer(TargetComputer):
         discover_service: bool = True,
         tags: list[str] | None = None,
     ) -> None:
-        if discover_service and _is_askui_core_service_running():
-            logger.info(
-                "Detected running %s; using port %s and disabling autostart",
-                _ASKUI_CORE_SERVICE_NAME,
-                _ASKUI_CORE_SERVICE_PORT,
+        if discover_service and self._is_askui_core_service_running():
+            service_msg = (
+                f"Detected running {self._ASKUI_CORE_SERVICE_NAME}; using port "
+                f"{self._ASKUI_CORE_SERVICE_PORT} and disabling autostart"
             )
-            address = _replace_port(address, _ASKUI_CORE_SERVICE_PORT)
+            logger.info(service_msg)
+            address = _replace_port(address, self._ASKUI_CORE_SERVICE_PORT)
             autostart = False
         tags = tags or []
         tags.append(ToolTags.LOCAL.value)
@@ -169,6 +147,30 @@ class LocalTargetComputer(TargetComputer):
     def autostart(self) -> bool:
         """Whether `start()` launches the controller process."""
         return self._autostart
+
+    @staticmethod
+    def _is_askui_core_service_running() -> bool:
+        """Return `True` when the `AskuiCoreService` Windows service is RUNNING."""
+        if sys.platform != "win32":
+            return False
+        try:
+            result = subprocess.run(
+                ["sc", "query", LocalTargetComputer._ASKUI_CORE_SERVICE_NAME],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            error_msg = (
+                "Failed to query "
+                f"{LocalTargetComputer._ASKUI_CORE_SERVICE_NAME} service"
+            )
+            logger.debug(error_msg)
+            return False
+        if result.returncode != 0:
+            return False
+        return "RUNNING" in result.stdout.upper()
 
     def _parse_port(self) -> int:
         addr = self._address if "://" in self._address else "//" + self._address
