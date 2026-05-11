@@ -386,12 +386,20 @@ class AskUiControllerClient(AgentOs):
             stub.SetActiveDisplay(
                 controller_v1_pbs.Request_SetActiveDisplay(displayID=server.display)
             )
-        except Exception:
+        except Exception as e:
             try:
                 channel.close()
             finally:
                 if started_process:
                     server.stop()
+            if hasattr(e, "add_note"):
+                e.add_note(
+                    f"While connecting to Agent OS server {server.description!r} "
+                    f"(computer_id={server.computer_id!r}, "
+                    f"session_guid={server.session_guid}, "
+                    f"display={server.display}, "
+                    f"address={server.address})"
+                )
             raise
         self._connections[server.session_guid] = _Connection(
             channel=channel,
@@ -484,10 +492,7 @@ class AskUiControllerClient(AgentOs):
         except Exception:  # noqa: BLE001
             logger.exception("Error closing channel for controller %s", session_guid)
         if conn.started_process:
-            server = next(
-                (s for s in self._manager.list() if s.session_guid == session_guid),
-                None,
-            )
+            server = self._manager.get_by_session_guid(session_guid)
             if server is None:
                 return
             try:

@@ -139,6 +139,19 @@ class AgentOsServerManager:
         """
         return self._servers[self._index_of(computer_id)]
 
+    def get_by_session_guid(self, session_guid: str) -> AgentOsServer | None:
+        """
+        Return the registered server with the given `session_guid`, or `None` if
+        no such server is registered.
+
+        Intended for internal lookups (e.g. mapping a gRPC session GUID back to
+        its server during teardown). For user-facing selection, prefer `get`.
+        """
+        for server in self._servers:
+            if server.session_guid == session_guid:
+                return server
+        return None
+
     def switch(self, computer_id: str) -> AgentOsServer:
         """
         Set the active server by its `computer_id`.
@@ -161,10 +174,7 @@ class AgentOsServerManager:
         """The currently active server, or `None` if no servers are registered."""
         if self._active_session_guid is None:
             return None
-        for server in self._servers:
-            if server.session_guid == self._active_session_guid:
-                return server
-        return None
+        return self.get_by_session_guid(self._active_session_guid)
 
     def __len__(self) -> int:
         return len(self._servers)
