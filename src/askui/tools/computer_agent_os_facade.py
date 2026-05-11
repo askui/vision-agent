@@ -1,6 +1,9 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from PIL import Image
+from typing_extensions import Self
 
 from askui.models.shared.tool_tags import ToolTags
 from askui.tools.agent_os import (
@@ -296,6 +299,15 @@ class ComputerAgentOsFacade(AgentOs):
 
     def switch_target_computer(self, session_guid: str) -> "TargetComputer":
         return self._agent_os.switch_target_computer(session_guid)
+
+    @contextmanager
+    def temporary_select(self, session_guid: str) -> Iterator[Self]:
+        with self._agent_os.temporary_select(session_guid):
+            self._real_screen_resolution = None
+            try:
+                yield self
+            finally:
+                self._real_screen_resolution = None
 
     def _scale_coordinates_back(
         self,

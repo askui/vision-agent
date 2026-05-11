@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
 from typing import TYPE_CHECKING, Literal
 
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Self
 
 from askui.models.shared.tool_tags import ToolTags
 
@@ -716,4 +718,27 @@ class AgentOs(ABC):
 
     def switch_target_computer(self, session_guid: str) -> "TargetComputer":
         """Switch the active target computer by its session GUID."""
+        raise NotImplementedError
+
+    def temporary_select(self, session_guid: str) -> AbstractContextManager[Self]:
+        """
+        Temporarily switch the active target computer for the duration of a `with`
+        block, then restore the previously-active target on exit (even if the block
+        raises).
+
+        Args:
+            session_guid (str): Session GUID of the target to activate inside the
+                block.
+
+        Returns:
+            AbstractContextManager[Self]: Context manager that yields this
+                `AgentOs` with `session_guid` active.
+
+        Example:
+            ```python
+            with agent_os.temporary_select(session_guid):
+                agent_os.click()
+            # previous active target restored here
+            ```
+        """
         raise NotImplementedError

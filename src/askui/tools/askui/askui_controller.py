@@ -1,6 +1,8 @@
 import logging
 import time
 import types
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Literal, Type
 
@@ -100,8 +102,8 @@ class AskUiControllerClient(AgentOs):
     local, the rest remote with unique addresses). `connect()` opens a gRPC channel
     and session for *every* registered server. Exactly one server is *active* at a
     time; agent-os actions are routed to its connection. `disconnect()` closes every
-    open connection and stops only those local processes that were autostarted by
-    this client (i.e. `is_local` and `autostart=True` at connect time).
+    open connection and stops only those local processes that were started by
+    this client (i.e. `is_local` and not `is_service` at connect time).
 
     Use `add_target_computer` / `add_remote_target_computer` to register additional
     targets (which auto-connect if the client is currently connected),
@@ -298,14 +300,33 @@ class AskUiControllerClient(AgentOs):
         )
         return server
 
+    @contextmanager
+    @override
+    def temporary_select(self, session_guid: str) -> Iterator[Self]:
+        previous = self._manager.active
+        self._reporter.add_message(
+            self._REPORTER_SOURCE,
+            f"temporary_select({session_guid!r}) [previous={previous!r}]",
+        )
+        self.switch_target_computer(session_guid)
+        try:
+            yield self
+        finally:
+            if previous is not None and previous.session_guid != session_guid:
+                self.switch_target_computer(previous.session_guid)
+            self._reporter.add_message(
+                self._REPORTER_SOURCE,
+                f"temporary_select({session_guid!r}) -> restored",
+            )
+
     @telemetry.record_call()
     @override
     def connect(self) -> None:
         """
         Open a gRPC channel and session to every registered controller server.
 
-        For each server: starts the local process when `is_local` and `autostart`
-        are both `True`, opens an insecure gRPC channel, starts a session, starts
+        For each server: starts the local process when `is_local` and `is_service`
+        is `False`, opens an insecure gRPC channel, starts a session, starts
         execution, and sets the configured display. Servers already connected are
         skipped, so calling `connect()` twice is safe.
 
@@ -326,7 +347,7 @@ class AskUiControllerClient(AgentOs):
         if server.session_guid in self._connections:
             return
         started_process = False
-        if isinstance(server, LocalTargetComputer) and server.autostart:
+        if isinstance(server, LocalTargetComputer) and not server.is_service:
             server.start()
             started_process = True
         channel = grpc.insecure_channel(
@@ -413,7 +434,7 @@ class AskUiControllerClient(AgentOs):
         Close every open controller-server connection.
 
         For each connection: stops execution, ends the session, closes the gRPC
-        channel, and (only when the local process was autostarted by `connect()`)
+        channel, and (only when `connect()` started the local process)
         stops the controller process. Errors are logged but do not abort the loop -
         a partial failure on one server still releases the others.
         """
@@ -448,7 +469,7 @@ class AskUiControllerClient(AgentOs):
                 server.stop()
             except Exception:  # noqa: BLE001
                 logger.exception(
-                    "Error stopping autostarted process for controller %s",
+                    "Error stopping client-started controller process for %s",
                     session_guid,
                 )
 

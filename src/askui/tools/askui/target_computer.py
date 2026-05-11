@@ -91,11 +91,12 @@ class LocalTargetComputer(TargetComputer):
         settings (AskUiControllerSettings | None, optional): Process-level settings
             (executable path, args). Defaults to a fresh `AskUiControllerSettings`.
         address (str, optional): gRPC address. Defaults to ``"localhost:23000"``.
-        autostart (bool, optional): Whether `start()` actually launches the process.
-            Defaults to `True`.
+        is_service (bool, optional): When `True`, `start()` does not launch the
+            controller binary because it is managed externally (e.g. AskUI Core
+            Service on Windows). Defaults to `False`.
         discover_service (bool, optional): On Windows, probe for a running
             ``askuicoreservice`` and, if found, switch the address to port
-            ``26000`` and disable autostart. Defaults to `True`.
+            ``26000`` and set `is_service` to `True`. Defaults to `True`.
         description (str, optional)
     """
 
@@ -107,19 +108,19 @@ class LocalTargetComputer(TargetComputer):
         description: str = "Local target computer",
         settings: AskUiControllerSettings | None = None,
         address: str = "localhost:23000",
-        autostart: bool = True,
+        is_service: bool = False,
         discover_service: bool = True,
     ) -> None:
         if discover_service and self._is_askui_core_service_running():
             service_msg = (
                 f"Detected running {self._ASKUI_CORE_SERVICE_NAME}; using port "
-                f"{self._ASKUI_CORE_SERVICE_PORT} and disabling autostart"
+                f"{self._ASKUI_CORE_SERVICE_PORT} (controller managed by service)"
             )
             logger.info(service_msg)
             address = _replace_port(address, self._ASKUI_CORE_SERVICE_PORT)
-            autostart = False
+            is_service = True
         super().__init__(address=address, description=description)
-        self._autostart = autostart
+        self._is_service = is_service
         self._settings = settings or AskUiControllerSettings()
         self._process: subprocess.Popen[bytes] | None = None
 
@@ -129,9 +130,9 @@ class LocalTargetComputer(TargetComputer):
         return True
 
     @property
-    def autostart(self) -> bool:
-        """Whether `start()` launches the controller process."""
-        return self._autostart
+    def is_service(self) -> bool:
+        """Whether the controller process is managed externally (skip `start()`)."""
+        return self._is_service
 
     @staticmethod
     def _is_askui_core_service_running() -> bool:
@@ -184,15 +185,15 @@ class LocalTargetComputer(TargetComputer):
     @override
     def start(self, clean_up: bool = False) -> None:
         """
-        Start the controller process if `autostart` is enabled.
+        Start the controller process unless this target uses a service-managed binary.
 
         Args:
             clean_up (bool, optional): Whether to clean up existing processes
                 (only on Windows) before starting. Defaults to `False`.
         """
-        if not self._autostart:
+        if self._is_service:
             logger.debug(
-                "Skipping local controller start because autostart is disabled"
+                "Skipping local controller start; process is managed by service"
             )
             return
         if (
