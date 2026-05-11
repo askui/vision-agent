@@ -736,8 +736,9 @@ class AgentOs(ABC):
 
         Example:
             ```python
-            with agent_os.temporary_select(computer_id):
-                agent_os.click()
+            with agent_os.temporary_select('Remote-Machine') as remote_machine:
+                img = remote_machine.screenshot()
+                img.save("remote_machine.png")
             # previous active server restored here
             ```
         """

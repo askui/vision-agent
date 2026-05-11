@@ -521,8 +521,8 @@ class AndroidAgentOs(ABC):
 
         Example:
             ```python
-            with android_agent_os.temporary_select(device_sn):
-                android_agent_os.tap(100, 200)
+            with android_agent_os.temporary_select('table_phone') as table_phone:
+                table_phone.tap(100, 200)
             # previous active device restored here
             ```
         """
