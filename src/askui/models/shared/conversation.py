@@ -371,17 +371,17 @@ class Conversation:
         Args:
             message: Message to add
         """
+        # Report to reporter
+        self._reporter.add_message(
+            self.current_speaker.name, message.model_dump(mode="json")
+        )
+
         if not self._truncation_strategy:
             logger.error("No truncation strategy, cannot add message")
             return
 
         # Add to truncation strategy
         self._truncation_strategy.append_message(message)
-
-        # Report to reporter
-        self._reporter.add_message(
-            self.current_speaker.name, message.model_dump(mode="json")
-        )
 
     @tracer.start_as_current_span("_handle_continue_conversation")
     def _handle_continue_conversation(self, result: SpeakerResult) -> bool:
