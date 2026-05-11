@@ -9,6 +9,10 @@ from typing_extensions import Self
 from askui.models.shared.tool_tags import ToolTags
 
 if TYPE_CHECKING:
+    from askui.tools.askui.agent_os_server import (
+        AgentOsServer,
+        RemoteAgentOsServer,
+    )
     from askui.tools.askui.askui_ui_controller_grpc.generated import (
         Controller_V1_pb2 as controller_v1_pbs,
     )
@@ -19,10 +23,6 @@ if TYPE_CHECKING:
         GetActiveProcessResponseModel,
         GetActiveWindowResponseModel,
         GetSystemInfoResponseModel,
-    )
-    from askui.tools.askui.target_computer import (
-        RemoteTargetComputer,
-        TargetComputer,
     )
 
 MouseButton = Literal["left", "middle", "right"]
@@ -683,62 +683,62 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    # --- Target-computer management -----------------------------------------------
+    # --- Agent-OS-server management -----------------------------------------------
     # These methods only do something meaningful for backends that talk to multiple
-    # AskUI Remote Device Controller servers (`AskUiControllerClient`). Other
-    # `AgentOs` implementations (Playwright, Android, ...) inherit the default
-    # implementations, which raise `NotImplementedError`.
+    # Agent OS servers (`AskUiControllerClient`). Other `AgentOs` implementations
+    # (Playwright, Android, ...) inherit the default implementations, which raise
+    # `NotImplementedError`.
 
-    def add_target_computer(self, target: "TargetComputer") -> "TargetComputer":
-        """Register an additional target computer. Auto-connects if connected."""
+    def add_agent_os_server(self, server: "AgentOsServer") -> "AgentOsServer":
+        """Register an additional Agent OS server. Auto-connects if connected."""
         raise NotImplementedError
 
-    def add_remote_target_computer(
+    def add_remote_agent_os_server(
         self,
         address: str,
         description: str,
-    ) -> "RemoteTargetComputer":
-        """Register an additional remote target computer."""
+    ) -> "RemoteAgentOsServer":
+        """Register an additional remote Agent OS server."""
         raise NotImplementedError
 
-    def reset_target_computers(
+    def reset_agent_os_servers(
         self,
-        target_computers: "list[TargetComputer] | None" = None,
+        agent_os_servers: "list[AgentOsServer] | None" = None,
     ) -> None:
-        """Disconnect (if connected) and replace the target-computer list."""
+        """Disconnect (if connected) and replace the Agent-OS-server list."""
         raise NotImplementedError
 
-    def list_target_computers(self) -> "list[TargetComputer]":
-        """Return all registered target computers."""
+    def list_agent_os_servers(self) -> "list[AgentOsServer]":
+        """Return all registered Agent OS servers."""
         raise NotImplementedError
 
-    def get_active_target_computer(self, report: bool = True) -> "TargetComputer":
-        """Return the currently active target computer."""
+    def get_active_agent_os_server(self, report: bool = True) -> "AgentOsServer":
+        """Return the currently active Agent OS server."""
         raise NotImplementedError
 
-    def switch_target_computer(self, session_guid: str) -> "TargetComputer":
-        """Switch the active target computer by its session GUID."""
+    def switch_agent_os_server(self, computer_id: str) -> "AgentOsServer":
+        """Switch the active Agent OS server by its `computer_id`."""
         raise NotImplementedError
 
-    def temporary_select(self, session_guid: str) -> AbstractContextManager[Self]:
+    def temporary_select(self, computer_id: str) -> AbstractContextManager[Self]:
         """
-        Temporarily switch the active target computer for the duration of a `with`
-        block, then restore the previously-active target on exit (even if the block
+        Temporarily switch the active Agent OS server for the duration of a `with`
+        block, then restore the previously-active server on exit (even if the block
         raises).
 
         Args:
-            session_guid (str): Session GUID of the target to activate inside the
+            computer_id (str): Computer id of the server to activate inside the
                 block.
 
         Returns:
             AbstractContextManager[Self]: Context manager that yields this
-                `AgentOs` with `session_guid` active.
+                `AgentOs` with the selected server active.
 
         Example:
             ```python
-            with agent_os.temporary_select(session_guid):
+            with agent_os.temporary_select(computer_id):
                 agent_os.click()
-            # previous active target restored here
+            # previous active server restored here
             ```
         """
         raise NotImplementedError

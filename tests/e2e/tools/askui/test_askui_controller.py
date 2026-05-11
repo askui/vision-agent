@@ -7,7 +7,7 @@ from PIL import Image
 
 from askui.reporting import CompositeReporter
 from askui.tools.agent_os import Coordinate
-from askui.tools.askui import LocalTargetComputer
+from askui.tools.askui import LocalAgentOsServer
 from askui.tools.askui.askui_controller import (
     AskUiControllerClient,
     RenderObjectStyle,
@@ -16,20 +16,20 @@ from askui.tools.askui.askui_controller_settings import AskUiControllerSettings
 
 
 @pytest.fixture
-def controller_server() -> LocalTargetComputer:
-    return LocalTargetComputer(
+def agent_os_server() -> LocalAgentOsServer:
+    return LocalAgentOsServer(
         settings=AskUiControllerSettings(controller_args="--showOverlay true")
     )
 
 
 @pytest.fixture
 def controller_client(
-    controller_server: LocalTargetComputer,
+    agent_os_server: LocalAgentOsServer,
 ) -> AskUiControllerClient:
     return AskUiControllerClient(
         reporter=CompositeReporter(),
         display=1,
-        target_computers=[controller_server],
+        agent_os_servers=[agent_os_server],
     )
 
 

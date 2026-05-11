@@ -42,7 +42,11 @@ class AskUiControllerOperationTimeoutError(AskUiControllerError):
     """
 
     def __init__(
-        self, message: str = "Action not yet done", timeout_seconds: float | None = None
+        self,
+        message: str = (
+            "Controller action did not finish within the expected time window."
+        ),
+        timeout_seconds: float | None = None,
     ):
         super().__init__(message)
         self.timeout_seconds = timeout_seconds
@@ -52,7 +56,7 @@ class AskUiControllerInvalidCommandError(AskUiControllerError):
     """Exception raised when a command sent to the controller is invalid.
 
     This exception is raised when a command fails schema validation on the
-    controller server side, typically due to malformed command structure or
+    Agent OS server side, typically due to malformed command structure or
     invalid parameters.
 
     Args:
@@ -61,12 +65,13 @@ class AskUiControllerInvalidCommandError(AskUiControllerError):
 
     def __init__(self, details: str | None = None):
         error_msg = (
-            "AgentOS: Command validation failed"
-            " This error may be resolved by updating the AskUI"
-            " controller to the latest version."
+            "AgentOS: command validation failed on the Agent OS server. "
+            "This is typically caused by a malformed command or a version "
+            "mismatch; updating the AskUI controller to the latest version "
+            "may resolve it."
         )
         if details:
-            error_msg += f"\n{details}"
+            error_msg += f"\nServer details: {details}"
         super().__init__(error_msg)
         self.details = details
 

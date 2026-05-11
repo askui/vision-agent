@@ -25,66 +25,98 @@ def _replace_port(address: str, port: int) -> str:
     return f"{host}:{port}"
 
 
-class TargetComputer:
+class AgentOsServer:
     """
-    Base class describing a target computer (i.e. an AskUI Remote Device Controller
-    server) that the `AskUiControllerClient` can connect to.
+    Base class describing an Agent OS server that the `AskUiControllerClient` can
+    connect to.
 
-    Each target has a unique session GUID, a gRPC address, and a human-readable
-    description.
+    An Agent OS server is the server-side counterpart of the `AgentOs` client
+    abstraction. It runs on the machine being automated, exposes a gRPC API for
+    OS-level operations (screenshot, mouse, keyboard, ...), and is identified by
+    a unique session GUID. Each server also tracks which display it is currently
+    operating against.
 
     Args:
-        address (str): gRPC address of the controller server
+        address (str): gRPC address of the Agent OS server
             (e.g. ``"localhost:23000"``).
         description (str): Human-readable description.
+        display (int, optional): Display ID selected for this server. Defaults to `1`.
+        computer_id (str | None, optional): Stable, human-friendly identifier for the
+            computer this server runs on. Used by `AgentOsServerManager` lookup
+            helpers. Must be unique across registered servers. Defaults to the
+            server's `session_guid`.
     """
 
     def __init__(
         self,
         address: str,
         description: str,
+        display: int = 1,
+        computer_id: str | None = None,
     ) -> None:
         self._session_guid = _generate_session_guid()
         self._address = address
         self._description = description
+        self._display = display
+        self._computer_id = (
+            computer_id if computer_id is not None else self._session_guid
+        )
 
     @property
     def session_guid(self) -> str:
-        """Unique session GUID assigned to this target computer."""
+        """Unique session GUID assigned to this Agent OS server."""
         return self._session_guid
 
     @property
+    def computer_id(self) -> str:
+        """
+        Stable identifier for the computer this Agent OS server runs on. Defaults
+        to `session_guid` when no custom id was supplied at construction time.
+        """
+        return self._computer_id
+
+    @property
     def address(self) -> str:
-        """gRPC address of the target computer."""
+        """gRPC address of the Agent OS server."""
         return self._address
 
     @property
     def description(self) -> str:
-        """Description of this target computer."""
+        """Description of this Agent OS server."""
         return self._description
 
     @property
+    def display(self) -> int:
+        """Display ID currently selected for this Agent OS server."""
+        return self._display
+
+    @display.setter
+    def display(self, value: int) -> None:
+        self._display = value
+
+    @property
     def is_local(self) -> bool:
-        """Whether this target represents a locally-managed controller process."""
+        """Whether this server represents a locally-managed process."""
         return False
 
     def start(self, clean_up: bool = False) -> None:
-        """Start the underlying controller process. No-op for non-local targets."""
+        """Start the underlying server process. No-op for non-local servers."""
 
     def stop(self, force: bool = False) -> None:
-        """Stop the underlying controller process. No-op for non-local targets."""
+        """Stop the underlying server process. No-op for non-local servers."""
 
     def __repr__(self) -> str:
         return (
             f"{type(self).__name__}("
-            f"session_guid={self._session_guid!r}, "
-            f"description={self._description!r})"
+            f"computer_id={self._computer_id!r}, "
+            f"description={self._description!r}, "
+            f"display={self._display!r})"
         )
 
 
-class LocalTargetComputer(TargetComputer):
+class LocalAgentOsServer(AgentOsServer):
     """
-    Local target computer: manages an AskUI Remote Device Controller subprocess on
+    Local Agent OS server: manages an AskUI Remote Device Controller subprocess on
     this machine.
 
     Args:
@@ -98,6 +130,7 @@ class LocalTargetComputer(TargetComputer):
             ``askuicoreservice`` and, if found, switch the address to port
             ``26000`` and set `is_service` to `True`. Defaults to `True`.
         description (str, optional)
+        display (int, optional): Display ID selected for this server. Defaults to `1`.
     """
 
     _ASKUI_CORE_SERVICE_NAME = "AskuiCoreService"
@@ -105,11 +138,13 @@ class LocalTargetComputer(TargetComputer):
 
     def __init__(
         self,
-        description: str = "Local target computer",
+        description: str = "Local Agent OS server",
         settings: AskUiControllerSettings | None = None,
         address: str = "localhost:23000",
         is_service: bool = False,
         discover_service: bool = True,
+        display: int = 1,
+        computer_id: str | None = None,
     ) -> None:
         if discover_service and self._is_askui_core_service_running():
             service_msg = (
@@ -119,7 +154,12 @@ class LocalTargetComputer(TargetComputer):
             logger.info(service_msg)
             address = _replace_port(address, self._ASKUI_CORE_SERVICE_PORT)
             is_service = True
-        super().__init__(address=address, description=description)
+        super().__init__(
+            address=address,
+            description=description,
+            display=display,
+            computer_id=computer_id,
+        )
         self._is_service = is_service
         self._settings = settings or AskUiControllerSettings()
         self._process: subprocess.Popen[bytes] | None = None
@@ -131,7 +171,7 @@ class LocalTargetComputer(TargetComputer):
 
     @property
     def is_service(self) -> bool:
-        """Whether the controller process is managed externally (skip `start()`)."""
+        """Whether the server process is managed externally (skip `start()`)."""
         return self._is_service
 
     @staticmethod
@@ -141,7 +181,7 @@ class LocalTargetComputer(TargetComputer):
             return False
         try:
             result = subprocess.run(
-                ["sc", "query", LocalTargetComputer._ASKUI_CORE_SERVICE_NAME],
+                ["sc", "query", LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -149,8 +189,7 @@ class LocalTargetComputer(TargetComputer):
             )
         except (OSError, subprocess.SubprocessError):
             error_msg = (
-                "Failed to query "
-                f"{LocalTargetComputer._ASKUI_CORE_SERVICE_NAME} service"
+                f"Failed to query {LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME} service"
             )
             logger.debug(error_msg)
             return False
@@ -162,7 +201,10 @@ class LocalTargetComputer(TargetComputer):
         addr = self._address if "://" in self._address else "//" + self._address
         parsed = urlparse(addr)
         if parsed.port is None:
-            error_msg = f"Could not parse port from address: {self._address}"
+            error_msg = (
+                f"Could not parse port from address {self._address!r}. "
+                "Expected format 'host:port' (e.g. 'localhost:23000')."
+            )
             raise ValueError(error_msg)
         return parsed.port
 
@@ -185,7 +227,7 @@ class LocalTargetComputer(TargetComputer):
     @override
     def start(self, clean_up: bool = False) -> None:
         """
-        Start the controller process unless this target uses a service-managed binary.
+        Start the server process unless this server uses a service-managed binary.
 
         Args:
             clean_up (bool, optional): Whether to clean up existing processes
@@ -193,7 +235,7 @@ class LocalTargetComputer(TargetComputer):
         """
         if self._is_service:
             logger.debug(
-                "Skipping local controller start; process is managed by service"
+                "Skipping local Agent OS server start; process is managed by service"
             )
             return
         if (
@@ -218,7 +260,7 @@ class LocalTargetComputer(TargetComputer):
     @override
     def stop(self, force: bool = False) -> None:
         """
-        Stop the controller process.
+        Stop the server process.
 
         Args:
             force (bool, optional): Whether to forcefully terminate the process.
@@ -235,33 +277,43 @@ class LocalTargetComputer(TargetComputer):
             else:
                 self._process.terminate()
         except Exception:  # noqa: BLE001 - We want to catch all other exceptions here
-            logger.exception("Controller error")
+            logger.exception("Agent OS server error")
         finally:
             self._process = None
 
 
-class RemoteTargetComputer(TargetComputer):
+class RemoteAgentOsServer(AgentOsServer):
     """
-    Remote target computer: the client connects to an already-running controller on
+    Remote Agent OS server: the client connects to an already-running server on
     another machine.
 
     No process management is performed; `start()` and `stop()` are no-ops.
 
     Args:
-        address (str): gRPC address of the remote controller (required).
+        address (str): gRPC address of the remote Agent OS server (required).
         description (str): Human-readable description.
+        display (int, optional): Display ID selected for this server. Defaults to `1`.
+        computer_id (str | None, optional): Stable, human-friendly identifier for the
+            computer this server runs on. Defaults to the server's `session_guid`.
     """
 
     def __init__(
         self,
         address: str,
         description: str,
+        display: int = 1,
+        computer_id: str | None = None,
     ) -> None:
-        super().__init__(address=address, description=description)
+        super().__init__(
+            address=address,
+            description=description,
+            display=display,
+            computer_id=computer_id,
+        )
 
 
 __all__ = [
-    "LocalTargetComputer",
-    "RemoteTargetComputer",
-    "TargetComputer",
+    "AgentOsServer",
+    "LocalAgentOsServer",
+    "RemoteAgentOsServer",
 ]

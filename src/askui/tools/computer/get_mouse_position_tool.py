@@ -9,8 +9,8 @@ class ComputerGetMousePositionTool(ComputerBaseTool):
         super().__init__(
             name="get_mouse_position",
             description=(
-                "Get the current mouse position on the currently active target "
-                "computer. The result is prefixed with the active target computer "
+                "Get the current mouse position on the currently active Agent OS "
+                "server. The result is prefixed with the active Agent OS server "
                 "session GUID."
             ),
             agent_os=agent_os,
@@ -19,9 +19,9 @@ class ComputerGetMousePositionTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> str:
-        target = self.agent_os.get_active_target_computer(report=False)
+        server = self.agent_os.get_active_agent_os_server(report=False)
         cursor_position = self.agent_os.get_mouse_position()
         return (
-            f"[target {target.session_guid}]: Mouse is at position "
+            f"[server {server.session_guid}]: Mouse is at position "
             f"({cursor_position.x}, {cursor_position.y})."
         )

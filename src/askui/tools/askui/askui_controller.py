@@ -21,6 +21,14 @@ from askui.tools.agent_os import (
     ModifierKey,
     PcKey,
 )
+from askui.tools.askui.agent_os_server import (
+    AgentOsServer,
+    LocalAgentOsServer,
+    RemoteAgentOsServer,
+)
+from askui.tools.askui.agent_os_server_manager import (
+    AgentOsServerManager,
+)
 from askui.tools.askui.askui_ui_controller_grpc.desktop_agent_os_error import (
     DesktopAgentOsError,
 )
@@ -64,14 +72,6 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
     GetSystemInfoResponse,
     GetSystemInfoResponseModel,
 )
-from askui.tools.askui.target_computer import (
-    LocalTargetComputer,
-    RemoteTargetComputer,
-    TargetComputer,
-)
-from askui.tools.askui.target_computer_manager import (
-    TargetComputerManager,
-)
 from askui.utils.annotated_image import AnnotatedImage
 
 from .exceptions import (
@@ -85,7 +85,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class _Connection:
-    """gRPC connection state for a single controller server."""
+    """gRPC connection state for a single Agent OS server."""
 
     channel: grpc.Channel
     stub: controller_v1.ControllerAPIStub
@@ -95,65 +95,69 @@ class _Connection:
 
 class AskUiControllerClient(AgentOs):
     """
-    Implementation of `AgentOs` that communicates with one or more AskUI Remote Device
-    Controller servers via gRPC.
+    Implementation of `AgentOs` that communicates with one or more Agent OS servers
+    (AskUI Remote Device Controller processes) via gRPC.
 
-    A client is configured with a non-empty list of `target_computers` (at most one
+    A client is configured with a non-empty list of `agent_os_servers` (at most one
     local, the rest remote with unique addresses). `connect()` opens a gRPC channel
     and session for *every* registered server. Exactly one server is *active* at a
     time; agent-os actions are routed to its connection. `disconnect()` closes every
     open connection and stops only those local processes that were started by
     this client (i.e. `is_local` and not `is_service` at connect time).
 
-    Use `add_target_computer` / `add_remote_target_computer` to register additional
+    Use `add_agent_os_server` / `add_remote_agent_os_server` to register additional
     targets (which auto-connect if the client is currently connected),
-    `switch_target_computer` to change the active one, `list_target_computers` to
-    inspect the list, and `reset_target_computers` to clear or replace the list.
+    `switch_agent_os_server` to change the active one, `list_agent_os_servers` to
+    inspect the list, and `reset_agent_os_servers` to clear or replace the list.
 
     Args:
         reporter (Reporter): Reporter used for reporting with the `"AgentOs"`.
         display (int, optional): Display number to use. Defaults to `1`.
-        target_computers (list[TargetComputer] | None, optional):
-            Controller servers to register. Must be non-empty if provided, contain at
+        agent_os_servers (list[AgentOsServer] | None, optional):
+            Agent OS servers to register. Must be non-empty if provided, contain at
             most one local server, and have unique addresses across remote servers.
-            If `None` (default), a single `LocalTargetComputer` with
+            If `None` (default), a single `LocalAgentOsServer` with
             default settings is registered.
     """
 
     _REPORTER_SOURCE = "AgentOS"
 
-    @telemetry.record_call(exclude={"reporter", "target_computers"})
+    @telemetry.record_call(exclude={"reporter", "agent_os_servers"})
     def __init__(
         self,
         reporter: Reporter = NULL_REPORTER,
         display: int = 1,
-        target_computers: list[TargetComputer] | None = None,
+        agent_os_servers: list[AgentOsServer] | None = None,
     ) -> None:
-        if not target_computers:
-            target_computers = [LocalTargetComputer()]
+        if not agent_os_servers:
+            agent_os_servers = [LocalAgentOsServer(display=display)]
 
         self._connections: dict[str, _Connection] = {}
         self._pre_action_wait = 0
         self._post_action_wait = 0.05
         self._max_retries = 10
-        self._display = display
         self._reporter = reporter
-        self._manager = TargetComputerManager(target_computers=target_computers)
+        self._manager = AgentOsServerManager(agent_os_servers=agent_os_servers)
 
     @property
-    def target_computer_manager(self) -> TargetComputerManager:
-        """The underlying target-computer manager."""
+    def agent_os_server_manager(self) -> AgentOsServerManager:
+        """The underlying Agent-OS-server manager."""
         return self._manager
 
     @property
     def is_connected(self) -> bool:
-        """`True` when at least one target-computer connection is open."""
+        """`True` when at least one Agent-OS-server connection is open."""
         return bool(self._connections)
 
-    def _require_active_server(self) -> TargetComputer:
+    def _require_active_server(self) -> AgentOsServer:
         server = self._manager.active
         if server is None:
-            error_msg = "No active controller server is registered"
+            error_msg = (
+                "No active Agent OS server. Register one via "
+                "`AskUiControllerClient.add_agent_os_server()` / "
+                "`add_remote_agent_os_server()`, or pass `agent_os_servers` to the "
+                "`AskUiControllerClient` constructor."
+            )
             raise AskUiControllerError(error_msg)
         return server
 
@@ -162,8 +166,9 @@ class AskUiControllerClient(AgentOs):
         conn = self._connections.get(server.session_guid)
         if conn is None:
             error_msg = (
-                f"Active controller server {server.session_guid} is not connected; "
-                "call connect() first"
+                f"Active Agent OS server {server.description!r} "
+                f"(session_guid={server.session_guid}, address={server.address}) "
+                "is not connected. Call `AskUiControllerClient.connect()` first."
             )
             raise AskUiControllerError(error_msg)
         return conn
@@ -174,13 +179,13 @@ class AskUiControllerClient(AgentOs):
 
     @telemetry.record_call()
     @override
-    def add_remote_target_computer(
+    def add_remote_agent_os_server(
         self,
         address: str,
         description: str,
-    ) -> RemoteTargetComputer:
+    ) -> RemoteAgentOsServer:
         """
-        Register a remote controller server. Auto-connects if the client is currently
+        Register a remote Agent OS server. Auto-connects if the client is currently
         connected.
 
         Args:
@@ -188,142 +193,144 @@ class AskUiControllerClient(AgentOs):
             description (str): Human-readable description.
 
         Returns:
-            RemoteTargetComputer: The newly registered server.
+            RemoteAgentOsServer: The newly registered server.
         """
         self._reporter.add_message(
             self._REPORTER_SOURCE,
-            f"add_remote_target_computer({address!r}, description={description!r})",
+            f"add_remote_agent_os_server({address!r}, description={description!r})",
         )
         server = self._manager.add_remote(address=address, description=description)
         if self.is_connected:
             self._connect_server(server)
         self._reporter.add_message(
-            self._REPORTER_SOURCE, f"add_remote_target_computer(...) -> {server!r}"
+            self._REPORTER_SOURCE, f"add_remote_agent_os_server(...) -> {server!r}"
         )
         return server
 
     @telemetry.record_call(exclude={"server"})
     @override
-    def add_target_computer(self, server: TargetComputer) -> TargetComputer:
+    def add_agent_os_server(self, server: AgentOsServer) -> AgentOsServer:
         """
-        Register an already-constructed controller server. Auto-connects if the
+        Register an already-constructed Agent OS server. Auto-connects if the
         client is currently connected.
         """
         self._reporter.add_message(
-            self._REPORTER_SOURCE, f"add_target_computer({server!r})"
+            self._REPORTER_SOURCE, f"add_agent_os_server({server!r})"
         )
         self._manager.add(server)
         if self.is_connected:
             self._connect_server(server)
         return server
 
-    @telemetry.record_call(exclude={"target_computers"})
+    @telemetry.record_call(exclude={"agent_os_servers"})
     @override
-    def reset_target_computers(
+    def reset_agent_os_servers(
         self,
-        target_computers: list[TargetComputer] | None = None,
+        agent_os_servers: list[AgentOsServer] | None = None,
     ) -> None:
         """
-        Disconnect (if connected) and replace the controller-server list.
+        Disconnect (if connected) and replace the Agent-OS-server list.
 
         Args:
-            target_computers (list[TargetComputer] | None, optional):
-                New list of controller servers to register after the reset. If `None`,
+            agent_os_servers (list[AgentOsServer] | None, optional):
+                New list of Agent OS servers to register after the reset. If `None`,
                 the list is left empty and a subsequent `connect()` will fail until
                 at least one server has been registered again. Same validation rules
                 as the constructor (at most one local, unique remote addresses).
         """
         self._reporter.add_message(
-            self._REPORTER_SOURCE, f"reset_target_computers({target_computers!r})"
+            self._REPORTER_SOURCE, f"reset_agent_os_servers({agent_os_servers!r})"
         )
         was_connected = self.is_connected
         if was_connected:
             self.disconnect()
         self._manager.reset()
-        if target_computers is not None:
-            for server in target_computers:
+        if agent_os_servers is not None:
+            for server in agent_os_servers:
                 self._manager.add(server)
             if was_connected:
                 self.connect()
 
     @telemetry.record_call()
     @override
-    def list_target_computers(self) -> list[TargetComputer]:
-        """Return all registered controller servers."""
-        self._reporter.add_message(self._REPORTER_SOURCE, "list_target_computers()")
+    def list_agent_os_servers(self) -> list[AgentOsServer]:
+        """Return all registered Agent OS servers."""
+        self._reporter.add_message(self._REPORTER_SOURCE, "list_agent_os_servers()")
         servers = self._manager.list()
         self._reporter.add_message(
-            self._REPORTER_SOURCE, f"list_target_computers() -> {servers!r}"
+            self._REPORTER_SOURCE, f"list_agent_os_servers() -> {servers!r}"
         )
         return servers
 
     @telemetry.record_call()
     @override
-    def get_active_target_computer(self, report: bool = True) -> TargetComputer:
-        """Return the currently active controller server."""
+    def get_active_agent_os_server(self, report: bool = True) -> AgentOsServer:
+        """Return the currently active Agent OS server."""
         if report:
             self._reporter.add_message(
-                self._REPORTER_SOURCE, "get_active_target_computer()"
+                self._REPORTER_SOURCE, "get_active_agent_os_server()"
             )
         server = self._require_active_server()
         if report:
             self._reporter.add_message(
-                self._REPORTER_SOURCE, f"get_active_target_computer() -> {server!r}"
+                self._REPORTER_SOURCE, f"get_active_agent_os_server() -> {server!r}"
             )
         return server
 
     @telemetry.record_call()
     @override
-    def switch_target_computer(self, session_guid: str) -> TargetComputer:
+    def switch_agent_os_server(self, computer_id: str) -> AgentOsServer:
         """
-        Switch the active controller server.
+        Switch the active Agent OS server by its `computer_id` (the user-supplied
+        identifier; defaults to the server's `session_guid` when none was supplied
+        at construction time).
 
         Connections to all registered servers stay open across switches; this just
-        changes which connection routes future agent-os actions. If the target was
+        changes which connection routes future agent-os actions. If the server was
         added after `connect()` and isn't connected yet, it is connected on switch.
 
         Args:
-            session_guid (str): The session GUID of the server to switch to.
+            computer_id (str): The computer id of the server to switch to.
 
         Returns:
-            TargetComputer: The newly active server.
+            AgentOsServer: The newly active server.
         """
         self._reporter.add_message(
-            self._REPORTER_SOURCE, f"switch_target_computer({session_guid!r})"
+            self._REPORTER_SOURCE, f"switch_agent_os_server({computer_id!r})"
         )
-        server = self._manager.switch(session_guid)
-        if self.is_connected and session_guid not in self._connections:
+        server = self._manager.switch(computer_id)
+        if self.is_connected and server.session_guid not in self._connections:
             self._connect_server(server)
         self._reporter.add_message(
             self._REPORTER_SOURCE,
-            f"switch_target_computer({session_guid!r}) -> {server!r}",
+            f"switch_agent_os_server({computer_id!r}) -> {server!r}",
         )
         return server
 
     @contextmanager
     @override
-    def temporary_select(self, session_guid: str) -> Iterator[Self]:
+    def temporary_select(self, computer_id: str) -> Iterator[Self]:
         previous = self._manager.active
         self._reporter.add_message(
             self._REPORTER_SOURCE,
-            f"temporary_select({session_guid!r}) [previous={previous!r}]",
+            f"temporary_select({computer_id!r}) [previous={previous!r}]",
         )
-        self.switch_target_computer(session_guid)
+        self.switch_agent_os_server(computer_id)
         try:
             yield self
         finally:
-            if previous is not None and previous.session_guid != session_guid:
-                self.switch_target_computer(previous.session_guid)
+            if previous is not None and previous.computer_id != computer_id:
+                self.switch_agent_os_server(previous.computer_id)
             self._reporter.add_message(
                 self._REPORTER_SOURCE,
-                f"temporary_select({session_guid!r}) -> restored",
+                f"temporary_select({computer_id!r}) -> restored",
             )
 
     @telemetry.record_call()
     @override
     def connect(self) -> None:
         """
-        Open a gRPC channel and session to every registered controller server.
+        Open a gRPC channel and session to every registered Agent OS server.
 
         For each server: starts the local process when `is_local` and `is_service`
         is `False`, opens an insecure gRPC channel, starts a session, starts
@@ -334,7 +341,12 @@ class AskUiControllerClient(AgentOs):
         `disconnect()` before re-raising.
         """
         if not self._manager.list():
-            error_msg = "No controller servers registered; cannot connect"
+            error_msg = (
+                "Cannot connect: no Agent OS servers registered. Provide at least "
+                "one via the `AskUiControllerClient` constructor's `agent_os_servers` "
+                "argument, or call `add_agent_os_server()` / "
+                "`add_remote_agent_os_server()` before `connect()`."
+            )
             raise AskUiControllerError(error_msg)
         try:
             for server in self._manager.list():
@@ -343,11 +355,11 @@ class AskUiControllerClient(AgentOs):
             self.disconnect()
             raise
 
-    def _connect_server(self, server: TargetComputer) -> None:
+    def _connect_server(self, server: AgentOsServer) -> None:
         if server.session_guid in self._connections:
             return
         started_process = False
-        if isinstance(server, LocalTargetComputer) and not server.is_service:
+        if isinstance(server, LocalAgentOsServer) and not server.is_service:
             server.start()
             started_process = True
         channel = grpc.insecure_channel(
@@ -372,7 +384,7 @@ class AskUiControllerClient(AgentOs):
                 controller_v1_pbs.Request_StartExecution(sessionInfo=session_info)
             )
             stub.SetActiveDisplay(
-                controller_v1_pbs.Request_SetActiveDisplay(displayID=self._display)
+                controller_v1_pbs.Request_SetActiveDisplay(displayID=server.display)
             )
         except Exception:
             try:
@@ -424,7 +436,18 @@ class AskUiControllerClient(AgentOs):
             time.sleep(self._post_action_wait)
             num_retries += 1
         if num_retries == self._max_retries - 1:
-            raise AskUiControllerOperationTimeoutError
+            server = self._require_active_server()
+            timeout_seconds = self._max_retries * self._post_action_wait
+            timeout_msg = (
+                f"Action did not finish on Agent OS server {server.description!r} "
+                f"(session_guid={server.session_guid}) within "
+                f"{timeout_seconds:.2f}s ({self._max_retries} polls of "
+                f"{self._post_action_wait:.2f}s). "
+                f"Action class id: {acion_class_id}."
+            )
+            raise AskUiControllerOperationTimeoutError(
+                message=timeout_msg, timeout_seconds=timeout_seconds
+            )
         return response
 
     @telemetry.record_call()
@@ -461,9 +484,11 @@ class AskUiControllerClient(AgentOs):
         except Exception:  # noqa: BLE001
             logger.exception("Error closing channel for controller %s", session_guid)
         if conn.started_process:
-            try:
-                server = self._manager.get(session_guid)
-            except KeyError:
+            server = next(
+                (s for s in self._manager.list() if s.session_guid == session_guid),
+                None,
+            )
+            if server is None:
                 return
             try:
                 server.stop()
@@ -519,7 +544,7 @@ class AskUiControllerClient(AgentOs):
             controller_v1_pbs.Request_CaptureScreen(
                 sessionInfo=self._session_info,
                 captureParameters=controller_v1_pbs.CaptureParameters(
-                    displayID=self._display
+                    displayID=self._require_active_server().display
                 ),
             )
         )
@@ -809,7 +834,7 @@ class AskUiControllerClient(AgentOs):
         self._get_stub().SetActiveDisplay(
             controller_v1_pbs.Request_SetActiveDisplay(displayID=display)
         )
-        self._display = display
+        self._require_active_server().display = display
         self._reporter.add_message(self._REPORTER_SOURCE, f"set_display({display})")
 
     @telemetry.record_call(exclude={"command"})
@@ -845,14 +870,24 @@ class AskUiControllerClient(AgentOs):
             Display: The currently active display/screen.
         """
         self._reporter.add_message(self._REPORTER_SOURCE, "retrieve_active_display()")
+        server = self._require_active_server()
+        active_display_id = server.display
         displays_list_response = self.list_displays()
         for display in displays_list_response.data:
-            if display.id == self._display:
+            if display.id == active_display_id:
                 self._reporter.add_message(
                     self._REPORTER_SOURCE, f"retrieve_active_display() -> {display}"
                 )
                 return display
-        error_msg = f"Display {self._display} not found"
+        available_ids = (
+            ", ".join(str(d.id) for d in displays_list_response.data) or "none"
+        )
+        error_msg = (
+            f"Display {active_display_id} not found on Agent OS server "
+            f"{server.description!r} (session_guid={server.session_guid}). "
+            f"Available display ids: {available_ids}. "
+            "Call `set_display()` with a valid id, or `list_displays()` to inspect."
+        )
         raise ValueError(error_msg)
 
     @telemetry.record_call()
@@ -1049,7 +1084,13 @@ class AskUiControllerClient(AgentOs):
         )
         new_display_length = len(self.list_displays().data)
         if new_display_length <= display_length_before_adding_window:
-            msg = f"Failed to set active window {window_id} for process {process_id}"
+            msg = (
+                f"Failed to add window {window_id} of process {process_id} as a "
+                f"virtual display: display count did not increase "
+                f"({display_length_before_adding_window} -> {new_display_length}). "
+                "Verify the process and window ids exist and are valid for the "
+                "active Agent OS server."
+            )
             raise AskUiControllerError(msg)
         self._reporter.add_message(
             self._REPORTER_SOURCE,
@@ -1410,7 +1451,10 @@ class AskUiControllerClient(AgentOs):
         command = GetSystemInfoCommand()
         res = self._send_command(command).message.command
         if not isinstance(res, GetSystemInfoResponse):
-            message = f"unexpected response type: {res}"
+            message = (
+                f"get_system_info: expected GetSystemInfoResponse from the "
+                f"controller but got {type(res).__name__}: {res!r}"
+            )
             raise DesktopAgentOsError(message)
         self._reporter.add_message(
             self._REPORTER_SOURCE, f"get_system_info() -> {res.response}"
@@ -1428,7 +1472,10 @@ class AskUiControllerClient(AgentOs):
         command = GetActiveProcessCommand()
         res = self._send_command(command).message.command
         if not isinstance(res, GetActiveProcessResponse):
-            message = f"unexpected response type: {res}"
+            message = (
+                f"get_active_process: expected GetActiveProcessResponse from the "
+                f"controller but got {type(res).__name__}: {res!r}"
+            )
             raise DesktopAgentOsError(message)
         self._reporter.add_message(
             self._REPORTER_SOURCE, f"get_active_process() -> {res.response}"
@@ -1462,7 +1509,10 @@ class AskUiControllerClient(AgentOs):
         command = GetActiveWindowCommand()
         res = self._send_command(command).message.command
         if not isinstance(res, GetActiveWindowResponse):
-            message = f"unexpected response type: {res}"
+            message = (
+                f"get_active_window: expected GetActiveWindowResponse from the "
+                f"controller but got {type(res).__name__}: {res!r}"
+            )
             raise DesktopAgentOsError(message)
         self._reporter.add_message(
             self._REPORTER_SOURCE, f"get_active_window() -> {res.response}"

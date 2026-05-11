@@ -17,14 +17,14 @@ from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
 )
 from askui.tools.computer import (
-    ComputerGetActiveTargetComputerTool,
+    ComputerGetActiveAgentOsServerTool,
     ComputerGetMousePositionTool,
     ComputerGetSystemInfoTool,
     ComputerKeyboardPressedTool,
     ComputerKeyboardReleaseTool,
     ComputerKeyboardTapTool,
+    ComputerListAgentOsServersTool,
     ComputerListDisplaysTool,
-    ComputerListTargetComputersTool,
     ComputerMouseClickTool,
     ComputerMouseHoldDownTool,
     ComputerMouseReleaseTool,
@@ -33,7 +33,7 @@ from askui.tools.computer import (
     ComputerRetrieveActiveDisplayTool,
     ComputerScreenshotTool,
     ComputerSetActiveDisplayTool,
-    ComputerSwitchTargetComputerTool,
+    ComputerSwitchAgentOsServerTool,
     ComputerTypeTool,
 )
 from askui.tools.exception_tool import ExceptionTool
@@ -41,7 +41,7 @@ from askui.tools.exception_tool import ExceptionTool
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
-from .tools.askui import AskUiControllerClient, TargetComputer
+from .tools.askui import AgentOsServer, AskUiControllerClient
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +56,10 @@ class ComputerAgent(Agent):
     Args:
         display (int, optional): The display number to use for screen interactions. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        target_computers (list[TargetComputer] | None, optional):
-            Controller servers used by the default `AskUiControllerClient`. Must contain
+        agent_os_servers (list[AgentOsServer] | None, optional):
+            Agent OS servers used by the default `AskUiControllerClient`. Must contain
             at least one server, at most one local, and remote addresses must be unique.
-            Defaults to a single local controller server. Ignored when `tools` is set.
+            Defaults to a single local Agent OS server. Ignored when `tools` is set.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
@@ -82,7 +82,7 @@ class ComputerAgent(Agent):
             "act_tools",
             "callbacks",
             "truncation_strategy",
-            "target_computers",
+            "agent_os_servers",
         }
     )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -90,7 +90,7 @@ class ComputerAgent(Agent):
         self,
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
-        target_computers: list[TargetComputer] | None = None,
+        agent_os_servers: list[AgentOsServer] | None = None,
         settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
@@ -102,7 +102,7 @@ class ComputerAgent(Agent):
             agent_os=AskUiControllerClient(
                 display=display,
                 reporter=reporter,
-                target_computers=target_computers,
+                agent_os_servers=agent_os_servers,
             )
         )
         super().__init__(
@@ -526,9 +526,9 @@ class ComputerAgent(Agent):
             ComputerListDisplaysTool(),
             ComputerRetrieveActiveDisplayTool(),
             ComputerSetActiveDisplayTool(),
-            ComputerListTargetComputersTool(),
-            ComputerSwitchTargetComputerTool(),
-            ComputerGetActiveTargetComputerTool(),
+            ComputerListAgentOsServersTool(),
+            ComputerSwitchAgentOsServerTool(),
+            ComputerGetActiveAgentOsServerTool(),
         ]
 
 

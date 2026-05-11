@@ -12,8 +12,8 @@ class ComputerScreenshotTool(ComputerBaseTool):
             name="screenshot",
             description=(
                 "Take a screenshot of the current screen on the currently active "
-                "target computer. The accompanying message is prefixed with the "
-                "active target computer session GUID so it is clear which target "
+                "Agent OS server. The accompanying message is prefixed with the "
+                "active Agent OS server session GUID so it is clear which server "
                 "the screenshot was taken on."
             ),
             agent_os=agent_os,
@@ -22,6 +22,6 @@ class ComputerScreenshotTool(ComputerBaseTool):
         self.is_cacheable = True
 
     def __call__(self) -> tuple[str, Image.Image]:
-        target = self.agent_os.get_active_target_computer(report=False)
+        server = self.agent_os.get_active_agent_os_server(report=False)
         screenshot = self.agent_os.screenshot()
-        return f"[target {target.session_guid}]: Screenshot was taken.", screenshot
+        return f"[server {server.session_guid}]: Screenshot was taken.", screenshot
