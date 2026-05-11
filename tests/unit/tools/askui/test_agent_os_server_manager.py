@@ -1,0 +1,187 @@
+import pytest
+
+from askui.tools.askui.agent_os_server import (
+    LocalAgentOsServer,
+    RemoteAgentOsServer,
+)
+from askui.tools.askui.agent_os_server_manager import AgentOsServerManager
+
+
+def _make_remote(
+    address: str = "1.2.3.4:23000",
+    description: str = "remote",
+    computer_id: str | None = None,
+) -> RemoteAgentOsServer:
+    return RemoteAgentOsServer(
+        address=address, description=description, computer_id=computer_id
+    )
+
+
+def _make_local(computer_id: str | None = None) -> LocalAgentOsServer:
+    return LocalAgentOsServer(discover_service=False, computer_id=computer_id)
+
+
+class TestConstruction:
+    def test_empty_constructor_yields_empty_manager(self) -> None:
+        m = AgentOsServerManager()
+        assert m.list() == []
+        assert m.active is None
+        assert len(m) == 0
+
+    def test_constructor_registers_initial_servers_in_order(self) -> None:
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        b = _make_remote(address="2.2.2.2:23000", computer_id="b")
+        m = AgentOsServerManager(agent_os_servers=[a, b])
+        assert m.list() == [a, b]
+        # First registered becomes active.
+        assert m.active is a
+
+    def test_first_added_becomes_active(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(computer_id="a")
+        m.add(a)
+        assert m.active is a
+
+
+class TestAddConstraints:
+    def test_rejects_second_local_server(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_local(computer_id="first"))
+        with pytest.raises(ValueError, match="second local Agent OS server"):
+            m.add(_make_local(computer_id="second"))
+
+    def test_rejects_duplicate_computer_id(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(address="1.1.1.1:23000", computer_id="rig"))
+        with pytest.raises(ValueError, match="computer_id='rig'"):
+            m.add(_make_remote(address="2.2.2.2:23000", computer_id="rig"))
+
+    def test_rejects_duplicate_remote_address(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(address="1.1.1.1:23000", computer_id="a"))
+        with pytest.raises(
+            ValueError, match="remote Agent OS server with address '1.1.1.1:23000'"
+        ):
+            m.add(_make_remote(address="1.1.1.1:23000", computer_id="b"))
+
+    def test_allows_local_plus_remote_with_same_address(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_local(computer_id="local"))
+        # Local target's default address is 'localhost:23000' but the local/remote
+        # address-uniqueness rule only applies between remote servers.
+        m.add(
+            _make_remote(
+                address="localhost:23000", description="remote", computer_id="remote"
+            )
+        )
+        assert len(m) == 2
+
+
+class TestAddRemote:
+    def test_constructs_and_registers(self) -> None:
+        m = AgentOsServerManager()
+        server = m.add_remote(address="1.2.3.4:23000", description="r")
+        assert isinstance(server, RemoteAgentOsServer)
+        assert server.address == "1.2.3.4:23000"
+        assert server.description == "r"
+        assert m.list() == [server]
+
+
+class TestGetAndSwitch:
+    def test_get_returns_server_by_computer_id(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        m.add(a)
+        assert m.get("a") is a
+
+    def test_get_raises_keyerror_with_registered_ids(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(address="1.1.1.1:23000", computer_id="a"))
+        with pytest.raises(KeyError) as exc_info:
+            m.get("missing")
+        message = str(exc_info.value)
+        assert "missing" in message
+        assert "'a'" in message  # registered id surfaced
+
+    def test_switch_changes_active(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        b = _make_remote(address="2.2.2.2:23000", computer_id="b")
+        m.add(a)
+        m.add(b)
+        assert m.active is a
+        m.switch("b")
+        assert m.active is b
+
+    def test_switch_unknown_id_raises_keyerror(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(computer_id="a"))
+        with pytest.raises(KeyError, match="missing"):
+            m.switch("missing")
+
+
+class TestGetBySessionGuid:
+    def test_returns_server_by_session_guid(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        m.add(a)
+        assert m.get_by_session_guid(a.session_guid) is a
+
+    def test_returns_none_for_unknown_session_guid(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(computer_id="a"))
+        assert m.get_by_session_guid("no-such-guid") is None
+
+
+class TestRemove:
+    def test_remove_drops_server(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        b = _make_remote(address="2.2.2.2:23000", computer_id="b")
+        m.add(a)
+        m.add(b)
+        m.remove("a")
+        assert m.list() == [b]
+
+    def test_remove_active_falls_back_to_first_remaining(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        b = _make_remote(address="2.2.2.2:23000", computer_id="b")
+        m.add(a)
+        m.add(b)
+        assert m.active is a
+        m.remove("a")
+        assert m.active is b
+
+    def test_remove_last_clears_active(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(computer_id="a"))
+        m.remove("a")
+        assert m.active is None
+        assert len(m) == 0
+
+    def test_remove_inactive_keeps_active_unchanged(self) -> None:
+        m = AgentOsServerManager()
+        a = _make_remote(address="1.1.1.1:23000", computer_id="a")
+        b = _make_remote(address="2.2.2.2:23000", computer_id="b")
+        m.add(a)
+        m.add(b)
+        m.remove("b")
+        assert m.active is a
+
+    def test_remove_unknown_raises_keyerror(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(computer_id="a"))
+        with pytest.raises(KeyError):
+            m.remove("missing")
+
+
+class TestReset:
+    def test_reset_clears_all(self) -> None:
+        m = AgentOsServerManager()
+        m.add(_make_remote(computer_id="a"))
+        m.add(_make_remote(address="2.2.2.2:23000", computer_id="b"))
+        m.reset()
+        assert m.list() == []
+        assert m.active is None
+        assert len(m) == 0
