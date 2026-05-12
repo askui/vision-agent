@@ -53,18 +53,36 @@ class ComputerAgent(Agent):
     This agent can perform various UI interactions like clicking, typing, scrolling, and more.
     It uses computer vision models to locate UI elements and execute actions on them.
 
+    A single `ComputerAgent` can drive **one or more machines** through the
+    `agent_os_servers` argument. Each entry is an Agent OS server (local
+    subprocess or remote gRPC endpoint) identified by a stable `computer_id`.
+    At any moment one server is *active* and receives all explicit calls
+    (`click`, `type`, `keyboard`, ...). The active server can be changed at
+    runtime via `agent.tools.os.switch_agent_os_server(computer_id)` or
+    scoped to a block using `agent.tools.os.temporary_select(computer_id)`.
+    The `act()` model is also given list/switch/get-active tools so it can
+    orchestrate work across machines on its own (e.g. read something on one
+    computer and re-enter it on another).
+
     Args:
-        display (int, optional): The display number to use for screen interactions. Defaults to `1`.
+        display (int, optional): The display number to use for screen interactions on the default local server. Ignored when `agent_os_servers` is provided. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
         agent_os_servers (list[AgentOsServer] | None, optional):
-            Agent OS servers used by the default `AskUiControllerClient`. Must contain
-            at least one server, at most one local, and remote addresses must be unique.
-            Defaults to a single local Agent OS server.
+            Agent OS servers the agent can route actions to. May mix one
+            `LocalAgentOsServer` (managing a controller subprocess on this
+            machine) with any number of `RemoteAgentOsServer`s pointing at
+            controllers already running on other machines. Constraints: at
+            least one server, at most one local, and remote `address`es plus
+            all `computer_id`s must be unique. The first entry becomes the
+            initial active server. Defaults to a single local server bound to
+            `display`.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
 
     Example:
+        Single local machine (the default):
+
         ```python
         from askui import ComputerAgent
 
@@ -72,6 +90,50 @@ class ComputerAgent(Agent):
             agent.click("Submit button")
             agent.type("Hello World")
             agent.act("Open settings menu")
+        ```
+
+    Example:
+        Research on one machine and write up the findings on another. The
+        first server in the list is the active one; `temporary_select`
+        re-routes a block of explicit calls and restores the previous
+        active server on exit.
+
+        ```python
+        from askui import ComputerAgent
+        from askui.tools.askui import LocalAgentOsServer, RemoteAgentOsServer
+
+        with ComputerAgent(
+            agent_os_servers=[
+                LocalAgentOsServer(computer_id="research-box"),
+                RemoteAgentOsServer(
+                    address="192.168.1.42:26000",
+                    description="Writer box with a text editor open",
+                    computer_id="writer-box",
+                ),
+            ],
+        ) as agent:
+            agent.act(
+                "On research-box, open a browser, google 'askui', and read "
+                "the top results to gather key facts about what AskUI is, "
+                "what it does, and notable features. Then switch to "
+                "writer-box and write a Markdown document titled "
+                "'AskUI Findings' summarizing those facts as a bulleted "
+                "list in the open text editor."
+            )
+        ```
+
+    Example:
+        Register a remote machine at runtime:
+
+        ```python
+        from askui import ComputerAgent
+
+        with ComputerAgent() as agent:
+            agent.tools.os.add_remote_agent_os_server(
+                address="10.0.0.5:26000",
+                description="Build server",
+            )
+            agent.act("Kick off a release build on the build server")
         ```
     """
 
