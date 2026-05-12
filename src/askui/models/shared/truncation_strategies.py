@@ -133,10 +133,10 @@ def _summarize_message_history(
         )
     except Exception as e:
         # catch e.g. BadRequestError
+        error_msg = f"Truncation Failed with error: {e}"
+        logger.exception(error_msg)
         if reporter:
-            reporter.add_message(
-                "TruncationStrategy", f"Truncation Failed with error: {e}"
-            )
+            reporter.add_message("TruncationStrategy", error_msg)
         raise
 
 
