@@ -1,5 +1,6 @@
 import logging
 import time
+import traceback as _traceback
 import types
 from pathlib import Path
 from typing import Annotated, Literal, Optional, Type, overload
@@ -871,9 +872,11 @@ class Agent:
 
     @telemetry.record_call()
     def close(self) -> None:
-        if self._agent_os is not None:
-            self._agent_os.disconnect()
-        self._reporter.generate()
+        try:
+            self._reporter.generate()
+        finally:
+            if self._agent_os is not None:
+                self._agent_os.disconnect()
 
     @telemetry.record_call()
     def open(self) -> None:
@@ -892,7 +895,22 @@ class Agent:
         exc_value: BaseException | None,
         traceback: types.TracebackType | None,
     ) -> None:
+        if exc_value is not None:
+            self._report_unhandled_error(exc_value, traceback)
         self.close()
+
+    def _report_unhandled_error(
+        self,
+        exc_value: BaseException,
+        tb: types.TracebackType | None,
+    ) -> None:
+        try:
+            formatted = "".join(
+                _traceback.format_exception(type(exc_value), exc_value, tb)
+            )
+            self._reporter.add_message("Error", formatted)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to add unhandled error to reporter")
 
     @staticmethod
     def get_default_tools() -> list[Tool]:
