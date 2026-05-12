@@ -1,4 +1,5 @@
 import re
+from typing import Callable
 
 import pytest
 
@@ -131,7 +132,9 @@ class TestSubclassesPassThroughDisplayAndId:
             ),
         ],
     )
-    def test_display_and_computer_id_round_trip(self, factory) -> None:  # noqa: ANN001
+    def test_display_and_computer_id_round_trip(
+        self, factory: Callable[[], AgentOsServer]
+    ) -> None:
         s: AgentOsServer = factory()
         assert s.display == 4
         assert s.computer_id in {"local", "remote"}

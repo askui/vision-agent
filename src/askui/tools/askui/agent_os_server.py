@@ -177,25 +177,26 @@ class LocalAgentOsServer(AgentOsServer):
     @staticmethod
     def _is_askui_core_service_running() -> bool:
         """Return `True` when the `AskuiCoreService` Windows service is RUNNING."""
-        if sys.platform != "win32":
-            return False
-        try:
-            result = subprocess.run(
-                ["sc", "query", LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-        except (OSError, subprocess.SubprocessError):
-            error_msg = (
-                f"Failed to query {LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME} service"
-            )
-            logger.debug(error_msg)
-            return False
-        if result.returncode != 0:
-            return False
-        return "RUNNING" in result.stdout.upper()
+        if sys.platform == "win32":
+            try:
+                result = subprocess.run(
+                    ["sc", "query", LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+            except (OSError, subprocess.SubprocessError):
+                error_msg = (
+                    "Failed to query "
+                    f"{LocalAgentOsServer._ASKUI_CORE_SERVICE_NAME} service"
+                )
+                logger.debug(error_msg)
+                return False
+            if result.returncode != 0:
+                return False
+            return "RUNNING" in result.stdout.upper()
+        return False
 
     def _parse_port(self) -> int:
         addr = self._address if "://" in self._address else "//" + self._address

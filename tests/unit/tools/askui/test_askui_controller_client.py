@@ -113,9 +113,13 @@ class TestSwitchAgentOsServer:
         b = _make_remote(computer_id="b", display=4)
         client = AskUiControllerClient(agent_os_servers=[a, b])
         client.switch_agent_os_server("b")
-        assert client.agent_os_server_manager.active.display == 4
+        active_b = client.agent_os_server_manager.active
+        assert active_b is not None
+        assert active_b.display == 4
         client.switch_agent_os_server("a")
-        assert client.agent_os_server_manager.active.display == 1
+        active_a = client.agent_os_server_manager.active
+        assert active_a is not None
+        assert active_a.display == 1
 
 
 class TestListAndReset:
@@ -162,10 +166,14 @@ class TestTemporarySelect:
         a = _make_local(computer_id="a")
         b = _make_remote(computer_id="b")
         client = AskUiControllerClient(agent_os_servers=[a, b])
-        assert client.agent_os_server_manager.active is a
+        manager = client.agent_os_server_manager
+        before = manager.active
+        assert before is a
         with client.temporary_select("b"):
-            assert client.agent_os_server_manager.active is b
-        assert client.agent_os_server_manager.active is a
+            inside = manager.active
+            assert inside is b
+        after = manager.active
+        assert after is a
 
     def test_temporary_select_restores_previous_even_on_exception(self) -> None:
         a = _make_local(computer_id="a")

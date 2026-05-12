@@ -59,7 +59,7 @@ class ComputerAgent(Agent):
         agent_os_servers (list[AgentOsServer] | None, optional):
             Agent OS servers used by the default `AskUiControllerClient`. Must contain
             at least one server, at most one local, and remote addresses must be unique.
-            Defaults to a single local Agent OS server. Ignored when `tools` is set.
+            Defaults to a single local Agent OS server.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
         act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
