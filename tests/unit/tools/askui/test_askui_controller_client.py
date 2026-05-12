@@ -131,7 +131,9 @@ class TestListAndReset:
         assert client.list_agent_os_servers() == []
 
     def test_reset_with_new_list_replaces_registrations(self) -> None:
-        client = AskUiControllerClient(agent_os_servers=[_make_remote(computer_id="old")])
+        client = AskUiControllerClient(
+            agent_os_servers=[_make_remote(computer_id="old")]
+        )
         new_server = _make_remote(address="9.9.9.9:23000", computer_id="new")
         client.reset_agent_os_servers([new_server])
         assert client.list_agent_os_servers() == [new_server]
@@ -169,9 +171,13 @@ class TestTemporarySelect:
         a = _make_local(computer_id="a")
         b = _make_remote(computer_id="b")
         client = AskUiControllerClient(agent_os_servers=[a, b])
-        with pytest.raises(RuntimeError, match="boom"), client.temporary_select("b"):
+        error_message = "boom"
+        with (
+            pytest.raises(RuntimeError, match=error_message),
+            client.temporary_select("b"),
+        ):
             assert client.agent_os_server_manager.active is b
-            raise RuntimeError("boom")
+            raise RuntimeError(error_message)
         assert client.agent_os_server_manager.active is a
 
     def test_temporary_select_same_id_is_a_noop_around_yield(self) -> None:

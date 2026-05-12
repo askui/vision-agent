@@ -20,4 +20,4 @@ class ComputerListDisplaysTool(ComputerBaseTool):
         displays_json = self.agent_os.list_displays().model_dump_json(
             exclude={"data": {"__all__": {"size"}}},
         )
-        return f"[server {server.session_guid}]: {displays_json}"
+        return f"[Server with id '{server.computer_id}']: {displays_json}"

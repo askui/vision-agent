@@ -21,4 +21,4 @@ class ComputerRetrieveActiveDisplayTool(ComputerBaseTool):
         display_json = self.agent_os.retrieve_active_display().model_dump_json(
             exclude={"size"}
         )
-        return f"[server {server.session_guid}]: {display_json}"
+        return f"[Server with id '{server.computer_id}']: {display_json}"

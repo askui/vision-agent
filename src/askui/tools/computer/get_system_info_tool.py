@@ -34,4 +34,4 @@ class ComputerGetSystemInfoTool(ComputerBaseTool):
     def __call__(self) -> str:
         server = self.agent_os.get_active_agent_os_server(report=False)
         system_info_json = self.agent_os.get_system_info().model_dump_json()
-        return f"[server {server.session_guid}]: {system_info_json}"
+        return f"[Server with id '{server.computer_id}']: {system_info_json}"

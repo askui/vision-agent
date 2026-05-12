@@ -22,6 +22,6 @@ class ComputerGetMousePositionTool(ComputerBaseTool):
         server = self.agent_os.get_active_agent_os_server(report=False)
         cursor_position = self.agent_os.get_mouse_position()
         return (
-            f"[server {server.session_guid}]: Mouse is at position "
+            f"[Server with id '{server.computer_id}']: Mouse is at position "
             f"({cursor_position.x}, {cursor_position.y})."
         )

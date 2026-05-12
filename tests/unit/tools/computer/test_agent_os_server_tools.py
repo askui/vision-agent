@@ -47,9 +47,7 @@ class TestComputerSwitchAgentOsServerTool:
         tool = ComputerSwitchAgentOsServerTool(agent_os=fake_agent_os)
         assert tool.base_name == "switch_agent_os_server"
 
-    def test_input_schema_requires_computer_id(
-        self, fake_agent_os: MagicMock
-    ) -> None:
+    def test_input_schema_requires_computer_id(self, fake_agent_os: MagicMock) -> None:
         tool = ComputerSwitchAgentOsServerTool(agent_os=fake_agent_os)
         schema = tool.input_schema
         assert "computer_id" in schema["properties"]
@@ -77,9 +75,7 @@ class TestComputerGetActiveAgentOsServerTool:
         tool = ComputerGetActiveAgentOsServerTool(agent_os=fake_agent_os)
         assert tool.is_cacheable is False
 
-    def test_call_returns_active_server_repr(
-        self, fake_agent_os: MagicMock
-    ) -> None:
+    def test_call_returns_active_server_repr(self, fake_agent_os: MagicMock) -> None:
         active = RemoteAgentOsServer(
             address="1.1.1.1:23000", description="a", computer_id="a"
         )

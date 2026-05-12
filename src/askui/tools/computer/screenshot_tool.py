@@ -24,4 +24,7 @@ class ComputerScreenshotTool(ComputerBaseTool):
     def __call__(self) -> tuple[str, Image.Image]:
         server = self.agent_os.get_active_agent_os_server(report=False)
         screenshot = self.agent_os.screenshot()
-        return f"[server {server.session_guid}]: Screenshot was taken.", screenshot
+        return (
+            f"[Server with id '{server.computer_id}']: Screenshot was taken.",
+            screenshot,
+        )
