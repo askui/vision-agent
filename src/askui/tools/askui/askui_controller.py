@@ -224,6 +224,8 @@ class AskUiControllerClient(AgentOs):
         self._start_session()
         self._start_execution()
         self.set_display(self._display)
+        if self._settings.clean_virtual_displays:
+            self.remove_virtual_displays()
 
     def _get_stub(self) -> controller_v1.ControllerAPIStub:
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
