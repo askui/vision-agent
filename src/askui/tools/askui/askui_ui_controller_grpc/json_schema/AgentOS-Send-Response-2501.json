@@ -643,7 +643,7 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "const": "GetFileList"
+                  "const": "GetFileNames"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -655,7 +655,7 @@
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "files": {
+                    "fileNames": {
                       "type": "array",
                       "items": {
                         "type": "string"
@@ -663,7 +663,7 @@
                     }
                   },
                   "required": [
-                    "files"
+                    "fileNames"
                   ]
                 }
               },
@@ -683,7 +683,7 @@
                   ]
                 }
               ],
-              "title": "GetFileListResponse"
+              "title": "GetFileNamesResponse"
             },
             {
               "properties": {
@@ -702,7 +702,16 @@
                   "additionalProperties": false,
                   "properties": {
                     "file": {
-                      "type": "string"
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "content": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "content"
+                      ]
                     }
                   },
                   "required": [
@@ -732,7 +741,7 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "const": "ClearVirtualDisplays"
+                  "const": "RemoveVirtualDisplays"
                 },
                 "actionId": {
                   "$ref": "#/definitions/actionId"
@@ -742,7 +751,7 @@
                 "name",
                 "actionId"
               ],
-              "title": "ClearVirtualDisplaysResponse"
+              "title": "RemoveVirtualDisplaysResponse"
             }
           ]
         }

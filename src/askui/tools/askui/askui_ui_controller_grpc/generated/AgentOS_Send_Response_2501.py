@@ -228,18 +228,26 @@ class GetActiveWindowResponseModel(BaseModel):
     )
     window: Window
 
-class GetFileListResponseModel(BaseModel):
+
+class FileModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    files: list[str]
+    content: str
+
+
+class GetFileNamesResponseModel(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    fileNames: list[str]
 
 
 class GetFileResponseModel(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    file: str
+    file: FileModel
 
 class Length(RootModel[Union[constr(pattern=r'^(\d+(\.\d+)?(px|%)|auto)$'), float]]):
     root: Union[constr(pattern=r'^(\d+(\.\d+)?(px|%)|auto)$'), float]
@@ -368,11 +376,11 @@ class GetActiveWindowResponse(BaseModel):
     response: GetActiveWindowResponseModel
 
 
-class GetFileListResponse(BaseModel):
-    name: Literal['GetFileList']
+class GetFileNamesResponse(BaseModel):
+    name: Literal['GetFileNames']
     actionId: ActionId
     error: str | None = None
-    response: GetFileListResponseModel | None = None
+    response: GetFileNamesResponseModel | None = None
 
 
 class GetFileResponse(BaseModel):
@@ -382,8 +390,8 @@ class GetFileResponse(BaseModel):
     response: GetFileResponseModel | None = None
 
 
-class ClearVirtualDisplaysResponse(BaseModel):
-    name: Literal['ClearVirtualDisplays']
+class RemoveVirtualDisplaysResponse(BaseModel):
+    name: Literal['RemoveVirtualDisplays']
     actionId: ActionId
 
 class SetActiveWindowResponse(BaseModel):
@@ -399,7 +407,7 @@ ResponsesModels = Union[
     AddRenderObjectResponseModel,
     GetActiveProcessResponseModel,
     GetActiveWindowResponseModel,
-    GetFileListResponseModel,
+    GetFileNamesResponseModel,
     GetFileResponseModel,
 ]
 class Message(BaseModel):
@@ -418,9 +426,9 @@ class Message(BaseModel):
         SetActiveProcessResponse,
         GetActiveWindowResponse,
         SetActiveWindowResponse,
-        GetFileListResponse,
+        GetFileNamesResponse,
         GetFileResponse,
-        ClearVirtualDisplaysResponse,
+        RemoveVirtualDisplaysResponse,
     ]
 
 

@@ -877,7 +877,7 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "const": "GetFileList"
+                  "const": "GetFileNames"
                 },
                 "parameters": {
                   "type": "array",
@@ -891,7 +891,7 @@
               "required": [
                 "name"
               ],
-              "title": "GetFileListCommand"
+              "title": "GetFileNamesCommand"
             },
             {
               "properties": {
@@ -917,7 +917,7 @@
               "properties": {
                 "name": {
                   "type": "string",
-                  "const": "ClearVirtualDisplays"
+                  "const": "RemoveVirtualDisplays"
                 },
                 "parameters": {
                   "type": "array"
@@ -926,7 +926,7 @@
               "required": [
                 "name"
               ],
-              "title": "ClearVirtualDisplaysCommand"
+              "title": "RemoveVirtualDisplaysCommand"
             }
           ]
         }

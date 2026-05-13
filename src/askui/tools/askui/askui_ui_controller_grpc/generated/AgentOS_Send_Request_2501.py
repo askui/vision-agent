@@ -7,7 +7,8 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, confloat, conint, constr
+from pydantic import (BaseModel, ConfigDict, Field, RootModel, confloat,
+                      conint, constr)
 
 
 class ParameterEnum(Enum):
@@ -393,9 +394,9 @@ class LoadCharacterMapCommand(BaseModel):
         None, max_length=1, min_length=1
     )
 
-class GetFileListCommand(BaseModel):
-    name: Literal['GetFileList'] = 'GetFileList'
-    parameters: list[str]  = Field(..., max_length=1, min_length=1)
+class GetFileNamesCommand(BaseModel):
+    name: Literal['GetFileNames'] = 'GetFileNames'
+    parameters: list[str] = Field(..., max_length=1, min_length=1)
 
 
 class GetFileCommand(BaseModel):
@@ -403,8 +404,8 @@ class GetFileCommand(BaseModel):
     parameters: list[str] = Field(..., max_length=1, min_length=1)
 
 
-class ClearVirtualDisplaysCommand(BaseModel):
-    name: Literal['ClearVirtualDisplays'] = 'ClearVirtualDisplays'
+class RemoveVirtualDisplaysCommand(BaseModel):
+    name: Literal['RemoveVirtualDisplays'] = 'RemoveVirtualDisplays'
     parameters: List[Any] = []
 
 Command =Union[
@@ -426,9 +427,9 @@ Command =Union[
         SetActiveProcessCommand,
         GetActiveWindowCommand,
         SetActiveWindowCommand,
-        GetFileListCommand,
+        GetFileNamesCommand,
         GetFileCommand,
-        ClearVirtualDisplaysCommand
+        RemoveVirtualDisplaysCommand,
     ]
 
 class Message(BaseModel):

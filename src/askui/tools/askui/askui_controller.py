@@ -40,13 +40,12 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     AddRenderObjectCommand,
     AskUIAgentOSSendRequestSchema,
     ClearRenderObjectsCommand,
-    ClearVirtualDisplaysCommand,
     Command,
     DeleteRenderObjectCommand,
     GetActiveProcessCommand,
     GetActiveWindowCommand,
     GetFileCommand,
-    GetFileListCommand,
+    GetFileNamesCommand,
     GetMousePositionCommand,
     GetSystemInfoCommand,
     Guid,
@@ -55,6 +54,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     Location,
     Message,
     Parameter3,
+    RemoveVirtualDisplaysCommand,
     RenderImage,
     RenderObjectId,
     RenderObjectStyle,
@@ -70,7 +70,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
     GetActiveProcessResponseModel,
     GetActiveWindowResponse,
     GetActiveWindowResponseModel,
-    GetFileListResponse,
+    GetFileNamesResponse,
     GetFileResponse,
     GetSystemInfoResponse,
     GetSystemInfoResponseModel,
@@ -1302,23 +1302,27 @@ class AskUiControllerClient(AgentOs):
         command = SetActiveWindowCommand(parameters=[_process_id, _window_id])
         self._send_command(command)
 
-    def get_file_list(self, path: str) -> list[str]:
+    def get_file_names(self, absolute_directory_path: str) -> list[str]:
         """
-        Get the list of files at the given path on the device under automation.
+        Get the file names in the given absolute directory on the device under
+        automation.
 
         Args:
-            path (str): The directory path to list files from.
+            absolute_directory_path (str): The absolute directory path to list
+                file names from.
 
         Returns:
-            list[str]: The file paths returned by the controller.
+            list[str]: The file names returned by the controller.
         """
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
             "Stub is not initialized"
         )
-        self._reporter.add_message("AgentOS", f"get_file_list({path})")
-        command = GetFileListCommand(parameters=[path])
+        self._reporter.add_message(
+            "AgentOS", f"get_file_names({absolute_directory_path})"
+        )
+        command = GetFileNamesCommand(parameters=[absolute_directory_path])
         res = self._send_command(command).message.command
-        if not isinstance(res, GetFileListResponse):
+        if not isinstance(res, GetFileNamesResponse):
             message = f"unexpected response type: {res}"
             raise DesktopAgentOsError(message)
         if res.error is not None:
@@ -1327,9 +1331,9 @@ class AskUiControllerClient(AgentOs):
             message = f"{type(res).__name__} is missing both error and response"
             raise DesktopAgentOsError(message)
         self._reporter.add_message(
-            "AgentOS", f"get_file_list({path}) -> {res.response}"
+            "AgentOS", f"get_file_names({absolute_directory_path}) -> {res.response}"
         )
-        return res.response.files
+        return res.response.fileNames
 
     def get_file(self, path: str) -> Image.Image | str:
         """
@@ -1364,13 +1368,38 @@ class AskUiControllerClient(AgentOs):
         if res.response is None:
             message = f"{type(res).__name__} is missing both error and response"
             raise DesktopAgentOsError(message)
-        decoded = self._decode_file_payload(res.response.file)
+        decoded = self._decode_file_payload(res.response.file.content)
         if isinstance(decoded, Image.Image):
             detail = f"image ({decoded.format}, {decoded.size[0]}x{decoded.size[1]})"
-        else:
-            detail = f"text ({len(decoded)} chars)"
+            self._reporter.add_message(
+                "AgentOS", f"get_file({path}) -> {detail}", decoded
+            )
+            return decoded
+
+        detail = f"text ({len(decoded)} chars)"
         self._reporter.add_message("AgentOS", f"get_file({path}) -> {detail}")
         return decoded
+
+    def remove_virtual_displays(self) -> None:
+        """
+        Remove all virtual displays from the controller, leaving only real
+        displays active.
+        """
+        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
+            "Stub is not initialized"
+        )
+        self._reporter.add_message("AgentOS", "remove_virtual_displays()")
+        command = RemoveVirtualDisplaysCommand()
+        self._send_command(command)
+        self._reporter.add_message("AgentOS", "remove_virtual_displays() -> done")
+
+        logger.debug(
+            (
+                "Setting display to 1 to ensure that the "
+                "controller is using the real display"
+            )
+        )
+        self.set_display(1)
 
     @staticmethod
     def _decode_file_payload(base64_data: str) -> Image.Image | str:
@@ -1386,15 +1415,3 @@ class AskUiControllerClient(AgentOs):
                 pass
         message = "File contents are neither a supported image nor UTF-8 text"
         raise DesktopAgentOsError(message)
-
-    def clear_virtual_displays(self) -> None:
-        """
-        Remove all virtual displays from the controller, leaving only real
-        displays active.
-        """
-        assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
-            "Stub is not initialized"
-        )
-        self._reporter.add_message("AgentOS", "clear_virtual_displays()")
-        command = ClearVirtualDisplaysCommand()
-        self._send_command(command)
