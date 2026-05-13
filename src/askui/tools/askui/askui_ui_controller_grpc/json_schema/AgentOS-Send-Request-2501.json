@@ -42,7 +42,10 @@
           "$ref": "#/definitions/length"
         }
       },
-      "required": ["x", "y"]
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "rotation": {
       "type": "integer",
@@ -51,7 +54,12 @@
     },
     "renderObjectType": {
       "type": "string",
-      "enum": ["Quad", "Line", "Texture", "Image"]
+      "enum": [
+        "Quad",
+        "Line",
+        "Texture",
+        "Image"
+      ]
     },
     "renderObjectId": {
       "type": "integer",
@@ -296,7 +304,9 @@
               "$ref": "#/definitions/guid"
             }
           },
-          "required": ["authentication"]
+          "required": [
+            "authentication"
+          ]
         },
         "command": {
           "type": "object",
@@ -314,7 +324,12 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": ["platform", "label", "version", "architecture"]
+                        "enum": [
+                          "platform",
+                          "label",
+                          "version",
+                          "architecture"
+                        ]
                       },
                       "minItems": 1,
                       "maxItems": 4,
@@ -325,7 +340,10 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "GetSystemInfoCommand"
             },
             {
@@ -338,7 +356,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "GetMousePositionCommand"
             },
             {
@@ -358,7 +378,10 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "SetMousePositionCommand"
             },
             {
@@ -374,7 +397,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Quad"]
+                          "enum": [
+                            "Quad"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -387,7 +412,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Line"]
+                          "enum": [
+                            "Line"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -403,7 +430,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Image"]
+                          "enum": [
+                            "Image"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -419,7 +448,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Text"]
+                          "enum": [
+                            "Text"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -435,7 +466,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Shape"]
+                          "enum": [
+                            "Shape"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -450,7 +483,10 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "AddRenderObjectCommand"
             },
             {
@@ -508,7 +544,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Image"]
+                          "enum": [
+                            "Image"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -524,7 +562,9 @@
                       "items": [
                         {
                           "type": "string",
-                          "enum": ["Text"]
+                          "enum": [
+                            "Text"
+                          ]
                         },
                         {
                           "$ref": "#/definitions/renderObjectStyle"
@@ -539,7 +579,10 @@
                   ]
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "UpdateRenderObjectCommand"
             },
             {
@@ -558,7 +601,10 @@
                       "type": "array",
                       "items": {
                         "type": "string",
-                        "enum": ["width", "height"]
+                        "enum": [
+                          "width",
+                          "height"
+                        ]
                       },
                       "minItems": 1,
                       "maxItems": 2,
@@ -569,7 +615,10 @@
                   "maxItems": 2
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "GetRenderObjectInfoCommand"
             },
             {
@@ -589,7 +638,10 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "DeleteRenderObjectCommand"
             },
             {
@@ -602,7 +654,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "ClearRenderObjectsCommand"
             },
             {
@@ -625,14 +679,20 @@
                     },
                     {
                       "type": "string",
-                      "enum": ["BreakWord", "BreakAll"]
+                      "enum": [
+                        "BreakWord",
+                        "BreakAll"
+                      ]
                     }
                   ],
                   "minItems": 4,
                   "maxItems": 4
                 }
               },
-              "required": ["name", "parameters"],
+              "required": [
+                "name",
+                "parameters"
+              ],
               "title": "GetRenderTextWordBreakIndexCommand"
             },
             {
@@ -650,7 +710,9 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "WaitForKeyPressCommand"
             },
             {
@@ -673,7 +735,9 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "LoadKeyMapCommand"
             },
             {
@@ -700,7 +764,9 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "LoadCharacterMapCommand"
             },
             {
@@ -713,7 +779,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "ClearKeyMapCommand"
             },
             {
@@ -726,7 +794,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "ClearCharacterMapCommand"
             },
             {
@@ -739,7 +809,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "GetActiveProcessCommand"
             },
             {
@@ -759,7 +831,9 @@
                   "maxItems": 1
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "SetActiveProcessCommand"
             },
             {
@@ -772,7 +846,9 @@
                   "type": "array"
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "GetActiveWindowCommand"
             },
             {
@@ -792,14 +868,76 @@
                   "maxItems": 2
                 }
               },
-              "required": ["name"],
+              "required": [
+                "name"
+              ],
               "title": "SetActiveWindowCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetFileList"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "title": "GetFileListCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetFile"
+                },
+                "parameters": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "maxItems": 1
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "title": "GetFileCommand"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "ClearVirtualDisplays"
+                },
+                "parameters": {
+                  "type": "array"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "title": "ClearVirtualDisplaysCommand"
             }
           ]
         }
       },
-      "required": ["header", "command"]
+      "required": [
+        "header",
+        "command"
+      ]
     }
   },
-  "required": ["message"]
+  "required": [
+    "message"
+  ]
 }
