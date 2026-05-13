@@ -288,7 +288,10 @@ class ComputerAgentOsFacade(AgentOs):
         Returns:
             Image.Image | str: Decoded file contents.
         """
-        return self._agent_os.get_file(path)
+        response = self._agent_os.get_file(path)
+        if isinstance(response, Image.Image):
+            return scale_image_to_fit(response, self._target_resolution)
+        return response
 
     def remove_virtual_displays(self) -> None:
         """
