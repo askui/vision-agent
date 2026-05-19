@@ -22,5 +22,13 @@ class AskUiControllerClientSettings(BaseSettings):
         "Controller server. Defaults to True.",
     )
 
+    clean_virtual_displays: bool = Field(
+        default=False,
+        description=(
+            "Whether to clean virtual displays after the controller is started."
+            "Default: False"
+        ),
+    )
+
 
 __all__ = ["AskUiControllerClientSettings"]

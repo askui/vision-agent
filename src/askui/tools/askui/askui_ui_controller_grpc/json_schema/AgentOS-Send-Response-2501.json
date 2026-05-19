@@ -27,7 +27,10 @@
           "$ref": "#/definitions/length"
         }
       },
-      "required": ["x", "y"]
+      "required": [
+        "x",
+        "y"
+      ]
     },
     "renderObjectId": {
       "type": "integer",
@@ -44,7 +47,7 @@
     "message": {
       "type": "object",
       "properties": {
-        "command": {
+        "Response": {
           "type": "object",
           "oneOf": [
             {
@@ -75,7 +78,11 @@
                   }
                 }
               },
-              "required": ["name", "actionId", "reponse"],
+              "required": [
+                "name",
+                "actionId",
+                "reponse"
+              ],
               "title": "GetSystemInfoResponse"
             },
             {
@@ -95,10 +102,16 @@
                       "$ref": "#/definitions/location2"
                     }
                   },
-                  "required": ["position"]
+                  "required": [
+                    "position"
+                  ]
                 }
               },
-              "required": ["name", "actionId", "response"],
+              "required": [
+                "name",
+                "actionId",
+                "response"
+              ],
               "title": "GetMousePositionResponse"
             },
             {
@@ -111,7 +124,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "SetMousePositionResponse"
             },
             {
@@ -131,10 +147,16 @@
                       "$ref": "#/definitions/renderObjectId"
                     }
                   },
-                  "required": ["id"]
+                  "required": [
+                    "id"
+                  ]
                 }
               },
-              "required": ["name", "actionId", "response"],
+              "required": [
+                "name",
+                "actionId",
+                "response"
+              ],
               "title": "AddRenderObjectResponse"
             },
             {
@@ -147,7 +169,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "UpdateRenderObjectResponse"
             },
             {
@@ -172,7 +197,11 @@
                   }
                 }
               },
-              "required": ["name", "actionId", "reponse"],
+              "required": [
+                "name",
+                "actionId",
+                "reponse"
+              ],
               "title": "GetRenderObjectInfoResponse"
             },
             {
@@ -185,7 +214,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "DeleteRenderObjectResponse"
             },
             {
@@ -198,7 +230,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "ClearRenderObjectsResponse"
             },
             {
@@ -218,10 +253,16 @@
                       "type": "integer"
                     }
                   },
-                  "required": ["index"]
+                  "required": [
+                    "index"
+                  ]
                 }
               },
-              "required": ["name", "actionId", "response"],
+              "required": [
+                "name",
+                "actionId",
+                "response"
+              ],
               "title": "GetRenderTextWordBreakIndexResponse"
             },
             {
@@ -397,7 +438,11 @@
                   }
                 }
               },
-              "required": ["name", "actionId", "reponse"],
+              "required": [
+                "name",
+                "actionId",
+                "reponse"
+              ],
               "title": "WaitForKeyPressResponse"
             },
             {
@@ -410,7 +455,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "LoadKeyMapResponse"
             },
             {
@@ -423,7 +471,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "LoadCharacterMapResponse"
             },
             {
@@ -436,7 +487,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "ClearKeyMapResponse"
             },
             {
@@ -449,7 +503,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "ClearCharacterMapResponse"
             },
             {
@@ -478,13 +535,22 @@
                           "type": "string"
                         }
                       },
-                      "required": ["id", "name"]
+                      "required": [
+                        "id",
+                        "name"
+                      ]
                     }
                   },
-                  "required": ["process"]
+                  "required": [
+                    "process"
+                  ]
                 }
               },
-              "required": ["name", "actionId", "response"],
+              "required": [
+                "name",
+                "actionId",
+                "response"
+              ],
               "title": "GetActiveProcessResponse"
             },
             {
@@ -497,7 +563,10 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "SetActiveProcessResponse"
             },
             {
@@ -534,13 +603,24 @@
                           "type": "string"
                         }
                       },
-                      "required": ["id", "name", "processId", "processName"]
+                      "required": [
+                        "id",
+                        "name",
+                        "processId",
+                        "processName"
+                      ]
                     }
                   },
-                  "required": ["window"]
+                  "required": [
+                    "window"
+                  ]
                 }
               },
-              "required": ["name", "actionId", "response"],
+              "required": [
+                "name",
+                "actionId",
+                "response"
+              ],
               "title": "GetActiveWindowResponse"
             },
             {
@@ -553,14 +633,135 @@
                   "$ref": "#/definitions/actionId"
                 }
               },
-              "required": ["name", "actionId"],
+              "required": [
+                "name",
+                "actionId"
+              ],
               "title": "SetActiveWindowResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetFileNames"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "error": {
+                  "type": "string"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "fileNames": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "fileNames"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "actionId"
+              ],
+              "oneOf": [
+                {
+                  "required": [
+                    "error"
+                  ]
+                },
+                {
+                  "required": [
+                    "response"
+                  ]
+                }
+              ],
+              "title": "GetFileNamesResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "GetFile"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                },
+                "error": {
+                  "type": "string"
+                },
+                "response": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "file": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "content": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "content"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "file"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "actionId"
+              ],
+              "oneOf": [
+                {
+                  "required": [
+                    "error"
+                  ]
+                },
+                {
+                  "required": [
+                    "response"
+                  ]
+                }
+              ],
+              "title": "GetFileResponse"
+            },
+            {
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "const": "RemoveVirtualDisplays"
+                },
+                "actionId": {
+                  "$ref": "#/definitions/actionId"
+                }
+              },
+              "required": [
+                "name",
+                "actionId"
+              ],
+              "title": "RemoveVirtualDisplaysResponse"
             }
           ]
         }
       },
-      "required": ["command"]
+      "required": [
+        "command"
+      ]
     }
   },
-  "required": ["message"]
+  "required": [
+    "message"
+  ]
 }

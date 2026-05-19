@@ -229,6 +229,26 @@ class GetActiveWindowResponseModel(BaseModel):
     window: Window
 
 
+class FileModel(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    content: str
+
+
+class GetFileNamesResponseModel(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    fileNames: list[str]
+
+
+class GetFileResponseModel(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    file: FileModel
+
 class Length(RootModel[Union[constr(pattern=r'^(\d+(\.\d+)?(px|%)|auto)$'), float]]):
     root: Union[constr(pattern=r'^(\d+(\.\d+)?(px|%)|auto)$'), float]
 
@@ -356,6 +376,24 @@ class GetActiveWindowResponse(BaseModel):
     response: GetActiveWindowResponseModel
 
 
+class GetFileNamesResponse(BaseModel):
+    name: Literal['GetFileNames']
+    actionId: ActionId
+    error: str | None = None
+    response: GetFileNamesResponseModel | None = None
+
+
+class GetFileResponse(BaseModel):
+    name: Literal['GetFile']
+    actionId: ActionId
+    error: str | None = None
+    response: GetFileResponseModel | None = None
+
+
+class RemoveVirtualDisplaysResponse(BaseModel):
+    name: Literal['RemoveVirtualDisplays']
+    actionId: ActionId
+
 class SetActiveWindowResponse(BaseModel):
     name: Literal['SetActiveWindow']
     actionId: ActionId
@@ -369,6 +407,8 @@ ResponsesModels = Union[
     AddRenderObjectResponseModel,
     GetActiveProcessResponseModel,
     GetActiveWindowResponseModel,
+    GetFileNamesResponseModel,
+    GetFileResponseModel,
 ]
 class Message(BaseModel):
     command: Union[
@@ -386,6 +426,9 @@ class Message(BaseModel):
         SetActiveProcessResponse,
         GetActiveWindowResponse,
         SetActiveWindowResponse,
+        GetFileNamesResponse,
+        GetFileResponse,
+        RemoveVirtualDisplaysResponse,
     ]
 
 
