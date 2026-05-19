@@ -21,11 +21,11 @@ from askui.models.shared.prompts import SystemPrompt
 from askui.models.shared.token_counter import SimpleTokenCounter
 from askui.models.shared.tools import ToolCollection
 from askui.prompts.truncation import SUMMARIZE_INSTRUCTION_PROMPT
+from askui.reporting import Reporter
 
 if TYPE_CHECKING:
     from askui.callbacks.conversation_callback import ConversationCallback
     from askui.models.shared.conversation import Conversation
-    from askui.reporting import Reporter
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,7 @@ def _summarize_message_history(
     system: SystemPrompt | None = None,
     tools: ToolCollection | None = None,
     provider_options: dict[str, Any] | None = None,
+    reporter: Reporter | None = None,
 ) -> MessageParam:
     """Ask the VLM to summarize the conversation history.
 
@@ -99,6 +100,7 @@ def _summarize_message_history(
             Required for cache hits on the prefix.
         provider_options: Provider-specific options (e.g. ``betas``)
             used by the regular conversation calls.
+        reporter: Reporter to log errors during summarization to
 
     Returns:
         The raw VLM response message.
@@ -121,13 +123,21 @@ def _summarize_message_history(
         )
     )
 
-    return vlm_provider.create_message(
-        messages=messages_to_summarize,
-        max_tokens=2048,
-        system=system,
-        tools=tools,
-        provider_options=provider_options,
-    )
+    try:
+        return vlm_provider.create_message(
+            messages=messages_to_summarize,
+            max_tokens=2048,
+            system=system,
+            tools=tools,
+            provider_options=provider_options,
+        )
+    except Exception as e:
+        # catch e.g. BadRequestError
+        error_msg = f"Truncation Failed with error: {e}"
+        logger.exception(error_msg)
+        if reporter:
+            reporter.add_message("TruncationStrategy", error_msg)
+        raise
 
 
 def _extract_summary_text(response: MessageParam) -> str:
@@ -405,6 +415,7 @@ class SlidingImageWindowSummarizingTruncationStrategy(TruncationStrategy):
             system=system,
             tools=tools,
             provider_options=provider_options,
+            reporter=self.reporter,
         )
         if self.reporter:
             self.reporter.add_message(
@@ -731,6 +742,7 @@ class SummarizingTruncationStrategy(TruncationStrategy):
             system=system,
             tools=tools,
             provider_options=provider_options,
+            reporter=self.reporter,
         )
         if self.reporter:
             self.reporter.add_message(
