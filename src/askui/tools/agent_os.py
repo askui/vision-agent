@@ -741,3 +741,46 @@ class AgentOs(ABC):
             ```
         """
         raise NotImplementedError
+
+    def get_file_names(self, absolute_directory_path: str) -> list[str]:
+        """
+        List file names in an absolute directory on the automation target
+        (desktop Agent OS).
+
+        Args:
+            absolute_directory_path (str): Absolute directory path on the target system.
+
+        Returns:
+            list[str]: Names of files in that directory.
+
+        Raises:
+            NotImplementedError: If the implementation does not support this operation.
+        """
+        raise NotImplementedError
+
+    def get_file(self, path: str) -> Image.Image | str:
+        """
+        Read a file from the automation target (desktop Agent OS).
+
+        Binary image payloads are returned as `PIL.Image.Image` when recognized;
+        otherwise UTF-8 text when decodable.
+
+        Args:
+            path (str): File path on the target system.
+
+        Returns:
+            Image.Image | str: Decoded file contents.
+
+        Raises:
+            NotImplementedError: If the implementation does not support this operation.
+        """
+        raise NotImplementedError
+
+    def remove_virtual_displays(self) -> None:
+        """
+        Remove virtual displays from the controller, leaving real displays only.
+
+        Raises:
+            NotImplementedError: If the implementation does not support this operation.
+        """
+        raise NotImplementedError

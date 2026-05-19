@@ -1,3 +1,4 @@
+import base64
 import time
 import types
 from collections.abc import Iterator
@@ -44,6 +45,8 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     DeleteRenderObjectCommand,
     GetActiveProcessCommand,
     GetActiveWindowCommand,
+    GetFileCommand,
+    GetFileNamesCommand,
     GetMousePositionCommand,
     GetSystemInfoCommand,
     Guid,
@@ -52,6 +55,7 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Request_2
     Location,
     Message,
     Parameter3,
+    RemoveVirtualDisplaysCommand,
     RenderImage,
     RenderObjectId,
     RenderObjectStyle,
@@ -67,10 +71,13 @@ from askui.tools.askui.askui_ui_controller_grpc.generated.AgentOS_Send_Response_
     GetActiveProcessResponseModel,
     GetActiveWindowResponse,
     GetActiveWindowResponseModel,
+    GetFileNamesResponse,
+    GetFileResponse,
     GetSystemInfoResponse,
     GetSystemInfoResponseModel,
 )
 from askui.utils.annotated_image import AnnotatedImage
+from askui.utils.image_utils import base64_to_image
 
 from .exceptions import (
     AskUiControllerError,
@@ -1416,3 +1423,111 @@ class AskUiControllerClient(AgentOs):
         _window_id = Parameter3(root=window_id)
         command = SetActiveWindowCommand(parameters=[_process_id, _window_id])
         self._send_command(command)
+
+    @telemetry.record_call()
+    @override
+    def get_file_names(self, absolute_directory_path: str) -> list[str]:
+        """
+        Get the file names in the given absolute directory on the device under
+        automation.
+
+        Args:
+            absolute_directory_path (str): The absolute directory path to list
+                file names from.
+
+        Returns:
+            list[str]: The file names returned by the controller.
+        """
+        self._reporter.add_message(
+            self._REPORTER_SOURCE, f"get_file_names({absolute_directory_path})"
+        )
+        command = GetFileNamesCommand(parameters=[absolute_directory_path])
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetFileNamesResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        if res.error is not None:
+            raise DesktopAgentOsError(res.error)
+        if res.response is None:
+            message = f"{type(res).__name__} is missing both error and response"
+            raise DesktopAgentOsError(message)
+        self._reporter.add_message(
+            self._REPORTER_SOURCE,
+            f"get_file_names({absolute_directory_path}) -> {res.response}",
+        )
+        return res.response.fileNames
+
+    @telemetry.record_call()
+    @override
+    def get_file(self, path: str) -> Image.Image | str:
+        """
+        Get the contents of a file at the given path on the device under
+        automation.
+
+        The controller returns the file as a Base64-encoded string, which is
+        decoded and returned as `PIL.Image.Image` when the bytes can be opened
+        as an image (PNG, JPEG, BMP, GIF, WebP, TIFF, ...), or as `str` when
+        they decode cleanly as UTF-8 text.
+
+        Args:
+            path (str): The file path to read on the device under automation.
+
+        Returns:
+            Image.Image | str: The decoded file contents.
+
+        Raises:
+            DesktopAgentOsError: If the file cannot be read or the response is invalid.
+        """
+        self._reporter.add_message(self._REPORTER_SOURCE, f"get_file({path})")
+        command = GetFileCommand(parameters=[path])
+        res = self._send_command(command).message.command
+        if not isinstance(res, GetFileResponse):
+            message = f"unexpected response type: {res}"
+            raise DesktopAgentOsError(message)
+        if res.error is not None:
+            raise DesktopAgentOsError(res.error)
+        if res.response is None:
+            message = f"{type(res).__name__} is missing both error and response"
+            raise DesktopAgentOsError(message)
+        decoded = self._decode_file_payload(res.response.file.content)
+        if isinstance(decoded, Image.Image):
+            detail = f"image ({decoded.format}, {decoded.size[0]}x{decoded.size[1]})"
+            self._reporter.add_message(
+                self._REPORTER_SOURCE, f"get_file({path}) -> {detail}", decoded
+            )
+            return decoded
+
+        detail = f"text ({len(decoded)} chars)"
+        self._reporter.add_message(
+            self._REPORTER_SOURCE, f"get_file({path}) -> {detail}"
+        )
+        return decoded
+
+    @telemetry.record_call()
+    @override
+    def remove_virtual_displays(self) -> None:
+        """
+        Remove all virtual displays from the controller, leaving only real
+        displays active.
+        """
+        self._reporter.add_message(self._REPORTER_SOURCE, "remove_virtual_displays()")
+        command = RemoveVirtualDisplaysCommand()
+        self._send_command(command)
+        self._reporter.add_message(
+            self._REPORTER_SOURCE, "remove_virtual_displays() -> done"
+        )
+
+    @staticmethod
+    def _decode_file_payload(base64_data: str) -> Image.Image | str:
+        try:
+            return base64_to_image(base64_data)
+        except ValueError:
+            pass
+        data = base64.b64decode(base64_data, validate=True)
+        if b"\x00" not in data:
+            try:
+                return data.decode("utf-8")
+            except UnicodeDecodeError:
+                pass
+        message = "File contents are neither a supported image nor UTF-8 text"
+        raise DesktopAgentOsError(message)

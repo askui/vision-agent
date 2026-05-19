@@ -1,3 +1,6 @@
+from .get_file import ComputerGetFileTool
+from .get_file_names import ComputerGetFileNamesTool
+from .remove_virtual_displays import ComputerRemoveVirtualDisplaysTool
 from .window_management import (
     ComputerAddWindowAsVirtualDisplayTool,
     ComputerListProcessTool,
@@ -7,6 +10,9 @@ from .window_management import (
 )
 
 __all__ = [
+    "ComputerGetFileNamesTool",
+    "ComputerGetFileTool",
+    "ComputerRemoveVirtualDisplaysTool",
     "ComputerListProcessTool",
     "ComputerListProcessWindowsTool",
     "ComputerAddWindowAsVirtualDisplayTool",

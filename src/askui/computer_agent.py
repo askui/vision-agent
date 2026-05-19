@@ -79,7 +79,9 @@ class ComputerAgent(Agent):
             `display`.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
-        act_tools (list[Tool] | None, optional): Additional tools to make available for the `act()` method.
+        act_tools (list[Tool] | None, optional): Additional tools to make available for
+            the `act()` method for every call. Same tools can instead be passed per call
+            via `act(..., tools=[...])` (see example below).
 
     Example:
         Single local machine (the default):
@@ -135,6 +137,26 @@ class ComputerAgent(Agent):
                 description="Build server",
             )
             agent.act("Kick off a release build on the build server")
+        ```
+
+    Example (optional tools for `act()`):
+        Register tools from `askui.tools.store` (or your own `Tool` implementations)
+        either on the agent so they apply to all `act()` calls, or only for one call.
+
+        ```python
+        from askui import ComputerAgent
+        from askui.tools.store.computer import ComputerSaveScreenshotTool
+
+        with ComputerAgent(
+            act_tools=[ComputerSaveScreenshotTool(base_dir="/path/to/screenshots")]
+        ) as agent:
+            agent.act("Take a screenshot and save it as demo/demo.png")
+
+        with ComputerAgent() as agent:
+            agent.act(
+                "Take a screenshot and save it as demo/demo.png",
+                tools=[ComputerSaveScreenshotTool(base_dir="/path/to/screenshots")],
+            )
         ```
     """
 
@@ -548,8 +570,8 @@ class ComputerAgent(Agent):
 
             with ComputerAgent() as agent:
                 # Use for Windows
-                agent.cli(r'start "" "C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC non-blocking
-                agent.cli(r'"C:\Program Files\VideoLAN\VLC\vlc.exe"') # Start in VLC blocking
+                agent.cli(r'start "" "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"') # Start in VLC non-blocking
+                agent.cli(r'"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"') # Start in VLC blocking
 
                 # Mac
                 agent.cli("open -a chrome")  # Open Chrome non-blocking for mac

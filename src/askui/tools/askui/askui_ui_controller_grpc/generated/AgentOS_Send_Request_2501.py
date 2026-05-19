@@ -5,9 +5,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, confloat, conint, constr
+from pydantic import (BaseModel, ConfigDict, Field, RootModel, confloat,
+                      conint, constr)
 
 
 class ParameterEnum(Enum):
@@ -393,6 +394,20 @@ class LoadCharacterMapCommand(BaseModel):
         None, max_length=1, min_length=1
     )
 
+class GetFileNamesCommand(BaseModel):
+    name: Literal['GetFileNames'] = 'GetFileNames'
+    parameters: list[str] = Field(..., max_length=1, min_length=1)
+
+
+class GetFileCommand(BaseModel):
+    name: Literal['GetFile'] = 'GetFile'
+    parameters: list[str] = Field(..., max_length=1, min_length=1)
+
+
+class RemoveVirtualDisplaysCommand(BaseModel):
+    name: Literal['RemoveVirtualDisplays'] = 'RemoveVirtualDisplays'
+    parameters: List[str] = Field(default=[], max_length=0)
+
 Command =Union[
         GetSystemInfoCommand,
         GetMousePositionCommand,
@@ -412,6 +427,9 @@ Command =Union[
         SetActiveProcessCommand,
         GetActiveWindowCommand,
         SetActiveWindowCommand,
+        GetFileNamesCommand,
+        GetFileCommand,
+        RemoveVirtualDisplaysCommand,
     ]
 
 class Message(BaseModel):

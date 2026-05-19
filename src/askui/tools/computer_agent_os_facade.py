@@ -317,6 +317,40 @@ class ComputerAgentOsFacade(AgentOs):
             finally:
                 self._real_screen_resolution = None
 
+    def get_file_names(self, absolute_directory_path: str) -> list[str]:
+        """
+        List file names in an absolute directory on the automation target.
+
+        Args:
+            absolute_directory_path (str): Absolute directory path on the target system.
+
+        Returns:
+            list[str]: Names of files in that directory.
+        """
+        return self._agent_os.get_file_names(absolute_directory_path)
+
+    def get_file(self, path: str) -> Image.Image | str:
+        """
+        Read a file from the automation target.
+
+        Args:
+            path (str): File path on the target system.
+
+        Returns:
+            Image.Image | str: Decoded file contents.
+        """
+        response = self._agent_os.get_file(path)
+        if isinstance(response, Image.Image):
+            return scale_image_to_fit(response, self._target_resolution)
+        return response
+
+    def remove_virtual_displays(self) -> None:
+        """
+        Remove virtual displays from the controller, leaving real displays only.
+        """
+        self._agent_os.remove_virtual_displays()
+        self._real_screen_resolution = None
+
     def _scale_coordinates_back(
         self,
         x: int,
