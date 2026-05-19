@@ -406,7 +406,7 @@ class GetFileCommand(BaseModel):
 
 class RemoveVirtualDisplaysCommand(BaseModel):
     name: Literal['RemoveVirtualDisplays'] = 'RemoveVirtualDisplays'
-    parameters: List[Any] = []
+    parameters: List[str] = Field(default=[], max_length=0)
 
 Command =Union[
         GetSystemInfoCommand,

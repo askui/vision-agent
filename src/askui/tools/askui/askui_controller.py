@@ -225,7 +225,11 @@ class AskUiControllerClient(AgentOs):
         self._start_execution()
         self.set_display(self._display)
         if self._settings.clean_virtual_displays:
+            logger.info(
+                "clean_virtual_displays is enabled. Removing all virtual displays ... "
+            )
             self.remove_virtual_displays()
+            logger.info("Virtual displays removed.")
 
     def _get_stub(self) -> controller_v1.ControllerAPIStub:
         assert isinstance(self._stub, controller_v1.ControllerAPIStub), (
@@ -1394,14 +1398,6 @@ class AskUiControllerClient(AgentOs):
         command = RemoveVirtualDisplaysCommand()
         self._send_command(command)
         self._reporter.add_message("AgentOS", "remove_virtual_displays() -> done")
-
-        logger.debug(
-            (
-                "Setting display to 1 to ensure that the "
-                "controller is using the real display"
-            )
-        )
-        self.set_display(1)
 
     @staticmethod
     def _decode_file_payload(base64_data: str) -> Image.Image | str:

@@ -34,13 +34,10 @@ class ComputerRemoveVirtualDisplaysTool(ComputerBaseTool):
                 "add_window_as_virtual_display_tool) to restore a normal setup before "
                 "continuing automation."
             ),
-            input_schema={
-                "type": "object",
-                "properties": {},
-                "required": [],
-            },
             agent_os=agent_os,
         )
+
+        self.is_cacheable = True
 
     def __call__(self) -> str:
         self.agent_os.remove_virtual_displays()

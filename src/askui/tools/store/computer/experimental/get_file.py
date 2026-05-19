@@ -49,6 +49,7 @@ class ComputerGetFileTool(ComputerBaseTool):
             agent_os=agent_os,
             required_tags=[ToolTags.SCALED_AGENT_OS.value],
         )
+        self.is_cacheable = True
 
     def __call__(self, absolute_file_path: str) -> Image.Image | str:
         return self.agent_os.get_file(absolute_file_path)
