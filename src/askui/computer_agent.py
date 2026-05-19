@@ -17,13 +17,13 @@ from askui.prompts.act_prompts import (
     create_computer_agent_prompt,
 )
 from askui.tools.computer import (
-    ComputerGetActiveAgentOsServerTool,
+    ComputerGetCurrentComputerTargetIdTool,
     ComputerGetMousePositionTool,
     ComputerGetSystemInfoTool,
     ComputerKeyboardPressedTool,
     ComputerKeyboardReleaseTool,
     ComputerKeyboardTapTool,
-    ComputerListAgentOsServersTool,
+    ComputerListAgentOsTargetComputersTool,
     ComputerListDisplaysTool,
     ComputerMouseClickTool,
     ComputerMouseHoldDownTool,
@@ -33,7 +33,7 @@ from askui.tools.computer import (
     ComputerRetrieveActiveDisplayTool,
     ComputerScreenshotTool,
     ComputerSetActiveDisplayTool,
-    ComputerSwitchAgentOsServerTool,
+    ComputerSwitchAgentOsTargetComputerTool,
     ComputerTypeTool,
 )
 from askui.tools.exception_tool import ExceptionTool
@@ -41,7 +41,7 @@ from askui.tools.exception_tool import ExceptionTool
 from .reporting import CompositeReporter, Reporter
 from .retry import Retry
 from .tools import AgentToolbox, ComputerAgentOsFacade, ModifierKey, PcKey
-from .tools.askui import AgentOsServer, AskUiControllerClient
+from .tools.askui import AgentOsTargetComputer, AskUiControllerClient
 
 logger = logging.getLogger(__name__)
 
@@ -54,27 +54,28 @@ class ComputerAgent(Agent):
     It uses computer vision models to locate UI elements and execute actions on them.
 
     A single `ComputerAgent` can drive **one or more machines** through the
-    `agent_os_servers` argument. Each entry is an Agent OS server (local
-    subprocess or remote gRPC endpoint) identified by a stable `computer_id`.
-    At any moment one server is *active* and receives all explicit calls
-    (`click`, `type`, `keyboard`, ...). The active server can be changed at
-    runtime via `agent.tools.os.switch_agent_os_server(computer_id)` or
-    scoped to a block using `agent.tools.os.temporary_select(computer_id)`.
-    The `act()` model is also given list/switch/get-active tools so it can
-    orchestrate work across machines on its own (e.g. read something on one
-    computer and re-enter it on another).
+    `agent_os_target_computers` argument. Each entry is an Agent OS target
+    computer (local subprocess or remote gRPC endpoint) identified by a stable
+    `computer_id`. At any moment one target is *active* and receives all
+    explicit calls (`click`, `type`, `keyboard`, ...). The active target can be
+    changed at runtime via
+    `agent.tools.os.switch_agent_os_target_computer(computer_id)` or scoped to a
+    block using `agent.tools.os.temporary_select(computer_id)`. The `act()`
+    model is also given list/switch/get-current tools so it can orchestrate
+    work across machines on its own (e.g. read something on one computer and
+    re-enter it on another).
 
     Args:
-        display (int, optional): The display number to use for screen interactions on the default local server. Ignored when `agent_os_servers` is provided. Defaults to `1`.
+        display (int, optional): The display number to use for screen interactions on the default local target. Ignored when `agent_os_target_computers` is provided. Defaults to `1`.
         reporters (list[Reporter] | None, optional): List of reporter instances for logging and reporting. If `None`, an empty list is used.
-        agent_os_servers (list[AgentOsServer] | None, optional):
-            Agent OS servers the agent can route actions to. May mix one
-            `LocalAgentOsServer` (managing a controller subprocess on this
-            machine) with any number of `RemoteAgentOsServer`s pointing at
+        agent_os_target_computers (list[AgentOsTargetComputer] | None, optional):
+            Target computers the agent can route actions to. May mix one
+            `LocalAgentOsTargetComputer` (managing a controller subprocess on this
+            machine) with any number of `RemoteAgentOsTargetComputer`s pointing at
             controllers already running on other machines. Constraints: at
-            least one server, at most one local, and remote `address`es plus
+            least one target, at most one local, and remote `address`es plus
             all `computer_id`s must be unique. The first entry becomes the
-            initial active server. Defaults to a single local server bound to
+            initial active target. Defaults to a single local target bound to
             `display`.
         settings (AgentSettings | None, optional): Provider-based model settings. If `None`, uses the default AskUI model stack.
         retry (Retry, optional): The retry instance to use for retrying failed actions. Defaults to `ConfigurableRetry` with exponential backoff. Currently only supported for `locate()` method.
@@ -94,18 +95,18 @@ class ComputerAgent(Agent):
 
     Example:
         Research on one machine and write up the findings on another. The
-        first server in the list is the active one; `temporary_select`
+        first target in the list is the active one; `temporary_select`
         re-routes a block of explicit calls and restores the previous
-        active server on exit.
+        active target on exit.
 
         ```python
         from askui import ComputerAgent
-        from askui.tools.askui import LocalAgentOsServer, RemoteAgentOsServer
+        from askui.tools.askui import LocalAgentOsTargetComputer, RemoteAgentOsTargetComputer
 
         with ComputerAgent(
-            agent_os_servers=[
-                LocalAgentOsServer(computer_id="research-box"),
-                RemoteAgentOsServer(
+            agent_os_target_computers=[
+                LocalAgentOsTargetComputer(computer_id="research-box"),
+                RemoteAgentOsTargetComputer(
                     address="192.168.1.42:26000",
                     description="Writer box with a text editor open",
                     computer_id="writer-box",
@@ -129,7 +130,7 @@ class ComputerAgent(Agent):
         from askui import ComputerAgent
 
         with ComputerAgent() as agent:
-            agent.tools.os.add_remote_agent_os_server(
+            agent.tools.os.add_remote_agent_os_target_computer(
                 address="10.0.0.5:26000",
                 description="Build server",
             )
@@ -144,7 +145,7 @@ class ComputerAgent(Agent):
             "act_tools",
             "callbacks",
             "truncation_strategy",
-            "agent_os_servers",
+            "agent_os_target_computers",
         }
     )
     @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -152,7 +153,7 @@ class ComputerAgent(Agent):
         self,
         display: Annotated[int, Field(ge=1)] = 1,
         reporters: list[Reporter] | None = None,
-        agent_os_servers: list[AgentOsServer] | None = None,
+        agent_os_target_computers: list[AgentOsTargetComputer] | None = None,
         settings: AgentSettings | None = None,
         retry: Retry | None = None,
         act_tools: list[Tool] | None = None,
@@ -164,7 +165,7 @@ class ComputerAgent(Agent):
             agent_os=AskUiControllerClient(
                 display=display,
                 reporter=reporter,
-                agent_os_servers=agent_os_servers,
+                agent_os_target_computers=agent_os_target_computers,
             )
         )
         super().__init__(
@@ -588,9 +589,9 @@ class ComputerAgent(Agent):
             ComputerListDisplaysTool(),
             ComputerRetrieveActiveDisplayTool(),
             ComputerSetActiveDisplayTool(),
-            ComputerListAgentOsServersTool(),
-            ComputerSwitchAgentOsServerTool(),
-            ComputerGetActiveAgentOsServerTool(),
+            ComputerListAgentOsTargetComputersTool(),
+            ComputerSwitchAgentOsTargetComputerTool(),
+            ComputerGetCurrentComputerTargetIdTool(),
         ]
 
 

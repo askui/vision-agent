@@ -21,9 +21,9 @@ from askui.tools.askui.askui_controller import RenderObjectStyle  # noqa: TC001
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 if TYPE_CHECKING:
-    from askui.tools.askui.agent_os_server import (
-        AgentOsServer,
-        RemoteAgentOsServer,
+    from askui.tools.askui.agent_os_target_computer import (
+        AgentOsTargetComputer,
+        RemoteAgentOsTargetComputer,
     )
     from askui.tools.askui.askui_ui_controller_grpc.generated import (
         Controller_V1_pb2 as controller_v1_pbs,
@@ -273,34 +273,40 @@ class ComputerAgentOsFacade(AgentOs):
         """
         self._agent_os.set_window_in_focus(process_id, window_id)
 
-    def add_agent_os_server(self, server: "AgentOsServer") -> "AgentOsServer":
-        return self._agent_os.add_agent_os_server(server)
+    def add_agent_os_target_computer(
+        self, agent_os_target_computer: "AgentOsTargetComputer"
+    ) -> "AgentOsTargetComputer":
+        return self._agent_os.add_agent_os_target_computer(agent_os_target_computer)
 
-    def add_remote_agent_os_server(
+    def add_remote_agent_os_target_computer(
         self,
         address: str,
         description: str,
-    ) -> "RemoteAgentOsServer":
-        return self._agent_os.add_remote_agent_os_server(
+    ) -> "RemoteAgentOsTargetComputer":
+        return self._agent_os.add_remote_agent_os_target_computer(
             address=address, description=description
         )
 
-    def reset_agent_os_servers(
+    def reset_agent_os_target_computers(
         self,
-        agent_os_servers: "list[AgentOsServer] | None" = None,
+        agent_os_target_computers: "list[AgentOsTargetComputer] | None" = None,
     ) -> None:
-        self._agent_os.reset_agent_os_servers(agent_os_servers)
+        self._agent_os.reset_agent_os_target_computers(agent_os_target_computers)
 
-    def list_agent_os_servers(self) -> "list[AgentOsServer]":
-        return self._agent_os.list_agent_os_servers()
+    def list_agent_os_target_computers(self) -> "list[AgentOsTargetComputer]":
+        return self._agent_os.list_agent_os_target_computers()
 
-    def get_active_agent_os_server(self, report: bool = True) -> "AgentOsServer":
-        return self._agent_os.get_active_agent_os_server(report=report)
+    def get_current_computer_target_id(self, report: bool = True) -> str:
+        return self._agent_os.get_current_computer_target_id(report=report)
 
-    def switch_agent_os_server(self, computer_id: str) -> "AgentOsServer":
-        agent_os_server = self._agent_os.switch_agent_os_server(computer_id)
+    def switch_agent_os_target_computer(
+        self, computer_id: str
+    ) -> "AgentOsTargetComputer":
+        agent_os_target_computer = self._agent_os.switch_agent_os_target_computer(
+            computer_id
+        )
         self._real_screen_resolution = None
-        return agent_os_server
+        return agent_os_target_computer
 
     @contextmanager
     def temporary_select(self, computer_id: str) -> Iterator[Self]:

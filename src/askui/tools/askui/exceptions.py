@@ -1,8 +1,9 @@
 class AskUiControllerError(Exception):
     """Base exception for AskUI controller errors.
 
-    This exception is raised when there is an error in the AskUI controller (client),
-    which handles the communication with the AskUI controller (server).
+    This exception is raised when there is an error in the AskUI controller
+    client, which handles the communication with the AskUI controller process
+    running on the target computer.
 
     Args:
         message (str): The error message.
@@ -56,22 +57,23 @@ class AskUiControllerInvalidCommandError(AskUiControllerError):
     """Exception raised when a command sent to the controller is invalid.
 
     This exception is raised when a command fails schema validation on the
-    Agent OS server side, typically due to malformed command structure or
+    target computer side, typically due to malformed command structure or
     invalid parameters.
 
     Args:
-        details (str | None): Optional additional error details from the server.
+        details (str | None): Optional additional error details from the target
+            computer.
     """
 
     def __init__(self, details: str | None = None):
         error_msg = (
-            "AgentOS: command validation failed on the Agent OS server. "
+            "AgentOS: command validation failed on the target computer. "
             "This is typically caused by a malformed command or a version "
             "mismatch; updating the AskUI controller to the latest version "
             "may resolve it."
         )
         if details:
-            error_msg += f"\nServer details: {details}"
+            error_msg += f"\nController details: {details}"
         super().__init__(error_msg)
         self.details = details
 

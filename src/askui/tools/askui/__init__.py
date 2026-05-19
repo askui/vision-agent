@@ -1,17 +1,17 @@
-from .agent_os_server import (
-    AgentOsServer,
-    LocalAgentOsServer,
-    RemoteAgentOsServer,
+from .agent_os_target_computer import (
+    AgentOsTargetComputer,
+    LocalAgentOsTargetComputer,
+    RemoteAgentOsTargetComputer,
 )
-from .agent_os_server_manager import (
-    AgentOsServerManager,
+from .agent_os_target_computer_manager import (
+    AgentOsTargetComputerManager,
 )
 from .askui_controller import AskUiControllerClient
 
 __all__ = [
-    "AgentOsServer",
-    "AgentOsServerManager",
+    "AgentOsTargetComputer",
+    "AgentOsTargetComputerManager",
     "AskUiControllerClient",
-    "LocalAgentOsServer",
-    "RemoteAgentOsServer",
+    "LocalAgentOsTargetComputer",
+    "RemoteAgentOsTargetComputer",
 ]

@@ -4,9 +4,9 @@ from askui.tools.agent_os import AgentOs
 
 class ComputerGetSystemInfoTool(ComputerBaseTool):
     """
-    Get the system information of the currently active Agent OS server.
-    This tool returns the system information as a JSON object prefixed with
-    the active Agent OS server session GUID.
+    Get the system information of the currently active Agent OS target computer.
+    This tool returns the system information as a JSON object prefixed with the
+    active target computer's id.
     The JSON object contains the following fields:
     - platform: The operating system platform.
     - label: The operating system label.
@@ -18,10 +18,10 @@ class ComputerGetSystemInfoTool(ComputerBaseTool):
         super().__init__(
             name="get_system_info_tool",
             description="""
-                Get the system information of the currently active Agent OS server.
-                This tool returns the system information as a JSON object prefixed
-                with the active Agent OS server session GUID so it is clear which
-                server the info belongs to.
+                Get the system information of the currently active Agent OS target
+                computer. This tool returns the system information as a JSON object
+                prefixed with the active target computer's id so it is clear which
+                computer the info belongs to.
                 The JSON object contains the following fields:
                 - platform: The operating system platform.
                 - label: The operating system label.
@@ -32,6 +32,6 @@ class ComputerGetSystemInfoTool(ComputerBaseTool):
         )
 
     def __call__(self) -> str:
-        server = self.agent_os.get_active_agent_os_server(report=False)
+        target_id = self.agent_os.get_current_computer_target_id(report=False)
         system_info_json = self.agent_os.get_system_info().model_dump_json()
-        return f"[Server with id '{server.computer_id}']: {system_info_json}"
+        return f"[Computer '{target_id}']: {system_info_json}"

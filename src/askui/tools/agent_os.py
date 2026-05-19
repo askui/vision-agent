@@ -9,9 +9,9 @@ from typing_extensions import Self
 from askui.models.shared.tool_tags import ToolTags
 
 if TYPE_CHECKING:
-    from askui.tools.askui.agent_os_server import (
-        AgentOsServer,
-        RemoteAgentOsServer,
+    from askui.tools.askui.agent_os_target_computer import (
+        AgentOsTargetComputer,
+        RemoteAgentOsTargetComputer,
     )
     from askui.tools.askui.askui_ui_controller_grpc.generated import (
         Controller_V1_pb2 as controller_v1_pbs,
@@ -683,63 +683,61 @@ class AgentOs(ABC):
         """
         raise NotImplementedError
 
-    # --- Agent-OS-server management -----------------------------------------------
-    # These methods only do something meaningful for backends that talk to multiple
-    # Agent OS servers (`AskUiControllerClient`). Other `AgentOs` implementations
-    # (Playwright, Android, ...) inherit the default implementations, which raise
-    # `NotImplementedError`.
-
-    def add_agent_os_server(self, server: "AgentOsServer") -> "AgentOsServer":
-        """Register an additional Agent OS server. Auto-connects if connected."""
+    def add_agent_os_target_computer(
+        self, agent_os_target_computer: "AgentOsTargetComputer"
+    ) -> "AgentOsTargetComputer":
+        """Register an additional target computer. Auto-connects if connected."""
         raise NotImplementedError
 
-    def add_remote_agent_os_server(
+    def add_remote_agent_os_target_computer(
         self,
         address: str,
         description: str,
-    ) -> "RemoteAgentOsServer":
-        """Register an additional remote Agent OS server."""
+    ) -> "RemoteAgentOsTargetComputer":
+        """Register an additional remote target computer."""
         raise NotImplementedError
 
-    def reset_agent_os_servers(
+    def reset_agent_os_target_computers(
         self,
-        agent_os_servers: "list[AgentOsServer] | None" = None,
+        agent_os_target_computers: "list[AgentOsTargetComputer] | None" = None,
     ) -> None:
-        """Disconnect (if connected) and replace the Agent-OS-server list."""
+        """Disconnect (if connected) and replace the target computer list."""
         raise NotImplementedError
 
-    def list_agent_os_servers(self) -> "list[AgentOsServer]":
-        """Return all registered Agent OS servers."""
+    def list_agent_os_target_computers(self) -> "list[AgentOsTargetComputer]":
+        """Return all registered target computers."""
         raise NotImplementedError
 
-    def get_active_agent_os_server(self, report: bool = True) -> "AgentOsServer":
-        """Return the currently active Agent OS server."""
+    def get_current_computer_target_id(self, report: bool = True) -> str:
+        """Return the `computer_id` of the currently active target computer."""
         raise NotImplementedError
 
-    def switch_agent_os_server(self, computer_id: str) -> "AgentOsServer":
-        """Switch the active Agent OS server by its `computer_id`."""
+    def switch_agent_os_target_computer(
+        self, computer_id: str
+    ) -> "AgentOsTargetComputer":
+        """Switch the active target computer by its `computer_id`."""
         raise NotImplementedError
 
     def temporary_select(self, computer_id: str) -> AbstractContextManager[Self]:
         """
-        Temporarily switch the active Agent OS server for the duration of a `with`
-        block, then restore the previously-active server on exit (even if the block
-        raises).
+        Temporarily switch the active target computer for the duration of a `with`
+        block, then restore the previously-active target on exit (even if the
+        block raises).
 
         Args:
-            computer_id (str): Computer id of the server to activate inside the
+            computer_id (str): Computer id of the target to activate inside the
                 block.
 
         Returns:
             AbstractContextManager[Self]: Context manager that yields this
-                `AgentOs` with the selected server active.
+                `AgentOs` with the selected target active.
 
         Example:
             ```python
             with agent_os.temporary_select('Remote-Machine') as remote_machine:
                 img = remote_machine.screenshot()
                 img.save("remote_machine.png")
-            # previous active server restored here
+            # previous active target restored here
             ```
         """
         raise NotImplementedError
