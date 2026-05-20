@@ -6,7 +6,6 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from askui.tools.agent_os import AgentOs, Display, DisplaySize
-from askui.tools.toolbox import AgentToolbox
 
 
 @pytest.fixture
@@ -97,9 +96,13 @@ def agent_os_mock(mocker: MockerFixture) -> AgentOs:
 
 
 @pytest.fixture
-def agent_toolbox_mock(agent_os_mock: AgentOs) -> AgentToolbox:
-    """Fixture providing a mock agent toolbox."""
-    return AgentToolbox(agent_os=agent_os_mock)
+def agent_os_mock_patch(mocker: MockerFixture, agent_os_mock: AgentOs) -> AgentOs:
+    """Patches `AskUiControllerClient` so `ComputerAgent` uses `agent_os_mock`."""
+    mocker.patch(
+        "askui.computer_agent.AskUiControllerClient",
+        return_value=agent_os_mock,
+    )
+    return agent_os_mock
 
 
 @pytest.fixture(autouse=True)

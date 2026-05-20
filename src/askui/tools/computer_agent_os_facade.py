@@ -1,6 +1,9 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from PIL import Image
+from typing_extensions import Self
 
 from askui.models.shared.tool_tags import ToolTags
 from askui.tools.agent_os import (
@@ -18,6 +21,10 @@ from askui.tools.askui.askui_controller import RenderObjectStyle  # noqa: TC001
 from askui.utils.image_utils import scale_coordinates, scale_image_to_fit
 
 if TYPE_CHECKING:
+    from askui.tools.askui.agent_os_target_computer import (
+        AgentOsTargetComputer,
+        RemoteAgentOsTargetComputer,
+    )
     from askui.tools.askui.askui_ui_controller_grpc.generated import (
         Controller_V1_pb2 as controller_v1_pbs,
     )
@@ -265,6 +272,50 @@ class ComputerAgentOsFacade(AgentOs):
             window_id (int): The ID of the window to set as active.
         """
         self._agent_os.set_window_in_focus(process_id, window_id)
+
+    def add_agent_os_target_computer(
+        self, agent_os_target_computer: "AgentOsTargetComputer"
+    ) -> "AgentOsTargetComputer":
+        return self._agent_os.add_agent_os_target_computer(agent_os_target_computer)
+
+    def add_remote_agent_os_target_computer(
+        self,
+        address: str,
+        description: str,
+    ) -> "RemoteAgentOsTargetComputer":
+        return self._agent_os.add_remote_agent_os_target_computer(
+            address=address, description=description
+        )
+
+    def reset_agent_os_target_computers(
+        self,
+        agent_os_target_computers: "list[AgentOsTargetComputer] | None" = None,
+    ) -> None:
+        self._agent_os.reset_agent_os_target_computers(agent_os_target_computers)
+
+    def list_agent_os_target_computers(self) -> "list[AgentOsTargetComputer]":
+        return self._agent_os.list_agent_os_target_computers()
+
+    def get_current_computer_target_id(self, report: bool = True) -> str:
+        return self._agent_os.get_current_computer_target_id(report=report)
+
+    def switch_agent_os_target_computer(
+        self, computer_id: str
+    ) -> "AgentOsTargetComputer":
+        agent_os_target_computer = self._agent_os.switch_agent_os_target_computer(
+            computer_id
+        )
+        self._real_screen_resolution = None
+        return agent_os_target_computer
+
+    @contextmanager
+    def temporary_select(self, computer_id: str) -> Iterator[Self]:
+        with self._agent_os.temporary_select(computer_id):
+            self._real_screen_resolution = None
+            try:
+                yield self
+            finally:
+                self._real_screen_resolution = None
 
     def get_file_names(self, absolute_directory_path: str) -> list[str]:
         """
